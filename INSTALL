@@ -7,7 +7,7 @@ following:
 1. Patch the kernel source:
 
 cd /usr/src/linux-2.6.10
-patch -p1 < ../linux-multilayer-switch/linux-2.6.10-multilayer-switch.patch
+patch -p1 < ../lms/linux-2.6.10-lms.patch
 
 2. Configure the kernel using your favorite method (make menuconfig for
 instance) and enable the switch module under:
@@ -16,17 +16,17 @@ instance) and enable the switch module under:
       -> Networking Options
          -> Ethernet switch
 
-3. Edit /usr/src/linux-multilayer-switch/userspace/Makefile and change
+3. Edit /usr/src/lms/userspace/Makefile and change
 the CFLAGS variable to point to the right kernel location, for example:
 CFLAGS = -I/usr/src/linux-2.6.10/include -Wall
 
 4. Compile the userspace tool:
 
-cd /usr/src/linux-multilayer-switch/userspace
+cd /usr/src/lms/userspace
 make
 
 5. Reboot with the new kernel.
 
-6. Optionaly copy "swctl" from /usr/src/linux-multilayer-switch/userspace
+6. Optionaly copy "swctl" from /usr/src/lms/userspace
 to /usr/sbin, or change your environment configuration so that you can
 run swctl without specifying the full path.
