@@ -3,8 +3,6 @@
 
 #include "sw_private.h"
 
-extern void sw_fdb_init(struct net_switch *sw);
-extern void fdb_cleanup_port(struct net_switch_port *);
 
 static __inline__ int sw_mac_hash(const unsigned char *mac) {
 	unsigned long x;

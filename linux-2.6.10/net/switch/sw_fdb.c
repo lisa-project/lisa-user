@@ -3,13 +3,19 @@
 
 #define DEBUG 1
 
+static kmem_cache_t *sw_fdb_cache;
+
 void __init sw_fdb_init(struct net_switch *sw) {
 	int i;
 
 	for (i=0; i<SW_HASH_SIZE; i++) {
-		INIT_LIST_HEAD(&sw->hash[i].head);
-		rwlock_init(&sw->hash[i].mutex);
+		INIT_LIST_HEAD(&sw->fdb[i].entries);
+		rwlock_init(&sw->fdb[i].lock);
 	}
+	sw_fdb_cache = kmem_cache_create("sw_fdb_cache",
+		sizeof(struct net_switch_fdb_entry),
+		0, SLAB_HWCACHE_ALIGN, NULL, NULL);
+		
 	dbg("Initialized hash of %d buckets\n", SW_HASH_SIZE);	
 }
 
@@ -21,22 +27,21 @@ void fdb_cleanup_port(struct net_switch_port *port) {
 static inline int __fdb_learn(struct net_switch_bucket *bucket,
 		unsigned char *mac, struct net_switch_port *port, int vlan,
 		struct net_switch_fdb_entry **pentry) {
-	struct list_head p;
 	struct net_switch_fdb_entry *entry;
 
-	list_for_each(p, &bucket->entries) {
-		entry = list_entry(p, struct net_switch_fdb_entry, lh);
+	list_for_each_entry(entry, &bucket->entries, lh) {
 		if(entry->port == port && entry->vlan == vlan &&
-				!memcmp(entry.mac, mac)) {
+				!memcmp(entry->mac, mac, ETH_ALEN)) {
 			*pentry = entry;
+			entry->stamp = jiffies;
 			return 1;
 		}
 	}
 	return 0;
 }
 
-static void fdb_learn(unsigned char *mac, struct net_switch_port *port, int vlan) {
-	struct net_switch_bucket *bucket = &sw.fdb[sw_mac_hash(mac)];
+void fdb_learn(unsigned char *mac, struct net_switch_port *port, int vlan) {
+	struct net_switch_bucket *bucket = &port->sw->fdb[sw_mac_hash(mac)];
 	struct net_switch_fdb_entry *entry;
 
 	read_lock(&bucket->lock);
@@ -60,12 +65,21 @@ static void fdb_learn(unsigned char *mac, struct net_switch_port *port, int vlan
 		return;
 	}
 
-	/* FIXME alocare entry din cache */
+	/*
+		we try to alloc an entry from the cache.
+		If that fails we return.
+	*/
+	entry = kmem_cache_alloc(sw_fdb_cache, GFP_ATOMIC);
+	if (!entry) return;
 
-	memcpy(entry.mac, mac, 6);
-	entry.vlan = vlan;
-	entry.port = port;
-	entry.stamp = jiffies;
+	memcpy(entry->mac, mac, 6);
+	entry->vlan = vlan;
+	entry->port = port;
+	entry->stamp = jiffies;
 	list_add_tail(&entry->lh, &bucket->entries);
 	write_unlock(&bucket->lock);
+}
+
+void __exit sw_fdb_exit(void) {
+	kmem_cache_destroy(sw_fdb_cache);
 }

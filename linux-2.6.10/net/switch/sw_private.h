@@ -8,7 +8,6 @@
 #include <asm/semaphore.h>
 #include <asm/atomic.h>
 
-
 #define SW_HASH_SIZE_BITS 12
 #define SW_HASH_SIZE (1 << SW_HASH_SIZE_BITS)
 
@@ -49,6 +48,9 @@ struct net_switch_port {
 	/* Physical device associated with this port */
 	struct net_device *dev;
 
+	/* Pointer to the switch owning this port */
+	struct net_switch *sw;
+
 	unsigned int flags;
 	int vlan;
 
@@ -63,7 +65,7 @@ struct net_switch_port {
 /* Hash Entry */
 struct net_switch_fdb_entry {
 	struct list_head lh;
-	unsigned char mac[6];
+	unsigned char mac[ETH_ALEN];
 	int vlan;
 	struct net_switch_port *port;
 	unsigned long stamp;
@@ -73,5 +75,11 @@ struct skb_extra {
 	int vlan;
 	int has_vlan_tag;
 };
+
+/* Functions implemented in fdb.c */
+extern void sw_fdb_init(struct net_switch *sw);
+extern void fdb_cleanup_port(struct net_switch_port *);
+extern void fdb_learn(unsigned char *mac, struct net_switch_port *port, int vlan);
+extern void sw_fdb_exit(void);
 
 #endif

@@ -42,6 +42,7 @@ static int sw_addif(struct net_device *dev) {
 		return -ENOMEM;
 	memset(port, 0, sizeof(struct net_switch_port));
 	port->dev = dev;
+	port->sw = &sw;
 	list_add_tail_rcu(&port->lh, &sw.ports);
 	rcu_assign_pointer(dev->sw_port, port);
 	dev_hold(dev);
@@ -131,6 +132,8 @@ static int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 }
 
 static void dump_packet(const struct sk_buff *skb) {
+	int i;
+	
 	printk(KERN_DEBUG "sw_handle_frame on %s: proto=0x%hx "
 			"head=0x%p data=0x%p tail=0x%p end=0x%p\n",
 			skb->dev->name, ntohs(skb->protocol),
@@ -148,7 +151,6 @@ static void dump_packet(const struct sk_buff *skb) {
 static int sw_handle_frame(struct net_switch_port *port, struct sk_buff **pskb) {
 	struct sk_buff *skb = *pskb;
 	struct skb_extra skb_e;
-	int i;
 
 	if(skb->protocol == ntohs(ETH_P_8021Q)) {
 		skb_e.vlan = ntohs(*(unsigned short *)skb->data) & 4095;
@@ -210,6 +212,7 @@ static void switch_exit(void) {
 	 */
 	swioctl_set(NULL);
 	sw_handle_frame_hook = NULL;
+	sw_fdb_exit();
 	dbg("Switch module unloaded\n");
 }
 
