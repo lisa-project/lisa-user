@@ -102,8 +102,19 @@ static int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 
 static int sw_handle_frame(struct net_switch_port *port, struct sk_buff **pskb) {
 	struct sk_buff *skb = *pskb;
+	int i;
 
-	printk(KERN_DEBUG "sw_handle_frame on %s\n", skb->dev->name);
+	printk(KERN_DEBUG "sw_handle_frame on %s: proto=0x%hx "
+			"head=0x%p data=0x%p tail=0x%p end=0x%p\n",
+			skb->dev->name, ntohs(skb->protocol),
+			skb->head, skb->data, skb->tail, skb->end);
+	printk("MAC dump: ");
+	for(i = 0; i < skb->mac_len; i++)
+		printk("0x%x ", skb->mac.raw[i]);
+	printk("\nDATA dump: ");
+	for(i = 0; i < 4; i++)
+		printk("0x%x ", skb->data[i]);
+	printk("\n");
 	return 0;
 }
 
