@@ -1,0 +1,36 @@
+<html>
+<body bgcolor="white">
+<br>
+<center>
+<table width="70%" border="0">
+<tr><td><h1>About</h1>
+<p>LISA stands for <b>LI</b>nux <b>S</b>witching <b>A</b>ppliance. It's a project that
+aims at building a network multilayer switching device that runs on a (slightly modified)
+PC hardware architecture running Linux.
+<p>The device should be able to perform Layer 2 and Layer 3 packet switching and run
+dynamic routing protocols such as OSPF and BGP. The configuration and operation command line
+interface will be similar to Cisco's IOS.
+<p>The project will not compete with Cisco (we could not do that anyway :P) but should
+provide a cost-effective advanced-featured solution for small networks.
+<p>The project is divided into several smaller projects:
+<ul>
+<li><a href="switch.html" target="main">Linux Multilayer Switch</a> - The very heart of
+the LISA project. It's a Linux kernel module that performs Layer 2 switching and
+implements virtual interfaces for inter-vlan routing.
+<li><a href="blank.html" target="main">Command Line Interface</a> - A Cisco-like command
+line interface that works closely with the kernel module to configure and control the
+switching process.
+<li><a href="blank.html" target="main">Switch Minilinux Distro</a> - A tiny Linux distro
+that only includes the necessary components to run the multilayer switching system.
+<li><a href="blank.html" target="main">BIOS / Monitor</a> - Bootstrap code that starts
+up the system, initializes and configures the mainboard chipset and boots the kernel.
+<li><a href="blank.html" target="main">Flash Emulator</a> - A hardware device that
+does in-system programming of the BIOS flash memory.
+</ul>
+<h1>Authors</h1>
+This project was started by <a href="mailto:radu.rendec@ines.ro">Radu Rendec</a> and
+<a href="mailto:ioan.nicu@ines.ro">Ionut Nicu</a> to serve as Bachelor Degree Project
+at the Politechnical University in Bucharest, Romania.
+</td></tr></table></center>
+</body>
+</html>

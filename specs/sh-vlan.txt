@@ -1,0 +1,125 @@
+iNES-PARTER#sh vlan
+VLAN Name                             Status    Ports
+---- -------------------------------- --------- -------------------------------
+1    default                          active
+2    BANEASA_CORE                     active    Fa0/1, Fa0/15, Fa0/19, Fa0/20,
+                                                Fa0/31, Fa0/38, Fa0/46
+3    AuctionWatch                     active
+4    BORDER-ROUTERS                   active
+5    WEB_HOST                         active
+7    AKAMAI                           active
+8    DSL-BANEASA                      active
+9    FIBRA_NOASTRA                    active
+10   COLOCARI                         active    Fa0/13
+11   BANEASA_192_168_x_x              active    Fa0/2, Fa0/9, Fa0/10, Fa0/12,
+                                                Fa0/14, Fa0/16, Fa0/18, Fa0/21,
+                                                Fa0/22, Fa0/23, Fa0/24, Fa0/25,
+                                                Fa0/26, Fa0/27, Fa0/29, Fa0/30,
+                                                Fa0/32, Fa0/34, Fa0/36, Fa0/37,
+                                                Fa0/39, Fa0/41, Fa0/43, Fa0/44,
+                                                Fa0/45, Fa0/47
+12   WEBDEV                           active    Fa0/3, Fa0/4, Fa0/5, Fa0/6,
+                                                Fa0/7, Fa0/8, Fa0/28, Fa0/33
+13   BKP_SW                           active
+14   CUPROM-iNES-ETAJ2                active
+15   SSN7                             active
+16   bridge_sniff                     active
+17   ICU                              active
+19   PEERING-ASTRAL                   active
+20   RDS-PEERING                      active
+21   ORIZONT_GROUP                    active
+35   P(R)OST.RO                       active
+40   VLAN_RDS_FO1                     active
+41   TEST                             active
+43   RDS-VLAN-43-CORA                 active
+61   ASTRAL-BACKUP                    active
+62   VLAN0062                         active
+80   RDS-VLAN80                       active
+100  BANEASA-VICTORIA                 active
+101  VICTORIA-BANEASA-FIBRA-NOASTRA   active
+102  BUCURESTI-BRASOV                 active
+186  LIBRA                            active
+200  NEW-DSL                          active    Fa0/40
+201  B-BORDER-|-HTB-|-B-CORE          active
+202  B-BORDER-|NOHTB|-B-CORE          active
+203  INTERNET-RDS-IN                  active
+204  CLIENTI_ASTRAL_FIBRA             active
+205  CLIENTI_ASTRAL_RADIO_CABLU       active
+206  RONIX                            active
+207  L2-ACCESSNET                     active
+208  KONDIMENT-ROUTER-BLADESERVER     active
+209  BLADE-TEMP                       active
+250  VIDEO-XXL                        active
+251  VIDEO2                           active
+300  ALCATEL                          active    Fa0/35
+301  CLUSTER-SERVERS                  active
+302  DB-VOICE                         active
+303  ISKRATEL                         active
+309  C-ZONE-1                         active
+311  RDS-MT                           active
+314  C-ZONE-2                         active
+316  MEDIASAT-PEER                    active
+400  EVOLVA-INTERNATIONAL             active
+401  EVOLVA-INTERNATIONAL-BACKUP      active
+402  EVOLVA-METROPOLITAN              active
+403  EVOLVA-DIRECT-CONNECTED          active
+666  VLAN_DE_MANAGEMENT               active
+800  FIBRA-NOUVEAU                    active
+801  POSTA_ROM_UNIRII                 active
+802  CRINSOFT                         active
+803  ROMSYM                           active
+804  KIWEE                            active
+805  PETROSOFT                        active
+806  FORDAQ                           active
+807  PEERING-EUROWEB                  active
+808  STS                              active
+809  FIBERNET                         active
+810  POSTA-GIULESTI                   active
+811  CLIENTI-PE-EUROWEB               active
+812  BVB                              active
+849  VLAN_PENTRU_TESTE_BIROU          active    Fa0/17
+850  FIBRA-OBOR                       active
+851  FILINGROM                        active
+900  FIBRA-BANEASA                    active
+901  VLAN-FIBRA-ICI                   active
+902  FIBRA_CALIN_TATOMIR              active
+903  FIBRA_AMB_UNG                    active
+904  FORD-TZIRIAC                     active
+905  JOLIE-VILLE                      active
+906  SOFTWIN-FIBRA                    active
+907  AGIP-FIBRA                       active
+908  TRANSTEL                         active
+909  ARBOMEDIA-SERVERE                active
+950  OTOPENI                          active
+1002 fddi-default                     active
+1003 trcrf-default                    active
+1004 fddinet-default                  active
+1005 trbrf-default                    active
+
+VLAN Type  SAID       MTU   Parent RingNo BridgeNo Stp  BrdgMode Trans1 Trans2
+---- ----- ---------- ----- ------ ------ -------- ---- -------- ------ ------
+1    enet  100001     1500  -      -      -        -    -        1002   1003
+2    enet  100002     1500  -      -      -        -    -        0      0
+3    enet  100003     1500  -      -      -        -    -        0      0
+4    enet  100004     1500  -      -      -        -    -        0      0
+5    enet  100005     1500  -      -      -        -    -        0      0
+7    enet  100007     1500  -      -      -        -    -        0      0
+8    enet  100008     1500  -      -      -        -    -        0      0
+9    enet  100009     1500  -      -      -        -    -        0      0
+10   enet  100010     1500  -      -      -        -    -        0      0
+11   enet  100011     1500  -      -      -        -    -        0      0
+12   enet  100012     1500  -      -      -        -    -        0      0
+13   enet  100013     1500  -      -      -        -    -        0      0
+14   enet  100014     1500  -      -      -        -    -        0      0
+15   enet  100015     1500  -      -      -        -    -        0      0
+16   enet  100016     1500  -      -      -        -    -        0      0
+17   enet  100017     1500  -      -      -        -    -        0      0
+19   enet  100019     1500  -      -      -        -    -        0      0
+20   enet  100020     1500  -      -      -        -    -        0      0
+21   enet  100021     1500  -      -      -        -    -        0      0
+35   enet  100035     1500  -      -      -        -    -        0      0
+40   enet  100040     1500  -      -      -        -    -        0      0
+41   enet  100041     1500  -      -      -        -    -        0      0
+43   enet  100043     1500  -      -      -        -    -        0      0
+61   enet  100061     1500  -      -      -        -    -        0      0
+62   enet  100062     1500  -      -      -        -    -        0      0
