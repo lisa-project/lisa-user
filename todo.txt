@@ -1,6 +1,4 @@
 Blade:
-* La adaugare vlan: sa adaug in el interfetele trunk pt. care e allowed si
-  cele non-trunk in vlan-ul respectiv
 * La schimbare trunking se sterg mac-urile invatate pe interfata?
 * 2 liste pentru fdb: interfete trunk si non-trunk
 * ce se intampla cand se rade un vlan in care e o interfata non-trunk?

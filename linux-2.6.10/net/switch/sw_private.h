@@ -86,6 +86,16 @@ struct net_switch_vdb_link {
 #define SW_PFL_DISABLED     0x01
 #define SW_PFL_TRUNK		0x02
 
+#define sw_disable_port_rcu(port) do {\
+	(port)->flags |= SW_PFL_DISABLED;\
+	synchronize_kernel();\
+} while(0)
+
+#define sw_enable_port_rcu(port) do {\
+	(port)->flags &= ~SW_PFL_DISABLED;\
+	synchronize_kernel();\
+} while(0)
+
 /* Hash Entry */
 struct net_switch_fdb_entry {
 	struct list_head lh;
@@ -100,8 +110,11 @@ struct skb_extra {
 	int has_vlan_tag;
 };
 
-#define sw_allow_vlan(bitmap, vlan) (bitmap)[(vlan) / 8] &= ~(1 << ((vlan) % 8))
-#define sw_forbid_vlan(bitmap, vlan) (bitmap)[(vlan) / 8] |= (1 << ((vlan) % 8))
+#define sw_allow_vlan(bitmap, vlan) ((bitmap)[(vlan) / 8] &= ~(1 << ((vlan) % 8)))
+#define sw_forbid_vlan(bitmap, vlan) ((bitmap)[(vlan) / 8] |= (1 << ((vlan) % 8)))
+#define sw_forbidden_vlan(bitmap, vlan) ((bitmap)[(vlan) / 8] & (1 << ((vlan) % 8)))
+
+#define sw_port_forbidden_vlan(port, vlan) sw_forbidden_vlan((port)->forbidden_vlans, vlan)
 
 extern struct net_switch sw;
 

@@ -63,7 +63,6 @@ static int sw_addif(struct net_device *dev) {
     port->vlan = 1; /* By default all ports are in vlan 1 */
 	memset(port->forbidden_vlans, 0xff, 512);
 	__sw_allow_default_vlans(port->forbidden_vlans);
-	__dump_bitmap(port->forbidden_vlans);
     sw_vdb_add_port(1, port);
 	list_add_tail_rcu(&port->lh, &sw.ports);
 	rcu_assign_pointer(dev->sw_port, port);
@@ -79,7 +78,6 @@ static int sw_addif(struct net_device *dev) {
 static inline void __sw_add_to_vlans(struct net_switch_port *port) {
 	int n, vlan = 0;
 	unsigned char mask, *bmp = port->forbidden_vlans;
-	//__dump_bitmap(port->forbidden_vlans);
 	for(n = 0; n < 512; n++, bmp++) {
 		for(mask = 1; mask; mask <<= 1, vlan++) {
 			if(*bmp & mask)
@@ -113,15 +111,21 @@ int sw_set_port_trunk(struct net_switch_port *port, int trunk) {
 	if(port->flags & SW_PFL_TRUNK) {
 		if(trunk)
 			return -EINVAL;
+		sw_disable_port_rcu(port);
 		__sw_remove_from_vlans(port);
 		port->flags &= ~SW_PFL_TRUNK;
+		fdb_cleanup_port(port);
 		sw_vdb_add_port(port->vlan, port);
+		sw_enable_port_rcu(port);
 	} else {
 		if(!trunk)
 			return -EINVAL;
+		sw_disable_port_rcu(port);
 		sw_vdb_del_port(port->vlan, port);
 		port->flags |= SW_PFL_TRUNK;
+		fdb_cleanup_port(port);
 		__sw_add_to_vlans(port);
+		sw_enable_port_rcu(port);
 	}
 	return 0;
 }
@@ -399,6 +403,11 @@ static void dump_packet(const struct sk_buff *skb) {
 static int sw_handle_frame(struct net_switch_port *port, struct sk_buff **pskb) {
 	struct sk_buff *skb = *pskb;
 	struct skb_extra skb_e;
+
+	if(port->flags & SW_PFL_DISABLED) {
+		dbg("Received frame on disabled port %s\n", port->dev->name);
+		return 1;
+	}
 
 	if(skb->protocol == ntohs(ETH_P_8021Q)) {
 		skb_e.vlan = ntohs(*(unsigned short *)skb->data) & 4095;

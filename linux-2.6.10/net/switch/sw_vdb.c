@@ -4,6 +4,7 @@
 /* Add a new vlan to the vlan database */
 int sw_vdb_add_vlan(struct net_switch *sw, int vlan, char *name) {
 	struct net_switch_vdb_entry *entry;
+	struct net_switch_port *port;
 
     if(vlan < 1 || vlan > 4095)
         return -ENOMEM;
@@ -19,6 +20,17 @@ int sw_vdb_add_vlan(struct net_switch *sw, int vlan, char *name) {
     INIT_LIST_HEAD(&entry->trunk_ports);
     INIT_LIST_HEAD(&entry->non_trunk_ports);
 	rcu_assign_pointer(sw->vdb[vlan], entry);
+
+	list_for_each_entry(port, &sw->ports, lh) {
+		if(port->flags & SW_PFL_TRUNK) {
+			if(sw_port_forbidden_vlan(port, vlan))
+				continue;
+		} else {
+			if(port->vlan != vlan)
+				continue;
+		}
+		sw_vdb_add_port(vlan, port);
+	}
 
 	return 0;
 }
