@@ -30,7 +30,7 @@ void fdb_cleanup_port(struct net_switch_port *port) {
 			if(entry->port == port)
                 break;
 		}
-        if(&entry->lh != &sw->fdb[i].entries) {
+        if(&entry->lh == &sw->fdb[i].entries) {
             read_unlock(&sw->fdb[i].lock);
             continue;
         }
@@ -40,6 +40,8 @@ void fdb_cleanup_port(struct net_switch_port *port) {
 		list_for_each_entry_safe(entry, tmp, &sw->fdb[i].entries, lh) {
 			if(entry->port == port) {
                 list_del(&entry->lh);
+				dbg("About to free fdb entry at 0x%p for port %s on bucket %d\n",
+						entry, port->dev->name, i);
                 kmem_cache_free(sw_fdb_cache, entry);
             }
 		}
