@@ -163,6 +163,7 @@ static int proc_read_vlan(char *page, char **start,
 			len += sprintf(page+len,"%s ", link->port->dev->name);
 		}
 		list_for_each_entry(link, &sw.vdb[vlan]->non_trunk_ports, lh) {
+			if (!link->port->dev->sw_port) continue;
 			len += sprintf(page+len,"%s ", link->port->dev->name);
 		}
 		len += sprintf(page+len, "\n");
