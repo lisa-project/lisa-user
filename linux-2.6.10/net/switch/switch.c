@@ -65,7 +65,7 @@ static int sw_delif(struct net_device *dev) {
 		return -EINTR;
 	if((port = rcu_dereference(dev->sw_port)) == NULL) {
 		up(&sw.adddelif_mutex);
-		return -ENODEV;
+		return -EINVAL;
 	}
 	__sw_delif(dev, port);
 	up(&sw.adddelif_mutex);
@@ -85,7 +85,7 @@ static int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 	buf[IFNAMSIZ - 1] = '\0';
 
 	if((dev = dev_get_by_name(buf)) == NULL)
-		return -EINVAL;
+		return -ENODEV;
 
 	switch(cmd) {
 	case SIOCSWADDIF:
