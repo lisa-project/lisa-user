@@ -100,12 +100,6 @@ struct skb_extra {
 	int has_vlan_tag;
 };
 
-/* Userspace arg struct for ioctls */
-struct sw_user_arg {
-	int vlan;
-	char *name;
-};
-
 #define sw_allow_vlan(bitmap, vlan) (bitmap)[(vlan) / 8] &= ~(1 << ((vlan) % 8))
 #define sw_forbid_vlan(bitmap, vlan) (bitmap)[(vlan) / 8] |= (1 << ((vlan) % 8))
 

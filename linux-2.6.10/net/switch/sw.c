@@ -304,7 +304,7 @@ static int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 	if(!capable(CAP_NET_ADMIN))
 		return -EPERM;
 
-	if ((err = copy_from_user(&arg, uarg, sizeof(struct sw_user_arg))))
+	if ((err = copy_from_user(&arg, uarg, sizeof(struct net_switch_ioctl_arg))))
 		return -EINVAL;
 
 	if(cmd != SIOCSWCFG)

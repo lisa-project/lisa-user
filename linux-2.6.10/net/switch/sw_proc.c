@@ -34,7 +34,7 @@ static int read_vlan_bitmap(char *page, struct net_switch_port *port, int initia
 	for (;i<SW_VLAN_BMP_NO; i++) {
 		for (; mask < 0x100; mask<<=1, vlan++) {
 			if ((port->forbidden_vlans[i] & mask) && flag) {
-				if (offset > initial_offset) offset+=sprintf(page+count+offset, ", ");
+				if (offset > initial_offset) offset+=sprintf(page+count+offset, ",");
 				if (offset > SCR_RIGHT_MAX) {
 					count+=offset;
 					count+=sprintf(page+count, "\n");
@@ -44,7 +44,7 @@ static int read_vlan_bitmap(char *page, struct net_switch_port *port, int initia
 				if (max - min > 1) 
 					offset += sprintf(page+count+offset, "%d-%d", min, max);
 				else if (max - min == 1) 
-					offset += sprintf(page+count+offset, "%d, %d", min, max);
+					offset += sprintf(page+count+offset, "%d,%d", min, max);
 				else 
 					offset += sprintf(page+count+offset, "%d", min);
 				flag = 0;
@@ -63,7 +63,7 @@ static int read_vlan_bitmap(char *page, struct net_switch_port *port, int initia
 	}
 
 	if (! (port->forbidden_vlans[SW_VLAN_BMP_NO-1] & 0x80)) {
-		if (offset > initial_offset) offset+=sprintf(page+count+offset, ", ");
+		if (offset > initial_offset) offset+=sprintf(page+count+offset, ",");
 		if (offset > SCR_RIGHT_MAX) {
 			count+=offset;
 			count+=sprintf(page+count, "\n");
@@ -73,7 +73,7 @@ static int read_vlan_bitmap(char *page, struct net_switch_port *port, int initia
 		if (max - min > 1) 
 			offset += sprintf(page+count+offset, "%d-%d", min, max);
 		else if (max - min == 1)
-			offset += sprintf(page+count+offset, "%d, %d", min, max);
+			offset += sprintf(page+count+offset, "%d,%d", min, max);
 		else 
 			offset += sprintf(page+count+offset, "%d", min);
 	}
@@ -96,8 +96,8 @@ static int proc_read_ifaces(char *page, char **start,
 	rcu_read_lock();
 	list_for_each_entry(port, &sw.ports, lh) {
 		len+= sprintf(page+len, "%4s  %5d  %7d  ",
-			port->dev->name, port->flags & SW_PFL_TRUNK, 
-			(port->flags & SW_PFL_DISABLED) == 0);
+			port->dev->name, (port->flags & SW_PFL_TRUNK)?1:0, 
+			port->flags & SW_PFL_DISABLED);
 		if (port->flags & SW_PFL_TRUNK) {
 			len += read_vlan_bitmap(page+len, port, 22);
 			len += sprintf(page+len, "\n");

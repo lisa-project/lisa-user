@@ -60,6 +60,7 @@ int main(int argc, char **argv) {
 			return 0;
 		}
 		user_arg.cmd = SWCFG_DELIF;
+		user_arg.name = argv[2];
 		status = ioctl(sock, SIOCSWCFG, &user_arg);
 		if(status)
 			perror("del failed");
