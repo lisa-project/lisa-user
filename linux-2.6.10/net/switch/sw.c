@@ -18,7 +18,7 @@ MODULE_VERSION("0.1");
 
 extern int (*sw_handle_frame_hook)(struct net_switch_port *p, struct sk_buff **pskb);
 
-static struct net_switch sw;
+struct net_switch sw;
 
 static void init_switch(struct net_switch *sw) {
 	INIT_LIST_HEAD(&sw->ports);

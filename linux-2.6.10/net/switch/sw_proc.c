@@ -1,5 +1,6 @@
 #include <linux/proc_fs.h>
 
+#include "sw_private.h"
 #include "sw_debug.h"
 #include "sw_proc.h"
 
@@ -20,9 +21,25 @@ static int proc_read_ifaces(char *page, char **start,
 static int proc_read_mac(char *page, char **start,
 		off_t off, int count,
 		int *eof, void *data) {
-	int len;
+	struct net_switch_fdb_entry *entry;	
+	int len = 0;
+	int i;
 
-	len = sprintf(page, "Hello, this is the mac file\n");
+	len += sprintf(page, "Destination Address  Address Type  VLAN  Destination Port\n"
+		"-------------------  ------------  ----  ----------------\n");
+	for (i=0; i<SW_HASH_SIZE; i++) {
+		read_lock(&sw.fdb[i].lock);
+		list_for_each_entry(entry, &sw.fdb[i].entries, lh) {
+			len+=sprintf(page+len, "%02x%02x.%02x%02x.%02x%02x       "
+				"Dynamic       %4d  %s\n",
+				entry->mac[0], entry->mac[1], entry->mac[2],
+				entry->mac[3], entry->mac[4], entry->mac[5],
+				entry->vlan,
+				entry->port->dev->name
+				);
+		}
+		read_unlock(&sw.fdb[i].lock);
+	}
 		
 	return len;
 }

@@ -89,6 +89,8 @@ struct skb_extra {
 	int has_vlan_tag;
 };
 
+extern struct net_switch sw;
+
 /* sw_fdb.c */
 extern void sw_fdb_init(struct net_switch *sw);
 extern void fdb_cleanup_port(struct net_switch_port *);
