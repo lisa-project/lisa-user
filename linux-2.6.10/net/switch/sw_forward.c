@@ -1,3 +1,20 @@
+/*
+ *    This file is part of Linux Multilayer Switch.
+ *
+ *    Linux Multilayer Switch is free software; you can redistribute it and/or
+ *    modify it under the terms of the GNU General Public License as published
+ *    by the Free Software Foundation; either version 2 of the License, or
+ *    (at your option) any later version.
+ *
+ *    Linux Multilayer Switch is distributed in the hope that it will be 
+ *    useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *    GNU General Public License for more details.
+ *
+ *    You should have received a copy of the GNU General Public License
+ *    along with Linux Multilayer Switch; if not, write to the Free Software
+ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
 
 #include "sw_private.h"
 #include "sw_debug.h"
@@ -67,6 +84,7 @@ static void sw_flood(struct net_switch *sw, struct net_switch_port *in,
 			skb2 = skb_clone(skb, GFP_ATOMIC);
 			skb2->dev = link->port->dev;
 			dbg("flood: before dev_queue_xmit()\n");
+			skb_push(skb2, ETH_HLEN);
 			dev_queue_xmit(skb2);
 		}
 /*		skb2 = skb_copy(skb, GFP_ATOMIC);

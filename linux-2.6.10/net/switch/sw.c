@@ -1,3 +1,21 @@
+/*
+ *    This file is part of Linux Multilayer Switch.
+ *
+ *    Linux Multilayer Switch is free software; you can redistribute it and/or
+ *    modify it under the terms of the GNU General Public License as published
+ *    by the Free Software Foundation; either version 2 of the License, or
+ *    (at your option) any later version.
+ *
+ *    Linux Multilayer Switch is distributed in the hope that it will be 
+ *    useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *    GNU General Public License for more details.
+ *
+ *    You should have received a copy of the GNU General Public License
+ *    along with Linux Multilayer Switch; if not, write to the Free Software
+ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/switch.h>
@@ -387,9 +405,9 @@ static void dump_packet(const struct sk_buff *skb) {
 	int i;
 	
 	printk(KERN_DEBUG "sw_handle_frame on %s: proto=0x%hx "
-			"head=0x%p data=0x%p tail=0x%p end=0x%p\n",
+			"head=0x%p data=0x%p tail=0x%p end=0x%p mac=0x%p\n",
 			skb->dev->name, ntohs(skb->protocol),
-			skb->head, skb->data, skb->tail, skb->end);
+			skb->head, skb->data, skb->tail, skb->end, skb->mac.raw);
 	printk("MAC dump: ");
 	for(i = 0; i < skb->mac_len; i++)
 		printk("0x%x ", skb->mac.raw[i]);
