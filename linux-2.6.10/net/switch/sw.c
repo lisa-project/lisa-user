@@ -275,6 +275,7 @@ static void exit_switch(struct net_switch *sw) {
 	cleanup_switch_proc();
 }
 
+/* FIXME functia e obsolete, dar am pastrat-o ca exemplu pt luat nume din userspace
 static inline int __dev_get_by_name_user(void __user *ptr, struct net_device **pdev) {
 	char buf[IFNAMSIZ];
 	struct net_device *dev;
@@ -289,80 +290,88 @@ static inline int __dev_get_by_name_user(void __user *ptr, struct net_device **p
 
 	return 0;
 }
+*/
 
 /* Handle "deviceless" ioctls. These ioctls are not specific to a certain
    device; they control the switching engine as a whole.
  */
 static int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 	struct net_device *dev;
-	struct sw_user_arg arg;
+	struct net_switch_ioctl_arg arg;
 	unsigned char bitmap[SW_VLAN_BMP_NO];
 	int err = -EINVAL;
 
 	if(!capable(CAP_NET_ADMIN))
 		return -EPERM;
 
+	if ((err = copy_from_user(&arg, uarg, sizeof(struct sw_user_arg))))
+		return -EINVAL;
+
+	if(cmd != SIOCSWCFG)
+		return -EINVAL;
+
 	memset(bitmap, 0xFF, SW_VLAN_BMP_NO);
 
-	switch(cmd) {
-		
-	case SIOCSWADDIF:
-		if((err = __dev_get_by_name_user(uarg, &dev)))
+	/* FIXME zona indicata de arg.name trebuie copiata din userspace */
+	switch(arg.cmd) {
+	case SWCFG_ADDIF:
+		if((dev = dev_get_by_name(arg.name)) == NULL) {
+			err = -ENODEV;
 			break;
+		}
 		err = sw_addif(dev);
 		dev_put(dev);
 		break;
 		
-	case SIOCSWDELIF:
-		if((err = __dev_get_by_name_user(uarg, &dev)))
+	case SWCFG_DELIF:
+		if((dev = dev_get_by_name(arg.name)) == NULL) {
+			err = -ENODEV;
 			break;
+		}
 		err = sw_delif(dev);
 		dev_put(dev);
 		break;
 	
-	case SIOCSWADDVLAN:
-		if ((err = copy_from_user(&arg, uarg, sizeof(struct sw_user_arg))))
-			break;
+	case SWCFG_ADDVLAN:
 		err = sw_vdb_add_vlan(&sw, arg.vlan, arg.name);
 		break;
-	case SIOCSWDELVLAN:
-		if ((err = copy_from_user(&arg, uarg, sizeof(struct sw_user_arg))))
-			break;
+	case SWCFG_DELVLAN:
 		err = sw_vdb_del_vlan(&sw, arg.vlan);
 		break;
-	case SIOCSWRENAMEVLAN:
-		if ((err = copy_from_user(&arg, uarg, sizeof(struct sw_user_arg))))
-			break;
+	case SWCFG_RENAMEVLAN:
 		err = sw_vdb_set_vlan_name(&sw, arg.vlan, arg.name);
 		break;
-	case SIOCSWADDVLANPORT:
-		if ((err = copy_from_user(&arg, uarg, sizeof(struct sw_user_arg))))
+	case SWCFG_ADDVLANPORT:
+		if((dev = dev_get_by_name(arg.name)) == NULL) {
+			err = -ENODEV;
 			break;
-		if((dev = dev_get_by_name(arg.name)) == NULL)
-			break;
+		}
 		sw_allow_vlan(bitmap, arg.vlan);
 		err = sw_add_port_forbidden_vlans(rcu_dereference(dev->sw_port), bitmap);
 		break;
-	case SIOCSWDELVLANPORT:
-		if ((err = copy_from_user(&arg, uarg, sizeof(struct sw_user_arg))))
+	case SWCFG_DELVLANPORT:
+		if((dev = dev_get_by_name(arg.name)) == NULL) {
+			err = -ENODEV;
 			break;
-		if((dev = dev_get_by_name(arg.name)) == NULL)
-			break;
-		sw_forbid_vlan(bitmap, arg.vlan);	
+		}
+		/* use sw_allow_vlan here because sw_del_port_forbidden_vlans
+		   negates the mask
+		 */
+		sw_allow_vlan(bitmap, arg.vlan);	
 		err = sw_del_port_forbidden_vlans(rcu_dereference(dev->sw_port), bitmap);
 		break;
-	case SIOCSWSETTRUNK:
-		if ((err = copy_from_user(&arg, uarg, sizeof(struct sw_user_arg))))
+	case SWCFG_SETTRUNK:
+		if((dev = dev_get_by_name(arg.name)) == NULL) {
+			err = -ENODEV;
 			break;
-		if((dev = dev_get_by_name(arg.name)) == NULL)
-			break;
+		}
 		err = sw_set_port_trunk(rcu_dereference(dev->sw_port), arg.vlan);	
 		break;
-	case SIOCSWSETPORTVLAN:	
-		if ((err = copy_from_user(&arg, uarg, sizeof(struct sw_user_arg))))
+	case SWCFG_SETPORTVLAN:	
+		if((dev = dev_get_by_name(arg.name)) == NULL) {
+			err = -ENODEV;
 			break;
-		if((dev = dev_get_by_name(arg.name)) == NULL)
-			break;
+		}
 		err = sw_set_port_vlan(rcu_dereference(dev->sw_port), arg.vlan);	
 		break;
 	}

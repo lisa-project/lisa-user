@@ -5,6 +5,7 @@
 #include <linux/list.h>
 #include <linux/wait.h>
 #include <linux/spinlock.h>
+#include <linux/net_switch.h>
 #include <asm/semaphore.h>
 #include <asm/atomic.h>
 

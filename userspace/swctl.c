@@ -3,13 +3,12 @@
 #include <stdlib.h>
 
 #include <linux/sockios.h>
+#include <linux/net_switch.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 
 #include <assert.h>
-
-#include "swctl.h"
 
 void usage() {
 	printf("Usage: swctl [command] [args]\n\n"
@@ -29,7 +28,7 @@ void usage() {
 int main(int argc, char **argv) {
 	int sock;
 	int status;
-	struct sw_vdb_arg user_arg;
+	struct net_switch_ioctl_arg user_arg;
 
 	if (argc < 2) {
 		usage();
@@ -47,7 +46,9 @@ int main(int argc, char **argv) {
 			usage();
 			return 0;
 		}
-		status = ioctl(sock, SIOCSWADDIF, argv[2]);
+		user_arg.cmd = SWCFG_ADDIF;
+		user_arg.name = argv[2];
+		status = ioctl(sock, SIOCSWCFG, &user_arg);
 		if(status)
 			perror("add failed");
 		return 0;
@@ -58,7 +59,8 @@ int main(int argc, char **argv) {
 			usage();
 			return 0;
 		}
-		status = ioctl(sock, SIOCSWDELIF, argv[2]);
+		user_arg.cmd = SWCFG_DELIF;
+		status = ioctl(sock, SIOCSWCFG, &user_arg);
 		if(status)
 			perror("del failed");
 		return 0;
@@ -69,9 +71,10 @@ int main(int argc, char **argv) {
 			usage();
 			return 0;
 		}
+		user_arg.cmd = SWCFG_ADDVLAN;
 		user_arg.vlan = atoi(argv[2]);
 		user_arg.name = strdup(argv[3]);
-		status = ioctl(sock, SIOCSWADDVLAN, &user_arg);
+		status = ioctl(sock, SIOCSWCFG, &user_arg);
 		if (status)
 			perror("addvlan failed");
 		return 0;	
@@ -82,9 +85,10 @@ int main(int argc, char **argv) {
 			usage();
 			return 0;
 		}
+		user_arg.cmd = SWCFG_DELVLAN;
 		user_arg.vlan = atoi(argv[2]);
 		user_arg.name = NULL;
-		status = ioctl(sock, SIOCSWDELVLAN, &user_arg);
+		status = ioctl(sock, SIOCSWCFG, &user_arg);
 		if (status)
 			perror("delvlan failed");
 		return 0;
@@ -95,9 +99,10 @@ int main(int argc, char **argv) {
 			usage();
 			return 0;
 		}
+		user_arg.cmd = SWCFG_RENAMEVLAN;
 		user_arg.vlan = atoi(argv[2]);
 		user_arg.name = strdup(argv[3]);
-		status = ioctl(sock, SIOCSWRENAMEVLAN, &user_arg);
+		status = ioctl(sock, SIOCSWCFG, &user_arg);
 		if (status)
 			perror("chvlan failed");
 		return 0;	
@@ -108,9 +113,10 @@ int main(int argc, char **argv) {
 			usage();
 			return 0;
 		}
+		user_arg.cmd = SWCFG_ADDVLANPORT;
 		user_arg.name = strdup(argv[2]);
 		user_arg.vlan = atoi(argv[3]);
-		status = ioctl(sock, SIOCSWADDVLANPORT, &user_arg);
+		status = ioctl(sock, SIOCSWCFG, &user_arg);
 		if (status)
 			perror("addportvlan failed");
 		return 0;	
@@ -121,9 +127,10 @@ int main(int argc, char **argv) {
 			usage();
 			return 0;
 		}
+		user_arg.cmd = SWCFG_DELVLANPORT;
 		user_arg.name = strdup(argv[2]);
 		user_arg.vlan = atoi(argv[3]);
-		status = ioctl(sock, SIOCSWDELVLANPORT, &user_arg);
+		status = ioctl(sock, SIOCSWCFG, &user_arg);
 		if (status)
 			perror("delportvlan failed");
 		return 0;
@@ -134,9 +141,10 @@ int main(int argc, char **argv) {
 			usage();
 			return 0;
 		}
+		user_arg.cmd = SWCFG_SETTRUNK;
 		user_arg.name = strdup(argv[2]);
 		user_arg.vlan = atoi(argv[3]);
-		status = ioctl(sock, SIOCSWSETTRUNK, &user_arg);
+		status = ioctl(sock, SIOCSWCFG, &user_arg);
 		if (status)
 			perror("settrunk failed");
 		return 0;	
@@ -147,9 +155,10 @@ int main(int argc, char **argv) {
 			usage();
 			return 0;
 		}
+		user_arg.cmd = SWCFG_SETPORTVLAN;
 		user_arg.name = strdup(argv[2]);
 		user_arg.vlan = atoi(argv[3]);
-		status = ioctl(sock, SIOCSWSETPORTVLAN, &user_arg);
+		status = ioctl(sock, SIOCSWCFG, &user_arg);
 		if (status)
 			perror("setportvlan failed");
 		return 0;

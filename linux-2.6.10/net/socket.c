@@ -891,15 +891,7 @@ static int sock_ioctl(struct inode *inode, struct file *file, unsigned int cmd,
 				err = vlan_ioctl_hook(argp);
 			up(&vlan_ioctl_mutex);
 			break;
-		case SIOCSWADDIF:
-		case SIOCSWDELIF:
-		case SIOCSWADDVLAN:
-		case SIOCSWDELVLAN:
-		case SIOCSWRENAMEVLAN:
-		case SIOCSWADDVLANPORT:
-		case SIOCSWDELVLANPORT:
-		case SIOCSWSETTRUNK:
-		case SIOCSWSETPORTVLAN:
+		case SIOCSWCFG:
 			err = -ENOPKG;
 			if (!sw_ioctl_hook)
 				request_module("switch");

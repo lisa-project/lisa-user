@@ -123,15 +123,8 @@
 #define SIOCBRDELIF	0x89a3		/* remove interface from bridge */
 
 /* switch calls */
-#define SIOCSWADDIF		0x89b0	/* add interface to switch */
-#define SIOCSWDELIF		0x89b1	/* remove interface from switch */
-#define SIOCSWADDVLAN	0x89b2	/* add vlan to vlan database */
-#define SIOCSWDELVLAN	0x89b3	/* delete vlan from vlan database */
-#define SIOCSWRENAMEVLAN 0x89b4	/* rename vlan from vlan database */
-#define SIOCSWADDVLANPORT 0x89b5 /* add a port to a vlan (trunk mode) */
-#define SIOCSWDELVLANPORT 0x89b6 /* remove a port from a vlan (trunk mode) */
-#define SIOCSWSETTRUNK	0x89b7	/* put a port in trunk mode */
-#define SIOCSWSETPORTVLAN 0x89b8 /* add a port in a vlan (non-trunk mode) */
+
+#define SIOCSWCFG	0x89b0
 
 /* Device private ioctl calls */
 
