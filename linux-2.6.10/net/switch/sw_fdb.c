@@ -24,7 +24,7 @@ void __init sw_fdb_init(struct net_switch *sw) {
 
 	for (i=0; i<SW_HASH_SIZE; i++) {
 		INIT_LIST_HEAD(&sw->fdb[i].entries);
-		rwlock_init(&sw->fdb[i].lock);
+		spin_lock_init(&sw->fdb[i].lock);
 	}
 	sw->fdb_cache = kmem_cache_create("sw_fdb_cache",
 		sizeof(struct net_switch_fdb_entry),
@@ -34,34 +34,45 @@ void __init sw_fdb_init(struct net_switch *sw) {
 }
 
 /* Walk the fdb and delete all entries referencing a given port.
+   
+   This is (should be) always called from user space, so locking is
+   done _with_ softirqs disabled (spin_lock_bh()).
+
+   Writing is done in a transactional manner: first check if we need
+   to change a bucket, and then lock the bucket only if we need to
+   change it. While holding the lock search for the entry again to
+   avoid races.
  */
 void fdb_cleanup_port(struct net_switch_port *port) {
     struct net_switch *sw = port->sw;
     struct net_switch_fdb_entry *entry, *tmp;
+	struct list_head *entry_lh, *tmp_lh;
+	LIST_HEAD(del_list);
     int i;
 	
 	for (i = 0; i < SW_HASH_SIZE; i++) {
-        read_lock(&sw->fdb[i].lock);
-		list_for_each_entry(entry, &sw->fdb[i].entries, lh) {
+		list_for_each_entry_rcu(entry, &sw->fdb[i].entries, lh) {
 			if(entry->port == port)
                 break;
 		}
-        if(&entry->lh == &sw->fdb[i].entries) {
-            read_unlock(&sw->fdb[i].lock);
+        if(&entry->lh == &sw->fdb[i].entries)
             continue;
-        }
-        read_unlock(&sw->fdb[i].lock);
-        /* We found entries; re-lock for write and delete them */
-        write_lock(&sw->fdb[i].lock);
-		list_for_each_entry_safe(entry, tmp, &sw->fdb[i].entries, lh) {
+        /* We found entries; lock for write and delete them */
+        spin_lock_bh(&sw->fdb[i].lock);
+		list_for_each_safe_rcu(entry_lh, tmp_lh, &sw->fdb[i].entries) {
+			entry = list_entry(entry_lh, struct net_switch_fdb_entry, lh);
 			if(entry->port == port) {
-                list_del(&entry->lh);
-				dbg("About to free fdb entry at 0x%p for port %s on bucket %d\n",
-						entry, port->dev->name, i);
-                kmem_cache_free(sw->fdb_cache, entry);
+                list_del_rcu(&entry->lh);
+				list_add(&entry->lh, &del_list);
             }
 		}
-        write_unlock(&sw->fdb[i].lock);
+        spin_unlock_bh(&sw->fdb[i].lock);
+	}
+	synchronize_kernel();
+	list_for_each_entry_safe(entry, tmp, &del_list, lh) {
+		dbg("About to free fdb entry at 0x%p for port %s on bucket %d\n",
+				entry, entry->port->dev->name, i);
+		kmem_cache_free(sw->fdb_cache, entry);
 	}
 }
 
@@ -70,7 +81,7 @@ static inline int __fdb_learn(struct net_switch_bucket *bucket,
 		struct net_switch_fdb_entry **pentry) {
 	struct net_switch_fdb_entry *entry;
 
-	list_for_each_entry(entry, &bucket->entries, lh) {
+	list_for_each_entry_rcu(entry, &bucket->entries, lh) {
 		if(entry->vlan == vlan &&
 				!memcmp(entry->mac, mac, ETH_ALEN)) {
 			*pentry = entry;
@@ -84,7 +95,7 @@ int fdb_lookup(struct net_switch_bucket *bucket, unsigned char *mac,
 		int vlan, struct net_switch_fdb_entry **pentry) {
 	struct net_switch_fdb_entry *entry;	
 
-	list_for_each_entry(entry, &bucket->entries, lh) {
+	list_for_each_entry_rcu(entry, &bucket->entries, lh) {
 		if (!memcmp(entry->mac, mac, ETH_ALEN) && entry->vlan == vlan) {
 			*pentry = entry;
 			return 1;
@@ -93,30 +104,29 @@ int fdb_lookup(struct net_switch_bucket *bucket, unsigned char *mac,
 	return 0;
 }
 
+/* This is always called from softirq context, so we do locking without
+   disabling softirqs
+ */
 void fdb_learn(unsigned char *mac, struct net_switch_port *port, int vlan) {
 	struct net_switch_bucket *bucket = &port->sw->fdb[sw_mac_hash(mac)];
 	struct net_switch_fdb_entry *entry;
 
-	read_lock(&bucket->lock);
 	if(__fdb_learn(bucket, mac, port, vlan, &entry)) {
 		/* we found a matching entry */
 		entry->port = port; /* FIXME this should be atomic ??? */
 		entry->stamp = jiffies;
-		read_unlock(&bucket->lock);
 		return;
 	}
-	read_unlock(&bucket->lock);
 
-	/* No matching entry. This time lock bucket for write, but search for
-	   the entry again, because someone might have added it in the meantime
+	/* No matching entry. This time lock bucket, but search for the entry
+	   again, because someone might have added it in the meantime.
 	 */
-
-	write_lock(&bucket->lock);
+	spin_lock(&bucket->lock);
 	if(__fdb_learn(bucket, mac, port, vlan, &entry)) {
 		/* we found a matching entry */
 		entry->port = port;
 		entry->stamp = jiffies;
-		write_unlock(&bucket->lock);
+		spin_unlock(&bucket->lock);
 		return;
 	}
 
@@ -126,7 +136,7 @@ void fdb_learn(unsigned char *mac, struct net_switch_port *port, int vlan) {
 	*/
 	entry = kmem_cache_alloc(port->sw->fdb_cache, GFP_ATOMIC);
 	if (!entry) {
-		write_unlock(&bucket->lock);
+		spin_unlock(&bucket->lock);
 		dbg("cache out of memory");
 		return;
 	}	
@@ -135,8 +145,9 @@ void fdb_learn(unsigned char *mac, struct net_switch_port *port, int vlan) {
 	entry->vlan = vlan;
 	entry->port = port;
 	entry->stamp = jiffies;
-	list_add_tail(&entry->lh, &bucket->entries);
-	write_unlock(&bucket->lock);
+	/* FIXME smp_wmb() here ?? */
+	list_add_tail_rcu(&entry->lh, &bucket->entries);
+	spin_unlock(&bucket->lock);
 }
 
 void __exit sw_fdb_exit(struct net_switch *sw) {

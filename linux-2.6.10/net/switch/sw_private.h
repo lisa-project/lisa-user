@@ -38,10 +38,10 @@ struct net_switch_bucket {
 	struct list_head entries;
 
 	/* To avoid adding a fdb_entry twice we protect each bucket
-	   with a rwlock. Since each bucket has its own rwlock, this
+	   with a spinlock. Since each bucket has its own lock, this
 	   doesn't lead to a bottleneck.
 	 */
-	rwlock_t lock;
+	spinlock_t lock;
 };
 
 #define SW_MAX_VLAN_NAME	32

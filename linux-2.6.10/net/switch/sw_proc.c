@@ -124,9 +124,9 @@ static int proc_read_mac(char *page, char **start,
 
 	len += sprintf(page, "Destination Address  Address Type  VLAN  Destination Port\n"
 		"-------------------  ------------  ----  ----------------\n");
+	rcu_read_lock();
 	for (i=0; i<SW_HASH_SIZE; i++) {
-		read_lock(&sw.fdb[i].lock);
-		list_for_each_entry(entry, &sw.fdb[i].entries, lh) {
+		list_for_each_entry_rcu(entry, &sw.fdb[i].entries, lh) {
 			len+=sprintf(page+len, "%02x%02x.%02x%02x.%02x%02x       "
 				"Dynamic       %4d  %s\n",
 				entry->mac[0], entry->mac[1], entry->mac[2],
@@ -135,9 +135,9 @@ static int proc_read_mac(char *page, char **start,
 				entry->port->dev->name
 				);
 		}
-		read_unlock(&sw.fdb[i].lock);
 	}
-		
+	rcu_read_unlock();
+	
 	return len;
 }
 
