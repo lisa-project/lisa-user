@@ -38,7 +38,9 @@ __dbg_static inline void __strip_vlan_tag(struct sk_buff *skb, int i) {
 	strip_vlan_tag(skb);
 }
 
-__dbg_static inline void sw_skb_xmit(struct sk_buff *skb, struct net_device *dev) {
+/* FIXME: pkt_type may be PACKET_MULTICAST */
+__dbg_static inline void sw_skb_xmit(struct sk_buff *skb, struct net_device *dev,
+		unsigned char pkt_type) {
 	/* FIXME pachetele de 1500 se busesc
 	if (skb->len > skb->dev->mtu) {
 		dbg("Dropping frame due to len > dev->mtu\n");
@@ -53,6 +55,7 @@ __dbg_static inline void sw_skb_xmit(struct sk_buff *skb, struct net_device *dev
 		return;
 	}
 	/* This is a vif, so we need to call sw_vif_rx() instead */
+	skb->pkt_type = pkt_type;
 	skb->dev = dev;
 	sw_vif_rx(skb);
 	return;
@@ -91,7 +94,7 @@ __dbg_static void __sw_forward(struct net_switch_port *in, struct net_switch_por
 		strip_vlan_tag(skb);
 	}
 	dbg("Forwarding frame to %s\n", out->dev->name);
-	sw_skb_xmit(skb, out->dev);
+	sw_skb_xmit(skb, out->dev, PACKET_HOST);
 }
 
 #ifdef DEBUG
@@ -120,7 +123,7 @@ __dbg_static int __sw_flood(struct net_switch *sw, struct net_switch_port *in,
 		if (prev) {
 			__sw_flood_inc_cloned;
 			skb2 = skb_clone(skb, GFP_ATOMIC);
-			sw_skb_xmit(skb, prev->port->dev);
+			sw_skb_xmit(skb, prev->port->dev, PACKET_BROADCAST);
 			ret++;
 			skb = skb2;
 		}
@@ -138,7 +141,7 @@ __dbg_static int __sw_flood(struct net_switch *sw, struct net_switch_port *in,
 			skb2 = skb_copy(skb, GFP_ATOMIC);
 			f(skb2, vlan);
 			needs_tag_change = 0;
-			sw_skb_xmit(skb, prev->port->dev);
+			sw_skb_xmit(skb, prev->port->dev, PACKET_BROADCAST);
 			ret++;
 			skb = skb2;
 			prev = link;
@@ -158,7 +161,7 @@ __dbg_static int __sw_flood(struct net_switch *sw, struct net_switch_port *in,
 			__sw_flood_inc_cloned;
 			skb2 = skb_clone(skb, GFP_ATOMIC);
 
-			sw_skb_xmit(skb, prev->port->dev);
+			sw_skb_xmit(skb, prev->port->dev, PACKET_BROADCAST);
 			ret++;
 			skb = skb2;
 		}
@@ -173,7 +176,7 @@ __dbg_static int __sw_flood(struct net_switch *sw, struct net_switch_port *in,
 			sw_skb_unshare(&skb);
 			f(skb, vlan);
 		}	
-		sw_skb_xmit(skb, prev->port->dev);
+		sw_skb_xmit(skb, prev->port->dev, PACKET_BROADCAST);
 		ret++;
 	}
 	else {
@@ -227,6 +230,7 @@ int sw_vif_forward(struct sk_buff *skb, struct skb_extra *skb_e) {
 			sw_skb_unshare(&skb);
 			strip_vlan_tag(skb);
 		}
+		skb->pkt_type = PACKET_HOST;
 		skb->dev = dev;
 		sw_vif_rx(skb);
 		return 1;

@@ -91,7 +91,6 @@ __dbg_static int sw_handle_frame(struct net_switch_port *port, struct sk_buff **
 	struct sk_buff *skb = *pskb;
 	struct skb_extra skb_e;
 
-	dump_packet(*pskb);
 	if(port->flags & (SW_PFL_DISABLED | SW_PFL_DROPALL)) {
 		dbg("Received frame on disabled port %s\n", port->dev->name);
 		goto free_skb;
@@ -160,6 +159,129 @@ void sw_disable_port(struct net_switch_port *port) {
 	dbg("Disabled port %s\n", port->dev->name);
 }
 
+#include <asm/system.h>
+#include <linux/module.h>
+#include <linux/types.h>
+#include <linux/kernel.h>
+#include <linux/string.h>
+#include <linux/errno.h>
+#include <linux/config.h>
+
+#include <linux/net.h>
+#include <linux/socket.h>
+#include <linux/sockios.h>
+#include <linux/in.h>
+#include <linux/inet.h>
+#include <linux/netdevice.h>
+#include <linux/etherdevice.h>
+
+#include <net/snmp.h>
+#include <net/ip.h>
+#include <net/protocol.h>
+#include <net/route.h>
+#include <linux/skbuff.h>
+#include <net/sock.h>
+#include <net/arp.h>
+#include <net/icmp.h>
+#include <net/raw.h>
+#include <net/checksum.h>
+#include <linux/netfilter_ipv4.h>
+#include <net/xfrm.h>
+#include <linux/mroute.h>
+#include <linux/netlink.h>
+
+int sw_packet_handler(struct sk_buff *skb, struct net_device *dev,
+		struct packet_type *pt) {
+	struct iphdr *iph;
+
+	//dbg("sw_packet_handler: we've got our packet handler :) \n");
+	if (!strcmp(skb->dev->name, "eth0")) {
+		dev_kfree_skb(skb);
+		return 0;
+	}
+	dump_packet(skb);
+	/* When the interface is in promisc. mode, drop all the crap
+	 * that it receives, do not try to analyse it.
+	 */
+	if (skb->pkt_type == PACKET_OTHERHOST) {
+		dbg("drop1\n");
+		goto drop;
+	}
+
+	IP_INC_STATS_BH(IPSTATS_MIB_INRECEIVES);
+
+	if ((skb = skb_share_check(skb, GFP_ATOMIC)) == NULL) {
+		IP_INC_STATS_BH(IPSTATS_MIB_INDISCARDS);
+		dbg("drop2\n");
+		goto out;
+	}
+
+	if (!pskb_may_pull(skb, sizeof(struct iphdr))) {
+		dbg("drop3\n");
+		goto inhdr_error;
+	}
+
+	iph = skb->nh.iph;
+
+	/*
+	 *	RFC1122: 3.1.2.2 MUST silently discard any IP frame that fails the checksum.
+	 *
+	 *	Is the datagram acceptable?
+	 *
+	 *	1.	Length at least the size of an ip header
+	 *	2.	Version of 4
+	 *	3.	Checksums correctly. [Speed optimisation for later, skip loopback checksums]
+	 *	4.	Doesn't have a bogus length
+	 */
+
+	if (iph->ihl < 5 || iph->version != 4) {
+		dbg("drop4\n");
+		goto inhdr_error;
+	}
+
+	if (!pskb_may_pull(skb, iph->ihl*4)) {
+		dbg("drop5\n");
+		goto inhdr_error;
+	}
+
+	iph = skb->nh.iph;
+
+	if (ip_fast_csum((u8 *)iph, iph->ihl) != 0) {
+		dbg("drop6\n");
+		goto inhdr_error;
+	}
+
+	{
+		__u32 len = ntohs(iph->tot_len); 
+		if (skb->len < len || len < (iph->ihl<<2)) {
+		dbg("drop7\n");
+			goto inhdr_error;
+		}
+
+		/* Our transport medium may have padded the buffer out. Now we know it
+		 * is IP we can trim to the true length of the frame.
+		 * Note this now means skb->len holds ntohs(iph->tot_len).
+		 */
+		if (skb->len > len) {
+			__pskb_trim(skb, len);
+			if (skb->ip_summed == CHECKSUM_HW)
+				skb->ip_summed = CHECKSUM_NONE;
+		}
+	}
+
+	dbg("final drop\n");
+	goto drop;
+
+inhdr_error:
+	IP_INC_STATS_BH(IPSTATS_MIB_INHDRERRORS);
+drop:
+        kfree_skb(skb);
+out:
+        return NET_RX_DROP;
+}
+
+struct packet_type  *sw_pt;
+
 /* Initialize everything associated with a switch */
 static void init_switch(struct net_switch *sw) {
 	int i;
@@ -174,6 +296,12 @@ static void init_switch(struct net_switch *sw) {
 	sw_fdb_init(sw);
 	init_switch_proc();
 	sw_vdb_init(sw);
+	dbg("Registering our packet handler\n");
+	sw_pt = kmalloc(sizeof(struct packet_type), GFP_ATOMIC);
+	memset(sw_pt, 0, sizeof(struct packet_type));
+	sw_pt->type = htons(ETH_P_IP);
+	sw_pt->func = sw_packet_handler;
+	dev_add_pack(sw_pt);
 }
 
 /* Free everything associated with a switch */
@@ -189,6 +317,7 @@ static void exit_switch(struct net_switch *sw) {
 	sw_fdb_exit(sw);
 	sw_vdb_exit(sw);
 	sw_vif_cleanup(sw);
+	dev_remove_pack(sw_pt);
 	cleanup_switch_proc();
 }
 
@@ -212,6 +341,7 @@ static void switch_exit(void) {
 
 #ifdef DEBUG
 EXPORT_SYMBOL(sw_handle_frame);
+EXPORT_SYMBOL(sw_packet_handler);
 #endif
 
 module_init(switch_init);
