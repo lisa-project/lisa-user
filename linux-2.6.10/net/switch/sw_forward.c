@@ -94,9 +94,21 @@ __dbg_static void __sw_forward(struct net_switch_port *in, struct net_switch_por
 	sw_skb_xmit(skb, out->dev);
 }
 
+#ifdef DEBUG
+#define __sw_flood_inc_cloned cloned++
+#define __sw_flood_inc_copied copied++
+#define __sw_flood_inc_unshared unshared++
+#else
+#define __sw_flood_inc_cloned
+#define __sw_flood_inc_copied
+#define __sw_flood_inc_unshared
+#endif
 __dbg_static int __sw_flood(struct net_switch *sw, struct net_switch_port *in,
 	struct sk_buff *skb, int vlan, void (*f)(struct sk_buff *, int),
 	struct list_head *lh1, struct list_head *lh2) {
+#ifdef DEBUG
+	int cloned = 0, copied = 0, unshared = 0;
+#endif
 	
 	struct net_switch_vdb_link *link, *prev=NULL, *oldprev;
 	struct sk_buff *skb2;
@@ -106,6 +118,7 @@ __dbg_static int __sw_flood(struct net_switch *sw, struct net_switch_port *in,
 	list_for_each_entry_rcu(link, lh1, lh) {
 		if (link->port == in) continue;
 		if (prev) {
+			__sw_flood_inc_cloned;
 			skb2 = skb_clone(skb, GFP_ATOMIC);
 			sw_skb_xmit(skb, prev->port->dev);
 			ret++;
@@ -121,6 +134,7 @@ __dbg_static int __sw_flood(struct net_switch *sw, struct net_switch_port *in,
 			   in lh2; make a copy of the skb, then send the last skb from
 			   lh1
 			 */
+			__sw_flood_inc_copied;
 			skb2 = skb_copy(skb, GFP_ATOMIC);
 			f(skb2, vlan);
 			needs_tag_change = 0;
@@ -136,10 +150,12 @@ __dbg_static int __sw_flood(struct net_switch *sw, struct net_switch_port *in,
 				   make sure skb is an exclusive copy and apply the tag
 				   change to it before it gets cloned and sent
 				 */
+				__sw_flood_inc_unshared;
 				sw_skb_unshare(&skb);
 				f(skb, vlan);
 				needs_tag_change = 0;
 			}
+			__sw_flood_inc_cloned;
 			skb2 = skb_clone(skb, GFP_ATOMIC);
 
 			sw_skb_xmit(skb, prev->port->dev);
@@ -153,6 +169,7 @@ __dbg_static int __sw_flood(struct net_switch *sw, struct net_switch_port *in,
 			/* lh2 is not empty, so the remaining element is from lh2,
 			   but the tag change was not applied
 			 */
+			__sw_flood_inc_unshared;
 			sw_skb_unshare(&skb);
 			f(skb, vlan);
 		}	
@@ -163,8 +180,13 @@ __dbg_static int __sw_flood(struct net_switch *sw, struct net_switch_port *in,
 		dbg("flood: nothing to flood, freeing skb.\n");
 		dev_kfree_skb(skb);
 	}
+	dbg("__sw_flood: cloned=%d copied=%d unshared=%d\n", cloned, copied,
+			unshared);
 	return ret;
 }
+#undef __sw_flood_inc_cloned
+#undef __sw_flood_inc_copied
+#undef __sw_flood_inc_unshared
 
 /* Flood frame to all necessary ports */
 __dbg_static int sw_flood(struct net_switch *sw, struct net_switch_port *in,

@@ -91,6 +91,7 @@ __dbg_static int sw_handle_frame(struct net_switch_port *port, struct sk_buff **
 	struct sk_buff *skb = *pskb;
 	struct skb_extra skb_e;
 
+	dump_packet(*pskb);
 	if(port->flags & (SW_PFL_DISABLED | SW_PFL_DROPALL)) {
 		dbg("Received frame on disabled port %s\n", port->dev->name);
 		goto free_skb;
