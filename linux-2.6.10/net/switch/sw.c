@@ -7,7 +7,7 @@
 
 #include "sw_private.h"
 #include "sw_debug.h"
-#include "fdb.h"
+#include "sw_fdb.h"
 
 MODULE_DESCRIPTION("Cool stuff");
 MODULE_AUTHOR("us");
