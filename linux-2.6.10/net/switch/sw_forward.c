@@ -20,14 +20,16 @@
 #include "sw_debug.h"
 
 static inline void add_vlan_tag(struct sk_buff *skb, int vlan) {
+	memmove(skb->mac.raw-VLAN_TAG_BYTES, skb->mac.raw, 12);	
+	skb->mac.raw -= VLAN_TAG_BYTES;
 	skb_push(skb, VLAN_TAG_BYTES);
 	*(short *)skb->data = htons((short)vlan);
-	*(short *)(skb->data + 2) = *(short *)(skb->mac.raw + skb->mac_len - 2);
 	*(short *)(skb->mac.raw + skb->mac_len - 2) = htons(ETH_P_8021Q);
 }
 
 static inline void strip_vlan_tag(struct sk_buff *skb) {
-	*(short *)(skb->mac.raw + skb->mac_len - 2) = *(short *)(skb->data + 2);
+	memmove(skb->mac.raw+VLAN_TAG_BYTES, skb->mac.raw, 12);
+	skb->mac.raw+=VLAN_TAG_BYTES;
 	skb_pull(skb, VLAN_TAG_BYTES);
 }
 
@@ -65,6 +67,7 @@ static void sw_flood(struct net_switch *sw, struct net_switch_port *in,
 			if (link->port == in) continue;
 			skb2 = skb_clone(skb, GFP_ATOMIC);
 			skb2->dev = link->port->dev;
+			skb_push(skb2, ETH_HLEN);
 			dev_queue_xmit(skb2);
 		}
 		skb2 = skb_copy(skb, GFP_ATOMIC);
@@ -73,6 +76,7 @@ static void sw_flood(struct net_switch *sw, struct net_switch_port *in,
 			if (link->port == in) continue;
 			skb3 = skb_clone(skb2, GFP_ATOMIC);
 			skb3->dev = link->port->dev;
+			skb_push(skb3, ETH_HLEN);
 			dev_queue_xmit(skb3);
 		}
 	} else { 
@@ -94,6 +98,7 @@ static void sw_flood(struct net_switch *sw, struct net_switch_port *in,
 			if (link->port == in) continue;
 			skb3 = skb_clone(skb2, GFP_ATOMIC);
 			skb3->dev = link->port->dev;
+			skb_push(skb3, ETH_HLEN);
 			dev_queue_xmit(skb3);
 		}
 	}

@@ -159,10 +159,6 @@ extern int fdb_lookup(struct net_switch_bucket *bucket, unsigned char *mac,
 	int vlan, struct net_switch_fdb_entry **pentry);
 extern void sw_fdb_exit(struct net_switch *sw);
 
-/* sw_proc.c */
-extern int init_switch_proc(void);
-extern void cleanup_switch_proc(void);
-
 /* sw_vdb.c */
 extern int sw_vdb_add_vlan(struct net_switch *sw, int vlan, char *name);
 extern int sw_vdb_del_vlan(struct net_switch *sw, int vlan);
@@ -171,6 +167,14 @@ extern void __init sw_vdb_init(struct net_switch *sw);
 extern void __exit sw_vdb_exit(struct net_switch *sw);
 extern int sw_vdb_add_port(int vlan, struct net_switch_port *port);
 extern int sw_vdb_del_port(int vlan, struct net_switch_port *port);
+
+/* sw_proc.c */
+extern int init_switch_proc(void);
+extern void cleanup_switch_proc(void);
+
+/* sw_ioctl.c */
+extern int sw_delif(struct net_device *dev);
+extern int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg);
 
 #define VLAN_TAG_BYTES 4
 
