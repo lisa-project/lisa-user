@@ -7,6 +7,23 @@
 #include <asm/semaphore.h>
 #include <asm/atomic.h>
 
+
+#define SW_HASH_SIZE_BITS 12
+#define SW_HASH_SIZE (1 << SW_HASH_SIZE_BITS)
+
+/* Hash bucket */
+struct net_switch_bucket {
+	/*
+		List of fdb_entries
+	*/
+	struct list_head head;
+	/*
+		Mutex for operations on the list
+		associated with this bucket.
+	*/
+	struct semaphore mutex;
+};
+
 struct net_switch {
 	/* List of all ports in the switch */
 	struct list_head ports;
@@ -16,6 +33,11 @@ struct net_switch {
 	   other things.
 	 */
 	struct semaphore adddelif_mutex;
+	
+	/*
+		Switch forwarding database (hashtable)
+	*/
+	struct net_switch_bucket hash[SW_HASH_SIZE];
 };
 
 struct net_switch_port {
@@ -28,6 +50,14 @@ struct net_switch_port {
 	/* Ports are freed with an RCU callback
 	 */
 	struct rcu_head rcu;
+};
+
+/* Hash Entry */
+struct net_switch_fdb_entry {
+	unsigned char mac[6];
+	unsigned char vlan_id[2];	
+	struct net_switch_port *port;
+	struct list_head next;
 };
 
 #endif
