@@ -1,5 +1,5 @@
 obj-$(CONFIG_SWITCH) += switch.o
-switch-objs := module.o
+switch-objs := module.o fdb.o
 
 EXTRA_CFLAGS += -DDEBUG
 

@@ -25,11 +25,6 @@ struct net_switch_port {
 	/* Physical device associated with this port */
 	struct net_device *dev;
 
-	/* When deleting interfaces, we have to wait until everybody's done
-	   with the corresponding port.
-	 */
-	wait_queue_head_t cleanup_q;
-
 	/* Ports are freed with an RCU callback
 	 */
 	struct rcu_head rcu;

@@ -7,6 +7,7 @@
 
 #include "sw_private.h"
 #include "sw_debug.h"
+#include "fdb.h"
 
 MODULE_DESCRIPTION("Cool stuff");
 MODULE_AUTHOR("us");
@@ -22,6 +23,8 @@ static void init_switch(struct net_switch *sw) {
 	init_MUTEX(&sw->adddelif_mutex);
 }
 
+/* Safely add an interface to the switch
+ */
 static int sw_addif(struct net_device *dev) {
 	struct net_switch_port *port;
 	if(down_interruptible(&sw.adddelif_mutex))
@@ -35,7 +38,6 @@ static int sw_addif(struct net_device *dev) {
 	}
 	if((port = kmalloc(sizeof(struct net_switch_port), GFP_KERNEL)) == NULL)
 		return -ENOMEM;
-	init_waitqueue_head(&port->cleanup_q);
 	port->dev = dev;
 	list_add_tail_rcu(&port->lh, &sw.ports);
 	rcu_assign_pointer(dev->sw_port, port);
@@ -46,25 +48,10 @@ static int sw_addif(struct net_device *dev) {
 	return 0;
 }
 
-void sw_port_cleanup(struct rcu_head *head) {
-	struct net_switch_port *port =
-		container_of(head, struct net_switch_port, rcu);
-
-	/* This is scheduled with RCU, so we know for sure that no instance
-	   of sw_handle_frame that processes incoming packets on this port
-	   is running (or will be running anymore).
-
-	   This is good, because it means that nobody tries to add entries 
-	   to the fdb that reference this port.
-
-	   We only need to walk the fdb and delete all entries that reference
-	   this port.
-	 */
-
-	/* Finally wake up the calling process to complete port deletion */
-	wake_up(&port->cleanup_q);
-}
-
+/* Remove an interface from the switch. Appropriate locks must be held
+   from outside to ensure that nobody tries to remove the same interface
+   at the same time.
+ */
 static void __sw_delif(struct net_device *dev, struct net_switch_port *port) {
 	/* First disable promiscuous mode, so that there be less chances to
 	   still receive packets on this port
@@ -75,18 +62,27 @@ static void __sw_delif(struct net_device *dev, struct net_switch_port *port) {
 	 */
 	rcu_assign_pointer(dev->sw_port, NULL);
 	list_del_rcu(&port->lh);
-	/* schedule cleanup _after_ everybody sees that dev->sw_port is NULL */
-	call_rcu(&port->rcu, sw_port_cleanup);
-	/* wait until the cleanup routine makes sure nobody uses the port anymore
-	   and wakes us up
+	/* dev->sw_port is now NULL, so no instance of sw_handle_frame() will
+	   process incoming packets on this port.
+
+	   However, at the time we changed the pointer there might have been
+	   instances of sw_handle_frame() that were processing incoming
+	   packets on this port. Frame processing can add entries to the fdb
+	   that reference this port, so we have to wait for all running
+	   instances to finish.
 	 */
-	interruptible_sleep_on(&port->cleanup_q);
+	synchronize_kernel();
+	/* Now nobody can add references to this port, so we can safely clean
+	   up all existing references and finally free the port memory
+	 */
+	fdb_cleanup_port(port);
 	/* free port memory and release interface */
 	kfree(port);
 	dev_put(dev);
 	dbg("Removed device %s from switch\n", dev->name);
 }
 
+/* Safely remove an interface from the switch */
 static int sw_delif(struct net_device *dev) {
 	struct net_switch_port *port;
 	if(down_interruptible(&sw.adddelif_mutex))
@@ -100,6 +96,9 @@ static int sw_delif(struct net_device *dev) {
 	return 0;
 }
 
+/* Handle "deviceless" ioctls. These ioctls are not specific to a certain
+   device; they control the switching engine as a whole.
+ */
 static int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 	struct net_device *dev;
 	char buf[IFNAMSIZ];
@@ -128,6 +127,7 @@ static int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 	return -EINVAL;
 }
 
+/* Handle a frame received on a physical interface */
 static int sw_handle_frame(struct net_switch_port *port, struct sk_buff **pskb) {
 	struct sk_buff *skb = *pskb;
 	int i;
@@ -146,6 +146,7 @@ static int sw_handle_frame(struct net_switch_port *port, struct sk_buff **pskb) 
 	return 0;
 }
 
+/* Module initialization */
 static int switch_init(void) {
 	init_switch(&sw);
 	swioctl_set(sw_deviceless_ioctl);
@@ -154,6 +155,7 @@ static int switch_init(void) {
 	return 0;
 }
 
+/* Module cleanup */
 static void switch_exit(void) {
 	struct list_head *pos, *n;
 	struct net_switch_port *port;
