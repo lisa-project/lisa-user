@@ -16,7 +16,8 @@ int sw_vdb_add_vlan(struct net_switch *sw, int vlan, char *name) {
     }
 	strncpy(entry->name, name, SW_MAX_VLAN_NAME);
     entry->name[SW_MAX_VLAN_NAME - 1] = '\0';
-    INIT_LIST_HEAD(&entry->ports);
+    INIT_LIST_HEAD(&entry->trunk_ports);
+    INIT_LIST_HEAD(&entry->non_trunk_ports);
 	rcu_assign_pointer(sw->vdb[vlan], entry);
 
 	return 0;
@@ -33,7 +34,10 @@ int sw_vdb_del_vlan(struct net_switch *sw, int vlan) {
 		return -ENOENT;
 	rcu_assign_pointer(sw->vdb[vlan], NULL);
 	synchronize_kernel();
-	list_for_each_entry_safe(link, tmp, &entry->ports, lh) {
+	list_for_each_entry_safe(link, tmp, &entry->trunk_ports, lh) {
+		kmem_cache_free(sw->vdb_cache, link);
+	}
+	list_for_each_entry_safe(link, tmp, &entry->non_trunk_ports, lh) {
 		kmem_cache_free(sw->vdb_cache, link);
 	}
 	kfree(entry);
@@ -56,7 +60,8 @@ int sw_vdb_set_vlan_name(struct net_switch *sw, int vlan, char *name) {
     }
 	strncpy(entry->name, name, SW_MAX_VLAN_NAME);
     entry->name[SW_MAX_VLAN_NAME - 1] = '\0';
-	entry->ports = old->ports;
+	entry->trunk_ports = old->trunk_ports;
+	entry->non_trunk_ports = old->non_trunk_ports;
 	rcu_assign_pointer(sw->vdb[vlan], entry);
 	synchronize_kernel();
 	kfree(old);
@@ -114,7 +119,11 @@ int sw_vdb_add_port(int vlan, struct net_switch_port *port) {
 	}
 	link->port = port;
 	smp_wmb();
-	list_add_tail_rcu(&link->lh, &sw->vdb[vlan]->ports);
+	if(port->flags & SW_PFL_TRUNK) {
+		list_add_tail_rcu(&link->lh, &sw->vdb[vlan]->trunk_ports);
+	} else {
+		list_add_tail_rcu(&link->lh, &sw->vdb[vlan]->non_trunk_ports);
+	}
 	dbg("vdb: Added port %s to vlan %d\n", port->dev->name, vlan);
 
 	return 0;
@@ -123,6 +132,7 @@ int sw_vdb_add_port(int vlan, struct net_switch_port *port) {
 /* Remove a port from a vlan */
 int sw_vdb_del_port(int vlan, struct net_switch_port *port) {
 	struct net_switch_vdb_link *link;
+	struct list_head *lh;
 
     if(vlan < 1 || vlan > 4095)
         return -EINVAL;
@@ -133,7 +143,10 @@ int sw_vdb_del_port(int vlan, struct net_switch_port *port) {
 	if(!port->sw->vdb[vlan])
 		return -ENOENT;
 		
-	list_for_each_entry(link, &port->sw->vdb[vlan]->ports, lh) {
+	lh = (port->flags & SW_PFL_TRUNK) ?
+		&port->sw->vdb[vlan]->trunk_ports :
+		&port->sw->vdb[vlan]->non_trunk_ports;
+	list_for_each_entry(link, lh, lh) {
 		if(link->port == port) {
 			list_del_rcu(&link->lh);
 			synchronize_kernel();

@@ -29,7 +29,8 @@ struct net_switch_bucket {
 
 struct net_switch_vdb_entry {
 	char name[SW_MAX_VLAN_NAME];
-	struct list_head ports;
+	struct list_head trunk_ports;
+	struct list_head non_trunk_ports;
 };
 
 #define SW_MAX_VLANS 4096
@@ -104,8 +105,8 @@ struct sw_user_arg {
 	char *name;
 };
 
-#define sw_allow_vlan(bitmap, vlan) (bitmap)[(vlan) / 8] |= (1 << ((vlan) % 8))
-#define sw_forbid_vlan(bitmap, vlan) (bitmap)[(vlan) / 8] &= ~(1 << ((vlan) % 8))
+#define sw_allow_vlan(bitmap, vlan) (bitmap)[(vlan) / 8] &= ~(1 << ((vlan) % 8))
+#define sw_forbid_vlan(bitmap, vlan) (bitmap)[(vlan) / 8] |= (1 << ((vlan) % 8))
 
 extern struct net_switch sw;
 
