@@ -52,18 +52,33 @@ destroy:
 	dev_kfree_skb(skb);
 }
 
+/* if the packet data is used by someone else
+   we make a copy before altering it 
+ */
+static void sw_skb_unshare(struct sk_buff **skb) {
+	struct sk_buff *skb2;
+
+	if (atomic_read(&skb_shinfo(*skb)->dataref)) {
+		skb2 = skb_copy(*skb, GFP_ATOMIC);
+		dev_kfree_skb(*skb);
+		*skb = skb2;
+	}
+}
+
 /* Forward frame from in port to out port,
    adding/removing vlan tag if necessary.
-*/
+ */
 static void __sw_forward(struct net_switch_port *in, struct net_switch_port *out, 
 	struct sk_buff *skb, struct skb_extra *skb_e) {
 
 	if (out->flags & SW_PFL_TRUNK && !(in->flags & SW_PFL_TRUNK)) {
 		/* must add vlan tag (vlan = in->vlan) */
+		sw_skb_unshare(&skb);
 		add_vlan_tag(skb, in->vlan);
 	}
 	else if (!(out->flags & SW_PFL_TRUNK) && in->flags & SW_PFL_TRUNK) {
 		/* must remove vlan tag */
+		sw_skb_unshare(&skb);
 		strip_vlan_tag(skb);
 	}
 	dbg("Forwarding frame to %s\n", out->dev->name);
@@ -92,7 +107,13 @@ static void __sw_flood(struct net_switch *sw, struct net_switch_port *in,
 		if (link->port == in) continue;
 		if (prev) {
 			if (first) {
-				skb2 = oldprev? skb_copy(skb, GFP_ATOMIC): skb;
+				if (oldprev) {
+					skb2 = skb_copy(skb, GFP_ATOMIC);
+				}
+				else {
+					sw_skb_unshare(&skb);
+					skb2 = skb;
+				}
 				f(skb2, vlan);
 				first = 0;
 			}
@@ -105,7 +126,13 @@ static void __sw_flood(struct net_switch *sw, struct net_switch_port *in,
 	}
 	if (prev) {
 		if (first) {
-			skb2 = oldprev? skb_copy(skb, GFP_ATOMIC): skb;
+			if (oldprev) {
+				skb2 = skb_copy(skb, GFP_ATOMIC);
+			}
+			else {
+				sw_skb_unshare(&skb);
+				skb2 = skb;
+			}
 			f(skb2, vlan);
 		}
 		else skb2 = skb_clone(skb, GFP_ATOMIC);
@@ -124,7 +151,8 @@ static void sw_flood(struct net_switch *sw, struct net_switch_port *in,
 
 	/* if source port is in trunk mode we first send the 
 	   socket buffer to all trunk ports in that vlan then
-	   strip vlan tag and send to all non-trunk ports in that vlan */
+	   strip vlan tag and send to all non-trunk ports in that vlan 
+	 */
 	if (in->flags & SW_PFL_TRUNK) {
 		__sw_flood(sw, in, skb, vlan, __strip_vlan_tag,
 				&sw->vdb[vlan]->trunk_ports,
@@ -146,6 +174,7 @@ int sw_forward(struct net_switch *sw, struct net_switch_port *in,
 	struct net_switch_bucket *bucket = &sw->fdb[sw_mac_hash(skb->mac.raw)];
 	struct net_switch_fdb_entry *out;
 
+	dbg("sw_forward: usage count %d\n", atomic_read(&skb_shinfo(skb)->dataref) != 1);
 	rcu_read_lock();
 	if (fdb_lookup(bucket, skb->mac.raw, skb_e->vlan, &out)) {
 		/* fdb entry found */

@@ -118,6 +118,7 @@ struct net_switch_vdb_link {
 struct net_switch_fdb_entry {
 	struct list_head lh;
 	unsigned char mac[ETH_ALEN];
+	int is_static;
 	int vlan;
 	struct net_switch_port *port;
 	unsigned long stamp;
