@@ -3,7 +3,9 @@
 
 struct net_device *sw_vif_find(struct net_switch *sw, int vlan) {
 	struct net_switch_vif_list *elem;
+	dbg("sw_vif_find called (vlan=%d)\n", vlan);
 	list_for_each_entry(elem, &sw->vif, lh) {
+		dbg("sw_vif_find: elem at %p, vlan=%d\n", elem, elem->vlan);
 		if(elem->vlan == vlan)
 			return elem->dev;
 	}
