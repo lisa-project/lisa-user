@@ -126,17 +126,9 @@ static void __sw_flood(struct net_switch *sw, struct net_switch_port *in,
 	}
 	if (prev) {
 		if (first) {
-			if (oldprev) {
-				skb2 = skb_copy(skb, GFP_ATOMIC);
-			}
-			else {
-				sw_skb_unshare(&skb);
-				skb2 = skb;
-			}
-			f(skb2, vlan);
-		}
-		else skb2 = skb_clone(skb, GFP_ATOMIC);
-
+			sw_skb_unshare(&skb);
+			f(skb, vlan);
+		}	
 		sw_skb_xmit(skb, prev->port->dev);
 	}
 	else {
