@@ -39,13 +39,22 @@ static inline void __strip_vlan_tag(struct sk_buff *skb, int i) {
 }
 
 static inline void sw_skb_xmit(struct sk_buff *skb, struct net_device *dev) {
+	/* FIXME pachetele de 1500 se busesc
 	if (skb->len > skb->dev->mtu) {
 		dbg("Dropping frame due to len > dev->mtu\n");
 		goto destroy;
 	}
+	*/
+	if (dev->sw_port) {
+		/* This is a physical port (not a bogus one i.e. vif) */
+		skb->dev = dev;
+		skb_push(skb, ETH_HLEN);
+		dev_queue_xmit(skb);
+		return;
+	}
+	/* This is a vif, so we need to call netif_receive_skb() instead */
 	skb->dev = dev;
-	skb_push(skb, ETH_HLEN);
-	dev_queue_xmit(skb);
+	netif_receive_skb(skb);
 	return;
 	
 destroy:	
@@ -180,6 +189,28 @@ static int sw_flood(struct net_switch *sw, struct net_switch_port *in,
 	}
 }	
 
+int sw_vif_forward(struct sk_buff *skb, struct skb_extra *skb_e) {
+	struct net_switch *sw = skb->dev->sw_port->sw;
+	unsigned char *vif_mac = sw->vif_mac;
+	struct net_device *dev;
+	int vlan;
+
+	if(memcmp(skb->mac.raw, vif_mac, ETH_ALEN - 2))
+		return 0;
+	vlan = (vif_mac[ETH_ALEN - 2] ^ skb->mac.raw[ETH_ALEN - 2]) * 0x100 +
+		(vif_mac[ETH_ALEN - 1] ^ skb->mac.raw[ETH_ALEN - 1]);
+	if(vlan == skb_e->vlan && (dev = sw_vif_find(sw, vlan))) {
+		if(skb_e->has_vlan_tag) {
+			sw_skb_unshare(&skb);
+			strip_vlan_tag(skb);
+		}
+		skb->dev = dev;
+		netif_receive_skb(skb);
+		return 1;
+	}
+	return 0;
+}
+
 /* Forwarding decision
    Returns the number of ports the packet was forwarded to.
  */
@@ -191,6 +222,8 @@ int sw_forward(struct net_switch_port *in,
 	int ret = 1;
 
 	dbg("sw_forward: usage count %d\n", atomic_read(&skb_shinfo(skb)->dataref) != 1);
+	if (sw_vif_forward(skb, skb_e))
+		return ret;
 	rcu_read_lock();
 	if (fdb_lookup(bucket, skb->mac.raw, skb_e->vlan, &out)) {
 		/* fdb entry found */

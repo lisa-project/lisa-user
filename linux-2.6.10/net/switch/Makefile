@@ -12,11 +12,14 @@ switch-objs := sw.o sw_fdb.o sw_proc.o sw_vdb.o sw_forward.o sw_ioctl.o sw_vif.o
 # 2			Shutdown the interface
 CFGFLAGS += -DNET_SWITCH_NOVLANFORIF=1
 
+# Enable debugging
+CFGFLAGS += -DDEBUG -q
+
 ##
 # End of config section
 ##
 
-EXTRA_CFLAGS += $(CFGFLAGS) -DDEBUG -g
+EXTRA_CFLAGS += $(CFGFLAGS)
 
 # KDIR := /lib/modules/$(KVER)/build
 KDIR := ../..

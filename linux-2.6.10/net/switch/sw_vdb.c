@@ -23,6 +23,7 @@
 int sw_vdb_add_vlan(struct net_switch *sw, int vlan, char *name) {
 	struct net_switch_vdb_entry *entry;
 	struct net_switch_port *port;
+	struct net_device *dev;
 
     if(vlan < 1 || vlan > 4095)
         return -EINVAL;
@@ -49,6 +50,11 @@ int sw_vdb_add_vlan(struct net_switch *sw, int vlan, char *name) {
 			sw_enable_port(port);
 		}
 		sw_vdb_add_port(vlan, port);
+	}
+
+	if((dev = sw_vif_find(sw, vlan))) {
+		struct net_switch_vif_priv *priv = netdev_priv(dev);
+		sw_vdb_add_port(vlan, &priv->bogo_port);
 	}
 
 	return 0;

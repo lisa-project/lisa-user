@@ -289,20 +289,20 @@ static int sw_set_port_vlan(struct net_switch_port *port, int vlan) {
 		sw_set_port_flag_rcu(port, SW_PFL_DROPALL);
 		sw_vdb_del_port(port->vlan, port);
 		status = sw_vdb_add_port(vlan, port);
-#if NET_SWITCH_NOVLANFORIF == 1
-		if(status)
-			status = __add_vlan_default(port->sw, vlan);
 		if(status) {
-			port->vlan = vlan;
-			smp_wmb();
-			sw_res_port_flag(port, SW_PFL_DROPALL);
-			return status;
-		}
-		status = sw_vdb_add_port(vlan, port);
+#if NET_SWITCH_NOVLANFORIF == 1
+			status = __add_vlan_default(port->sw, vlan);
+			if(status) {
+				port->vlan = vlan;
+				smp_wmb();
+				sw_res_port_flag(port, SW_PFL_DROPALL);
+				return status;
+			}
+			status = sw_vdb_add_port(vlan, port);
 #elif NET_SWITCH_NOVLANFORIF == 2
-		if(status)
 			sw_disable_port(port);
 #endif
+		}
 		port->vlan = vlan;
 		smp_wmb();
 		sw_res_port_flag(port, SW_PFL_DROPALL);

@@ -104,7 +104,8 @@ int sw_vif_addif(struct net_switch *sw, int vlan) {
 	else {
 		dbg("vif: successfully registered netdevice %s\n", dev->name);
 	}		
-	sw_vdb_add_vlan_default(sw, vlan);
+	if(sw_vdb_add_vlan_default(sw, vlan))
+		sw_vdb_add_port(vlan, &priv->bogo_port);
 	
 	return 0;
 }
@@ -114,8 +115,9 @@ static void __vif_delif(struct net_device *dev) {
 
 	priv = netdev_priv(dev);
 	list_del_rcu(&priv->lh);
-	unregister_netdev(dev);
+	sw_vdb_del_port(priv->bogo_port.vlan, &priv->bogo_port);
 	synchronize_kernel();
+	unregister_netdev(dev);
 	free_netdev(dev);
 }
 
