@@ -102,7 +102,7 @@ struct net_switch_port {
 	/* Bitmap of forbidden vlans for trunk ports.
 	   512 * 8 bits = 4096 bits => 4096 vlans
 	 */
-	unsigned char forbidden_vlans[SW_VLAN_BMP_NO];
+	unsigned char *forbidden_vlans;
 };
 
 struct net_switch_vdb_link {
@@ -111,10 +111,9 @@ struct net_switch_vdb_link {
 };
 
 struct net_switch_vif_priv {
-	struct net_switch *sw;
-	struct net_device *dev;
-	int vlan;
 	struct list_head lh;
+	struct net_device_stats stats;
+	struct net_switch_port bogo_port;
 };
 
 #define SW_PFL_DISABLED     0x01
@@ -225,7 +224,7 @@ extern void dump_mem(void *, int);
 #define VLAN_TAG_BYTES 4
 
 /* sw_forward.c */
-extern int sw_forward(struct net_switch *, struct net_switch_port *,
+extern int sw_forward(struct net_switch_port *,
 	struct sk_buff *, struct skb_extra *);
 
 /* sw_vif.c */

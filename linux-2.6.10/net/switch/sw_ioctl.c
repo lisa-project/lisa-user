@@ -70,6 +70,10 @@ static int sw_addif(struct net_device *dev) {
 	if((port = kmalloc(sizeof(struct net_switch_port), GFP_KERNEL)) == NULL)
 		return -ENOMEM;
 	memset(port, 0, sizeof(struct net_switch_port));
+	if((port->forbidden_vlans = kmalloc(SW_VLAN_BMP_NO, GFP_KERNEL)) == NULL) {
+		kfree(port);
+		return -ENOMEM;
+	}
 	port->dev = dev;
 	port->sw = &sw;
     port->vlan = 1; /* By default all ports are in vlan 1 */
@@ -127,6 +131,7 @@ int sw_delif(struct net_device *dev) {
 	}
 	list_del_rcu(&port->lh);
 	/* free port memory and release interface */
+	kfree(port->forbidden_vlans);
 	kfree(port);
 	dev_put(dev);
 	dbg("Removed device %s from switch\n", dev->name);

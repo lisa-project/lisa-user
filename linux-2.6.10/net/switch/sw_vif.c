@@ -4,10 +4,55 @@
 struct net_device *sw_vif_find(struct net_switch *sw, int vlan) {
 	struct net_switch_vif_priv *priv;
 	list_for_each_entry(priv, &sw->vif, lh) {
-		if(priv->vlan == vlan)
-			return priv->dev;
+		if(priv->bogo_port.vlan == vlan)
+			return priv->bogo_port.dev;
 	}
 	return NULL;
+}
+
+int sw_vif_open(struct net_device *dev) {
+	netif_start_queue(dev);
+	return 0;
+}
+
+int sw_vif_stop(struct net_device *dev) {
+	netif_stop_queue(dev);
+	return 0;
+}
+
+int sw_vif_hard_start_xmit(struct sk_buff *skb, struct net_device *dev) {
+	struct net_switch_vif_priv *priv = netdev_priv(dev);
+	struct skb_extra skb_e;
+	unsigned long pkt_len = skb->data_len;
+
+	skb_e.vlan = priv->bogo_port.vlan;
+	skb_e.has_vlan_tag = 0;
+	skb->mac.raw = skb->data;
+	skb->mac_len = ETH_HLEN;
+	skb_pull(skb, ETH_HLEN);
+	if(sw_forward(&priv->bogo_port, skb, &skb_e)) {
+		priv->stats.tx_packets++;
+		priv->stats.tx_bytes += pkt_len;
+	} else {
+		priv->stats.tx_errors++;
+	}
+	return 0;
+}
+
+void sw_vif_tx_timeout(struct net_device *dev) {
+}
+
+struct net_device_stats * sw_vif_get_stats(struct net_device *dev) {
+	struct net_switch_vif_priv *priv = netdev_priv(dev);
+	return &priv->stats;
+}
+
+int sw_vif_set_config(struct net_device *dev, struct ifmap *map) {
+	return 0;
+}
+
+int sw_vif_do_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd) {
+	return 0;
 }
 
 int sw_vif_addif(struct net_switch *sw, int vlan) {
@@ -32,10 +77,23 @@ int sw_vif_addif(struct net_switch *sw, int vlan) {
 	memcpy(dev->dev_addr, sw->vif_mac, ETH_ALEN);
 	dev->dev_addr[ETH_ALEN - 2] ^= vlan / 0x100;
 	dev->dev_addr[ETH_ALEN - 1] ^= vlan % 0x100;
+
+	dev->open = sw_vif_open;
+	dev->stop = sw_vif_stop;
+	dev->set_config = sw_vif_set_config;
+	dev->hard_start_xmit = sw_vif_hard_start_xmit;
+	dev->do_ioctl = sw_vif_do_ioctl;
+	dev->get_stats = sw_vif_get_stats;
+	dev->tx_timeout = sw_vif_tx_timeout;
+	dev->watchdog_timeo = HZ;
+	
 	priv = netdev_priv(dev);
-	priv->sw = sw;
-	priv->dev = dev;
-	priv->vlan = vlan;
+	INIT_LIST_HEAD(&priv->bogo_port.lh); /* paranoid */
+	priv->bogo_port.dev = dev;
+	priv->bogo_port.sw = sw;
+	priv->bogo_port.flags = 0;
+	priv->bogo_port.vlan = vlan;
+	priv->bogo_port.forbidden_vlans = NULL;
 	list_add_tail(&priv->lh, &sw->vif);
 	if ((result = register_netdev(dev))) {
 		dbg("vif: error %i registering netdevice %s\n", 
@@ -74,5 +132,5 @@ int sw_vif_delif(struct net_switch *sw, int vlan) {
 void sw_vif_cleanup(struct net_switch *sw) {
 	struct net_switch_vif_priv *priv, *tmp;
 	list_for_each_entry_safe(priv, tmp, &sw->vif, lh)
-		__vif_delif(priv->dev);
+		__vif_delif(priv->bogo_port.dev);
 }

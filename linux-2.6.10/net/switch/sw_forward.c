@@ -85,19 +85,21 @@ static void __sw_forward(struct net_switch_port *in, struct net_switch_port *out
 	sw_skb_xmit(skb, out->dev);
 }
 
-static void __sw_flood(struct net_switch *sw, struct net_switch_port *in,
+static int __sw_flood(struct net_switch *sw, struct net_switch_port *in,
 	struct sk_buff *skb, int vlan, void (*f)(struct sk_buff *, int),
 	struct list_head *lh1, struct list_head *lh2) {
 	
 	struct net_switch_vdb_link *link, *prev=NULL, *oldprev;
 	struct sk_buff *skb2;
 	int needs_tag_change = 1;
+	int ret = 0;
 
 	list_for_each_entry_rcu(link, lh1, lh) {
 		if (link->port == in) continue;
 		if (prev) {
 			skb2 = skb_clone(skb, GFP_ATOMIC);
 			sw_skb_xmit(skb, prev->port->dev);
+			ret++;
 			skb = skb2;
 		}
 		prev = link;
@@ -114,6 +116,7 @@ static void __sw_flood(struct net_switch *sw, struct net_switch_port *in,
 			f(skb2, vlan);
 			needs_tag_change = 0;
 			sw_skb_xmit(skb, prev->port->dev);
+			ret++;
 			skb = skb2;
 			prev = link;
 			continue;
@@ -131,6 +134,7 @@ static void __sw_flood(struct net_switch *sw, struct net_switch_port *in,
 			skb2 = skb_clone(skb, GFP_ATOMIC);
 
 			sw_skb_xmit(skb, prev->port->dev);
+			ret++;
 			skb = skb2;
 		}
 		prev = link;
@@ -144,15 +148,17 @@ static void __sw_flood(struct net_switch *sw, struct net_switch_port *in,
 			f(skb, vlan);
 		}	
 		sw_skb_xmit(skb, prev->port->dev);
+		ret++;
 	}
 	else {
 		dbg("flood: nothing to flood, freeing skb.\n");
 		dev_kfree_skb(skb);
 	}
+	return ret;
 }
 
 /* Flood frame to all necessary ports */
-static void sw_flood(struct net_switch *sw, struct net_switch_port *in,
+static int sw_flood(struct net_switch *sw, struct net_switch_port *in,
 		struct sk_buff *skb, int vlan) {
 
 	/* if source port is in trunk mode we first send the 
@@ -160,7 +166,7 @@ static void sw_flood(struct net_switch *sw, struct net_switch_port *in,
 	   strip vlan tag and send to all non-trunk ports in that vlan 
 	 */
 	if (in->flags & SW_PFL_TRUNK) {
-		__sw_flood(sw, in, skb, vlan, __strip_vlan_tag,
+		return __sw_flood(sw, in, skb, vlan, __strip_vlan_tag,
 				&sw->vdb[vlan]->trunk_ports,
 				&sw->vdb[vlan]->non_trunk_ports);
 	}
@@ -168,17 +174,21 @@ static void sw_flood(struct net_switch *sw, struct net_switch_port *in,
 	/* otherwise we send the frame to all non-trunk ports in that vlan 
 	   then add a vlan tag to it and send it to all trunk ports in that vlan.
 	 */
-		__sw_flood(sw, in, skb, vlan, add_vlan_tag,
+		return __sw_flood(sw, in, skb, vlan, add_vlan_tag,
 				&sw->vdb[vlan]->non_trunk_ports,
 				&sw->vdb[vlan]->trunk_ports);
 	}
 }	
 
-/* Forwarding decision */
-int sw_forward(struct net_switch *sw, struct net_switch_port *in,
+/* Forwarding decision
+   Returns the number of ports the packet was forwarded to.
+ */
+int sw_forward(struct net_switch_port *in,
 		struct sk_buff *skb, struct skb_extra *skb_e) {
+	struct net_switch *sw = in->sw;
 	struct net_switch_bucket *bucket = &sw->fdb[sw_mac_hash(skb->mac.raw)];
 	struct net_switch_fdb_entry *out;
+	int ret = 1;
 
 	dbg("sw_forward: usage count %d\n", atomic_read(&skb_shinfo(skb)->dataref) != 1);
 	rcu_read_lock();
@@ -214,12 +224,11 @@ int sw_forward(struct net_switch *sw, struct net_switch_port *in,
 		   The fact that skb_e->vlan exists in the vdb is based
 		   _only_ on the checks performed in sw_handle_frame()
 		 */
-		sw_flood(sw, in, skb, skb_e->vlan);
+		ret = sw_flood(sw, in, skb, skb_e->vlan);
 	}	
-	/* FIXME: alta constanta (pt ca aici _chiar_ nu e dropat :) )*/
-	return NET_RX_DROP; 
+	return ret; 
 	
 free_skb:	
 	dev_kfree_skb(skb);
-	return NET_RX_DROP;
+	return 0;
 }

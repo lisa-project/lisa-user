@@ -47,11 +47,13 @@ void dump_packet(const struct sk_buff *skb) {
 			skb->dev->name, ntohs(skb->protocol), skb->mac_len,
 			skb->head, skb->data, skb->tail, skb->end, skb->mac.raw);
 	printk("MAC dump: ");
-	for(i = 0; i < skb->mac_len; i++)
-		printk("0x%x ", skb->mac.raw[i]);
+	if(skb->mac.raw)
+		for(i = 0; i < skb->mac_len; i++)
+			printk("0x%x ", skb->mac.raw[i]);
 	printk("\nDATA dump: ");
-	for(i = 0; i < 4; i++)
-		printk("0x%x ", skb->data[i]);
+	if(skb->data)
+		for(i = 0; i < 4; i++)
+			printk("0x%x ", skb->data[i]);
 	printk("\n");
 }
 
@@ -98,7 +100,8 @@ __dbg_static int sw_handle_frame(struct net_switch_port *port, struct sk_buff **
 	/* Update the fdb */
 	fdb_learn(skb->mac.raw + 6, port, skb_e.vlan, SW_FDB_DYN);
 
-	return sw_forward(&sw, port, skb, &skb_e);
+	sw_forward(port, skb, &skb_e);
+	return NET_RX_DROP;
 
 free_skb:
 	dev_kfree_skb(skb);
