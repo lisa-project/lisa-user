@@ -167,6 +167,22 @@ void sw_del_port_forbidden_vlans(struct net_switch_port *port,
 	sw_set_port_forbidden_vlans(port, bmp);
 }
 
+/* Change a port's non-trunk vlan and make appropriate changes to the vlan
+   database if necessary.
+ */
+int sw_set_port_vlan(struct net_switch_port *port, int vlan) {
+	if(!port)
+		return -EINVAL;
+	if(port->vlan == vlan)
+		return 0;
+	if(!(port->flags & SW_PFL_TRUNK)) {
+		sw_vdb_del_port(port->vlan, port);
+		sw_vdb_add_port(vlan, port);
+	}
+	port->vlan = vlan;
+	return 0;
+}
+
 /* Remove an interface from the switch. Appropriate locks must be held
    from outside to ensure that nobody tries to remove the same interface
    at the same time.
