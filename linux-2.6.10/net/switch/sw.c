@@ -60,11 +60,10 @@ __dbg_static int sw_handle_frame(struct net_switch_port *port, struct sk_buff **
 	struct sk_buff *skb = *pskb;
 	struct skb_extra skb_e;
 
-	if(port->flags & SW_PFL_DISABLED) {
+	if(port->flags & (SW_PFL_DISABLED | SW_PFL_DROPALL)) {
 		dbg("Received frame on disabled port %s\n", port->dev->name);
 		goto free_skb;
 	}
-
 
 	if(skb->protocol == ntohs(ETH_P_8021Q)) {
 		skb_e.vlan = ntohs(*(unsigned short *)skb->data) & 4095;
@@ -111,6 +110,8 @@ void sw_enable_port(struct net_switch_port *port) {
 	/* Someday this will trigger some user-space callback to help
 	   the cli display warnings about a port changing state. For
 	   now just set the disabled flag */
+	if(!(port->flags & SW_PFL_DISABLED) || port->flags & SW_PFL_ADMDISABLED)
+		return;
 	port->flags &= ~SW_PFL_DISABLED;
 	dbg("Enabled port %s\n", port->dev->name);
 }
@@ -120,6 +121,8 @@ void sw_disable_port(struct net_switch_port *port) {
 	/* Someday this will trigger some user-space callback to help
 	   the cli display warnings about a port changing state. For
 	   now just set the disabled flag */
+	if(port->flags & SW_PFL_DISABLED)
+		return;
 	port->flags |= SW_PFL_DISABLED;
 	dbg("Disabled port %s\n", port->dev->name);
 }

@@ -2,7 +2,21 @@ obj-$(CONFIG_SWITCH) += switch.o
 
 switch-objs := sw.o sw_fdb.o sw_proc.o sw_vdb.o sw_forward.o sw_ioctl.o
 
-#EXTRA_CFLAGS += -DDEBUG -g
+##
+# Config section; will be moved to kernel config
+##
+
+# What to do when a non-trunk interface is assigned a vlan that does
+# not exist:
+# 1			Create the requested vlan (if we're not vtp client)
+# 2			Shutdown the interface
+CFGFLAGS += -DNET_SWITCH_NOVLANFORIF=1
+
+##
+# End of config section
+##
+
+EXTRA_CFLAGS += $(CFGFLAGS) -DDEBUG -g
 
 # KDIR := /lib/modules/$(KVER)/build
 KDIR := ../..

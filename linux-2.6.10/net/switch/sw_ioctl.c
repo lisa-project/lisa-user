@@ -152,26 +152,34 @@ static inline void __sw_add_to_vlans(struct net_switch_port *port) {
    vlan database.
  */
 static int sw_set_port_trunk(struct net_switch_port *port, int trunk) {
+	int status;
+
 	if (!port)
 		return -EINVAL;
 	if(port->flags & SW_PFL_TRUNK) {
 		if(trunk)
 			return -EINVAL;
-		sw_disable_port_rcu(port);
+		sw_set_port_flag_rcu(port, SW_PFL_DROPALL);
 		__sw_remove_from_vlans(port);
-		port->flags &= ~SW_PFL_TRUNK;
+		sw_res_port_flag(port, SW_PFL_TRUNK);
 		fdb_cleanup_port(port);
-		if(!sw_vdb_add_port(port->vlan, port))
-			sw_enable_port(port);
+		status = sw_vdb_add_port(port->vlan, port);
+#if NET_SWITCH_NOVLANFORIF == 2
+		if(status)
+			sw_disable_port(port);
+#endif
+		sw_res_port_flag(port, SW_PFL_DROPALL);
 	} else {
 		if(!trunk)
 			return -EINVAL;
-		sw_disable_port_rcu(port);
+		sw_set_port_flag_rcu(port, SW_PFL_DROPALL);
 		sw_vdb_del_port(port->vlan, port);
-		port->flags |= SW_PFL_TRUNK;
+		sw_set_port_flag(port, SW_PFL_TRUNK);
 		fdb_cleanup_port(port);
 		__sw_add_to_vlans(port);
+		/* Make sure it was not disabled by assigning a non-existent vlan */
 		sw_enable_port(port);
+		sw_res_port_flag(port, SW_PFL_DROPALL);
 	}
 	return 0;
 }
@@ -237,20 +245,54 @@ static int sw_del_port_forbidden_vlans(struct net_switch_port *port,
 	return sw_set_port_forbidden_vlans(port, bmp);
 }
 
+static int __add_vlan_default(struct net_switch *sw, int vlan) {
+	int status;
+
+	if(sw_vdb_vlan_exists(sw, vlan))
+		return 0;
+	if((status = sw_vdb_add_vlan_default(sw, vlan)))
+		return status;
+	/* TODO Notification to userspace for the cli */
+	return 0;
+}
+
 /* Change a port's non-trunk vlan and make appropriate changes to the vlan
    database if necessary.
  */
 static int sw_set_port_vlan(struct net_switch_port *port, int vlan) {
+	int status;
+
 	if(!port)
 		return -EINVAL;
 	if(port->vlan == vlan)
 		return 0;
-	if(!(port->flags & SW_PFL_TRUNK)) {
+	if(port->flags & SW_PFL_TRUNK) {
+		port->vlan = vlan;
+#if NET_SWITCH_NOVLANFORIF == 1
+		__add_vlan_default(port->sw, vlan);
+#endif
+	} else {
+		sw_set_port_flag_rcu(port, SW_PFL_DROPALL);
 		sw_vdb_del_port(port->vlan, port);
-		if(sw_vdb_add_port(vlan, port))
+		status = sw_vdb_add_port(vlan, port);
+#if NET_SWITCH_NOVLANFORIF == 1
+		if(status)
+			status = __add_vlan_default(port->sw, vlan);
+		if(status) {
+			port->vlan = vlan;
+			smp_wmb();
+			sw_res_port_flag(port, SW_PFL_DROPALL);
+			return status;
+		}
+		status = sw_vdb_add_port(vlan, port);
+#elif NET_SWITCH_NOVLANFORIF == 2
+		if(status)
 			sw_disable_port(port);
+#endif
+		port->vlan = vlan;
+		smp_wmb();
+		sw_res_port_flag(port, SW_PFL_DROPALL);
 	}
-	port->vlan = vlan;
 	return 0;
 }
 

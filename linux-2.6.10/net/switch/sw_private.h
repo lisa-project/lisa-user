@@ -103,6 +103,8 @@ struct net_switch_vdb_link {
 
 #define SW_PFL_DISABLED     0x01
 #define SW_PFL_TRUNK		0x02
+#define SW_PFL_DROPALL		0x04
+#define SW_PFL_ADMDISABLED	0x08
 
 #define sw_disable_port_rcu(port) do {\
 	sw_disable_port(port);\
@@ -111,6 +113,19 @@ struct net_switch_vdb_link {
 
 #define sw_enable_port_rcu(port) do {\
 	sw_enable_port(port);\
+	synchronize_kernel();\
+} while(0)
+
+#define sw_set_port_flag(port,flag) ((port)->flags |= (flag))
+#define sw_res_port_flag(port,flag) ((port)->flags &= ~(flag))
+
+#define sw_set_port_flag_rcu(port, flag) do {\
+	sw_set_port_flag(port, flag);\
+	synchronize_kernel();\
+} while(0)
+
+#define sw_res_port_flag_rcu(port, flag) do {\
+	sw_res_port_flag(port, flag);\
 	synchronize_kernel();\
 } while(0)
 
@@ -168,12 +183,16 @@ extern void sw_fdb_exit(struct net_switch *);
 
 /* sw_vdb.c */
 extern int sw_vdb_add_vlan(struct net_switch *, int, char *);
+extern int sw_vdb_add_vlan_default(struct net_switch *, int);
 extern int sw_vdb_del_vlan(struct net_switch *, int);
 extern int sw_vdb_set_vlan_name(struct net_switch *, int, char *);
 extern void __init sw_vdb_init(struct net_switch *);
 extern void __exit sw_vdb_exit(struct net_switch *);
 extern int sw_vdb_add_port(int, struct net_switch_port *);
 extern int sw_vdb_del_port(int, struct net_switch_port *);
+
+#define sw_vdb_vlan_exists(sw, vlan) \
+	((vlan) >= 1 && (vlan) <= 4095 && (sw)->vdb[vlan])
 
 /* sw_proc.c */
 extern int init_switch_proc(void);

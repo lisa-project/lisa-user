@@ -25,7 +25,7 @@ int sw_vdb_add_vlan(struct net_switch *sw, int vlan, char *name) {
 	struct net_switch_port *port;
 
     if(vlan < 1 || vlan > 4095)
-        return -ENOMEM;
+        return -EINVAL;
     if(sw->vdb[vlan])
         return -EEXIST;
     if(!(entry = kmalloc(sizeof(struct net_switch_vdb_entry),
@@ -52,6 +52,15 @@ int sw_vdb_add_vlan(struct net_switch *sw, int vlan, char *name) {
 	}
 
 	return 0;
+}
+
+int sw_vdb_add_vlan_default(struct net_switch *sw, int vlan) {
+	char buf[9];
+	
+    if(vlan < 1 || vlan > 4095)
+        return -EINVAL;
+	sprintf(buf, "VLAN%04d", vlan);
+	return sw_vdb_add_vlan(sw, vlan, buf);
 }
 
 /* Remove a vlan from the vlan database */
