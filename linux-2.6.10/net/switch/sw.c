@@ -46,12 +46,15 @@ static int sw_addif(struct net_device *dev) {
 	memset(port, 0, sizeof(struct net_switch_port));
 	port->dev = dev;
 	port->sw = &sw;
+    port->vlan = 1; /* By default all ports are in vlan 1 */
+    port->flags = SW_PFL_DISABLED;
+    sw_vdb_add_port(1, port);
 	list_add_tail_rcu(&port->lh, &sw.ports);
 	rcu_assign_pointer(dev->sw_port, port);
 	dev_hold(dev);
 	dev_set_promiscuity(dev, 1);
-	dbg("Added device %s to switch\n", dev->name);
 	up(&sw.adddelif_mutex);
+	dbg("Added device %s to switch\n", dev->name);
 	return 0;
 }
 

@@ -42,14 +42,15 @@ struct net_switch {
 	 */
 	struct semaphore adddelif_mutex;
 	
-	/*
-		Switch forwarding database (hashtable)
-	*/
+	/* Switch forwarding database (hashtable) */
 	struct net_switch_bucket fdb[SW_HASH_SIZE];
 
-	/* Vlan database
-	 */
+	/* Vlan database */
 	struct vdb_entry * vdb[4096];
+    /* Cache of link structures */
+    kmem_cache_t *vdb_cache;
+    /* Mutex for adding and removing vlans */
+    struct semaphore vdb_sema;
 };
 
 struct net_switch_port {
@@ -71,7 +72,8 @@ struct net_switch_port {
 	unsigned char forbidden_vlans[512];
 };
 
-#define SW_PFL_TRUNK		0x01
+#define SW_PFL_DISABLED     0x01
+#define SW_PFL_TRUNK		0x02
 
 /* Hash Entry */
 struct net_switch_fdb_entry {
@@ -99,5 +101,6 @@ extern void cleanup_switch_proc(void);
 
 /* sw_vdb.c */
 extern void sw_vdb_init(struct net_switch *sw);
+extern void sw_vdb_add_port(int vlan, struct net_switch_port *port);
 
 #endif

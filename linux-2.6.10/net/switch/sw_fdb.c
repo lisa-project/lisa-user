@@ -20,6 +20,31 @@ void __init sw_fdb_init(struct net_switch *sw) {
 /* Walk the fdb and delete all entries referencing a given port.
  */
 void fdb_cleanup_port(struct net_switch_port *port) {
+    struct net_switch *sw = port->sw;
+    struct net_switch_fdb_entry *entry, *tmp;
+    int i;
+	
+	for (i = 0; i < SW_HASH_SIZE; i++) {
+        read_lock(&sw->fdb[i].lock);
+		list_for_each_entry(entry, &sw->fdb[i].entries, lh) {
+			if(entry->port == port)
+                break;
+		}
+        if(&entry->lh != &sw->fdb[i].entries) {
+            read_unlock(&sw->fdb[i].lock);
+            continue;
+        }
+        read_unlock(&sw->fdb[i].lock);
+        /* We found entries; re-lock for write and delete them */
+        write_lock(&sw->fdb[i].lock);
+		list_for_each_entry_safe(entry, tmp, &sw->fdb[i].entries, lh) {
+			if(entry->port == port) {
+                list_del(&entry->lh);
+                kmem_cache_free(sw_fdb_cache, entry);
+            }
+		}
+        write_unlock(&sw->fdb[i].lock);
+	}
 }
 
 static inline int __fdb_learn(struct net_switch_bucket *bucket,
@@ -82,16 +107,8 @@ void fdb_learn(unsigned char *mac, struct net_switch_port *port, int vlan) {
 }
 
 void __exit sw_fdb_exit(struct net_switch *sw) {
-	/* FIXME: kmem_cache_free pe entry-urile care
-	 inca sunt in hash */
-	int i;
-	struct net_switch_fdb_entry *entry;
-	
-	for (i=0; i<SW_HASH_SIZE; i++) {
-		list_for_each_entry(entry, &sw->fdb[i].entries, lh) {
-			printk(KERN_DEBUG "removing i=%d entry=%p\n", i, entry);
-			kmem_cache_free(sw_fdb_cache, entry);
-		}
-	}
+	/* Entries are freed by __sw_delif(), which is called for
+       all interfaces before this
+     */
 	kmem_cache_destroy(sw_fdb_cache);
 }
