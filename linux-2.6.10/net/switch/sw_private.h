@@ -240,5 +240,6 @@ extern struct net_device *sw_vif_find(struct net_switch *, int);
 extern int sw_vif_addif(struct net_switch *, int);
 extern int sw_vif_delif(struct net_switch *, int);
 extern void sw_vif_cleanup(struct net_switch *);
+extern void sw_vif_rx(struct sk_buff *);
 
 #endif

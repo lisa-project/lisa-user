@@ -31,6 +31,7 @@ int sw_vif_hard_start_xmit(struct sk_buff *skb, struct net_device *dev) {
 	skb_e.has_vlan_tag = 0;
 	skb->mac.raw = skb->data;
 	skb->mac_len = ETH_HLEN;
+	skb->dev = dev;
 	skb_pull(skb, ETH_HLEN);
 	if(sw_forward(&priv->bogo_port, skb, &skb_e)) {
 		priv->stats.tx_packets++;
@@ -42,6 +43,15 @@ int sw_vif_hard_start_xmit(struct sk_buff *skb, struct net_device *dev) {
 }
 
 void sw_vif_tx_timeout(struct net_device *dev) {
+}
+
+void sw_vif_rx(struct sk_buff *skb) {
+	struct net_switch_vif_priv *priv;
+
+	priv = netdev_priv(skb->dev);
+	priv->stats.rx_packets++;
+	priv->stats.rx_bytes += skb->data_len;
+	netif_receive_skb(skb);
 }
 
 struct net_device_stats * sw_vif_get_stats(struct net_device *dev) {

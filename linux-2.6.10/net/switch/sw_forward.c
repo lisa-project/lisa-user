@@ -19,7 +19,7 @@
 #include "sw_private.h"
 #include "sw_debug.h"
 
-static inline void add_vlan_tag(struct sk_buff *skb, int vlan) {
+__dbg_static inline void add_vlan_tag(struct sk_buff *skb, int vlan) {
 	memmove(skb->mac.raw-VLAN_TAG_BYTES, skb->mac.raw, 2 * ETH_ALEN);	
 	skb->mac.raw -= VLAN_TAG_BYTES;
 	skb_push(skb, VLAN_TAG_BYTES);
@@ -27,18 +27,18 @@ static inline void add_vlan_tag(struct sk_buff *skb, int vlan) {
 	*(short *)(skb->mac.raw + ETH_HLEN - 2) = htons(ETH_P_8021Q);
 }
 
-static inline void strip_vlan_tag(struct sk_buff *skb) {
+__dbg_static inline void strip_vlan_tag(struct sk_buff *skb) {
 	memmove(skb->mac.raw+VLAN_TAG_BYTES, skb->mac.raw, 2 * ETH_ALEN);
 	skb->mac.raw+=VLAN_TAG_BYTES;
 	skb_pull(skb, VLAN_TAG_BYTES);
 	skb->protocol = *(short *)(skb->mac.raw + ETH_HLEN - 2);
 }
 
-static inline void __strip_vlan_tag(struct sk_buff *skb, int i) {
+__dbg_static inline void __strip_vlan_tag(struct sk_buff *skb, int i) {
 	strip_vlan_tag(skb);
 }
 
-static inline void sw_skb_xmit(struct sk_buff *skb, struct net_device *dev) {
+__dbg_static inline void sw_skb_xmit(struct sk_buff *skb, struct net_device *dev) {
 	/* FIXME pachetele de 1500 se busesc
 	if (skb->len > skb->dev->mtu) {
 		dbg("Dropping frame due to len > dev->mtu\n");
@@ -52,9 +52,9 @@ static inline void sw_skb_xmit(struct sk_buff *skb, struct net_device *dev) {
 		dev_queue_xmit(skb);
 		return;
 	}
-	/* This is a vif, so we need to call netif_receive_skb() instead */
+	/* This is a vif, so we need to call sw_vif_rx() instead */
 	skb->dev = dev;
-	netif_receive_skb(skb);
+	sw_vif_rx(skb);
 	return;
 	
 destroy:	
@@ -64,7 +64,7 @@ destroy:
 /* if the packet data is used by someone else
    we make a copy before altering it 
  */
-static void sw_skb_unshare(struct sk_buff **skb) {
+__dbg_static void sw_skb_unshare(struct sk_buff **skb) {
 	struct sk_buff *skb2;
 
 	if (atomic_read(&skb_shinfo(*skb)->dataref)) {
@@ -77,7 +77,7 @@ static void sw_skb_unshare(struct sk_buff **skb) {
 /* Forward frame from in port to out port,
    adding/removing vlan tag if necessary.
  */
-static void __sw_forward(struct net_switch_port *in, struct net_switch_port *out, 
+__dbg_static void __sw_forward(struct net_switch_port *in, struct net_switch_port *out, 
 	struct sk_buff *skb, struct skb_extra *skb_e) {
 
 	if (out->flags & SW_PFL_TRUNK && !(in->flags & SW_PFL_TRUNK)) {
@@ -94,7 +94,7 @@ static void __sw_forward(struct net_switch_port *in, struct net_switch_port *out
 	sw_skb_xmit(skb, out->dev);
 }
 
-static int __sw_flood(struct net_switch *sw, struct net_switch_port *in,
+__dbg_static int __sw_flood(struct net_switch *sw, struct net_switch_port *in,
 	struct sk_buff *skb, int vlan, void (*f)(struct sk_buff *, int),
 	struct list_head *lh1, struct list_head *lh2) {
 	
@@ -167,7 +167,7 @@ static int __sw_flood(struct net_switch *sw, struct net_switch_port *in,
 }
 
 /* Flood frame to all necessary ports */
-static int sw_flood(struct net_switch *sw, struct net_switch_port *in,
+__dbg_static int sw_flood(struct net_switch *sw, struct net_switch_port *in,
 		struct sk_buff *skb, int vlan) {
 
 	/* if source port is in trunk mode we first send the 
@@ -190,7 +190,8 @@ static int sw_flood(struct net_switch *sw, struct net_switch_port *in,
 }	
 
 int sw_vif_forward(struct sk_buff *skb, struct skb_extra *skb_e) {
-	struct net_switch *sw = skb->dev->sw_port->sw;
+	struct net_switch *sw = (skb->dev->sw_port)? skb->dev->sw_port->sw:
+		((struct net_switch_vif_priv *)netdev_priv(skb->dev))->bogo_port.sw;
 	unsigned char *vif_mac = sw->vif_mac;
 	struct net_device *dev;
 	int vlan;
@@ -205,7 +206,7 @@ int sw_vif_forward(struct sk_buff *skb, struct skb_extra *skb_e) {
 			strip_vlan_tag(skb);
 		}
 		skb->dev = dev;
-		netif_receive_skb(skb);
+		sw_vif_rx(skb);
 		return 1;
 	}
 	return 0;
