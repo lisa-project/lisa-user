@@ -1,10 +1,11 @@
 #include "sw_private.h"
 #include "sw_debug.h"
 
-static void __sw_vdb_add_vlan(struct net_switch *sw, int vlan) {
+static void sw_vdb_add_vlan(struct net_switch *sw, int vlan) {
     if(sw->vdb[vlan])
         return;
-    if(!(sw->vdb[vlan] = kmalloc(sizeof(struct vdb_entry), GFP_ATOMIC))) {
+    if(!(sw->vdb[vlan] = kmalloc(sizeof(struct net_switch_vdb_entry),
+					GFP_ATOMIC))) {
         dbg("Out of memory while trying to add vlan %d\n", vlan);
         return;
     }
@@ -21,18 +22,35 @@ void sw_vdb_set_vlan_name(struct net_switch *sw, int vlan, char *name) {
 
 void sw_vdb_init(struct net_switch *sw) {
 	memset(&sw->vdb, 0, sizeof(sw->vdb));
-    init_MUTEX(&sw->vdb_sema);
-    __sw_vdb_add_vlan(sw, 1);
+	sw->vdb_cache = kmem_cache_create("sw_vdb_cache",
+			sizeof(struct net_switch_vdb_link),
+			0, SLAB_HWCACHE_ALIGN, NULL, NULL);
+	if(!sw->vdb_cache)
+		return;
+    sw_vdb_add_vlan(sw, 1);
     sw_vdb_set_vlan_name(sw, 1, "default");
-}
-
-void sw_vdb_add_vlan(struct net_switch *sw, int vlan) {
-    if(vlan < 1 || vlan > 4095)
-        return;
-    down_interruptible(&sw->vdb_sema);
-    __sw_vdb_add_vlan(sw, vlan);
-    up(&sw->vdb_sema);
+    sw_vdb_set_vlan_name(sw, 1002, "fddi-default");
+    sw_vdb_set_vlan_name(sw, 1003, "trcrf-default");
+    sw_vdb_set_vlan_name(sw, 1004, "fddinet-default");
+    sw_vdb_set_vlan_name(sw, 1005, "trbrf-default");
 }
 
 void sw_vdb_add_port(int vlan, struct net_switch_port *port) {
+	struct net_switch *sw = port->sw;
+	struct net_switch_vdb_link *link;
+
+    if(vlan < 1 || vlan > 4095)
+        return;
+	if(!sw->vdb[vlan])
+		return;
+	/* The same port cannot be added twice to the same vlan because the only
+	   way to add a port to a vlan is by changing the port's configuration.
+	   Changing port configuration is mutually exclusive.
+	 */
+	link = kmem_cache_alloc(sw->vdb_cache, GFP_ATOMIC);
+	if(!link)
+		return;
+	link->port = port;
+	smp_wmb();
+	list_add_tail_rcu(&link->lh, &sw->vdb[vlan]->ports);
 }

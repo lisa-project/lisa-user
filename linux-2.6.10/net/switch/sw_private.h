@@ -27,7 +27,7 @@ struct net_switch_bucket {
 
 #define SW_MAX_VLAN_NAME	32
 
-struct vdb_entry {
+struct net_switch_vdb_entry {
 	char name[SW_MAX_VLAN_NAME];
 	struct list_head ports;
 };
@@ -36,21 +36,18 @@ struct net_switch {
 	/* List of all ports in the switch */
 	struct list_head ports;
 
-	/* We don't want an interface to be added or removed "twice". This
-	   would mess up the usage counter, the promiscuity counter and many
-	   other things.
+	/* To avoid deadlocks and brain damage, we have one global mutex for
+	   all configuration tasks.
 	 */
-	struct semaphore adddelif_mutex;
+	struct semaphore cfg_mutex;
 	
 	/* Switch forwarding database (hashtable) */
 	struct net_switch_bucket fdb[SW_HASH_SIZE];
 
 	/* Vlan database */
-	struct vdb_entry * vdb[4096];
+	struct net_switch_vdb_entry * volatile vdb[4096];
     /* Cache of link structures */
     kmem_cache_t *vdb_cache;
-    /* Mutex for adding and removing vlans */
-    struct semaphore vdb_sema;
 };
 
 struct net_switch_port {
@@ -72,6 +69,11 @@ struct net_switch_port {
 	unsigned char forbidden_vlans[512];
 };
 
+struct net_switch_vdb_link {
+	struct list_head lh;
+	struct net_switch_port *port;
+};
+
 #define SW_PFL_DISABLED     0x01
 #define SW_PFL_TRUNK		0x02
 
@@ -88,6 +90,9 @@ struct skb_extra {
 	int vlan;
 	int has_vlan_tag;
 };
+
+#define sw_allow_vlan(bitmap, vlan) (bitmap)[(vlan) / 8] |= (1 << ((vlan) % 8))
+#define sw_forbid_vlan(bitmap, vlan) (bitmap)[(vlan) / 8] &= ~(1 << ((vlan) % 8))
 
 extern struct net_switch sw;
 

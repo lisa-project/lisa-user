@@ -22,7 +22,7 @@ struct net_switch sw;
 
 static void init_switch(struct net_switch *sw) {
 	INIT_LIST_HEAD(&sw->ports);
-	init_MUTEX(&sw->adddelif_mutex);
+	init_MUTEX(&sw->cfg_mutex);
 	sw_fdb_init(sw);
 	init_switch_proc();
 	sw_vdb_init(sw);
@@ -32,13 +32,13 @@ static void init_switch(struct net_switch *sw) {
  */
 static int sw_addif(struct net_device *dev) {
 	struct net_switch_port *port;
-	if(down_interruptible(&sw.adddelif_mutex))
+	if(down_interruptible(&sw.cfg_mutex))
 		return -EINTR;
 	if(rcu_dereference(dev->sw_port) != NULL) {
 		/* dev->sw_port shouldn't be changed elsewhere, so
 		   we don't necessarily need rcu_dereference here
 		 */
-		up(&sw.adddelif_mutex);
+		up(&sw.cfg_mutex);
 		return -EBUSY;
 	}
 	if((port = kmalloc(sizeof(struct net_switch_port), GFP_KERNEL)) == NULL)
@@ -47,13 +47,17 @@ static int sw_addif(struct net_device *dev) {
 	port->dev = dev;
 	port->sw = &sw;
     port->vlan = 1; /* By default all ports are in vlan 1 */
-    port->flags = SW_PFL_DISABLED;
+	sw_allow_vlan(port->forbidden_vlans, 1);
+	sw_allow_vlan(port->forbidden_vlans, 1002);
+	sw_allow_vlan(port->forbidden_vlans, 1003);
+	sw_allow_vlan(port->forbidden_vlans, 1004);
+	sw_allow_vlan(port->forbidden_vlans, 1005);
     sw_vdb_add_port(1, port);
 	list_add_tail_rcu(&port->lh, &sw.ports);
 	rcu_assign_pointer(dev->sw_port, port);
 	dev_hold(dev);
 	dev_set_promiscuity(dev, 1);
-	up(&sw.adddelif_mutex);
+	up(&sw.cfg_mutex);
 	dbg("Added device %s to switch\n", dev->name);
 	return 0;
 }
@@ -95,14 +99,14 @@ static void __sw_delif(struct net_device *dev, struct net_switch_port *port) {
 /* Safely remove an interface from the switch */
 static int sw_delif(struct net_device *dev) {
 	struct net_switch_port *port;
-	if(down_interruptible(&sw.adddelif_mutex))
+	if(down_interruptible(&sw.cfg_mutex))
 		return -EINTR;
 	if((port = rcu_dereference(dev->sw_port)) == NULL) {
-		up(&sw.adddelif_mutex);
+		up(&sw.cfg_mutex);
 		return -EINVAL;
 	}
 	__sw_delif(dev, port);
-	up(&sw.adddelif_mutex);
+	up(&sw.cfg_mutex);
 	return 0;
 }
 
@@ -206,12 +210,12 @@ static void switch_exit(void) {
 	struct list_head *pos, *n;
 	struct net_switch_port *port;
 	/* Remove all interfaces from switch */
-	down_interruptible(&sw.adddelif_mutex);
+	down_interruptible(&sw.cfg_mutex);
 	list_for_each_safe(pos, n, &sw.ports) {
 		port = list_entry(pos, struct net_switch_port, lh);
 		__sw_delif(port->dev, port);
 	}
-	up(&sw.adddelif_mutex);
+	up(&sw.cfg_mutex);
 	/* Interfaces cannot be added now although the lock is released. 
 	   To add an interface one must do an ioctl, which calls
 	   request_module(). This fails if the module is unloading.
