@@ -1,0 +1,7 @@
+
+Copieri in 8139too.c
+
+rtl8139_start_xmit(), linia 1733:
+skb_copy_and_csum_dev(skb, tp->tx_buf[entry]);
+
+

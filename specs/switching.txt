@@ -1,0 +1,52 @@
+primeste_pachet(interfata, pachet);
+
+completeaza_packet_header();
+    daca(interfata.is_trunk && !packet_header.has_vlan_tag) {
+        drop;
+    }
+    daca(!interfata.is_trunk && packet_header.has_vlan_tag) {
+        drop;
+    }
+
+daca(interfata.is_trunk && !interfata.allowed_vlan(packet_header.vlan_id)) {
+    drop;
+}
+actualizare tabela de mac pe interfata;
+    daca(e in tabela de mac a interfetei) {
+        actualizare timestamp;
+    } else {
+        adaugare;
+    }
+
+if(packet_header.mac_destinatie == BROADCAST) {
+    flood();
+}
+
+if(interfata_out = cauta_interfata(packet_header.mac_destinatie)) {
+    if(interfata_out == packet_header.interfata_in) {
+        drop;
+    } else {
+        if(!interfata_out.is_trunk && interfata_out.vlan_id != packet_header.vlan_id) {
+            drop;
+        }
+        if(interfata_out.is_trunk && !interfata_out.allowed_vlan(packet_header.vlan_id) {
+            drop;
+        }
+        trimite_pachet(interfata_out);
+    }
+} else {
+    flood();
+}
+
+----
+
+
+flood() {
+    if_list = get_interfaces_by_vlan(packet_header.vlan_id);
+    for(interfata_out in if_list) {
+        if(interfata_out == packet_header.interfata_in) {
+            continue;
+        }
+        trimite_pachet(interfata_out);
+    }
+}

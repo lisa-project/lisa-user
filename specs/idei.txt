@@ -1,0 +1,2 @@
+* buffer(e) circulare de headere de pachete
+    * cate unul pe fiecare interfata

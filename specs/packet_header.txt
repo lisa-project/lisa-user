@@ -1,0 +1,7 @@
+struct packet_header {
+    mac_sursa;
+    mac_destinatie;
+    has_vlan_tag;
+    vlan_id;
+    interfata_in;
+};
