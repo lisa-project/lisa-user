@@ -20,17 +20,18 @@
 #include "sw_debug.h"
 
 static inline void add_vlan_tag(struct sk_buff *skb, int vlan) {
-	memmove(skb->mac.raw-VLAN_TAG_BYTES, skb->mac.raw, 12);	
+	memmove(skb->mac.raw-VLAN_TAG_BYTES, skb->mac.raw, 2 * ETH_ALEN);	
 	skb->mac.raw -= VLAN_TAG_BYTES;
 	skb_push(skb, VLAN_TAG_BYTES);
 	*(short *)skb->data = htons((short)vlan);
-	*(short *)(skb->mac.raw + skb->mac_len - 2) = htons(ETH_P_8021Q);
+	*(short *)(skb->mac.raw + ETH_HLEN - 2) = htons(ETH_P_8021Q);
 }
 
 static inline void strip_vlan_tag(struct sk_buff *skb) {
-	memmove(skb->mac.raw+VLAN_TAG_BYTES, skb->mac.raw, 12);
+	memmove(skb->mac.raw+VLAN_TAG_BYTES, skb->mac.raw, 2 * ETH_ALEN);
 	skb->mac.raw+=VLAN_TAG_BYTES;
 	skb_pull(skb, VLAN_TAG_BYTES);
+	skb->protocol = *(short *)(skb->mac.raw + ETH_HLEN - 2);
 }
 
 /* Forward frame from in port to out port,
@@ -92,7 +93,9 @@ static void sw_flood(struct net_switch *sw, struct net_switch_port *in,
 			skb_push(skb2, ETH_HLEN);
 			dev_queue_xmit(skb2);
 		}
+		dump_mem(skb, sizeof(struct sk_buff));
 		skb2 = skb_copy(skb, GFP_ATOMIC);
+		dump_mem(skb2, sizeof(struct sk_buff));
 		add_vlan_tag(skb2, vlan);
 		list_for_each_entry_rcu(link, &sw->vdb[vlan]->trunk_ports, lh) {
 			if (link->port == in) continue;

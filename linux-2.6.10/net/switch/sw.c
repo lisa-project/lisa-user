@@ -40,12 +40,12 @@ struct net_switch sw;
 /* Safely add an interface to the switch
  */
 
-static void dump_packet(const struct sk_buff *skb) {
+void dump_packet(const struct sk_buff *skb) {
 	int i;
 	
-	printk(KERN_DEBUG "sw_handle_frame on %s: proto=0x%hx "
+	printk(KERN_DEBUG "dev=%s: proto=0x%hx mac_len=%d "
 			"head=0x%p data=0x%p tail=0x%p end=0x%p mac=0x%p\n",
-			skb->dev->name, ntohs(skb->protocol),
+			skb->dev->name, ntohs(skb->protocol), skb->mac_len,
 			skb->head, skb->data, skb->tail, skb->end, skb->mac.raw);
 	printk("MAC dump: ");
 	for(i = 0; i < skb->mac_len; i++)
@@ -94,8 +94,6 @@ static int sw_handle_frame(struct net_switch_port *port, struct sk_buff **pskb) 
 
 	/* Update the fdb */
 	fdb_learn(skb->mac.raw + 6, port, skb_e.vlan);
-
-	dump_packet(skb);
 
 	return sw_forward(&sw, port, skb, &skb_e);
 }

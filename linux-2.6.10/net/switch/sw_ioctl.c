@@ -18,14 +18,15 @@
 #include "sw_private.h"
 #include "sw_debug.h"
 
-static inline void __dump_bitmap(unsigned char *bmp) {
-	int i, j;
+inline void dump_mem(void *m, int len) {
+	int j;
 	char buf[65];
+	unsigned char *mem= m;
 
-	for(i = 0; i < 16; i++) {
-		for(j = 0; j < 32; j++) {
-			sprintf(buf + 2 * j, "%02hx", *bmp);
-			bmp++;
+	while(len) {
+		for(j = 0; j < 32 &&len; j++, len--) {
+			sprintf(buf + 2 * j, "%02hx", *mem);
+			mem++;
 		}
 		dbg("bmp: %s\n", buf);
 	}

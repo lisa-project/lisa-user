@@ -151,6 +151,9 @@ static __inline__ int sw_mac_hash(const unsigned char *mac) {
 	return x & (SW_HASH_SIZE - 1);
 }
 
+/* sw.c */
+extern void dump_packet(const struct sk_buff *skb);
+
 /* sw_fdb.c */
 extern void sw_fdb_init(struct net_switch *sw);
 extern void fdb_cleanup_port(struct net_switch_port *);
@@ -175,6 +178,7 @@ extern void cleanup_switch_proc(void);
 /* sw_ioctl.c */
 extern int sw_delif(struct net_device *dev);
 extern int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg);
+extern void dump_mem(void *, int);
 
 #define VLAN_TAG_BYTES 4
 
