@@ -1,6 +1,4 @@
-* sw_flood: daca am de trimis pe n porturi sa fac n-1 clonari
-* fdb: folosire rcu si spinlock pentru scriere; modelul de "tranzactie"
-  ramane nemodificat
+* incrementare usage count pe datele din pachet la primire
 
 Blade:
 * La schimbare trunking se sterg mac-urile invatate pe interfata?
