@@ -153,7 +153,10 @@ static int proc_read_vlan(char *page, char **start,
 		if (! sw.vdb[vlan]) continue;
 		len += sprintf(page+len, "%-4d %-32s active   ", vlan, sw.vdb[vlan]->name);
 		/* FIXME: functie de listat porturile paginat */
-		list_for_each_entry(link, &sw.vdb[vlan]->ports, lh) {
+		list_for_each_entry(link, &sw.vdb[vlan]->trunk_ports, lh) {
+			len += sprintf(page+len,"%s ", link->port->dev->name);
+		}
+		list_for_each_entry(link, &sw.vdb[vlan]->non_trunk_ports, lh) {
 			len += sprintf(page+len,"%s ", link->port->dev->name);
 		}
 		len += sprintf(page+len, "\n");
