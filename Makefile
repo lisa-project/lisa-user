@@ -11,5 +11,10 @@ KSRC := /usr/src/linux-2.6.10
 
 PWD=$(shell pwd)
 
+all: modules
+
 modules:
-	$(MAKE) -C $(KSRC) SUBDIRS=$(PWD) modules
+	$(MAKE) -C $(KSRC) SUBDIRS=$(PWD) MODVERDIR=$(PWD) modules
+
+clean:
+	rm -f *.o *.ko
