@@ -17,4 +17,4 @@ modules:
 	$(MAKE) -C $(KSRC) SUBDIRS=$(PWD) MODVERDIR=$(PWD) modules
 
 clean:
-	rm -f *.o *.ko
+	rm -f *.o *.ko *.mod.*
