@@ -1,0 +1,21 @@
+CONFIG_NET_DIVERT:
+
+The Frame Diverter allows you to divert packets from the
+network, that are not aimed at the interface receiving it (in
+promisc. mode). Typically, a Linux box setup as an Ethernet bridge
+with the Frames Diverter on, can do some *really* transparent www
+caching using a Squid proxy for example.
+
+This is very useful when you don't want to change your router's
+config (or if you simply don't have access to it).
+
+The other possible usages of diverting Ethernet Frames are
+numberous:
+- reroute smtp traffic to another interface
+- traffic-shape certain network streams
+- transparently proxy smtp connections
+- etc...
+
+For more informations, please refer to:
+<http://diverter.sourceforge.net/>
+<http://perso.wanadoo.fr/magpie/EtherDivert.html>                             

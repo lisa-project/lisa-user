@@ -479,6 +479,15 @@ struct net_device
 	/* bridge stuff */
 	struct net_bridge_port	*br_port;
 
+	/* Switch port pointer
+
+	   This will be initialized to NULL since the whole structure is
+	   filled with 0.
+
+	   We change this pointer when an interface is added to the switch. 
+	 */
+	struct net_switch_port	*sw_port;
+
 #ifdef CONFIG_NET_DIVERT
 	/* this will get initialized at each interface type init routine */
 	struct divert_blk	*divert;

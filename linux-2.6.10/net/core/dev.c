@@ -1583,30 +1583,23 @@ static __inline__ int handle_bridge(struct sk_buff **pskb,
 
 /* Define switch handling hook */
 #if defined(CONFIG_SWITCH) || defined (CONFIG_SWITCH_MODULE)
-int (*sw_handle_frame_hook)(struct sk_buff **pskb);
+int (*sw_handle_frame_hook)(struct net_switch_port *p, struct sk_buff **pskb);
 
 static __inline__ int handle_switch(struct sk_buff **pskb,
 				    struct packet_type **pt_prev, int *ret)
 {
-/**
-*	TODO: verifica conditiile in care nu mai e 
-*	nevoie sa se apeleze codul de switch handling
-**/
- 
-/*	struct net_bridge_port *port;
+	struct net_switch_port *port;
 
 	if ((*pskb)->pkt_type == PACKET_LOOPBACK ||
-	    (port = rcu_dereference((*pskb)->dev->br_port)) == NULL)
+	    (port = rcu_dereference((*pskb)->dev->sw_port)) == NULL)
 		return 0;
 
 	if (*pt_prev) {
 		*ret = deliver_skb(*pskb, *pt_prev);
 		*pt_prev = NULL;
 	}
-*/
-	printk("Handle Switch");
 	
-	return sw_handle_frame_hook(pskb);
+	return sw_handle_frame_hook(port, pskb);
 }
 #else
 #define handle_switch(skb, pt_prev, ret)	(0)
@@ -1687,6 +1680,20 @@ int netif_receive_skb(struct sk_buff *skb)
 	}
 #endif
 
+	/* (Blade)
+	   
+	   Se pare ca aici se parcurge o lista cu toate protocoalele (ptype_all).
+	   Pentru fiecare protocol se apeleaza handlerul daca ptype->dev == NULL
+	   (asta inseamna ca se aplica pentru toate device-urile ???) sau daca
+	   ptype->dev coincide cu device-ul care a primit pachetul.
+
+	   Nu ma prind de ce apeleaza handlerul pentru elementul anterior din
+	   lista.
+	 */
+
+	/* FIXME (Blade) poate ar trebui sa inregistram switch-ul ca protocol in
+	   loc sa adaugam hook-ul direct in netif_receive_skb ?
+	 */
 	list_for_each_entry_rcu(ptype, &ptype_all, list) {
 		if (!ptype->dev || ptype->dev == skb->dev) {
 			if (pt_prev) 
@@ -1717,6 +1724,12 @@ ncls:
 	handle_diverter(skb);
 
 	if (handle_bridge(&skb, &pt_prev, &ret))
+		goto out;
+
+	/* FIXME: asta ar trebui pusa inainte de parcurgerea listei de
+	   protocoale din moment ce oricum "absorb" toate pachetele ???
+	 */
+	if (handle_switch(&skb, &pt_prev, &ret))
 		goto out;
 
 	type = skb->protocol;
@@ -3267,6 +3280,10 @@ EXPORT_SYMBOL(net_disable_timestamp);
 
 #if defined(CONFIG_BRIDGE) || defined(CONFIG_BRIDGE_MODULE)
 EXPORT_SYMBOL(br_handle_frame_hook);
+#endif
+
+#if defined(CONFIG_SWITCH) || defined (CONFIG_SWITCH_MODULE)
+EXPORT_SYMBOL(sw_handle_frame_hook);
 #endif
 
 #ifdef CONFIG_KMOD

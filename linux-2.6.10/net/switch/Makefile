@@ -7,7 +7,7 @@ obj-$(CONFIG_SWITCH) += switch.o
 
 # KVER := $(shell uname -r)
 # KSRC := /lib/modules/$(KVER)/build
-KSRC := /usr/src/linux-2.6.10
+KSRC := ../..
 
 PWD=$(shell pwd)
 
