@@ -389,6 +389,21 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 			return -EINVAL;
 		fdb_cleanup_port(port);
 		break;
+	case SWCFG_SETAGETIME:
+		if (arg.ts.tv_sec <= 0)
+			return -EINVAL;
+		atomic_set(&sw.fdb_age_time, timespec_to_jiffies(&arg.ts));
+		break;
+	case SWCFG_MACSTATIC:
+		if((dev = dev_get_by_name(arg.name)) == NULL) {
+			err = -ENODEV;
+			break;
+		}
+		port = rcu_dereference(dev->sw_port);
+		if(!port)
+			return -EINVAL;
+		fdb_learn(arg.mac, port, arg.vlan, SW_FDB_STATIC);
+		break;
 	}
 
 	return err;

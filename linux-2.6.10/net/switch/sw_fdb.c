@@ -33,6 +33,46 @@ void __init sw_fdb_init(struct net_switch *sw) {
 	dbg("Initialized hash of %d buckets\n", SW_HASH_SIZE);	
 }
 
+static __inline__ unsigned long sw_age_time(struct net_switch_fdb_entry *entry) {
+	return atomic_read(&entry->port->sw->fdb_age_time);
+}
+
+void sw_free_entry_rcu(struct rcu_head *rcu) {
+	struct net_switch_fdb_entry *entry = container_of(rcu, struct net_switch_fdb_entry, rcu);
+	dbg("About to free fdb entry at 0x%p for port %s (age timer expired)\n",
+			entry, entry->port->dev->name);
+	kmem_cache_free(entry->port->sw->fdb_cache, entry);
+}
+
+void sw_age_timer_expired(unsigned long arg) {
+	struct net_switch_fdb_entry *entry;
+
+	entry = (struct net_switch_fdb_entry *)arg;
+	if (time_before_eq(entry->stamp + sw_age_time(entry), jiffies)) {
+		spin_lock(&entry->bucket->lock);
+		del_timer(&entry->age_timer);
+		list_del_rcu(&entry->lh);
+		spin_unlock(&entry->bucket->lock);
+		call_rcu(&entry->rcu, sw_free_entry_rcu);
+	}
+	else {
+		dbg("Reactivating timer for fdb entry at 0x%p for port %s\n",
+				entry, entry->port->dev->name);
+		mod_timer(&entry->age_timer, entry->stamp + sw_age_time(entry));
+	}
+}
+
+static void sw_timer_add(struct timer_list *timer,
+		void (* callback)(unsigned long),
+		unsigned long data,
+		unsigned long expires) {
+	init_timer(timer);
+	timer->function = callback;
+	timer->data = data;
+	timer->expires = expires;
+	add_timer(timer);
+}
+
 /* Walk the fdb and delete all entries referencing a given port.
    
    This is (should be) always called from user space, so locking is
@@ -62,6 +102,8 @@ void fdb_cleanup_port(struct net_switch_port *port) {
 		list_for_each_safe_rcu(entry_lh, tmp_lh, &sw->fdb[i].entries) {
 			entry = list_entry(entry_lh, struct net_switch_fdb_entry, lh);
 			if(entry->port == port) {
+				if (!entry->is_static)
+					del_timer(&entry->age_timer);
                 list_del_rcu(&entry->lh);
 				list_add(&entry->lh, &del_list);
             }
@@ -104,6 +146,8 @@ void fdb_cleanup_vlan(struct net_switch *sw, int vlan) {
 		list_for_each_safe_rcu(entry_lh, tmp_lh, &sw->fdb[i].entries) {
 			entry = list_entry(entry_lh, struct net_switch_fdb_entry, lh);
 			if(entry->vlan == vlan) {
+				if (!entry->is_static)
+					del_timer(&entry->age_timer);
                 list_del_rcu(&entry->lh);
 				list_add(&entry->lh, &del_list);
             }
@@ -116,6 +160,26 @@ void fdb_cleanup_vlan(struct net_switch *sw, int vlan) {
 				entry, entry->port->dev->name);
 		kmem_cache_free(sw->fdb_cache, entry);
 	}
+}
+
+static void __fdb_change_to_static(struct net_switch_fdb_entry *entry) {
+	local_bh_disable();
+	del_timer(&entry->age_timer);
+	entry->is_static = SW_FDB_STATIC;
+	local_bh_enable();
+}
+
+int fdb_lookup(struct net_switch_bucket *bucket, unsigned char *mac,
+		int vlan, struct net_switch_fdb_entry **pentry) {
+	struct net_switch_fdb_entry *entry;	
+
+	list_for_each_entry_rcu(entry, &bucket->entries, lh) {
+		if (!memcmp(entry->mac, mac, ETH_ALEN) && entry->vlan == vlan) {
+			*pentry = entry;
+			return 1;
+		}
+	}
+	return 0;
 }
 
 static inline int __fdb_learn(struct net_switch_bucket *bucket,
@@ -133,30 +197,21 @@ static inline int __fdb_learn(struct net_switch_bucket *bucket,
 	return 0;
 }
 
-int fdb_lookup(struct net_switch_bucket *bucket, unsigned char *mac,
-		int vlan, struct net_switch_fdb_entry **pentry) {
-	struct net_switch_fdb_entry *entry;	
-
-	list_for_each_entry_rcu(entry, &bucket->entries, lh) {
-		if (!memcmp(entry->mac, mac, ETH_ALEN) && entry->vlan == vlan) {
-			*pentry = entry;
-			return 1;
-		}
-	}
-	return 0;
-}
-
 /* This is always called from softirq context, so we do locking without
    disabling softirqs
  */
-void fdb_learn(unsigned char *mac, struct net_switch_port *port, int vlan) {
+void fdb_learn(unsigned char *mac, struct net_switch_port *port,
+		int vlan, int is_static) {
 	struct net_switch_bucket *bucket = &port->sw->fdb[sw_mac_hash(mac)];
 	struct net_switch_fdb_entry *entry;
 
 	if(__fdb_learn(bucket, mac, port, vlan, &entry)) {
 		/* we found a matching entry */
+		if (entry->is_static) return; /* don't modify a static fdb entry */
 		entry->port = port; /* FIXME this should be atomic ??? */
 		entry->stamp = jiffies;
+		if (is_static && !entry->is_static) 
+			__fdb_change_to_static(entry);
 		return;
 	}
 
@@ -166,8 +221,11 @@ void fdb_learn(unsigned char *mac, struct net_switch_port *port, int vlan) {
 	spin_lock(&bucket->lock);
 	if(__fdb_learn(bucket, mac, port, vlan, &entry)) {
 		/* we found a matching entry */
+		if (entry->is_static) return;
 		entry->port = port;
 		entry->stamp = jiffies;
+		if (is_static && !entry->is_static)
+			__fdb_change_to_static(entry);
 		spin_unlock(&bucket->lock);
 		return;
 	}
@@ -187,6 +245,11 @@ void fdb_learn(unsigned char *mac, struct net_switch_port *port, int vlan) {
 	entry->vlan = vlan;
 	entry->port = port;
 	entry->stamp = jiffies;
+	entry->bucket = bucket;
+	entry->is_static = is_static;
+	if (!entry->is_static)  
+		sw_timer_add(&entry->age_timer, sw_age_timer_expired,
+				(unsigned long)entry, entry->stamp + sw_age_time(entry));
 	/* FIXME smp_wmb() here ?? */
 	list_add_tail_rcu(&entry->lh, &bucket->entries);
 	spin_unlock(&bucket->lock);

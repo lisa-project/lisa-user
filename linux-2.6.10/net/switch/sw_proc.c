@@ -128,9 +128,10 @@ static int proc_read_mac(char *page, char **start,
 	for (i=0; i<SW_HASH_SIZE; i++) {
 		list_for_each_entry_rcu(entry, &sw.fdb[i].entries, lh) {
 			len+=sprintf(page+len, "%02x%02x.%02x%02x.%02x%02x       "
-				"Dynamic       %4d  %s\n",
+				"%12s  %4d  %s\n",
 				entry->mac[0], entry->mac[1], entry->mac[2],
 				entry->mac[3], entry->mac[4], entry->mac[5],
+				(entry->is_static)? "Static": "Dynamic",
 				entry->vlan,
 				entry->port->dev->name
 				);

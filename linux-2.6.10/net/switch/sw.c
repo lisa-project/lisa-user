@@ -96,7 +96,7 @@ __dbg_static int sw_handle_frame(struct net_switch_port *port, struct sk_buff **
 	}
 
 	/* Update the fdb */
-	fdb_learn(skb->mac.raw + 6, port, skb_e.vlan);
+	fdb_learn(skb->mac.raw + 6, port, skb_e.vlan, SW_FDB_DYN);
 
 	return sw_forward(&sw, port, skb, &skb_e);
 
@@ -130,6 +130,7 @@ void sw_disable_port(struct net_switch_port *port) {
 /* Initialize everything associated with a switch */
 static void init_switch(struct net_switch *sw) {
 	INIT_LIST_HEAD(&sw->ports);
+	atomic_set(&sw->fdb_age_time, SW_DEFAULT_AGE_TIME); 
 	sw_fdb_init(sw);
 	init_switch_proc();
 	sw_vdb_init(sw);

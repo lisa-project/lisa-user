@@ -30,6 +30,11 @@
 #define SW_HASH_SIZE_BITS 12
 #define SW_HASH_SIZE (1 << SW_HASH_SIZE_BITS)
 
+#define SW_DEFAULT_AGE_TIME HZ*15
+
+#define SW_FDB_DYN	0
+#define SW_FDB_STATIC 1
+
 /* Hash bucket */
 struct net_switch_bucket {
 	/*
@@ -59,16 +64,14 @@ struct net_switch {
 	/* List of all ports in the switch */
 	struct list_head ports;
 
-	/* To avoid deadlocks and brain damage, we have one global mutex for
-	   all configuration tasks.
-	 */
-	struct semaphore cfg_mutex;
-	
 	/* Switch forwarding database (hashtable) */
 	struct net_switch_bucket fdb[SW_HASH_SIZE];
 
 	/* Vlan database */
 	struct net_switch_vdb_entry * volatile vdb[SW_MAX_VLANS];
+
+	/* Forwarding database entry aging time */
+	atomic_t fdb_age_time;
 	
 	/* Cache of forwarding database entries */
 	kmem_cache_t *fdb_cache;
@@ -136,6 +139,9 @@ struct net_switch_fdb_entry {
 	int is_static;
 	int vlan;
 	struct net_switch_port *port;
+	struct net_switch_bucket *bucket;
+	struct timer_list age_timer;
+	struct rcu_head rcu;
 	unsigned long stamp;
 };
 
@@ -176,7 +182,7 @@ extern void sw_disable_port(struct net_switch_port *);
 extern void sw_fdb_init(struct net_switch *);
 extern void fdb_cleanup_port(struct net_switch_port *);
 extern void fdb_cleanup_vlan(struct net_switch *, int);
-extern void fdb_learn(unsigned char *, struct net_switch_port *, int);
+extern void fdb_learn(unsigned char *, struct net_switch_port *, int, int);
 extern int fdb_lookup(struct net_switch_bucket *, unsigned char *,
 	int, struct net_switch_fdb_entry **);
 extern void sw_fdb_exit(struct net_switch *);
