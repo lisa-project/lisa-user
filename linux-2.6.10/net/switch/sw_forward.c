@@ -91,7 +91,7 @@ static void __sw_flood(struct net_switch *sw, struct net_switch_port *in,
 	
 	struct net_switch_vdb_link *link, *prev=NULL, *oldprev;
 	struct sk_buff *skb2;
-	int first = 1;
+	int needs_tag_change = 1;
 
 	list_for_each_entry_rcu(link, lh1, lh) {
 		if (link->port == in) continue;
@@ -105,19 +105,30 @@ static void __sw_flood(struct net_switch *sw, struct net_switch_port *in,
 	oldprev = prev;
 	list_for_each_entry_rcu(link, lh2, lh) {
 		if (link->port == in) continue;
+		if (oldprev && prev == oldprev) {
+			/* 1 or more elements in lh1 && and we're at the first element
+			   in lh2; make a copy of the skb, then send the last skb from
+			   lh1
+			 */
+			skb2 = skb_copy(skb, GFP_ATOMIC);
+			f(skb2, vlan);
+			needs_tag_change = 0;
+			sw_skb_xmit(skb, prev->port->dev);
+			skb = skb2;
+			prev = link;
+			continue;
+		}
 		if (prev) {
-			if (first) {
-				if (oldprev) {
-					skb2 = skb_copy(skb, GFP_ATOMIC);
-				}
-				else {
-					sw_skb_unshare(&skb);
-					skb2 = skb;
-				}
-				f(skb2, vlan);
-				first = 0;
+			if (needs_tag_change) {
+				/* 0 elements in lh1, and we're at the 2nd element in lh2;
+				   make sure skb is an exclusive copy and apply the tag
+				   change to it before it gets cloned and sent
+				 */
+				sw_skb_unshare(&skb);
+				f(skb, vlan);
+				needs_tag_change = 0;
 			}
-			else skb2 = skb_clone(skb, GFP_ATOMIC);
+			skb2 = skb_clone(skb, GFP_ATOMIC);
 
 			sw_skb_xmit(skb, prev->port->dev);
 			skb = skb2;
@@ -125,7 +136,10 @@ static void __sw_flood(struct net_switch *sw, struct net_switch_port *in,
 		prev = link;
 	}
 	if (prev) {
-		if (first) {
+		if (needs_tag_change && prev != oldprev) {
+			/* lh2 is not empty, so the remaining element is from lh2,
+			   but the tag change was not applied
+			 */
 			sw_skb_unshare(&skb);
 			f(skb, vlan);
 		}	
