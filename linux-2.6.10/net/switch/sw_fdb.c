@@ -33,7 +33,6 @@ static inline int __fdb_learn(struct net_switch_bucket *bucket,
 		if(entry->port == port && entry->vlan == vlan &&
 				!memcmp(entry->mac, mac, ETH_ALEN)) {
 			*pentry = entry;
-			entry->stamp = jiffies;
 			return 1;
 		}
 	}
@@ -70,9 +69,13 @@ void fdb_learn(unsigned char *mac, struct net_switch_port *port, int vlan) {
 		If that fails we return.
 	*/
 	entry = kmem_cache_alloc(sw_fdb_cache, GFP_ATOMIC);
-	if (!entry) return;
+	if (!entry) {
+		write_unlock(&bucket->lock);
+		dbg("cache out of memory");
+		return;
+	}	
 
-	memcpy(entry->mac, mac, 6);
+	memcpy(entry->mac, mac, ETH_ALEN);
 	entry->vlan = vlan;
 	entry->port = port;
 	entry->stamp = jiffies;
@@ -81,5 +84,7 @@ void fdb_learn(unsigned char *mac, struct net_switch_port *port, int vlan) {
 }
 
 void __exit sw_fdb_exit(void) {
+	/* FIXME: kmem_cache_free pe entry-urile care
+	 inca sunt in hash */
 	kmem_cache_destroy(sw_fdb_cache);
 }
