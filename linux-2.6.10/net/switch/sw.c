@@ -3,6 +3,7 @@
 #include <linux/switch.h>
 #include <linux/netdevice.h>
 #include <linux/slab.h>
+#include <linux/if_ether.h>
 #include <asm/semaphore.h>
 
 #include "sw_private.h"
@@ -39,6 +40,7 @@ static int sw_addif(struct net_device *dev) {
 	}
 	if((port = kmalloc(sizeof(struct net_switch_port), GFP_KERNEL)) == NULL)
 		return -ENOMEM;
+	memset(port, 0, sizeof(struct net_switch_port));
 	port->dev = dev;
 	list_add_tail_rcu(&port->lh, &sw.ports);
 	rcu_assign_pointer(dev->sw_port, port);
@@ -128,11 +130,7 @@ static int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 	return -EINVAL;
 }
 
-/* Handle a frame received on a physical interface */
-static int sw_handle_frame(struct net_switch_port *port, struct sk_buff **pskb) {
-	struct sk_buff *skb = *pskb;
-	int i;
-
+static void dump_packet(const struct sk_buff *skb) {
 	printk(KERN_DEBUG "sw_handle_frame on %s: proto=0x%hx "
 			"head=0x%p data=0x%p tail=0x%p end=0x%p\n",
 			skb->dev->name, ntohs(skb->protocol),
@@ -144,6 +142,45 @@ static int sw_handle_frame(struct net_switch_port *port, struct sk_buff **pskb) 
 	for(i = 0; i < 4; i++)
 		printk("0x%x ", skb->data[i]);
 	printk("\n");
+}
+
+/* Handle a frame received on a physical interface */
+static int sw_handle_frame(struct net_switch_port *port, struct sk_buff **pskb) {
+	struct sk_buff *skb = *pskb;
+	struct skb_extra skb_e;
+	int i;
+
+	if(skb->protocol == ntohs(ETH_P_8021Q)) {
+		skb_e.vlan = ntohs(*(unsigned short *)skb->data) & 4095;
+		skb_e.has_vlan_tag = 1;
+	} else {
+		skb_e.vlan = port->vlan;
+		skb_e.has_vlan_tag = 0;
+	}
+
+	/* Perform some sanity checks */
+	if((port->flags & SW_PFL_TRUNK) && !skb_e.has_vlan_tag) {
+		dbg("Received untagged frame on TRUNK port %s\n", port->dev->name);
+		return 1;
+	}
+	if(!(port->flags & SW_PFL_TRUNK) && skb_e.has_vlan_tag) {
+		dbg("Received tagged frame on non-TRUNK port %s\n", port->dev->name);
+		return 1;
+	}
+
+	/* If interface is in trunk, check if the vlan is allowed */
+	if((port->flags & SW_PFL_TRUNK) &&
+			(port->forbidden_vlans[skb_e.vlan / 8] & (1 << (skb_e.vlan % 8)))) {
+		dbg("Received frame on vlan %d, which is forbidden on %s\n",
+				skb_e.vlan, port->dev->name);
+		return 1;
+	}
+
+	/* Update the fdb */
+	fdb_learn(skb->mac.raw + 6, port, skb_e.vlan);
+
+	dump_packet(skb);
+
 	return 0;
 }
 

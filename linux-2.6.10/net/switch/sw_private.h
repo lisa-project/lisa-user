@@ -17,7 +17,7 @@ struct net_switch_bucket {
 	/*
 		List of fdb_entries
 	*/
-	struct list_head head;
+	struct list_head entries;
 
 	/* To avoid adding a fdb_entry twice we protect each bucket
 	   with a rwlock. Since each bucket has its own rwlock, this
@@ -39,7 +39,7 @@ struct net_switch {
 	/*
 		Switch forwarding database (hashtable)
 	*/
-	struct net_switch_bucket hash[SW_HASH_SIZE];
+	struct net_switch_bucket fdb[SW_HASH_SIZE];
 };
 
 struct net_switch_port {
@@ -49,17 +49,29 @@ struct net_switch_port {
 	/* Physical device associated with this port */
 	struct net_device *dev;
 
-	/* Ports are freed with an RCU callback
+	unsigned int flags;
+	int vlan;
+
+	/* Bitmap of forbidden vlans for trunk ports.
+	   512 * 8 bits = 4096 bits => 4096 vlans
 	 */
-	struct rcu_head rcu;
+	unsigned char forbidden_vlans[512];
 };
+
+#define SW_PFL_TRUNK		0x01
 
 /* Hash Entry */
 struct net_switch_fdb_entry {
-	unsigned char mac[6];
-	int vlan_id;
-	struct net_switch_port *port;
 	struct list_head lh;
+	unsigned char mac[6];
+	int vlan;
+	struct net_switch_port *port;
+	unsigned long stamp;
+};
+
+struct skb_extra {
+	int vlan;
+	int has_vlan_tag;
 };
 
 #endif
