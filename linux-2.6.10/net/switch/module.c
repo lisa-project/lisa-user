@@ -13,11 +13,6 @@ MODULE_AUTHOR("us");
 MODULE_LICENSE("GPL");
 MODULE_VERSION("0.1");
 
-/* TODO
-   + in 2.6 nu mai am MOD_INC_USE_COUNT si MOD_DEC_USE_COUNT; ar fi bine sa
-     nu dau jos modulul in timp ce se intampla kestii cu interfetele
- */
-
 extern int (*sw_handle_frame_hook)(struct net_switch_port *p, struct sk_buff **pskb);
 
 static struct net_switch sw;
@@ -40,8 +35,9 @@ static int sw_addif(struct net_device *dev) {
 	}
 	if((port = kmalloc(sizeof(struct net_switch_port), GFP_KERNEL)) == NULL)
 		return -ENOMEM;
+	init_waitqueue_head(&port->cleanup_q);
 	port->dev = dev;
-	list_add_tail(&port->lh, &sw.ports);
+	list_add_tail_rcu(&port->lh, &sw.ports);
 	rcu_assign_pointer(dev->sw_port, port);
 	dev_hold(dev);
 	dev_set_promiscuity(dev, 1);
@@ -50,12 +46,44 @@ static int sw_addif(struct net_device *dev) {
 	return 0;
 }
 
+void sw_port_cleanup(struct rcu_head *head) {
+	struct net_switch_port *port =
+		container_of(head, struct net_switch_port, rcu);
+
+	/* This is scheduled with RCU, so we know for sure that no instance
+	   of sw_handle_frame that processes incoming packets on this port
+	   is running (or will be running anymore).
+
+	   This is good, because it means that nobody tries to add entries 
+	   to the fdb that reference this port.
+
+	   We only need to walk the fdb and delete all entries that reference
+	   this port.
+	 */
+
+	/* Finally wake up the calling process to complete port deletion */
+	wake_up(&port->cleanup_q);
+}
+
 static void __sw_delif(struct net_device *dev, struct net_switch_port *port) {
+	/* First disable promiscuous mode, so that there be less chances to
+	   still receive packets on this port
+	 */
+	dev_set_promiscuity(dev, -1);
+	/* Now let all incoming queue processors know that frames on this port
+	   are not handled by the switch anymore.
+	 */
 	rcu_assign_pointer(dev->sw_port, NULL);
-	list_del(&port->lh);
+	list_del_rcu(&port->lh);
+	/* schedule cleanup _after_ everybody sees that dev->sw_port is NULL */
+	call_rcu(&port->rcu, sw_port_cleanup);
+	/* wait until the cleanup routine makes sure nobody uses the port anymore
+	   and wakes us up
+	 */
+	interruptible_sleep_on(&port->cleanup_q);
+	/* free port memory and release interface */
 	kfree(port);
 	dev_put(dev);
-	dev_set_promiscuity(dev, -1);
 	dbg("Removed device %s from switch\n", dev->name);
 }
 

@@ -1589,17 +1589,30 @@ static __inline__ int handle_switch(struct sk_buff **pskb,
 				    struct packet_type **pt_prev, int *ret)
 {
 	struct net_switch_port *port;
+	int ret;
 
+	/* RCU is already locked from outside, in netif_receive_skb(),
+	   but we use it here for better code readability.
+
+	   Deletion of ports relies on handling frames _with RCU locked_,
+	   besides nesting RCU locks is harmless and has no overhead.
+	   (right? :P)
+	 */
+	rcu_read_lock();
 	if ((*pskb)->pkt_type == PACKET_LOOPBACK ||
-	    (port = rcu_dereference((*pskb)->dev->sw_port)) == NULL)
+	    (port = rcu_dereference((*pskb)->dev->sw_port)) == NULL) {
+		rcu_read_unlock();
 		return 0;
+	}
 
 	if (*pt_prev) {
 		*ret = deliver_skb(*pskb, *pt_prev);
 		*pt_prev = NULL;
 	}
 	
-	return sw_handle_frame_hook(port, pskb);
+	ret = sw_handle_frame_hook(port, pskb);
+	rcu_read_unlock();
+	return ret;
 }
 #else
 #define handle_switch(skb, pt_prev, ret)	(0)
