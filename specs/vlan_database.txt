@@ -1,0 +1,10 @@
+Daca o interfata non-trunk se pune intr-un vlan care nu exista => interfata
+trece in down (FastEthernet0/23 is down, line protocol is down) dar isi
+pastreaza link-ul fizic.
+
+Nu se invata mac-uri pe un vlan care nu exista in vlan database.
+
+Daca o interfata e in trunk si are in lista de allowed vlans un vlan care nu
+exista in vlan database, atunci nu primeste/trimite pachete in vlanul
+respectiv. Daca intretimp vlanul respectiv apare in vlan database, atunci
+interfata incepe sa primeasca/trimita pachete in vlan-ul respectiv imediat.
