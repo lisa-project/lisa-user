@@ -46,6 +46,7 @@ int sw_vdb_add_vlan(struct net_switch *sw, int vlan, char *name) {
 		} else {
 			if(port->vlan != vlan)
 				continue;
+			sw_enable_port(port);
 		}
 		sw_vdb_add_port(vlan, port);
 	}
@@ -62,8 +63,15 @@ int sw_vdb_del_vlan(struct net_switch *sw, int vlan) {
 		return -EINVAL;
 	if(!(entry = sw->vdb[vlan]))
 		return -ENOENT;
+	list_for_each_entry(link, &entry->non_trunk_ports, lh) {
+		sw_disable_port(link->port);
+	}
 	rcu_assign_pointer(sw->vdb[vlan], NULL);
 	synchronize_kernel();
+	/* Now nobody learns macs on this vlan, so we can safely remove
+	   all entrues from the fdb
+	 */
+	fdb_cleanup_vlan(sw, vlan);
 	list_for_each_entry_safe(link, tmp, &entry->trunk_ports, lh) {
 		kmem_cache_free(sw->vdb_cache, link);
 	}

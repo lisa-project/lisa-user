@@ -56,7 +56,7 @@ void dump_packet(const struct sk_buff *skb) {
 }
 
 /* Handle a frame received on a physical interface */
-static int sw_handle_frame(struct net_switch_port *port, struct sk_buff **pskb) {
+__dbg_static int sw_handle_frame(struct net_switch_port *port, struct sk_buff **pskb) {
 	struct sk_buff *skb = *pskb;
 	struct skb_extra skb_e;
 
@@ -106,6 +106,24 @@ free_skb:
 	return NET_RX_DROP;
 }
 
+/* Enable a port */
+void sw_enable_port(struct net_switch_port *port) {
+	/* Someday this will trigger some user-space callback to help
+	   the cli display warnings about a port changing state. For
+	   now just set the disabled flag */
+	port->flags &= ~SW_PFL_DISABLED;
+	dbg("Enabled port %s\n", port->dev->name);
+}
+
+/* Disable a port */
+void sw_disable_port(struct net_switch_port *port) {
+	/* Someday this will trigger some user-space callback to help
+	   the cli display warnings about a port changing state. For
+	   now just set the disabled flag */
+	port->flags |= SW_PFL_DISABLED;
+	dbg("Disabled port %s\n", port->dev->name);
+}
+
 /* Initialize everything associated with a switch */
 static void init_switch(struct net_switch *sw) {
 	INIT_LIST_HEAD(&sw->ports);
@@ -146,6 +164,10 @@ static void switch_exit(void) {
 	sw_handle_frame_hook = NULL;
 	dbg("Switch module unloaded\n");
 }
+
+#ifdef DEBUG
+EXPORT_SYMBOL(sw_handle_frame);
+#endif
 
 module_init(switch_init);
 module_exit(switch_exit);

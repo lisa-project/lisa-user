@@ -70,8 +70,50 @@ void fdb_cleanup_port(struct net_switch_port *port) {
 	}
 	synchronize_kernel();
 	list_for_each_entry_safe(entry, tmp, &del_list, lh) {
-		dbg("About to free fdb entry at 0x%p for port %s on bucket %d\n",
-				entry, entry->port->dev->name, i);
+		dbg("About to free fdb entry at 0x%p for port %s\n",
+				entry, entry->port->dev->name);
+		kmem_cache_free(sw->fdb_cache, entry);
+	}
+}
+
+/* Walk the fdb and delete all entries referencing a given vlan.
+   
+   This is (should be) always called from user space, so locking is
+   done _with_ softirqs disabled (spin_lock_bh()).
+
+   Writing is done in a transactional manner: first check if we need
+   to change a bucket, and then lock the bucket only if we need to
+   change it. While holding the lock search for the entry again to
+   avoid races.
+ */
+void fdb_cleanup_vlan(struct net_switch *sw, int vlan) {
+    struct net_switch_fdb_entry *entry, *tmp;
+	struct list_head *entry_lh, *tmp_lh;
+	LIST_HEAD(del_list);
+    int i;
+	
+	for (i = 0; i < SW_HASH_SIZE; i++) {
+		list_for_each_entry_rcu(entry, &sw->fdb[i].entries, lh) {
+			if(entry->vlan == vlan)
+                break;
+		}
+        if(&entry->lh == &sw->fdb[i].entries)
+            continue;
+        /* We found entries; lock for write and delete them */
+        spin_lock_bh(&sw->fdb[i].lock);
+		list_for_each_safe_rcu(entry_lh, tmp_lh, &sw->fdb[i].entries) {
+			entry = list_entry(entry_lh, struct net_switch_fdb_entry, lh);
+			if(entry->vlan == vlan) {
+                list_del_rcu(&entry->lh);
+				list_add(&entry->lh, &del_list);
+            }
+		}
+        spin_unlock_bh(&sw->fdb[i].lock);
+	}
+	synchronize_kernel();
+	list_for_each_entry_safe(entry, tmp, &del_list, lh) {
+		dbg("About to free fdb entry at 0x%p for port %s\n",
+				entry, entry->port->dev->name);
 		kmem_cache_free(sw->fdb_cache, entry);
 	}
 }
@@ -149,6 +191,12 @@ void fdb_learn(unsigned char *mac, struct net_switch_port *port, int vlan) {
 	list_add_tail_rcu(&entry->lh, &bucket->entries);
 	spin_unlock(&bucket->lock);
 }
+
+#ifdef DEBUG
+EXPORT_SYMBOL(fdb_cleanup_port);
+EXPORT_SYMBOL(fdb_lookup);
+EXPORT_SYMBOL(fdb_learn);
+#endif
 
 void __exit sw_fdb_exit(struct net_switch *sw) {
 	/* Entries are freed by __sw_delif(), which is called for

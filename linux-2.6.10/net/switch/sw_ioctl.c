@@ -161,8 +161,8 @@ static int sw_set_port_trunk(struct net_switch_port *port, int trunk) {
 		__sw_remove_from_vlans(port);
 		port->flags &= ~SW_PFL_TRUNK;
 		fdb_cleanup_port(port);
-		sw_vdb_add_port(port->vlan, port);
-		sw_enable_port_rcu(port);
+		if(!sw_vdb_add_port(port->vlan, port))
+			sw_enable_port(port);
 	} else {
 		if(!trunk)
 			return -EINVAL;
@@ -171,7 +171,7 @@ static int sw_set_port_trunk(struct net_switch_port *port, int trunk) {
 		port->flags |= SW_PFL_TRUNK;
 		fdb_cleanup_port(port);
 		__sw_add_to_vlans(port);
-		sw_enable_port_rcu(port);
+		sw_enable_port(port);
 	}
 	return 0;
 }
@@ -247,7 +247,8 @@ static int sw_set_port_vlan(struct net_switch_port *port, int vlan) {
 		return 0;
 	if(!(port->flags & SW_PFL_TRUNK)) {
 		sw_vdb_del_port(port->vlan, port);
-		sw_vdb_add_port(vlan, port);
+		if(sw_vdb_add_port(vlan, port))
+			sw_disable_port(port);
 	}
 	port->vlan = vlan;
 	return 0;

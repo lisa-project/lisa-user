@@ -105,12 +105,12 @@ struct net_switch_vdb_link {
 #define SW_PFL_TRUNK		0x02
 
 #define sw_disable_port_rcu(port) do {\
-	(port)->flags |= SW_PFL_DISABLED;\
+	sw_disable_port(port);\
 	synchronize_kernel();\
 } while(0)
 
 #define sw_enable_port_rcu(port) do {\
-	(port)->flags &= ~SW_PFL_DISABLED;\
+	sw_enable_port(port);\
 	synchronize_kernel();\
 } while(0)
 
@@ -153,10 +153,13 @@ static __inline__ int sw_mac_hash(const unsigned char *mac) {
 
 /* sw.c */
 extern void dump_packet(const struct sk_buff *);
+extern void sw_enable_port(struct net_switch_port *);
+extern void sw_disable_port(struct net_switch_port *);
 
 /* sw_fdb.c */
 extern void sw_fdb_init(struct net_switch *);
 extern void fdb_cleanup_port(struct net_switch_port *);
+extern void fdb_cleanup_vlan(struct net_switch *, int);
 extern void fdb_learn(unsigned char *, struct net_switch_port *, int);
 extern int fdb_lookup(struct net_switch_bucket *, unsigned char *,
 	int, struct net_switch_fdb_entry **);

@@ -21,8 +21,10 @@
 
 #ifdef DEBUG
 #define dbg(text,par...) printk(KERN_DEBUG text, ##par)
+#define __dbg_static
 #else
 #define dbg(par...)
+#define __dbg_static static
 #endif
 
 #endif
