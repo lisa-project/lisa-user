@@ -1,4 +1,5 @@
 #include "sw_private.h"
+#include "sw_debug.h"
 
 struct net_device *sw_vif_find(struct net_switch *sw, int vlan) {
 	struct net_switch_vif_list *elem;
@@ -14,6 +15,7 @@ int sw_vif_addif(struct net_switch *sw, int vlan) {
 	struct net_device *dev;
 	struct net_switch_vif_list *vif_list;
 	struct net_switch_vif_priv *priv;
+	int result;
 	
 	if(vlan < 1 || vlan > 4095)
 		return -EINVAL;
@@ -26,7 +28,9 @@ int sw_vif_addif(struct net_switch *sw, int vlan) {
 	vif_list = kmalloc(sizeof(struct net_switch_vif_list), GFP_ATOMIC);
 	if(vif_list == NULL)
 		return -ENOMEM;
+	memset(buf, 0, sizeof(buf));
 	sprintf(buf, "vlan%d", vlan);
+	dbg("About to alloc netdev for vlan %d\n", vlan);
 	dev = alloc_netdev(sizeof(struct net_switch_vif_priv), buf, ether_setup);
 	if(dev == NULL) {
 		kfree(vif_list);
@@ -40,8 +44,14 @@ int sw_vif_addif(struct net_switch *sw, int vlan) {
 	priv = netdev_priv(dev);
 	priv->sw = sw;
 	priv->list = vif_list;
-	list_add_tail(&sw->vif, &vif_list->lh);
-	register_netdev(dev);
+	list_add_tail(&vif_list->lh, &sw->vif);
+	if ((result = register_netdev(dev))) {
+		dbg("vif: error %i registering netdevice %s\n", 
+				result, dev->name);
+	}
+	else {
+		dbg("vif: successfully registered netdevice %s\n", dev->name);
+	}		
 	
 	return 0;
 }

@@ -274,6 +274,7 @@ int main(int argc, char **argv) {
 			usage();
 			return 0;
 		}
+		user_arg.cmd  = SWCFG_ADDVIF;
 		user_arg.vlan = atoi(argv[2]);
 		status = ioctl(sock, SIOCSWCFG, &user_arg);
 		if (status)
@@ -286,6 +287,7 @@ int main(int argc, char **argv) {
 			usage();
 			return 0;
 		}
+		user_arg.cmd = SWCFG_DELVIF;
 		user_arg.vlan = atoi(argv[2]);
 		status = ioctl(sock, SIOCSWCFG, &user_arg);
 		if (status)
