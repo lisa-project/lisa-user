@@ -67,6 +67,7 @@ static void __sw_flood(struct net_switch *sw, struct net_switch_port *in,
 	int first = 1;
 
 	list_for_each_entry_rcu(link, lh1, lh) {
+		if (link->port == in) continue;
 		if (prev) {
 			skb2 = skb_clone(skb, GFP_ATOMIC);
 			skb->dev = prev->port->dev;
@@ -78,6 +79,7 @@ static void __sw_flood(struct net_switch *sw, struct net_switch_port *in,
 	}
 	oldprev = prev;
 	list_for_each_entry_rcu(link, lh2, lh) {
+		if (link->port == in) continue;
 		if (prev) {
 			if (first) {
 				skb2 = oldprev? skb_copy(skb, GFP_ATOMIC): skb;
@@ -105,6 +107,7 @@ static void __sw_flood(struct net_switch *sw, struct net_switch_port *in,
 		dev_queue_xmit(skb);
 	}
 	else {
+		dbg("flood: nothing to flood, freeing skb.\n");
 		dev_kfree_skb(skb);
 	}
 }
