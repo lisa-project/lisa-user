@@ -1,0 +1,6 @@
+This will contain a brief description of how to use Linux Multilayer
+Switch. We'll write it someday, we promise :P
+
+For now, follow the instructions in the INSTALL file provided with
+the tarball and run swctl with no arguments to get a list of the
+available options.
