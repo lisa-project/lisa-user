@@ -110,7 +110,7 @@ static void __sw_flood(struct net_switch *sw, struct net_switch_port *in,
 }
 
 /* Flood frame to all necessary ports */
-static void sw_flood2(struct net_switch *sw, struct net_switch_port *in,
+static void sw_flood(struct net_switch *sw, struct net_switch_port *in,
 		struct sk_buff *skb, int vlan) {
 
 	/* if source port is in trunk mode we first send the 
@@ -136,9 +136,11 @@ int sw_forward(struct net_switch *sw, struct net_switch_port *in,
 		struct sk_buff *skb, struct skb_extra *skb_e) {
 	struct net_switch_bucket *bucket = &sw->fdb[sw_mac_hash(skb->mac.raw)];
 	struct net_switch_fdb_entry *out;
-	
+
+	rcu_read_lock();
 	if (fdb_lookup(bucket, skb->mac.raw, skb_e->vlan, &out)) {
 		/* fdb entry found */
+		rcu_read_unlock();
 		if (in == out->port) {
 			/* in_port == out_port */
 			dbg("forward: Dropping frame, dport %s == sport %s\n",
@@ -161,9 +163,10 @@ int sw_forward(struct net_switch *sw, struct net_switch_port *in,
 				out->port->dev->name);
 		__sw_forward(in, out->port, skb, skb_e);
 	} else {
+		rcu_read_unlock();
 		dbg("forward: Flooding frame from %s to all necessary ports\n",
 				in->dev->name);
-		sw_flood2(sw, in, skb, skb_e->vlan);
+		sw_flood(sw, in, skb, skb_e->vlan);
 	}	
 	
 	return 1;
