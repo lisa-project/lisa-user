@@ -4,6 +4,7 @@
 #include <linux/netdevice.h>
 #include <linux/list.h>
 #include <linux/wait.h>
+#include <linux/spinlock.h>
 #include <asm/semaphore.h>
 #include <asm/atomic.h>
 
@@ -17,11 +18,12 @@ struct net_switch_bucket {
 		List of fdb_entries
 	*/
 	struct list_head head;
-	/*
-		Mutex for operations on the list
-		associated with this bucket.
-	*/
-	struct semaphore mutex;
+
+	/* To avoid adding a fdb_entry twice we protect each bucket
+	   with a rwlock. Since each bucket has its own rwlock, this
+	   doesn't lead to a bottleneck.
+	 */
+	rwlock_t lock;
 };
 
 struct net_switch {
@@ -55,9 +57,9 @@ struct net_switch_port {
 /* Hash Entry */
 struct net_switch_fdb_entry {
 	unsigned char mac[6];
-	unsigned char vlan_id[2];	
+	int vlan_id;
 	struct net_switch_port *port;
-	struct list_head next;
+	struct list_head lh;
 };
 
 #endif
