@@ -7,7 +7,7 @@
 #define SCR_RIGHT_MAX 70
 
 static struct proc_dir_entry *switch_dir, *iface_file,
-							 *mac_file;
+							 *mac_file, *vlan_file;
 
 
 static int read_vlan_bitmap(char *page, struct net_switch_port *port, int initial_offset) {
@@ -136,6 +136,34 @@ static int proc_read_mac(char *page, char **start,
 	return len;
 }
 
+static int proc_read_vlan(char *page, char **start,
+		off_t off, int count,
+		int *eof, void *data) {
+		
+	int len, vlan;
+	struct net_switch_vdb_link *link;
+	
+	len = sprintf(page, "VLAN Name                             Status    Ports\n");
+	len += sprintf(page+len, "---- -------------------------------- --------- "
+		"-------------------------------\n");
+	
+	rcu_read_lock();
+
+	for (vlan = 1; vlan < SW_MAX_VLANS; vlan++) {
+		if (! sw.vdb[vlan]) continue;
+		len += sprintf(page+len, "%-4d %-32s active   ", vlan, sw.vdb[vlan]->name);
+		/* FIXME: functie de listat porturile paginat */
+		list_for_each_entry(link, &sw.vdb[vlan]->ports, lh) {
+			len += sprintf(page+len,"%s ", link->port->dev->name);
+		}
+		len += sprintf(page+len, "\n");
+	}
+	
+	rcu_read_unlock();
+	
+	return len;	
+}	
+
 int init_switch_proc(void) {
 
 	/* Create our own directory under /proc/net */
@@ -149,7 +177,7 @@ int init_switch_proc(void) {
 	   Create the ifaces file, which lists information
 	   about the interfaces added to switch
 	 */
-	iface_file = create_proc_read_entry(SW_PROCFS_IFACES, 0600,
+	iface_file = create_proc_read_entry(SW_PROCFS_IFACES, 0644,
 			switch_dir, proc_read_ifaces, NULL);
 	if (!iface_file) {
 		remove_proc_entry(SW_PROCFS_DIR, proc_net);
@@ -157,7 +185,7 @@ int init_switch_proc(void) {
 	}
 	iface_file->owner = THIS_MODULE;
 
-	mac_file = create_proc_read_entry(SW_PROCFS_MAC, 0600,
+	mac_file = create_proc_read_entry(SW_PROCFS_MAC, 0644,
 			switch_dir, proc_read_mac, NULL);
 	if (!mac_file) {
 		remove_proc_entry(SW_PROCFS_DIR, proc_net);
@@ -165,6 +193,16 @@ int init_switch_proc(void) {
 		return -ENOMEM;
 	}
 	mac_file->owner = THIS_MODULE;
+	
+	vlan_file = create_proc_read_entry(SW_PROCFS_VLAN, 0644,
+			switch_dir, proc_read_vlan, NULL);
+	if (!vlan_file) {
+		remove_proc_entry(SW_PROCFS_DIR, proc_net);
+		remove_proc_entry(SW_PROCFS_IFACES, switch_dir);
+		remove_proc_entry(SW_PROCFS_MAC, switch_dir);
+		return -ENOMEM;
+	}
+	vlan_file->owner = THIS_MODULE;
 
 	dbg("sw_proc initialized\n");
 	return 0;
@@ -173,5 +211,6 @@ int init_switch_proc(void) {
 void cleanup_switch_proc(void) {
 	remove_proc_entry(SW_PROCFS_IFACES, switch_dir);
 	remove_proc_entry(SW_PROCFS_MAC, switch_dir);
+	remove_proc_entry(SW_PROCFS_VLAN, switch_dir);
 	remove_proc_entry(SW_PROCFS_DIR, proc_net);
 }
