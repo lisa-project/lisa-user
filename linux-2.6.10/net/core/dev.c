@@ -1589,7 +1589,7 @@ static __inline__ int handle_switch(struct sk_buff **pskb,
 				    struct packet_type **pt_prev, int *ret)
 {
 	struct net_switch_port *port;
-	int ret;
+	int res;
 
 	/* RCU is already locked from outside, in netif_receive_skb(),
 	   but we use it here for better code readability.
@@ -1610,9 +1610,9 @@ static __inline__ int handle_switch(struct sk_buff **pskb,
 		*pt_prev = NULL;
 	}
 	
-	ret = sw_handle_frame_hook(port, pskb);
+	res = sw_handle_frame_hook(port, pskb);
 	rcu_read_unlock();
-	return ret;
+	return res;
 }
 #else
 #define handle_switch(skb, pt_prev, ret)	(0)
