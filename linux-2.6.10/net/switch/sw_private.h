@@ -32,6 +32,9 @@ struct net_switch_vdb_entry {
 	struct list_head ports;
 };
 
+#define SW_MAX_VLANS 4096
+#define SW_VLAN_BMP_NO SW_MAX_VLANS/8
+
 struct net_switch {
 	/* List of all ports in the switch */
 	struct list_head ports;
@@ -45,7 +48,11 @@ struct net_switch {
 	struct net_switch_bucket fdb[SW_HASH_SIZE];
 
 	/* Vlan database */
-	struct net_switch_vdb_entry * volatile vdb[4096];
+	struct net_switch_vdb_entry * volatile vdb[SW_MAX_VLANS];
+	
+	/* Cache of forwarding database entries */
+	kmem_cache_t *fdb_cache;
+
     /* Cache of link structures */
     kmem_cache_t *vdb_cache;
 };
@@ -66,7 +73,7 @@ struct net_switch_port {
 	/* Bitmap of forbidden vlans for trunk ports.
 	   512 * 8 bits = 4096 bits => 4096 vlans
 	 */
-	unsigned char forbidden_vlans[512];
+	unsigned char forbidden_vlans[SW_VLAN_BMP_NO];
 };
 
 struct net_switch_vdb_link {
@@ -91,6 +98,12 @@ struct skb_extra {
 	int has_vlan_tag;
 };
 
+/* Userspace arg struct for ioctls */
+struct sw_user_arg {
+	int vlan;
+	char *name;
+};
+
 #define sw_allow_vlan(bitmap, vlan) (bitmap)[(vlan) / 8] |= (1 << ((vlan) % 8))
 #define sw_forbid_vlan(bitmap, vlan) (bitmap)[(vlan) / 8] &= ~(1 << ((vlan) % 8))
 
@@ -107,12 +120,12 @@ extern int init_switch_proc(void);
 extern void cleanup_switch_proc(void);
 
 /* sw_vdb.c */
-extern void sw_vdb_add_vlan(struct net_switch *sw, int vlan, char *name);
-extern void sw_vdb_del_vlan(struct net_switch *sw, int vlan);
-extern void sw_vdb_set_vlan_name(struct net_switch *sw, int vlan, char *name);
+extern int sw_vdb_add_vlan(struct net_switch *sw, int vlan, char *name);
+extern int sw_vdb_del_vlan(struct net_switch *sw, int vlan);
+extern int sw_vdb_set_vlan_name(struct net_switch *sw, int vlan, char *name);
 extern void __init sw_vdb_init(struct net_switch *sw);
 extern void __exit sw_vdb_exit(struct net_switch *sw);
-extern void sw_vdb_add_port(int vlan, struct net_switch_port *port);
-extern void sw_vdb_del_port(int vlan, struct net_switch_port *port);
+extern int sw_vdb_add_port(int vlan, struct net_switch_port *port);
+extern int sw_vdb_del_port(int vlan, struct net_switch_port *port);
 
 #endif

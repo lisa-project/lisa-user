@@ -1,8 +1,6 @@
 #include "sw_fdb.h"
 #include "sw_debug.h"
 
-static kmem_cache_t *sw_fdb_cache;
-
 void __init sw_fdb_init(struct net_switch *sw) {
 	int i;
 
@@ -10,7 +8,7 @@ void __init sw_fdb_init(struct net_switch *sw) {
 		INIT_LIST_HEAD(&sw->fdb[i].entries);
 		rwlock_init(&sw->fdb[i].lock);
 	}
-	sw_fdb_cache = kmem_cache_create("sw_fdb_cache",
+	sw->fdb_cache = kmem_cache_create("sw_fdb_cache",
 		sizeof(struct net_switch_fdb_entry),
 		0, SLAB_HWCACHE_ALIGN, NULL, NULL);
 		
@@ -42,7 +40,7 @@ void fdb_cleanup_port(struct net_switch_port *port) {
                 list_del(&entry->lh);
 				dbg("About to free fdb entry at 0x%p for port %s on bucket %d\n",
 						entry, port->dev->name, i);
-                kmem_cache_free(sw_fdb_cache, entry);
+                kmem_cache_free(sw->fdb_cache, entry);
             }
 		}
         write_unlock(&sw->fdb[i].lock);
@@ -93,7 +91,7 @@ void fdb_learn(unsigned char *mac, struct net_switch_port *port, int vlan) {
 		we try to alloc an entry from the cache.
 		If that fails we return.
 	*/
-	entry = kmem_cache_alloc(sw_fdb_cache, GFP_ATOMIC);
+	entry = kmem_cache_alloc(port->sw->fdb_cache, GFP_ATOMIC);
 	if (!entry) {
 		write_unlock(&bucket->lock);
 		dbg("cache out of memory");
@@ -112,5 +110,5 @@ void __exit sw_fdb_exit(struct net_switch *sw) {
 	/* Entries are freed by __sw_delif(), which is called for
        all interfaces before this
      */
-	kmem_cache_destroy(sw_fdb_cache);
+	kmem_cache_destroy(sw->fdb_cache);
 }

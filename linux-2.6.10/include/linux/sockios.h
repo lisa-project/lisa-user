@@ -125,6 +125,11 @@
 /* switch calls */
 #define SIOCSWADDIF		0x89b0	/* add interface to switch */
 #define SIOCSWDELIF		0x89b1	/* remove interface from switch */
+#define SIOCSWADDVLAN	0x89b2	/* add vlan to vlan database */
+#define SIOCSWDELVLAN	0x89b3	/* delete vlan from vlan database */
+#define SIOCSWRENAMEVLAN 0x89b4	/* rename vlan from vlan database */
+#define SIOCSWADDVLANPORT 0x89b5 /* add a port to a vlan */
+#define SIOCSWDELVLANPORT 0x89b6 /* remove a port from a vlan */
 
 /* Device private ioctl calls */
 

@@ -262,6 +262,7 @@ static inline int __dev_get_by_name_user(void __user *ptr, struct net_device **p
  */
 static int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 	struct net_device *dev;
+	struct sw_user_arg arg;
 	int err = -EINVAL;
 
 	if(!capable(CAP_NET_ADMIN))
@@ -285,7 +286,21 @@ static int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 		err = sw_delif(dev);
 		dev_put(dev);
 		break;
-
+	
+	case SIOCSWADDVLAN:
+		if ((err = copy_from_user(&arg, uarg, sizeof(struct sw_user_arg))))
+			break;
+		dbg("Add vlan: no=%d name=%s", arg.vlan, arg.name);
+		err = 0;
+		break;
+	case SIOCSWDELVLAN:
+		break;
+	case SIOCSWRENAMEVLAN:
+		break;
+	case SIOCSWADDVLANPORT:
+		break;
+	case SIOCSWDELVLANPORT:
+		break;
 	}
 	up(&sw.cfg_mutex);
 	return err;

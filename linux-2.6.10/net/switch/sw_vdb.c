@@ -2,53 +2,57 @@
 #include "sw_debug.h"
 
 /* Add a new vlan to the vlan database */
-void sw_vdb_add_vlan(struct net_switch *sw, int vlan, char *name) {
+int sw_vdb_add_vlan(struct net_switch *sw, int vlan, char *name) {
 	struct net_switch_vdb_entry *entry;
 
     if(vlan < 1 || vlan > 4095)
-        return;
+        return -ENOMEM;
     if(sw->vdb[vlan])
-        return;
+        return -EEXIST;
     if(!(entry = kmalloc(sizeof(struct net_switch_vdb_entry),
 					GFP_ATOMIC))) {
         dbg("Out of memory while trying to add vlan %d\n", vlan);
-        return;
+        return -ENOMEM;
     }
 	strncpy(entry->name, name, SW_MAX_VLAN_NAME);
     entry->name[SW_MAX_VLAN_NAME - 1] = '\0';
     INIT_LIST_HEAD(&entry->ports);
 	rcu_assign_pointer(sw->vdb[vlan], entry);
+
+	return 0;
 }
 
 /* Remove a vlan from the vlan database */
-void sw_vdb_del_vlan(struct net_switch *sw, int vlan) {
+int sw_vdb_del_vlan(struct net_switch *sw, int vlan) {
 	struct net_switch_vdb_entry *entry;
 	struct net_switch_vdb_link *link, *tmp;
 
 	if(vlan < 1 || vlan > 4095)
-		return;
+		return -EINVAL;
 	if(!(entry = sw->vdb[vlan]))
-		return;
+		return -ENOENT;
 	rcu_assign_pointer(sw->vdb[vlan], NULL);
 	synchronize_kernel();
 	list_for_each_entry_safe(link, tmp, &entry->ports, lh) {
 		kmem_cache_free(sw->vdb_cache, link);
 	}
 	kfree(entry);
+
+	return 0;
 }
 
 /* Rename a vlan */
-void sw_vdb_set_vlan_name(struct net_switch *sw, int vlan, char *name) {
+int sw_vdb_set_vlan_name(struct net_switch *sw, int vlan, char *name) {
 	struct net_switch_vdb_entry *entry, *old;
 
     if(vlan < 1 || vlan > 4095)
-        return;
+        return -EINVAL;
     if(!(old = sw->vdb[vlan]))
-        return;
+        return -ENOENT;
     if(!(entry = kmalloc(sizeof(struct net_switch_vdb_entry),
 					GFP_ATOMIC))) {
         dbg("Out of memory while trying to change vlan name%d\n", vlan);
-        return;
+        return -ENOMEM;
     }
 	strncpy(entry->name, name, SW_MAX_VLAN_NAME);
     entry->name[SW_MAX_VLAN_NAME - 1] = '\0';
@@ -56,6 +60,8 @@ void sw_vdb_set_vlan_name(struct net_switch *sw, int vlan, char *name) {
 	rcu_assign_pointer(sw->vdb[vlan], entry);
 	synchronize_kernel();
 	kfree(old);
+
+	return 0;
 }
 
 /* Initialize the vlan database */
@@ -79,17 +85,18 @@ void __exit sw_vdb_exit(struct net_switch *sw) {
 
 	for(vlan = 1; vlan <= 4095; vlan++)
 		sw_vdb_del_vlan(sw, vlan);
+	kmem_cache_destroy(sw->vdb_cache);
 }
 
 /* Add a port to a vlan */
-void sw_vdb_add_port(int vlan, struct net_switch_port *port) {
+int sw_vdb_add_port(int vlan, struct net_switch_port *port) {
 	struct net_switch *sw = port->sw;
 	struct net_switch_vdb_link *link;
 
     if(vlan < 1 || vlan > 4095)
-        return;
+        return -EINVAL;
 	if(!sw->vdb[vlan])
-		return;
+		return -ENOENT;
 	/* The same port cannot be added twice to the same vlan because the only
 	   way to add a port to a vlan is by changing the port's configuration.
 	   Changing port configuration is mutually exclusive.
@@ -97,29 +104,33 @@ void sw_vdb_add_port(int vlan, struct net_switch_port *port) {
 	link = kmem_cache_alloc(sw->vdb_cache, GFP_ATOMIC);
 	if(!link) {
 		dbg("Out of memory while adding port to vlan\n");
-		return;
+		return -ENOMEM;
 	}
 	link->port = port;
 	smp_wmb();
 	list_add_tail_rcu(&link->lh, &sw->vdb[vlan]->ports);
 	dbg("vdb: Added port %s to vlan %d\n", port->dev->name, vlan);
+
+	return 0;
 }
 
 /* Remove a port from a vlan */
-void sw_vdb_del_port(int vlan, struct net_switch_port *port) {
+int sw_vdb_del_port(int vlan, struct net_switch_port *port) {
 	struct net_switch_vdb_link *link;
 
     if(vlan < 1 || vlan > 4095)
-        return;
+        return -EINVAL;
 	if(!port->sw->vdb[vlan])
-		return;
+		return -ENOENT;
 	list_for_each_entry(link, &port->sw->vdb[vlan]->ports, lh) {
 		if(link->port == port) {
 			list_del_rcu(&link->lh);
 			synchronize_kernel();
 			kmem_cache_free(port->sw->vdb_cache, link);
 			dbg("vdb: Removed port %s from vlan %d\n", port->dev->name, vlan);
-			return;
+			return 0;
 		}
 	}
+	
+	return -ENOENT;
 }
