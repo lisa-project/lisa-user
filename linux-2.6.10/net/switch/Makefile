@@ -1,6 +1,6 @@
 obj-$(CONFIG_SWITCH) += switch.o
 
-switch-objs := sw.o sw_fdb.o sw_proc.o sw_vdb.o sw_forward.o sw_ioctl.o
+switch-objs := sw.o sw_fdb.o sw_proc.o sw_vdb.o sw_forward.o sw_ioctl.o sw_vif.o
 
 ##
 # Config section; will be moved to kernel config

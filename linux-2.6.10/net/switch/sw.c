@@ -130,6 +130,9 @@ void sw_disable_port(struct net_switch_port *port) {
 /* Initialize everything associated with a switch */
 static void init_switch(struct net_switch *sw) {
 	INIT_LIST_HEAD(&sw->ports);
+	INIT_LIST_HEAD(&sw->vif);
+	memcpy(sw->vif_mac, "\0lms\0\0", 6);
+	/* TODO module parameter to initialize vif_mac */
 	atomic_set(&sw->fdb_age_time, SW_DEFAULT_AGE_TIME); 
 	sw_fdb_init(sw);
 	init_switch_proc();
@@ -148,6 +151,7 @@ static void exit_switch(struct net_switch *sw) {
 	}
 	sw_fdb_exit(sw);
 	sw_vdb_exit(sw);
+	sw_vif_cleanup(sw);
 	cleanup_switch_proc();
 }
 

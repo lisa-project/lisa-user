@@ -404,6 +404,12 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 			return -EINVAL;
 		fdb_learn(arg.mac, port, arg.vlan, SW_FDB_STATIC);
 		break;
+	case SWCFG_ADDVIF:
+		err = sw_vif_addif(&sw, arg.vlan);
+		break;
+	case SWCFG_DELVIF:
+		err = sw_vif_delif(&sw, arg.vlan);
+		break;
 	}
 
 	return err;

@@ -62,18 +62,27 @@ unsigned char *parse_hw_addr(char *mac) {
 void usage() {
 	printf("Usage: swctl [command] [args]\n\n"
 		"Command can be any of:\n"
-		"  add interface_name\tAdds an interface to switch.\n"
-		"  del interface_name\tRemoves an iterface from switch\n"
-		"  addvlan vlan_no vlan_name\tAdds a vlan to the vlan database\n"
-		"  delvlan vlan_no\tDeletes a vlan from the vlan database\n"
-		"  chvlan vlan_no new_vlan_name\tRenames vlan_no to new_vlan_name\n"
-		"  addportvlan interface_name vlan_no\tAdds vlan to allowed vlans of interface (trunk mode)\n"
-		"  delportvlan interface_name vlan_no\tRemoves vlan from allowed vlans of interface (trunk mode)\n"
-		"  settrunk interface_name flag\tPuts interface in trunk (flag=1) or non-trunk (flag=0) mode\n"
-		"  setportvlan interface_name vlan_no\tAdd interface in vlan vlan_no (non-trunk mode)\n"
-		"  clearportmac interface_name\tClears fdb entries for interface\n"
-		"  setagetime ns\tSets aging interval (in seconds) for fdb entries\n"
-		"  macstatic interface_name vlan_no hw_addr\tAdds a static mac to interface in vlan vlan_no\n\n"
+		"  add iface_name\t\t\tAdds an interface to switch.\n"
+		"  del iface_name\t\t\tRemoves an iterface from switch\n"
+		"  addvlan vlan_no vlan_name\t\tAdds a vlan to the vlan database\n"
+		"  delvlan vlan_no\t\t\tDeletes a vlan from the vlan database\n"
+		"  chvlan vlan_no new_vlan_name\t\tRenames vlan_no to new_vlan_name\n"
+		"  addportvlan iface_name vlan_no\tAdds vlan to allowed vlans of\n"
+		"  \t\t\t\t\tinterface (trunk mode)\n"
+		"  delportvlan iface_name vlan_no\tRemoves vlan from allowed vlans of\n"
+		"  \t\t\t\t\tinterface (trunk mode)\n"
+		"  settrunk iface_name flag\t\tPuts interface in trunk (flag=1) or\n"
+		"  \t\t\t\t\tnon-trunk (flag=0) mode\n"
+		"  setportvlan iface_name vlan_no\tAdd interface in vlan vlan_no\n"
+		"  \t\t\t\t\t(non-trunk mode)\n"
+		"  clearportmac iface_name\t\tClears fdb entries for interface\n"
+		"  setagetime ns\t\t\t\tSets aging interval (in seconds) for fdb entries\n"
+		"  macstatic iface_name vlan_no hw_addr\tAdds a static mac to interface in vlan vlan_no\n"
+		"  addvif vlan_no\t\t\tCreates a virtual interface for\n"
+		"  \t\t\t\t\tgiven vlan\n"
+		"  delvif vlan_no\t\t\tRemoves the virtual interface for\n"
+		"  \t\t\t\t\tgiven vlan\n"
+		"\n"
 	);
 }
 
@@ -256,6 +265,31 @@ int main(int argc, char **argv) {
 		status = ioctl(sock, SIOCSWCFG, &user_arg);
 		if (status)
 			perror("macstatic failed");
+		return 0;
+	}
+
+
+	if (!strcmp(argv[1], "addvif")) {
+		if (argc < 3) {
+			usage();
+			return 0;
+		}
+		user_arg.vlan = atoi(argv[2]);
+		status = ioctl(sock, SIOCSWCFG, &user_arg);
+		if (status)
+			perror("addvif failed");
+		return 0;
+	}
+
+	if (!strcmp(argv[1], "delvif")) {
+		if (argc < 3) {
+			usage();
+			return 0;
+		}
+		user_arg.vlan = atoi(argv[2]);
+		status = ioctl(sock, SIOCSWCFG, &user_arg);
+		if (status)
+			perror("delvif failed");
 		return 0;
 	}
 

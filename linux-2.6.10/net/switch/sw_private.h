@@ -60,6 +60,12 @@ struct net_switch_vdb_entry {
 #define SW_MAX_VLANS 4096
 #define SW_VLAN_BMP_NO SW_MAX_VLANS/8
 
+struct net_switch_vif_list {
+	struct net_device *dev;
+	int vlan;
+	struct list_head lh;
+};
+
 struct net_switch {
 	/* List of all ports in the switch */
 	struct list_head ports;
@@ -73,11 +79,17 @@ struct net_switch {
 	/* Forwarding database entry aging time */
 	atomic_t fdb_age_time;
 	
+	/* Vlan virtual interfaces */
+	struct list_head vif;
+	
 	/* Cache of forwarding database entries */
 	kmem_cache_t *fdb_cache;
 
     /* Cache of link structures */
     kmem_cache_t *vdb_cache;
+
+	/* Template for virtual interfaces mac */
+	unsigned char vif_mac[ETH_ALEN];
 };
 
 struct net_switch_port {
@@ -102,6 +114,11 @@ struct net_switch_port {
 struct net_switch_vdb_link {
 	struct list_head lh;
 	struct net_switch_port *port;
+};
+
+struct net_switch_vif_priv {
+	struct net_switch *sw;
+	struct net_switch_vif_list *list;
 };
 
 #define SW_PFL_DISABLED     0x01
@@ -214,5 +231,11 @@ extern void dump_mem(void *, int);
 /* sw_forward.c */
 extern int sw_forward(struct net_switch *, struct net_switch_port *,
 	struct sk_buff *, struct skb_extra *);
+
+/* sw_vif.c */
+extern struct net_device *sw_vif_find(struct net_switch *, int);
+extern int sw_vif_addif(struct net_switch *, int);
+extern int sw_vif_delif(struct net_switch *, int);
+extern void sw_vif_cleanup(struct net_switch *);
 
 #endif
