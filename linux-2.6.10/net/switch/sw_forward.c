@@ -47,6 +47,7 @@ static void __sw_forward(struct net_switch_port *in, struct net_switch_port *out
 	}
 	dbg("Forwarding frame to %s\n", out->dev->name);
 	skb->dev = out->dev;
+	skb_push(skb, ETH_HLEN);
 	dev_queue_xmit(skb);
 }
 
@@ -87,14 +88,14 @@ static void sw_flood(struct net_switch *sw, struct net_switch_port *in,
 			skb_push(skb2, ETH_HLEN);
 			dev_queue_xmit(skb2);
 		}
-/*		skb2 = skb_copy(skb, GFP_ATOMIC);
+		skb2 = skb_copy(skb, GFP_ATOMIC);
 		add_vlan_tag(skb2, vlan);
 		list_for_each_entry_rcu(link, &sw->vdb[vlan]->trunk_ports, lh) {
 			if (link->port == in) continue;
 			skb3 = skb_clone(skb2, GFP_ATOMIC);
 			skb3->dev = link->port->dev;
 			dev_queue_xmit(skb3);
-		} */
+		}
 	}
 }
 
@@ -129,13 +130,12 @@ int sw_forward(struct net_switch *sw, struct net_switch_port *in,
 		dbg("forward: Forwarding frame from %s to %s\n", in->dev->name,
 				out->port->dev->name);
 		__sw_forward(in, out->port, skb, skb_e);
-	}
-	else {
+	} else {
 		read_unlock(&bucket->lock);
 		dbg("forward: Flooding frame from %s to all necessary ports\n",
 				in->dev->name);
 		sw_flood(sw, in, skb, skb_e->vlan);
 	}	
 	
-	return 0;
+	return 1;
 }
