@@ -13,28 +13,14 @@ static struct proc_dir_entry *switch_dir, *iface_file,
 
 static int read_vlan_bitmap(char *page, struct net_switch_port *port, int initial_offset) {
 	int i, vlan, min, max, mask, count;
-	int flag=0;
+	int enabled=0;
 	int offset = initial_offset;
 	
-	// listare allowed vlans
 	min = max = vlan = count = 0;
+	
 	for (i=0; i<SW_VLAN_BMP_NO; i++) {
 		for (mask=0x01; mask < 0x100; mask<<=1, vlan++) {
-			if (! (port->forbidden_vlans[i] & mask)) {
-				min = max = vlan;
-				mask <<= 1;
-				flag = 1;
-				break;
-			}
-		}
-		if (flag) break;
-	}
-	if (!flag) return count;
-	
-	vlan++;
-	for (;i<SW_VLAN_BMP_NO; i++) {
-		for (; mask < 0x100; mask<<=1, vlan++) {
-			if ((port->forbidden_vlans[i] & mask) && flag) {
+			if ((port->forbidden_vlans[i] & mask) && enabled) {
 				if (offset > initial_offset) offset+=sprintf(page+count+offset, ",");
 				if (offset > SCR_RIGHT_MAX) {
 					count+=offset;
@@ -48,19 +34,18 @@ static int read_vlan_bitmap(char *page, struct net_switch_port *port, int initia
 					offset += sprintf(page+count+offset, "%d,%d", min, max);
 				else 
 					offset += sprintf(page+count+offset, "%d", min);
-				flag = 0;
+				enabled = 0;
 			}
 			else if (! (port->forbidden_vlans[i] & mask)) {
-				if (!flag) {
+				if (!enabled) {
 					min = max = vlan;
-					flag = 1;
+					enabled = 1;
 				}
 				else {
 					max = vlan;
 				}
 			}
 		}
-		mask = 0x01;
 	}
 
 	if (! (port->forbidden_vlans[SW_VLAN_BMP_NO-1] & 0x80)) {
@@ -105,7 +90,7 @@ static int proc_read_ifaces(char *page, char **start,
 			len += sprintf(page+len, "\n");
 		}
 		else 
-			len += sprintf(page+len, "%4d\n", port->vlan);
+			len += sprintf(page+len, "%-4d\n", port->vlan);
 	}
 	rcu_read_unlock();
 	return len;
