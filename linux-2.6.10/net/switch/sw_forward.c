@@ -34,6 +34,10 @@ static inline void strip_vlan_tag(struct sk_buff *skb) {
 	skb->protocol = *(short *)(skb->mac.raw + ETH_HLEN - 2);
 }
 
+static inline void __strip_vlan_tag(struct sk_buff *skb, int i) {
+	strip_vlan_tag(skb);
+}
+
 /* Forward frame from in port to out port,
    adding/removing vlan tag if necessary.
 */
@@ -54,58 +58,78 @@ static void __sw_forward(struct net_switch_port *in, struct net_switch_port *out
 	dev_queue_xmit(skb);
 }
 
-/* Flood frame to all necessary ports */
-static void sw_flood(struct net_switch *sw, struct net_switch_port *in,
-		struct sk_buff *skb, int vlan) {
-	struct net_switch_vdb_link *link;
-	struct sk_buff *skb2, *skb3;
+static void __sw_flood(struct net_switch *sw, struct net_switch_port *in,
+	struct sk_buff *skb, int vlan, void (*f)(struct sk_buff *, int),
+	struct list_head *lh1, struct list_head *lh2) {
 	
+	struct net_switch_vdb_link *link, *prev=NULL, *oldprev;
+	struct sk_buff *skb2;
+	int first = 1;
+
+	list_for_each_entry_rcu(link, lh1, lh) {
+		if (prev) {
+			skb2 = skb_clone(skb, GFP_ATOMIC);
+			skb->dev = prev->port->dev;
+			skb_push(skb, ETH_HLEN);
+			dev_queue_xmit(skb);
+			skb = skb2;
+		}
+		prev = link;
+	}
+	oldprev = prev;
+	list_for_each_entry_rcu(link, lh2, lh) {
+		if (prev) {
+			if (first) {
+				skb2 = oldprev? skb_copy(skb, GFP_ATOMIC): skb;
+				f(skb2, vlan);
+				first = 0;
+			}
+			else skb2 = skb_clone(skb, GFP_ATOMIC);
+
+			skb->dev = prev->port->dev;
+			skb_push(skb, ETH_HLEN);
+			dev_queue_xmit(skb);
+			skb = skb2;
+		}
+		prev = link;
+	}
+	if (prev) {
+		if (first) {
+			skb2 = oldprev? skb_copy(skb, GFP_ATOMIC): skb;
+			f(skb2, vlan);
+		}
+		else skb2 = skb_clone(skb, GFP_ATOMIC);
+
+		skb->dev = prev->port->dev;
+		skb_push(skb, ETH_HLEN);
+		dev_queue_xmit(skb);
+	}
+	else {
+		dev_kfree_skb(skb);
+	}
+}
+
+/* Flood frame to all necessary ports */
+static void sw_flood2(struct net_switch *sw, struct net_switch_port *in,
+		struct sk_buff *skb, int vlan) {
+
 	/* if source port is in trunk mode we first send the 
 	   socket buffer to all trunk ports in that vlan then
 	   strip vlan tag and send to all non-trunk ports in that vlan */
 	if (in->flags & SW_PFL_TRUNK) {
-		list_for_each_entry_rcu(link, &sw->vdb[vlan]->trunk_ports, lh) {
-			if (link->port == in) continue;
-			skb2 = skb_clone(skb, GFP_ATOMIC);
-			skb2->dev = link->port->dev;
-			skb_push(skb2, ETH_HLEN);
-			dev_queue_xmit(skb2);
-		}
-		skb2 = skb_copy(skb, GFP_ATOMIC);
-		strip_vlan_tag(skb2);
-		list_for_each_entry_rcu(link, &sw->vdb[vlan]->non_trunk_ports, lh) {
-			if (link->port == in) continue;
-			skb3 = skb_clone(skb2, GFP_ATOMIC);
-			skb3->dev = link->port->dev;
-			skb_push(skb3, ETH_HLEN);
-			dev_queue_xmit(skb3);
-		}
-	} else { 
+		__sw_flood(sw, in, skb, vlan, __strip_vlan_tag,
+				&sw->vdb[vlan]->trunk_ports,
+				&sw->vdb[vlan]->non_trunk_ports);
+	}
+	else {
 	/* otherwise we send the frame to all non-trunk ports in that vlan 
 	   then add a vlan tag to it and send it to all trunk ports in that vlan.
 	 */
-		list_for_each_entry_rcu(link, &sw->vdb[vlan]->non_trunk_ports, lh) {
-			if (link->port == in) continue;
-			dbg("forward(flood): Forwarding frame to port %s\n", link->port->dev->name);
-			skb2 = skb_clone(skb, GFP_ATOMIC);
-			skb2->dev = link->port->dev;
-			dbg("flood: before dev_queue_xmit()\n");
-			skb_push(skb2, ETH_HLEN);
-			dev_queue_xmit(skb2);
-		}
-		dump_mem(skb, sizeof(struct sk_buff));
-		skb2 = skb_copy(skb, GFP_ATOMIC);
-		dump_mem(skb2, sizeof(struct sk_buff));
-		add_vlan_tag(skb2, vlan);
-		list_for_each_entry_rcu(link, &sw->vdb[vlan]->trunk_ports, lh) {
-			if (link->port == in) continue;
-			skb3 = skb_clone(skb2, GFP_ATOMIC);
-			skb3->dev = link->port->dev;
-			skb_push(skb3, ETH_HLEN);
-			dev_queue_xmit(skb3);
-		}
+		__sw_flood(sw, in, skb, vlan, add_vlan_tag,
+				&sw->vdb[vlan]->non_trunk_ports,
+				&sw->vdb[vlan]->trunk_ports);
 	}
-}
+}	
 
 /* Forwarding decision */
 int sw_forward(struct net_switch *sw, struct net_switch_port *in,
@@ -113,9 +137,7 @@ int sw_forward(struct net_switch *sw, struct net_switch_port *in,
 	struct net_switch_bucket *bucket = &sw->fdb[sw_mac_hash(skb->mac.raw)];
 	struct net_switch_fdb_entry *out;
 	
-	read_lock(&bucket->lock);
 	if (fdb_lookup(bucket, skb->mac.raw, skb_e->vlan, &out)) {
-		read_unlock(&bucket->lock);
 		/* fdb entry found */
 		if (in == out->port) {
 			/* in_port == out_port */
@@ -139,10 +161,9 @@ int sw_forward(struct net_switch *sw, struct net_switch_port *in,
 				out->port->dev->name);
 		__sw_forward(in, out->port, skb, skb_e);
 	} else {
-		read_unlock(&bucket->lock);
 		dbg("forward: Flooding frame from %s to all necessary ports\n",
 				in->dev->name);
-		sw_flood(sw, in, skb, skb_e->vlan);
+		sw_flood2(sw, in, skb, skb_e->vlan);
 	}	
 	
 	return 1;
