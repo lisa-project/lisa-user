@@ -19,8 +19,10 @@ void usage() {
 		"  addvlan vlan_no vlan_name\tAdds a vlan to the vlan database\n"
 		"  delvlan vlan_no\tDeletes a vlan from the vlan database\n"
 		"  chvlan vlan_no new_vlan_name\tRenames vlan_no to new_vlan_name\n"
-		"  addportvlan interface_name vlan_no\tAdds interface in vlan vlan_no\n"
-		"  delportvlan interface_name vlan_no\tRemoves interface from vlan vlan_no\n\n"
+		"  addportvlan interface_name vlan_no\tAdds vlan to allowed vlans of interface (trunk mode)\n"
+		"  delportvlan interface_name vlan_no\tRemoves vlan from allowed vlans of interface (trunk mode)\n"
+		"  settrunk interface_name flag\tPuts interface in trunk (flag=1) or non-trunk (flag=0) mode\n"
+		"  setportvlan interface_name vlan_no\tAdd interface in vlan vlan_no (non-trunk mode)\n\n"
 	);
 }
 
@@ -124,6 +126,32 @@ int main(int argc, char **argv) {
 		status = ioctl(sock, SIOCSWDELVLANPORT, &user_arg);
 		if (status)
 			perror("delportvlan failed");
+		return 0;
+	}
+	
+	if (!strcmp(argv[1], "settrunk")) {
+		if (argc < 4) {
+			usage();
+			return 0;
+		}
+		user_arg.name = strdup(argv[2]);
+		user_arg.vlan = atoi(argv[3]);
+		status = ioctl(sock, SIOCSWSETTRUNK, &user_arg);
+		if (status)
+			perror("settrunk failed");
+		return 0;	
+	}
+
+	if (!strcmp(argv[1], "setportvlan")) {
+		if (argc < 4) {
+			usage();
+			return 0;
+		}
+		user_arg.name = strdup(argv[2]);
+		user_arg.vlan = atoi(argv[3]);
+		status = ioctl(sock, SIOCSWSETPORTVLAN, &user_arg);
+		if (status)
+			perror("setportvlan failed");
 		return 0;
 	}
 

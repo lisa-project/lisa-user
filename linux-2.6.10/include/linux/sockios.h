@@ -128,8 +128,10 @@
 #define SIOCSWADDVLAN	0x89b2	/* add vlan to vlan database */
 #define SIOCSWDELVLAN	0x89b3	/* delete vlan from vlan database */
 #define SIOCSWRENAMEVLAN 0x89b4	/* rename vlan from vlan database */
-#define SIOCSWADDVLANPORT 0x89b5 /* add a port to a vlan */
-#define SIOCSWDELVLANPORT 0x89b6 /* remove a port from a vlan */
+#define SIOCSWADDVLANPORT 0x89b5 /* add a port to a vlan (trunk mode) */
+#define SIOCSWDELVLANPORT 0x89b6 /* remove a port from a vlan (trunk mode) */
+#define SIOCSWSETTRUNK	0x89b7	/* put a port in trunk mode */
+#define SIOCSWSETPORTVLAN 0x89b8 /* add a port in a vlan (non-trunk mode) */
 
 /* Device private ioctl calls */
 

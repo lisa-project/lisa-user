@@ -90,11 +90,17 @@ void __exit sw_vdb_exit(struct net_switch *sw) {
 
 /* Add a port to a vlan */
 int sw_vdb_add_port(int vlan, struct net_switch_port *port) {
-	struct net_switch *sw = port->sw;
+	struct net_switch *sw;
 	struct net_switch_vdb_link *link;
 
     if(vlan < 1 || vlan > 4095)
         return -EINVAL;
+		
+	if (!port) 
+		return -EINVAL;	
+		
+	sw = port->sw; 
+	
 	if(!sw->vdb[vlan])
 		return -ENOENT;
 	/* The same port cannot be added twice to the same vlan because the only
@@ -120,8 +126,13 @@ int sw_vdb_del_port(int vlan, struct net_switch_port *port) {
 
     if(vlan < 1 || vlan > 4095)
         return -EINVAL;
+		
+	if (!port) 
+		return -EINVAL;	
+		
 	if(!port->sw->vdb[vlan])
 		return -ENOENT;
+		
 	list_for_each_entry(link, &port->sw->vdb[vlan]->ports, lh) {
 		if(link->port == port) {
 			list_del_rcu(&link->lh);

@@ -55,7 +55,6 @@ static int sw_addif(struct net_device *dev) {
 	rcu_assign_pointer(dev->sw_port, port);
 	dev_hold(dev);
 	dev_set_promiscuity(dev, 1);
-	up(&sw.cfg_mutex);
 	dbg("Added device %s to switch\n", dev->name);
 	return 0;
 }
@@ -93,24 +92,27 @@ static inline void __sw_remove_from_vlans(struct net_switch_port *port) {
 /* Set a port's trunk mode and make appropriate changes to the
    vlan database.
  */
-void sw_set_port_trunk(struct net_switch_port *port, int trunk) {
+int sw_set_port_trunk(struct net_switch_port *port, int trunk) {
+	if (!port)
+		return -EINVAL;
 	if(port->flags & SW_PFL_TRUNK) {
 		if(trunk)
-			return;
+			return -EINVAL;
 		__sw_remove_from_vlans(port);
 		sw_vdb_add_port(port->vlan, port);
 	} else {
 		if(!trunk)
-			return;
+			return -EINVAL;
 		sw_vdb_del_port(port->vlan, port);
 		__sw_add_to_vlans(port);
 	}
+	return 0;
 }
 
 /* Change a port's bitmap of forbidden vlans and, if necessary,
    make appropriate changes to the vlan database.
  */
-void sw_set_port_forbidden_vlans(struct net_switch_port *port,
+int sw_set_port_forbidden_vlans(struct net_switch_port *port,
 		unsigned char *forbidden_vlans) {
 	unsigned char *new = forbidden_vlans;
 	unsigned char *old = port->forbidden_vlans;
@@ -131,13 +133,14 @@ void sw_set_port_forbidden_vlans(struct net_switch_port *port,
 		}
 	}
 	memcpy(port->forbidden_vlans, forbidden_vlans, 512);
+	return 0;
 }
 
 /* Update a port's bitmap of forbidden vlans by allowing vlans from a
    given bitmap of forbidden vlans. If necessary, make the appropriate
    changes to the vlan database.
  */
-void sw_add_port_forbidden_vlans(struct net_switch_port *port,
+int sw_add_port_forbidden_vlans(struct net_switch_port *port,
 		unsigned char *forbidden_vlans) {
 	unsigned char bmp[512];
 	unsigned char *p = bmp;
@@ -147,14 +150,14 @@ void sw_add_port_forbidden_vlans(struct net_switch_port *port,
 
 	for(n = 0; n < 512; n++, old++, new++, p++)
 		*p = *old & *new;
-	sw_set_port_forbidden_vlans(port, bmp);
+	return sw_set_port_forbidden_vlans(port, bmp);
 }
 
 /* Update a port's bitmap of forbidden vlans by disallowing those vlans
    that are allowed by a given bitmap (of forbidden vlans). If necessary,
    make the appropriate changes to the vlan database.
  */
-void sw_del_port_forbidden_vlans(struct net_switch_port *port,
+int sw_del_port_forbidden_vlans(struct net_switch_port *port,
 		unsigned char *forbidden_vlans) {
 	unsigned char bmp[512];
 	unsigned char *p = bmp;
@@ -164,7 +167,7 @@ void sw_del_port_forbidden_vlans(struct net_switch_port *port,
 
 	for(n = 0; n < 512; n++, old++, new++, p++)
 		*p = *old | ~*new;
-	sw_set_port_forbidden_vlans(port, bmp);
+	return sw_set_port_forbidden_vlans(port, bmp);
 }
 
 /* Change a port's non-trunk vlan and make appropriate changes to the vlan
@@ -235,7 +238,6 @@ static int sw_delif(struct net_device *dev) {
 /* Initialize everything associated with a switch */
 static void init_switch(struct net_switch *sw) {
 	INIT_LIST_HEAD(&sw->ports);
-	init_MUTEX(&sw->cfg_mutex);
 	sw_fdb_init(sw);
 	init_switch_proc();
 	sw_vdb_init(sw);
@@ -247,7 +249,6 @@ static void exit_switch(struct net_switch *sw) {
 	struct net_switch_port *port;
 
 	/* Remove all interfaces from switch */
-	down_interruptible(&sw->cfg_mutex);
 	list_for_each_safe(pos, n, &sw->ports) {
 		port = list_entry(pos, struct net_switch_port, lh);
 		sw_delif(port->dev);
@@ -255,7 +256,6 @@ static void exit_switch(struct net_switch *sw) {
 	sw_fdb_exit(sw);
 	sw_vdb_exit(sw);
 	cleanup_switch_proc();
-	up(&sw->cfg_mutex);
 }
 
 static inline int __dev_get_by_name_user(void __user *ptr, struct net_device **pdev) {
@@ -279,13 +279,13 @@ static inline int __dev_get_by_name_user(void __user *ptr, struct net_device **p
 static int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 	struct net_device *dev;
 	struct sw_user_arg arg;
+	unsigned char bitmap[SW_VLAN_BMP_NO];
 	int err = -EINVAL;
 
 	if(!capable(CAP_NET_ADMIN))
 		return -EPERM;
 
-	if(down_interruptible(&sw.cfg_mutex))
-		return -EINTR;
+	memset(bitmap, 0xFF, SW_VLAN_BMP_NO);
 
 	switch(cmd) {
 		
@@ -306,19 +306,50 @@ static int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 	case SIOCSWADDVLAN:
 		if ((err = copy_from_user(&arg, uarg, sizeof(struct sw_user_arg))))
 			break;
-		dbg("Add vlan: no=%d name=%s", arg.vlan, arg.name);
-		err = 0;
+		err = sw_vdb_add_vlan(&sw, arg.vlan, arg.name);
 		break;
 	case SIOCSWDELVLAN:
+		if ((err = copy_from_user(&arg, uarg, sizeof(struct sw_user_arg))))
+			break;
+		err = sw_vdb_del_vlan(&sw, arg.vlan);
 		break;
 	case SIOCSWRENAMEVLAN:
+		if ((err = copy_from_user(&arg, uarg, sizeof(struct sw_user_arg))))
+			break;
+		err = sw_vdb_set_vlan_name(&sw, arg.vlan, arg.name);
 		break;
 	case SIOCSWADDVLANPORT:
+		if ((err = copy_from_user(&arg, uarg, sizeof(struct sw_user_arg))))
+			break;
+		if((dev = dev_get_by_name(arg.name)) == NULL)
+			break;
+		sw_allow_vlan(bitmap, arg.vlan);
+		err = sw_add_port_forbidden_vlans(rcu_dereference(dev->sw_port), bitmap);
 		break;
 	case SIOCSWDELVLANPORT:
+		if ((err = copy_from_user(&arg, uarg, sizeof(struct sw_user_arg))))
+			break;
+		if((dev = dev_get_by_name(arg.name)) == NULL)
+			break;
+		sw_forbid_vlan(bitmap, arg.vlan);	
+		err = sw_del_port_forbidden_vlans(rcu_dereference(dev->sw_port), bitmap);
+		break;
+	case SIOCSWSETTRUNK:
+		if ((err = copy_from_user(&arg, uarg, sizeof(struct sw_user_arg))))
+			break;
+		if((dev = dev_get_by_name(arg.name)) == NULL)
+			break;
+		err = sw_set_port_trunk(rcu_dereference(dev->sw_port), arg.vlan);	
+		break;
+	case SIOCSWSETPORTVLAN:	
+		if ((err = copy_from_user(&arg, uarg, sizeof(struct sw_user_arg))))
+			break;
+		if((dev = dev_get_by_name(arg.name)) == NULL)
+			break;
+		err = sw_set_port_vlan(rcu_dereference(dev->sw_port), arg.vlan);	
 		break;
 	}
-	up(&sw.cfg_mutex);
+
 	return err;
 }
 
