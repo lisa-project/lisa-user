@@ -26,7 +26,6 @@
 
 #include "sw_private.h"
 #include "sw_debug.h"
-#include "sw_fdb.h"
 #include "sw_proc.h"
 
 MODULE_DESCRIPTION("Cool stuff");
@@ -63,8 +62,9 @@ static int sw_handle_frame(struct net_switch_port *port, struct sk_buff **pskb) 
 
 	if(port->flags & SW_PFL_DISABLED) {
 		dbg("Received frame on disabled port %s\n", port->dev->name);
-		return 1;
+		goto free_skb;
 	}
+
 
 	if(skb->protocol == ntohs(ETH_P_8021Q)) {
 		skb_e.vlan = ntohs(*(unsigned short *)skb->data) & 4095;
@@ -75,13 +75,17 @@ static int sw_handle_frame(struct net_switch_port *port, struct sk_buff **pskb) 
 	}
 
 	/* Perform some sanity checks */
+	if (!sw.vdb[skb_e.vlan]) {
+		dbg("Vlan %d doesn't exist int the vdb\n", skb_e.vlan);
+		goto free_skb;
+	}
 	if((port->flags & SW_PFL_TRUNK) && !skb_e.has_vlan_tag) {
 		dbg("Received untagged frame on TRUNK port %s\n", port->dev->name);
-		return 1;
+		goto free_skb;
 	}
 	if(!(port->flags & SW_PFL_TRUNK) && skb_e.has_vlan_tag) {
 		dbg("Received tagged frame on non-TRUNK port %s\n", port->dev->name);
-		return 1;
+		goto free_skb;
 	}
 
 	/* If interface is in trunk, check if the vlan is allowed */
@@ -89,13 +93,17 @@ static int sw_handle_frame(struct net_switch_port *port, struct sk_buff **pskb) 
 			(port->forbidden_vlans[skb_e.vlan / 8] & (1 << (skb_e.vlan % 8)))) {
 		dbg("Received frame on vlan %d, which is forbidden on %s\n",
 				skb_e.vlan, port->dev->name);
-		return 1;
+		goto free_skb;
 	}
 
 	/* Update the fdb */
 	fdb_learn(skb->mac.raw + 6, port, skb_e.vlan);
 
 	return sw_forward(&sw, port, skb, &skb_e);
+
+free_skb:
+	dev_kfree_skb(skb);
+	return NET_RX_DROP;
 }
 
 /* Initialize everything associated with a switch */

@@ -152,38 +152,38 @@ static __inline__ int sw_mac_hash(const unsigned char *mac) {
 }
 
 /* sw.c */
-extern void dump_packet(const struct sk_buff *skb);
+extern void dump_packet(const struct sk_buff *);
 
 /* sw_fdb.c */
-extern void sw_fdb_init(struct net_switch *sw);
+extern void sw_fdb_init(struct net_switch *);
 extern void fdb_cleanup_port(struct net_switch_port *);
-extern void fdb_learn(unsigned char *mac, struct net_switch_port *port, int vlan);
-extern int fdb_lookup(struct net_switch_bucket *bucket, unsigned char *mac,
-	int vlan, struct net_switch_fdb_entry **pentry);
-extern void sw_fdb_exit(struct net_switch *sw);
+extern void fdb_learn(unsigned char *, struct net_switch_port *, int);
+extern int fdb_lookup(struct net_switch_bucket *, unsigned char *,
+	int, struct net_switch_fdb_entry **);
+extern void sw_fdb_exit(struct net_switch *);
 
 /* sw_vdb.c */
-extern int sw_vdb_add_vlan(struct net_switch *sw, int vlan, char *name);
-extern int sw_vdb_del_vlan(struct net_switch *sw, int vlan);
-extern int sw_vdb_set_vlan_name(struct net_switch *sw, int vlan, char *name);
-extern void __init sw_vdb_init(struct net_switch *sw);
-extern void __exit sw_vdb_exit(struct net_switch *sw);
-extern int sw_vdb_add_port(int vlan, struct net_switch_port *port);
-extern int sw_vdb_del_port(int vlan, struct net_switch_port *port);
+extern int sw_vdb_add_vlan(struct net_switch *, int, char *);
+extern int sw_vdb_del_vlan(struct net_switch *, int);
+extern int sw_vdb_set_vlan_name(struct net_switch *, int, char *);
+extern void __init sw_vdb_init(struct net_switch *);
+extern void __exit sw_vdb_exit(struct net_switch *);
+extern int sw_vdb_add_port(int, struct net_switch_port *);
+extern int sw_vdb_del_port(int, struct net_switch_port *);
 
 /* sw_proc.c */
 extern int init_switch_proc(void);
 extern void cleanup_switch_proc(void);
 
 /* sw_ioctl.c */
-extern int sw_delif(struct net_device *dev);
-extern int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg);
+extern int sw_delif(struct net_device *);
+extern int sw_deviceless_ioctl(unsigned int, void __user *);
 extern void dump_mem(void *, int);
 
 #define VLAN_TAG_BYTES 4
 
 /* sw_forward.c */
-extern int sw_forward(struct net_switch *sw, struct net_switch_port *in,
-	struct sk_buff *skb, struct skb_extra *skb_e);
+extern int sw_forward(struct net_switch *, struct net_switch_port *,
+	struct sk_buff *, struct skb_extra *);
 
 #endif

@@ -16,7 +16,7 @@
  *    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "sw_fdb.h"
+#include "sw_private.h"
 #include "sw_debug.h"
 
 void __init sw_fdb_init(struct net_switch *sw) {

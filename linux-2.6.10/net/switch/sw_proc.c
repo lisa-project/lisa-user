@@ -101,7 +101,7 @@ static int proc_read_ifaces(char *page, char **start,
 	list_for_each_entry(port, &sw.ports, lh) {
 		len+= sprintf(page+len, "%4s  %5d  %7d  ",
 			port->dev->name, (port->flags & SW_PFL_TRUNK)?1:0, 
-			port->flags & SW_PFL_DISABLED);
+			!(port->flags & SW_PFL_DISABLED));
 		if (port->flags & SW_PFL_TRUNK) {
 			len += read_vlan_bitmap(page+len-INITIAL_OFFSET, port, INITIAL_OFFSET);
 			len -= INITIAL_OFFSET;

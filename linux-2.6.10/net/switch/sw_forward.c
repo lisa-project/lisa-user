@@ -38,6 +38,20 @@ static inline void __strip_vlan_tag(struct sk_buff *skb, int i) {
 	strip_vlan_tag(skb);
 }
 
+static inline void sw_skb_xmit(struct sk_buff *skb, struct net_device *dev) {
+	if (skb->len > skb->dev->mtu) {
+		dbg("Dropping frame due to len > dev->mtu\n");
+		goto destroy;
+	}
+	skb->dev = dev;
+	skb_push(skb, ETH_HLEN);
+	dev_queue_xmit(skb);
+	return;
+	
+destroy:	
+	dev_kfree_skb(skb);
+}
+
 /* Forward frame from in port to out port,
    adding/removing vlan tag if necessary.
 */
@@ -53,9 +67,7 @@ static void __sw_forward(struct net_switch_port *in, struct net_switch_port *out
 		strip_vlan_tag(skb);
 	}
 	dbg("Forwarding frame to %s\n", out->dev->name);
-	skb->dev = out->dev;
-	skb_push(skb, ETH_HLEN);
-	dev_queue_xmit(skb);
+	sw_skb_xmit(skb, out->dev);
 }
 
 static void __sw_flood(struct net_switch *sw, struct net_switch_port *in,
@@ -70,9 +82,7 @@ static void __sw_flood(struct net_switch *sw, struct net_switch_port *in,
 		if (link->port == in) continue;
 		if (prev) {
 			skb2 = skb_clone(skb, GFP_ATOMIC);
-			skb->dev = prev->port->dev;
-			skb_push(skb, ETH_HLEN);
-			dev_queue_xmit(skb);
+			sw_skb_xmit(skb, prev->port->dev);
 			skb = skb2;
 		}
 		prev = link;
@@ -88,9 +98,7 @@ static void __sw_flood(struct net_switch *sw, struct net_switch_port *in,
 			}
 			else skb2 = skb_clone(skb, GFP_ATOMIC);
 
-			skb->dev = prev->port->dev;
-			skb_push(skb, ETH_HLEN);
-			dev_queue_xmit(skb);
+			sw_skb_xmit(skb, prev->port->dev);
 			skb = skb2;
 		}
 		prev = link;
@@ -102,9 +110,7 @@ static void __sw_flood(struct net_switch *sw, struct net_switch_port *in,
 		}
 		else skb2 = skb_clone(skb, GFP_ATOMIC);
 
-		skb->dev = prev->port->dev;
-		skb_push(skb, ETH_HLEN);
-		dev_queue_xmit(skb);
+		sw_skb_xmit(skb, prev->port->dev);
 	}
 	else {
 		dbg("flood: nothing to flood, freeing skb.\n");
@@ -148,19 +154,19 @@ int sw_forward(struct net_switch *sw, struct net_switch_port *in,
 			/* in_port == out_port */
 			dbg("forward: Dropping frame, dport %s == sport %s\n",
 				out->port->dev->name, in->dev->name);
-			return 1; 
+			goto free_skb; 
 		}
 		if (!(out->port->flags & SW_PFL_TRUNK) && 
 				skb_e->vlan != out->port->vlan) {
 			dbg("forward: Dropping frame, dport %s vlan_id %d != skb_e.vlan_id %d\n",
 				out->port->dev->name, out->port->vlan, skb_e->vlan);
-			return 1;
+			goto free_skb;
 		}
 		if ((out->port->flags & SW_PFL_TRUNK) &&
 			(out->port->forbidden_vlans[skb_e->vlan / 8] & (1 << (skb_e->vlan % 8)))) {
 			dbg("forward: Dropping frame, skb_e.vlan_id %d not in allowed vlans of dport %s\n",
 				skb_e->vlan, out->port->dev->name);
-			return 1;
+			goto free_skb;
 		}
 		dbg("forward: Forwarding frame from %s to %s\n", in->dev->name,
 				out->port->dev->name);
@@ -169,8 +175,16 @@ int sw_forward(struct net_switch *sw, struct net_switch_port *in,
 		rcu_read_unlock();
 		dbg("forward: Flooding frame from %s to all necessary ports\n",
 				in->dev->name);
+		/*
+		   The fact that skb_e->vlan exists in the vdb is based
+		   _only_ on the checks performed in sw_handle_frame()
+		 */
 		sw_flood(sw, in, skb, skb_e->vlan);
 	}	
+	/* FIXME: alta constanta (pt ca aici _chiar_ nu e dropat :) )*/
+	return NET_RX_DROP; 
 	
-	return 1;
+free_skb:	
+	dev_kfree_skb(skb);
+	return NET_RX_DROP;
 }
