@@ -5,6 +5,7 @@
 #include "sw_proc.h"
 
 #define SCR_RIGHT_MAX 70
+#define INITIAL_OFFSET 22
 
 static struct proc_dir_entry *switch_dir, *iface_file,
 							 *mac_file, *vlan_file;
@@ -99,7 +100,8 @@ static int proc_read_ifaces(char *page, char **start,
 			port->dev->name, (port->flags & SW_PFL_TRUNK)?1:0, 
 			port->flags & SW_PFL_DISABLED);
 		if (port->flags & SW_PFL_TRUNK) {
-			len += read_vlan_bitmap(page+len, port, 22);
+			len += read_vlan_bitmap(page+len-INITIAL_OFFSET, port, INITIAL_OFFSET);
+			len -= INITIAL_OFFSET;
 			len += sprintf(page+len, "\n");
 		}
 		else 
@@ -151,7 +153,7 @@ static int proc_read_vlan(char *page, char **start,
 
 	for (vlan = 1; vlan < SW_MAX_VLANS; vlan++) {
 		if (! sw.vdb[vlan]) continue;
-		len += sprintf(page+len, "%-4d %-32s active   ", vlan, sw.vdb[vlan]->name);
+		len += sprintf(page+len, "%-4d %-32s active    ", vlan, sw.vdb[vlan]->name);
 		/* FIXME: functie de listat porturile paginat */
 		list_for_each_entry(link, &sw.vdb[vlan]->trunk_ports, lh) {
 			len += sprintf(page+len,"%s ", link->port->dev->name);
