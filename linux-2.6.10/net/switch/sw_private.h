@@ -107,7 +107,12 @@ extern int init_switch_proc(void);
 extern void cleanup_switch_proc(void);
 
 /* sw_vdb.c */
-extern void sw_vdb_init(struct net_switch *sw);
+extern void sw_vdb_add_vlan(struct net_switch *sw, int vlan, char *name);
+extern void sw_vdb_del_vlan(struct net_switch *sw, int vlan);
+extern void sw_vdb_set_vlan_name(struct net_switch *sw, int vlan, char *name);
+extern void __init sw_vdb_init(struct net_switch *sw);
+extern void __exit sw_vdb_exit(struct net_switch *sw);
 extern void sw_vdb_add_port(int vlan, struct net_switch_port *port);
+extern void sw_vdb_del_port(int vlan, struct net_switch_port *port);
 
 #endif

@@ -1,40 +1,87 @@
 #include "sw_private.h"
 #include "sw_debug.h"
 
-static void sw_vdb_add_vlan(struct net_switch *sw, int vlan) {
+/* Add a new vlan to the vlan database */
+void sw_vdb_add_vlan(struct net_switch *sw, int vlan, char *name) {
+	struct net_switch_vdb_entry *entry;
+
+    if(vlan < 1 || vlan > 4095)
+        return;
     if(sw->vdb[vlan])
         return;
-    if(!(sw->vdb[vlan] = kmalloc(sizeof(struct net_switch_vdb_entry),
+    if(!(entry = kmalloc(sizeof(struct net_switch_vdb_entry),
 					GFP_ATOMIC))) {
         dbg("Out of memory while trying to add vlan %d\n", vlan);
         return;
     }
-    sw->vdb[vlan]->name[0] = '\0';
-    sw->vdb[vlan]->name[SW_MAX_VLAN_NAME - 1] = '\0';
-    INIT_LIST_HEAD(&sw->vdb[vlan]->ports);
+	strncpy(entry->name, name, SW_MAX_VLAN_NAME);
+    entry->name[SW_MAX_VLAN_NAME - 1] = '\0';
+    INIT_LIST_HEAD(&entry->ports);
+	rcu_assign_pointer(sw->vdb[vlan], entry);
 }
 
+/* Remove a vlan from the vlan database */
+void sw_vdb_del_vlan(struct net_switch *sw, int vlan) {
+	struct net_switch_vdb_entry *entry;
+	struct net_switch_vdb_link *link, *tmp;
+
+	if(vlan < 1 || vlan > 4095)
+		return;
+	if(!(entry = sw->vdb[vlan]))
+		return;
+	rcu_assign_pointer(sw->vdb[vlan], NULL);
+	synchronize_kernel();
+	list_for_each_entry_safe(link, tmp, &entry->ports, lh) {
+		kmem_cache_free(sw->vdb_cache, link);
+	}
+	kfree(entry);
+}
+
+/* Rename a vlan */
 void sw_vdb_set_vlan_name(struct net_switch *sw, int vlan, char *name) {
+	struct net_switch_vdb_entry *entry, *old;
+
     if(vlan < 1 || vlan > 4095)
         return;
-    strncpy(sw->vdb[vlan]->name, name, SW_MAX_VLAN_NAME - 1);
+    if(!(old = sw->vdb[vlan]))
+        return;
+    if(!(entry = kmalloc(sizeof(struct net_switch_vdb_entry),
+					GFP_ATOMIC))) {
+        dbg("Out of memory while trying to change vlan name%d\n", vlan);
+        return;
+    }
+	strncpy(entry->name, name, SW_MAX_VLAN_NAME);
+    entry->name[SW_MAX_VLAN_NAME - 1] = '\0';
+	entry->ports = old->ports;
+	rcu_assign_pointer(sw->vdb[vlan], entry);
+	synchronize_kernel();
+	kfree(old);
 }
 
-void sw_vdb_init(struct net_switch *sw) {
+/* Initialize the vlan database */
+void __init sw_vdb_init(struct net_switch *sw) {
 	memset(&sw->vdb, 0, sizeof(sw->vdb));
 	sw->vdb_cache = kmem_cache_create("sw_vdb_cache",
 			sizeof(struct net_switch_vdb_link),
 			0, SLAB_HWCACHE_ALIGN, NULL, NULL);
 	if(!sw->vdb_cache)
 		return;
-    sw_vdb_add_vlan(sw, 1);
-    sw_vdb_set_vlan_name(sw, 1, "default");
-    sw_vdb_set_vlan_name(sw, 1002, "fddi-default");
-    sw_vdb_set_vlan_name(sw, 1003, "trcrf-default");
-    sw_vdb_set_vlan_name(sw, 1004, "fddinet-default");
-    sw_vdb_set_vlan_name(sw, 1005, "trbrf-default");
+    sw_vdb_add_vlan(sw, 1, "default");
+    sw_vdb_add_vlan(sw, 1002, "fddi-default");
+    sw_vdb_add_vlan(sw, 1003, "trcrf-default");
+    sw_vdb_add_vlan(sw, 1004, "fddinet-default");
+    sw_vdb_add_vlan(sw, 1005, "trbrf-default");
 }
 
+/* Destroy the vlan database */
+void __exit sw_vdb_exit(struct net_switch *sw) {
+	int vlan;
+
+	for(vlan = 1; vlan <= 4095; vlan++)
+		sw_vdb_del_vlan(sw, vlan);
+}
+
+/* Add a port to a vlan */
 void sw_vdb_add_port(int vlan, struct net_switch_port *port) {
 	struct net_switch *sw = port->sw;
 	struct net_switch_vdb_link *link;
@@ -48,9 +95,31 @@ void sw_vdb_add_port(int vlan, struct net_switch_port *port) {
 	   Changing port configuration is mutually exclusive.
 	 */
 	link = kmem_cache_alloc(sw->vdb_cache, GFP_ATOMIC);
-	if(!link)
+	if(!link) {
+		dbg("Out of memory while adding port to vlan\n");
 		return;
+	}
 	link->port = port;
 	smp_wmb();
 	list_add_tail_rcu(&link->lh, &sw->vdb[vlan]->ports);
+	dbg("vdb: Added port %s to vlan %d\n", port->dev->name, vlan);
+}
+
+/* Remove a port from a vlan */
+void sw_vdb_del_port(int vlan, struct net_switch_port *port) {
+	struct net_switch_vdb_link *link;
+
+    if(vlan < 1 || vlan > 4095)
+        return;
+	if(!port->sw->vdb[vlan])
+		return;
+	list_for_each_entry(link, &port->sw->vdb[vlan]->ports, lh) {
+		if(link->port == port) {
+			list_del_rcu(&link->lh);
+			synchronize_kernel();
+			kmem_cache_free(port->sw->vdb_cache, link);
+			dbg("vdb: Removed port %s from vlan %d\n", port->dev->name, vlan);
+			return;
+		}
+	}
 }

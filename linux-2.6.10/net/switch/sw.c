@@ -19,26 +19,27 @@ MODULE_VERSION("0.1");
 extern int (*sw_handle_frame_hook)(struct net_switch_port *p, struct sk_buff **pskb);
 
 struct net_switch sw;
+/* Safely add an interface to the switch
+ */
 
-static void init_switch(struct net_switch *sw) {
-	INIT_LIST_HEAD(&sw->ports);
-	init_MUTEX(&sw->cfg_mutex);
-	sw_fdb_init(sw);
-	init_switch_proc();
-	sw_vdb_init(sw);
+/* Set a forbidden vlan mask to allow the default vlans */
+static inline void __sw_allow_default_vlans(unsigned char *forbidden_vlans) {
+	sw_allow_vlan(forbidden_vlans, 1);
+	sw_allow_vlan(forbidden_vlans, 1002);
+	sw_allow_vlan(forbidden_vlans, 1003);
+	sw_allow_vlan(forbidden_vlans, 1004);
+	sw_allow_vlan(forbidden_vlans, 1005);
 }
 
-/* Safely add an interface to the switch
+/* Add an interface to the switch. The switch configuration mutex must
+   be acquired from outside.
  */
 static int sw_addif(struct net_device *dev) {
 	struct net_switch_port *port;
-	if(down_interruptible(&sw.cfg_mutex))
-		return -EINTR;
 	if(rcu_dereference(dev->sw_port) != NULL) {
 		/* dev->sw_port shouldn't be changed elsewhere, so
 		   we don't necessarily need rcu_dereference here
 		 */
-		up(&sw.cfg_mutex);
 		return -EBUSY;
 	}
 	if((port = kmalloc(sizeof(struct net_switch_port), GFP_KERNEL)) == NULL)
@@ -47,11 +48,8 @@ static int sw_addif(struct net_device *dev) {
 	port->dev = dev;
 	port->sw = &sw;
     port->vlan = 1; /* By default all ports are in vlan 1 */
-	sw_allow_vlan(port->forbidden_vlans, 1);
-	sw_allow_vlan(port->forbidden_vlans, 1002);
-	sw_allow_vlan(port->forbidden_vlans, 1003);
-	sw_allow_vlan(port->forbidden_vlans, 1004);
-	sw_allow_vlan(port->forbidden_vlans, 1005);
+	memset(port->forbidden_vlans, 0xff, 512);
+	__sw_allow_default_vlans(port->forbidden_vlans);
     sw_vdb_add_port(1, port);
 	list_add_tail_rcu(&port->lh, &sw.ports);
 	rcu_assign_pointer(dev->sw_port, port);
@@ -62,11 +60,123 @@ static int sw_addif(struct net_device *dev) {
 	return 0;
 }
 
+/* Effectively add a port to all allowed vlans in a bitmap of
+   forbidden vlans.
+ */
+static inline void __sw_add_to_vlans(struct net_switch_port *port) {
+	int n, vlan = 0;
+	unsigned char mask, *bmp = port->forbidden_vlans;
+	for(n = 0; n < 512; n++, bmp++) {
+		for(mask = 1; mask; mask <<= 1, vlan++) {
+			if(*bmp & mask)
+				continue;
+			sw_vdb_add_port(vlan, port);
+		}
+	}
+}
+
+/* Effectively remove a port from all allowed vlans in a bitmap of
+   forbidden vlans.
+ */
+static inline void __sw_remove_from_vlans(struct net_switch_port *port) {
+	int n, vlan = 0;
+	unsigned char mask, *bmp = port->forbidden_vlans;
+	for(n = 0; n < 512; n++, bmp++) {
+		for(mask = 1; mask; mask <<= 1, vlan++) {
+			if(*bmp & mask)
+				continue;
+			sw_vdb_del_port(vlan, port);
+		}
+	}
+}
+
+/* Set a port's trunk mode and make appropriate changes to the
+   vlan database.
+ */
+void sw_set_port_trunk(struct net_switch_port *port, int trunk) {
+	if(port->flags & SW_PFL_TRUNK) {
+		if(trunk)
+			return;
+		__sw_remove_from_vlans(port);
+		sw_vdb_add_port(port->vlan, port);
+	} else {
+		if(!trunk)
+			return;
+		sw_vdb_del_port(port->vlan, port);
+		__sw_add_to_vlans(port);
+	}
+}
+
+/* Change a port's bitmap of forbidden vlans and, if necessary,
+   make appropriate changes to the vlan database.
+ */
+void sw_set_port_forbidden_vlans(struct net_switch_port *port,
+		unsigned char *forbidden_vlans) {
+	unsigned char *new = forbidden_vlans;
+	unsigned char *old = port->forbidden_vlans;
+	unsigned char mask;
+	int n, vlan = 0;
+
+	__sw_allow_default_vlans(forbidden_vlans);
+	if(port->flags & SW_PFL_TRUNK) {
+		for(n = 0; n < 512; n++, old++, new++) {
+			for(mask = 1; mask; mask <<= 1, vlan++) {
+				if(!((*old ^ *new) & mask))
+					continue;
+				if(*new & mask)
+					sw_vdb_del_port(vlan, port);
+				else
+					sw_vdb_add_port(vlan, port);
+			}
+		}
+	}
+	memcpy(port->forbidden_vlans, forbidden_vlans, 512);
+}
+
+/* Update a port's bitmap of forbidden vlans by allowing vlans from a
+   given bitmap of forbidden vlans. If necessary, make the appropriate
+   changes to the vlan database.
+ */
+void sw_add_port_forbidden_vlans(struct net_switch_port *port,
+		unsigned char *forbidden_vlans) {
+	unsigned char bmp[512];
+	unsigned char *p = bmp;
+	unsigned char *new = forbidden_vlans;
+	unsigned char *old = port->forbidden_vlans;
+	int n;
+
+	for(n = 0; n < 512; n++, old++, new++, p++)
+		*p = *old & *new;
+	sw_set_port_forbidden_vlans(port, bmp);
+}
+
+/* Update a port's bitmap of forbidden vlans by disallowing those vlans
+   that are allowed by a given bitmap (of forbidden vlans). If necessary,
+   make the appropriate changes to the vlan database.
+ */
+void sw_del_port_forbidden_vlans(struct net_switch_port *port,
+		unsigned char *forbidden_vlans) {
+	unsigned char bmp[512];
+	unsigned char *p = bmp;
+	unsigned char *new = forbidden_vlans;
+	unsigned char *old = port->forbidden_vlans;
+	int n;
+
+	for(n = 0; n < 512; n++, old++, new++, p++)
+		*p = *old | ~*new;
+	sw_set_port_forbidden_vlans(port, bmp);
+}
+
 /* Remove an interface from the switch. Appropriate locks must be held
    from outside to ensure that nobody tries to remove the same interface
    at the same time.
  */
-static void __sw_delif(struct net_device *dev, struct net_switch_port *port) {
+static int sw_delif(struct net_device *dev) {
+	struct net_switch_port *port;
+
+	if((port = rcu_dereference(dev->sw_port)) == NULL)
+		return -EINVAL;
+
 	/* First disable promiscuous mode, so that there be less chances to
 	   still receive packets on this port
 	 */
@@ -75,7 +185,6 @@ static void __sw_delif(struct net_device *dev, struct net_switch_port *port) {
 	   are not handled by the switch anymore.
 	 */
 	rcu_assign_pointer(dev->sw_port, NULL);
-	list_del_rcu(&port->lh);
 	/* dev->sw_port is now NULL, so no instance of sw_handle_frame() will
 	   process incoming packets on this port.
 
@@ -87,26 +196,64 @@ static void __sw_delif(struct net_device *dev, struct net_switch_port *port) {
 	 */
 	synchronize_kernel();
 	/* Now nobody can add references to this port, so we can safely clean
-	   up all existing references and finally free the port memory
+	   up all existing references from the fdb
 	 */
 	fdb_cleanup_port(port);
+	/* Clean up vlan references: if the port was non-trunk, remove it from
+	   its single vlan; otherwise use the disallowed vlans bitmap to remove
+	   it from all vlans
+	 */
+	if(port->flags & SW_PFL_TRUNK) {
+		__sw_remove_from_vlans(port);
+	} else {
+		sw_vdb_del_port(port->vlan, port);
+	}
+	list_del_rcu(&port->lh);
 	/* free port memory and release interface */
 	kfree(port);
 	dev_put(dev);
 	dbg("Removed device %s from switch\n", dev->name);
+	return 0;
 }
 
-/* Safely remove an interface from the switch */
-static int sw_delif(struct net_device *dev) {
+/* Initialize everything associated with a switch */
+static void init_switch(struct net_switch *sw) {
+	INIT_LIST_HEAD(&sw->ports);
+	init_MUTEX(&sw->cfg_mutex);
+	sw_fdb_init(sw);
+	init_switch_proc();
+	sw_vdb_init(sw);
+}
+
+/* Free everything associated with a switch */
+static void exit_switch(struct net_switch *sw) {
+	struct list_head *pos, *n;
 	struct net_switch_port *port;
-	if(down_interruptible(&sw.cfg_mutex))
-		return -EINTR;
-	if((port = rcu_dereference(dev->sw_port)) == NULL) {
-		up(&sw.cfg_mutex);
-		return -EINVAL;
+
+	/* Remove all interfaces from switch */
+	down_interruptible(&sw->cfg_mutex);
+	list_for_each_safe(pos, n, &sw->ports) {
+		port = list_entry(pos, struct net_switch_port, lh);
+		sw_delif(port->dev);
 	}
-	__sw_delif(dev, port);
-	up(&sw.cfg_mutex);
+	sw_fdb_exit(sw);
+	sw_vdb_exit(sw);
+	cleanup_switch_proc();
+	up(&sw->cfg_mutex);
+}
+
+static inline int __dev_get_by_name_user(void __user *ptr, struct net_device **pdev) {
+	char buf[IFNAMSIZ];
+	struct net_device *dev;
+
+	if(copy_from_user(buf, ptr, IFNAMSIZ))
+		return -EFAULT;
+	buf[IFNAMSIZ - 1] = '\0';
+
+	if((dev = dev_get_by_name(buf)) == NULL)
+		return -ENODEV;
+	*pdev = dev;
+
 	return 0;
 }
 
@@ -115,30 +262,33 @@ static int sw_delif(struct net_device *dev) {
  */
 static int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 	struct net_device *dev;
-	char buf[IFNAMSIZ];
-	int err = 0;
+	int err = -EINVAL;
 
 	if(!capable(CAP_NET_ADMIN))
 		return -EPERM;
 
-	if(copy_from_user(buf, uarg, IFNAMSIZ))
-		return -EFAULT;
-	buf[IFNAMSIZ - 1] = '\0';
-
-	if((dev = dev_get_by_name(buf)) == NULL)
-		return -ENODEV;
+	if(down_interruptible(&sw.cfg_mutex))
+		return -EINTR;
 
 	switch(cmd) {
+		
 	case SIOCSWADDIF:
+		if((err = __dev_get_by_name_user(uarg, &dev)))
+			break;
 		err = sw_addif(dev);
 		dev_put(dev);
-		return err;
+		break;
+		
 	case SIOCSWDELIF:
+		if((err = __dev_get_by_name_user(uarg, &dev)))
+			break;
 		err = sw_delif(dev);
 		dev_put(dev);
-		return err;
+		break;
+
 	}
-	return -EINVAL;
+	up(&sw.cfg_mutex);
+	return err;
 }
 
 static void dump_packet(const struct sk_buff *skb) {
@@ -207,23 +357,9 @@ static int switch_init(void) {
 
 /* Module cleanup */
 static void switch_exit(void) {
-	struct list_head *pos, *n;
-	struct net_switch_port *port;
-	/* Remove all interfaces from switch */
-	down_interruptible(&sw.cfg_mutex);
-	list_for_each_safe(pos, n, &sw.ports) {
-		port = list_entry(pos, struct net_switch_port, lh);
-		__sw_delif(port->dev, port);
-	}
-	up(&sw.cfg_mutex);
-	/* Interfaces cannot be added now although the lock is released. 
-	   To add an interface one must do an ioctl, which calls
-	   request_module(). This fails if the module is unloading.
-	 */
+	exit_switch(&sw);
 	swioctl_set(NULL);
 	sw_handle_frame_hook = NULL;
-	sw_fdb_exit(&sw);
-	cleanup_switch_proc();
 	dbg("Switch module unloaded\n");
 }
 
