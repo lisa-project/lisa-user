@@ -53,8 +53,21 @@ static inline int __fdb_learn(struct net_switch_bucket *bucket,
 	struct net_switch_fdb_entry *entry;
 
 	list_for_each_entry(entry, &bucket->entries, lh) {
-		if(entry->port == port && entry->vlan == vlan &&
+		if(entry->vlan == vlan &&
 				!memcmp(entry->mac, mac, ETH_ALEN)) {
+			*pentry = entry;
+			return 1;
+		}
+	}
+	return 0;
+}
+
+int fdb_lookup(struct net_switch_bucket *bucket, unsigned char *mac,
+		int vlan, struct net_switch_fdb_entry **pentry) {
+	struct net_switch_fdb_entry *entry;	
+
+	list_for_each_entry(entry, &bucket->entries, lh) {
+		if (!memcmp(entry->mac, mac, ETH_ALEN) && entry->vlan == vlan) {
 			*pentry = entry;
 			return 1;
 		}
@@ -69,6 +82,7 @@ void fdb_learn(unsigned char *mac, struct net_switch_port *port, int vlan) {
 	read_lock(&bucket->lock);
 	if(__fdb_learn(bucket, mac, port, vlan, &entry)) {
 		/* we found a matching entry */
+		entry->port = port; /* FIXME this should be atomic ??? */
 		entry->stamp = jiffies;
 		read_unlock(&bucket->lock);
 		return;
@@ -82,6 +96,7 @@ void fdb_learn(unsigned char *mac, struct net_switch_port *port, int vlan) {
 	write_lock(&bucket->lock);
 	if(__fdb_learn(bucket, mac, port, vlan, &entry)) {
 		/* we found a matching entry */
+		entry->port = port;
 		entry->stamp = jiffies;
 		write_unlock(&bucket->lock);
 		return;

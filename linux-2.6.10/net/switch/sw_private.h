@@ -118,10 +118,27 @@ struct skb_extra {
 
 extern struct net_switch sw;
 
+static __inline__ int sw_mac_hash(const unsigned char *mac) {
+	unsigned long x;
+
+	x = mac[0];
+	x = (x << 2) ^ mac[1];
+	x = (x << 2) ^ mac[2];
+	x = (x << 2) ^ mac[3];
+	x = (x << 2) ^ mac[4];
+	x = (x << 2) ^ mac[5];
+
+	x ^= x >> 8;
+
+	return x & (SW_HASH_SIZE - 1);
+}
+
 /* sw_fdb.c */
 extern void sw_fdb_init(struct net_switch *sw);
 extern void fdb_cleanup_port(struct net_switch_port *);
 extern void fdb_learn(unsigned char *mac, struct net_switch_port *port, int vlan);
+extern int fdb_lookup(struct net_switch_bucket *bucket, unsigned char *mac,
+	int vlan, struct net_switch_fdb_entry **pentry);
 extern void sw_fdb_exit(struct net_switch *sw);
 
 /* sw_proc.c */
@@ -136,5 +153,11 @@ extern void __init sw_vdb_init(struct net_switch *sw);
 extern void __exit sw_vdb_exit(struct net_switch *sw);
 extern int sw_vdb_add_port(int vlan, struct net_switch_port *port);
 extern int sw_vdb_del_port(int vlan, struct net_switch_port *port);
+
+#define VLAN_TAG_BYTES 4
+
+/* sw_forward.c */
+extern int sw_forward(struct net_switch *sw, struct net_switch_port *in,
+	struct sk_buff *skb, struct skb_extra *skb_e);
 
 #endif

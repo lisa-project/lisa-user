@@ -440,7 +440,7 @@ static int sw_handle_frame(struct net_switch_port *port, struct sk_buff **pskb) 
 
 	dump_packet(skb);
 
-	return 0;
+	return sw_forward(&sw, port, skb, &skb_e);
 }
 
 /* Module initialization */
