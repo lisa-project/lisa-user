@@ -2,6 +2,7 @@
 #include <linux/module.h>
 
 MODULE_DESCRIPTION("Cool stuff");
+MODULE_AUTHOR("us");
 MODULE_LICENSE("GPL");
 MODULE_VERSION("0.1");
 
