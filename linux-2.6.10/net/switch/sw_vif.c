@@ -51,7 +51,6 @@ void sw_vif_rx(struct sk_buff *skb) {
 	priv = netdev_priv(skb->dev);
 	priv->stats.rx_packets++;
 	priv->stats.rx_bytes += skb->data_len;
-	dbg("sw_vif_rx: packet_type=%d\n", skb->pkt_type);
 	netif_receive_skb(skb);
 }
 
