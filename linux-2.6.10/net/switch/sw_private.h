@@ -25,6 +25,13 @@ struct net_switch_bucket {
 	rwlock_t lock;
 };
 
+#define SW_MAX_VLAN_NAME	32
+
+struct vdb_entry {
+	char name[SW_MAX_VLAN_NAME];
+	struct list_head ports;
+};
+
 struct net_switch {
 	/* List of all ports in the switch */
 	struct list_head ports;
@@ -39,6 +46,10 @@ struct net_switch {
 		Switch forwarding database (hashtable)
 	*/
 	struct net_switch_bucket fdb[SW_HASH_SIZE];
+
+	/* Vlan database
+	 */
+	struct vdb_entry * vdb[4096];
 };
 
 struct net_switch_port {
@@ -76,10 +87,12 @@ struct skb_extra {
 	int has_vlan_tag;
 };
 
-/* Functions implemented in fdb.c */
+/* Functions implemented in sw_fdb.c */
 extern void sw_fdb_init(struct net_switch *sw);
 extern void fdb_cleanup_port(struct net_switch_port *);
 extern void fdb_learn(unsigned char *mac, struct net_switch_port *port, int vlan);
 extern void sw_fdb_exit(void);
 
+/* Functions implemented in sw_vdb.c */
+extern void sw_vdb_init(struct net_switch *sw);
 #endif

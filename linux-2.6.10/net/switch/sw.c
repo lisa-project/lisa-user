@@ -23,6 +23,7 @@ static void init_switch(struct net_switch *sw) {
 	INIT_LIST_HEAD(&sw->ports);
 	init_MUTEX(&sw->adddelif_mutex);
 	sw_fdb_init(sw);
+	sw_vdb_init(sw);
 }
 
 /* Safely add an interface to the switch
