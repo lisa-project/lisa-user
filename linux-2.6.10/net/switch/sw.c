@@ -9,6 +9,7 @@
 #include "sw_private.h"
 #include "sw_debug.h"
 #include "sw_fdb.h"
+#include "sw_proc.h"
 
 MODULE_DESCRIPTION("Cool stuff");
 MODULE_AUTHOR("us");
@@ -23,6 +24,7 @@ static void init_switch(struct net_switch *sw) {
 	INIT_LIST_HEAD(&sw->ports);
 	init_MUTEX(&sw->adddelif_mutex);
 	sw_fdb_init(sw);
+	init_switch_proc();
 	sw_vdb_init(sw);
 }
 
@@ -213,7 +215,8 @@ static void switch_exit(void) {
 	 */
 	swioctl_set(NULL);
 	sw_handle_frame_hook = NULL;
-	sw_fdb_exit();
+	sw_fdb_exit(&sw);
+	cleanup_switch_proc();
 	dbg("Switch module unloaded\n");
 }
 

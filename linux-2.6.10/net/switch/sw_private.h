@@ -87,12 +87,17 @@ struct skb_extra {
 	int has_vlan_tag;
 };
 
-/* Functions implemented in sw_fdb.c */
+/* sw_fdb.c */
 extern void sw_fdb_init(struct net_switch *sw);
 extern void fdb_cleanup_port(struct net_switch_port *);
 extern void fdb_learn(unsigned char *mac, struct net_switch_port *port, int vlan);
-extern void sw_fdb_exit(void);
+extern void sw_fdb_exit(struct net_switch *sw);
 
-/* Functions implemented in sw_vdb.c */
+/* sw_proc.c */
+extern int init_switch_proc(void);
+extern void cleanup_switch_proc(void);
+
+/* sw_vdb.c */
 extern void sw_vdb_init(struct net_switch *sw);
+
 #endif

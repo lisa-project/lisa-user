@@ -1,8 +1,6 @@
 #include "sw_fdb.h"
 #include "sw_debug.h"
 
-#define DEBUG 1
-
 static kmem_cache_t *sw_fdb_cache;
 
 void __init sw_fdb_init(struct net_switch *sw) {
@@ -83,8 +81,17 @@ void fdb_learn(unsigned char *mac, struct net_switch_port *port, int vlan) {
 	write_unlock(&bucket->lock);
 }
 
-void __exit sw_fdb_exit(void) {
+void __exit sw_fdb_exit(struct net_switch *sw) {
 	/* FIXME: kmem_cache_free pe entry-urile care
 	 inca sunt in hash */
+	int i;
+	struct net_switch_fdb_entry *entry;
+	
+	for (i=0; i<SW_HASH_SIZE; i++) {
+		list_for_each_entry(entry, &sw->fdb[i].entries, lh) {
+			printk(KERN_DEBUG "removing i=%d entry=%p\n", i, entry);
+			kmem_cache_free(sw_fdb_cache, entry);
+		}
+	}
 	kmem_cache_destroy(sw_fdb_cache);
 }
