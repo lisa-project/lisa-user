@@ -39,7 +39,8 @@ void usage() {
 		"  addportvlan interface_name vlan_no\tAdds vlan to allowed vlans of interface (trunk mode)\n"
 		"  delportvlan interface_name vlan_no\tRemoves vlan from allowed vlans of interface (trunk mode)\n"
 		"  settrunk interface_name flag\tPuts interface in trunk (flag=1) or non-trunk (flag=0) mode\n"
-		"  setportvlan interface_name vlan_no\tAdd interface in vlan vlan_no (non-trunk mode)\n\n"
+		"  setportvlan interface_name vlan_no\tAdd interface in vlan vlan_no (non-trunk mode)\n"
+		"  clearportmac interface_name\tClears fdb entries for interface\n\n"
 	);
 }
 
@@ -181,6 +182,19 @@ int main(int argc, char **argv) {
 		if (status)
 			perror("setportvlan failed");
 		return 0;
+	}
+
+	if (!strcmp(argv[1], "clearportmac")) {
+		if (argc < 3) {
+			usage();
+			return 0;
+		}
+		user_arg.cmd = SWCFG_CLEARMACINT;
+		user_arg.name = strdup(argv[2]);
+		status = ioctl(sock, SIOCSWCFG, &user_arg);
+		if (status)
+			perror("clearportmac failed");
+		return 0;	
 	}
 
 	/* first command line arg invalid ... */
