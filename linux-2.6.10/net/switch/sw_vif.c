@@ -2,12 +2,10 @@
 #include "sw_debug.h"
 
 struct net_device *sw_vif_find(struct net_switch *sw, int vlan) {
-	struct net_switch_vif_list *elem;
-	dbg("sw_vif_find called (vlan=%d)\n", vlan);
-	list_for_each_entry(elem, &sw->vif, lh) {
-		dbg("sw_vif_find: elem at %p, vlan=%d\n", elem, elem->vlan);
-		if(elem->vlan == vlan)
-			return elem->dev;
+	struct net_switch_vif_priv *priv;
+	list_for_each_entry(priv, &sw->vif, lh) {
+		if(priv->vlan == vlan)
+			return priv->dev;
 	}
 	return NULL;
 }
@@ -15,7 +13,6 @@ struct net_device *sw_vif_find(struct net_switch *sw, int vlan) {
 int sw_vif_addif(struct net_switch *sw, int vlan) {
 	char buf[9];
 	struct net_device *dev;
-	struct net_switch_vif_list *vif_list;
 	struct net_switch_vif_priv *priv;
 	int result;
 	
@@ -27,26 +24,19 @@ int sw_vif_addif(struct net_switch *sw, int vlan) {
 	   because this is called only from ioctl() and ioctls are
 	   mutually exclusive (a semaphore in socket ioctl routine)
 	 */
-	vif_list = kmalloc(sizeof(struct net_switch_vif_list), GFP_ATOMIC);
-	if(vif_list == NULL)
-		return -ENOMEM;
-	memset(buf, 0, sizeof(buf));
 	sprintf(buf, "vlan%d", vlan);
 	dbg("About to alloc netdev for vlan %d\n", vlan);
 	dev = alloc_netdev(sizeof(struct net_switch_vif_priv), buf, ether_setup);
-	if(dev == NULL) {
-		kfree(vif_list);
+	if(dev == NULL)
 		return -EINVAL;
-	}
-	vif_list->dev = dev;
-	vif_list->vlan = vlan;
 	memcpy(dev->dev_addr, sw->vif_mac, ETH_ALEN);
 	dev->dev_addr[ETH_ALEN - 2] ^= vlan / 0x100;
 	dev->dev_addr[ETH_ALEN - 1] ^= vlan % 0x100;
 	priv = netdev_priv(dev);
 	priv->sw = sw;
-	priv->list = vif_list;
-	list_add_tail(&vif_list->lh, &sw->vif);
+	priv->dev = dev;
+	priv->vlan = vlan;
+	list_add_tail(&priv->lh, &sw->vif);
 	if ((result = register_netdev(dev))) {
 		dbg("vif: error %i registering netdevice %s\n", 
 				result, dev->name);
@@ -54,6 +44,7 @@ int sw_vif_addif(struct net_switch *sw, int vlan) {
 	else {
 		dbg("vif: successfully registered netdevice %s\n", dev->name);
 	}		
+	sw_vdb_add_vlan_default(sw, vlan);
 	
 	return 0;
 }
@@ -62,10 +53,9 @@ static void __vif_delif(struct net_device *dev) {
 	struct net_switch_vif_priv *priv;
 
 	priv = netdev_priv(dev);
-	list_del_rcu(&priv->list->lh);
+	list_del_rcu(&priv->lh);
 	unregister_netdev(dev);
 	synchronize_kernel();
-	kfree(&priv->list);
 	free_netdev(dev);
 }
 
@@ -82,7 +72,7 @@ int sw_vif_delif(struct net_switch *sw, int vlan) {
 }
 
 void sw_vif_cleanup(struct net_switch *sw) {
-	struct net_switch_vif_list *vif_list, *tmp;
-	list_for_each_entry_safe(vif_list, tmp, &sw->vif, lh)
-		__vif_delif(vif_list->dev);
+	struct net_switch_vif_priv *priv, *tmp;
+	list_for_each_entry_safe(priv, tmp, &sw->vif, lh)
+		__vif_delif(priv->dev);
 }

@@ -59,6 +59,7 @@ int sw_vdb_add_vlan_default(struct net_switch *sw, int vlan) {
 	
     if(vlan < 1 || vlan > 4095)
         return -EINVAL;
+	/* TODO If we're vtp client, ignore this request and return */
 	sprintf(buf, "VLAN%04d", vlan);
 	return sw_vdb_add_vlan(sw, vlan, buf);
 }

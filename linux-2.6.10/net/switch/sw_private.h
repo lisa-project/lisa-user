@@ -60,12 +60,6 @@ struct net_switch_vdb_entry {
 #define SW_MAX_VLANS 4096
 #define SW_VLAN_BMP_NO SW_MAX_VLANS/8
 
-struct net_switch_vif_list {
-	struct net_device *dev;
-	int vlan;
-	struct list_head lh;
-};
-
 struct net_switch {
 	/* List of all ports in the switch */
 	struct list_head ports;
@@ -118,7 +112,9 @@ struct net_switch_vdb_link {
 
 struct net_switch_vif_priv {
 	struct net_switch *sw;
-	struct net_switch_vif_list *list;
+	struct net_device *dev;
+	int vlan;
+	struct list_head lh;
 };
 
 #define SW_PFL_DISABLED     0x01
