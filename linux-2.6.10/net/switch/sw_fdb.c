@@ -8,7 +8,7 @@ void __init sw_fdb_init(struct net_switch *sw) {
 
 	for (i=0; i<SW_HASH_SIZE; i++) {
 		INIT_LIST_HEAD(&sw->hash[i].head);
-		init_MUTEX(&sw->hash[i].mutex);
+		rwlock_init(&sw->hash[i].mutex);
 	}
 	dbg("Initialized hash of %d buckets\n", SW_HASH_SIZE);	
 }
