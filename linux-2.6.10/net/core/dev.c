@@ -1589,30 +1589,27 @@ static __inline__ int handle_switch(struct sk_buff **pskb,
 				    struct packet_type **pt_prev, int *ret)
 {
 	struct net_switch_port *port;
-	int res;
 
-	/* RCU is already locked from outside, in netif_receive_skb(),
-	   but we use it here for better code readability.
-
-	   Deletion of ports relies on handling frames _with RCU locked_,
-	   besides nesting RCU locks is harmless and has no overhead.
-	   (right? :P)
-	 */
-	rcu_read_lock();
 	if ((*pskb)->pkt_type == PACKET_LOOPBACK ||
 	    (port = rcu_dereference((*pskb)->dev->sw_port)) == NULL) {
-		rcu_read_unlock();
+		/* This packed is not meant for us, so let netif_receive_skb()
+		   call the other handlers.
+		 */
 		return 0;
 	}
 
+	/* If there is a handler left from the list traversal (the
+	   handler list was not empty), call the handler here because
+	   we'll exit from netif_receive_skb() upon return from
+	   handle_switch().
+	 */
 	if (*pt_prev) {
 		*ret = deliver_skb(*pskb, *pt_prev);
 		*pt_prev = NULL;
 	}
 	
-	res = sw_handle_frame_hook(port, pskb);
-	rcu_read_unlock();
-	return res;
+	*ret = sw_handle_frame_hook(port, pskb);
+	return 1;
 }
 #else
 #define handle_switch(skb, pt_prev, ret)	(0)
@@ -1693,19 +1690,14 @@ int netif_receive_skb(struct sk_buff *skb)
 	}
 #endif
 
-	/* (Blade)
-	   
-	   Se pare ca aici se parcurge o lista cu toate protocoalele (ptype_all).
-	   Pentru fiecare protocol se apeleaza handlerul daca ptype->dev == NULL
-	   (asta inseamna ca se aplica pentru toate device-urile ???) sau daca
-	   ptype->dev coincide cu device-ul care a primit pachetul.
+	/* Generic packet handlers are called here. The list traversal uses
+	   "post-processing" of elements (that is we process the previous
+	   element i.e. pt_prev) at each step because the usage count on the
+	   skb must be increased for only n-1 elements (where n is the element
+	   count in the list).
 
-	   Nu ma prind de ce apeleaza handlerul pentru elementul anterior din
-	   lista.
-	 */
-
-	/* FIXME (Blade) poate ar trebui sa inregistram switch-ul ca protocol in
-	   loc sa adaugam hook-ul direct in netif_receive_skb ?
+	   Each halder is responsible for releasing the skb, but if we have
+	   no handlers, we'll eventually free the skb ourselves.
 	 */
 	list_for_each_entry_rcu(ptype, &ptype_all, list) {
 		if (!ptype->dev || ptype->dev == skb->dev) {
@@ -1739,12 +1731,13 @@ ncls:
 	if (handle_bridge(&skb, &pt_prev, &ret))
 		goto out;
 
-	/* FIXME: asta ar trebui pusa inainte de parcurgerea listei de
-	   protocoale din moment ce oricum "absorb" toate pachetele ???
-	 */
 	if (handle_switch(&skb, &pt_prev, &ret))
 		goto out;
 
+	/* Protocol-specific handlers are called here. This list is also
+	   traversed unsing post-processing of elements. Note that we might
+	   have a "previous element" left from the generic handlers list.
+	 */
 	type = skb->protocol;
 	list_for_each_entry_rcu(ptype, &ptype_base[ntohs(type)&15], list) {
 		if (ptype->type == type &&
@@ -1758,6 +1751,7 @@ ncls:
 	if (pt_prev) {
 		ret = pt_prev->func(skb, skb->dev, pt_prev);
 	} else {
+		/* It looks like we had no handlers. We have to free the skb. */
 		kfree_skb(skb);
 		/* Jamal, now you will not able to escape explaining
 		 * me how you were going to use this. :-)

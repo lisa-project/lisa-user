@@ -57,7 +57,36 @@ void dump_packet(const struct sk_buff *skb) {
 	printk("\n");
 }
 
-/* Handle a frame received on a physical interface */
+/* Handle a frame received on a physical interface
+
+   1. This is the general picture of the packet flow:
+   		driver_poll() {
+			dev_alloc_skb();
+			eth_copy_and_sum();
+			eth_type_trans();
+			netif_receive_skb() {
+				skb->dev->poll && netpoll_rx(skb);
+				deliver_skb();
+				(struct packet_type).func(skb, ...); // general packet handlers
+				handle_switch() {
+					sw_handle_frame(skb);
+				}
+			}
+		}
+	  
+	  driver_poll() is either the poll method of the driver (if it uses
+	  NAPI) or the poll method of the backlog device, (if the driver
+	  uses old Softnet).
+
+   2. This function and all called functions rely on rcu being already
+      locked. This is normally done in netif_receive_skb(). If for any
+	  stupid reason this doesn't happen, things will go terribly wrong.
+
+   3. Our return value is propagated back to driver_poll(). We should
+      return NET_RX_DROP if the packet was discarded for any reason or
+	  NET_RX_SUCCES if we handled the packet. We should'n however return
+	  NET_RX_DROP if we touched the packet in any way.
+ */
 __dbg_static int sw_handle_frame(struct net_switch_port *port, struct sk_buff **pskb) {
 	struct sk_buff *skb = *pskb;
 	struct skb_extra skb_e;
@@ -101,7 +130,7 @@ __dbg_static int sw_handle_frame(struct net_switch_port *port, struct sk_buff **
 	fdb_learn(skb->mac.raw + 6, port, skb_e.vlan, SW_FDB_DYN);
 
 	sw_forward(port, skb, &skb_e);
-	return NET_RX_DROP;
+	return NET_RX_SUCCESS;
 
 free_skb:
 	dev_kfree_skb(skb);
