@@ -28,6 +28,7 @@
 #define SWCFG_DELVLANPORT 	0x07	/* remove a port from a vlan (trunk mode) */
 #define SWCFG_SETTRUNK		0x08	/* put a port in trunk mode */
 #define SWCFG_SETPORTVLAN 	0x09	/* add a port in a vlan (non-trunk mode) */
+#define SWCFG_CLEARMACINT	0x0a	/* clear all macs for a given port */
 
 struct net_switch_ioctl_arg {
 	unsigned char cmd;

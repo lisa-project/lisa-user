@@ -258,6 +258,7 @@ static int sw_set_port_vlan(struct net_switch_port *port, int vlan) {
  */
 int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 	struct net_device *dev;
+	struct net_switch_port *port;
 	struct net_switch_ioctl_arg arg;
 	unsigned char bitmap[SW_VLAN_BMP_NO];
 	int err = -EINVAL;
@@ -334,6 +335,16 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 			break;
 		}
 		err = sw_set_port_vlan(rcu_dereference(dev->sw_port), arg.vlan);	
+		break;
+	case SWCFG_CLEARMACINT:
+		if((dev = dev_get_by_name(arg.name)) == NULL) {
+			err = -ENODEV;
+			break;
+		}
+		port = rcu_dereference(dev->sw_port);
+		if(!port)
+			return -EINVAL;
+		fdb_cleanup_port(port);
 		break;
 	}
 

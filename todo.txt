@@ -1,3 +1,7 @@
+* sw_flood: daca am de trimis pe n porturi sa fac n-1 clonari
+* fdb: folosire rcu si spinlock pentru scriere; modelul de "tranzactie"
+  ramane nemodificat
+
 Blade:
 * La schimbare trunking se sterg mac-urile invatate pe interfata?
 * 2 liste pentru fdb: interfete trunk si non-trunk
