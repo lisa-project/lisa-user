@@ -132,8 +132,12 @@ void sw_disable_port(struct net_switch_port *port) {
 
 /* Initialize everything associated with a switch */
 static void init_switch(struct net_switch *sw) {
+	int i;
+	
 	INIT_LIST_HEAD(&sw->ports);
-	INIT_LIST_HEAD(&sw->vif);
+	for (i=0; i<SW_VIF_HASH_SIZE; i++) {
+		INIT_LIST_HEAD(&sw->vif[i]);
+	}
 	memcpy(sw->vif_mac, "\0lms\0\0", 6);
 	/* TODO module parameter to initialize vif_mac */
 	atomic_set(&sw->fdb_age_time, SW_DEFAULT_AGE_TIME); 

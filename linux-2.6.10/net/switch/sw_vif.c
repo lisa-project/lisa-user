@@ -3,7 +3,9 @@
 
 struct net_device *sw_vif_find(struct net_switch *sw, int vlan) {
 	struct net_switch_vif_priv *priv;
-	list_for_each_entry(priv, &sw->vif, lh) {
+	struct list_head *search = &sw->vif[sw_vlan_hash(vlan)];
+
+	list_for_each_entry(priv, search, lh) {
 		if(priv->bogo_port.vlan == vlan)
 			return priv->bogo_port.dev;
 	}
@@ -94,7 +96,7 @@ int sw_vif_addif(struct net_switch *sw, int vlan) {
 	priv->bogo_port.flags = 0;
 	priv->bogo_port.vlan = vlan;
 	priv->bogo_port.forbidden_vlans = NULL;
-	list_add_tail(&priv->lh, &sw->vif);
+	list_add_tail(&priv->lh, &sw->vif[sw_vlan_hash(vlan)]);
 	if ((result = register_netdev(dev))) {
 		dbg("vif: error %i registering netdevice %s\n", 
 				result, dev->name);
@@ -120,6 +122,7 @@ static void __vif_delif(struct net_device *dev) {
 int sw_vif_delif(struct net_switch *sw, int vlan) {
 	struct net_device *dev;
 
+	dbg("sw_vif_delif called (vlan=%d).\n", vlan);
 	if(vlan < 1 || vlan > 4095)
 		return -EINVAL;
 	if((dev = sw_vif_find(sw, vlan)) == NULL)
@@ -131,6 +134,9 @@ int sw_vif_delif(struct net_switch *sw, int vlan) {
 
 void sw_vif_cleanup(struct net_switch *sw) {
 	struct net_switch_vif_priv *priv, *tmp;
-	list_for_each_entry_safe(priv, tmp, &sw->vif, lh)
-		__vif_delif(priv->bogo_port.dev);
+	int i;
+	
+	for (i=0; i < SW_VIF_HASH_SIZE; i++)
+		list_for_each_entry_safe(priv, tmp, &sw->vif[i], lh)
+			__vif_delif(priv->bogo_port.dev);
 }

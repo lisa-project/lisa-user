@@ -61,6 +61,15 @@ static inline void __sw_remove_from_vlans(struct net_switch_port *port) {
  */
 static int sw_addif(struct net_device *dev) {
 	struct net_switch_port *port;
+	struct net_switch_vif_priv *priv; 
+	int i;
+
+	for (i=0; i<SW_VIF_HASH_SIZE; i++)
+		list_for_each_entry(priv, &sw.vif[i], lh) {
+			if (dev == priv->bogo_port.dev)
+				return -EINVAL;
+		}
+			
 	if(rcu_dereference(dev->sw_port) != NULL) {
 		/* dev->sw_port shouldn't be changed elsewhere, so
 		   we don't necessarily need rcu_dereference here

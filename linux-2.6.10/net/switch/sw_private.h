@@ -57,35 +57,6 @@ struct net_switch_vdb_entry {
 	struct list_head non_trunk_ports;
 };
 
-#define SW_MAX_VLANS 4096
-#define SW_VLAN_BMP_NO SW_MAX_VLANS/8
-
-struct net_switch {
-	/* List of all ports in the switch */
-	struct list_head ports;
-
-	/* Switch forwarding database (hashtable) */
-	struct net_switch_bucket fdb[SW_HASH_SIZE];
-
-	/* Vlan database */
-	struct net_switch_vdb_entry * volatile vdb[SW_MAX_VLANS];
-
-	/* Forwarding database entry aging time */
-	atomic_t fdb_age_time;
-	
-	/* Vlan virtual interfaces */
-	struct list_head vif;
-	
-	/* Cache of forwarding database entries */
-	kmem_cache_t *fdb_cache;
-
-    /* Cache of link structures */
-    kmem_cache_t *vdb_cache;
-
-	/* Template for virtual interfaces mac */
-	unsigned char vif_mac[ETH_ALEN];
-};
-
 struct net_switch_port {
 	/* Linking with other ports in a list */
 	struct list_head lh;
@@ -105,15 +76,48 @@ struct net_switch_port {
 	unsigned char *forbidden_vlans;
 };
 
-struct net_switch_vdb_link {
-	struct list_head lh;
-	struct net_switch_port *port;
-};
-
 struct net_switch_vif_priv {
 	struct list_head lh;
 	struct net_device_stats stats;
 	struct net_switch_port bogo_port;
+};
+
+#define SW_MAX_VLANS 4096
+#define SW_VLAN_BMP_NO SW_MAX_VLANS/8
+
+#define SW_VIF_HASH_SIZE 97
+
+struct net_switch {
+	/* List of all ports in the switch */
+	struct list_head ports;
+
+	/* Switch forwarding database (hashtable) */
+	struct net_switch_bucket fdb[SW_HASH_SIZE];
+
+	/* Vlan database */
+	struct net_switch_vdb_entry * volatile vdb[SW_MAX_VLANS];
+
+	/* Forwarding database entry aging time */
+	atomic_t fdb_age_time;
+	
+	/* Vlan virtual interfaces */
+	struct list_head vif[SW_VIF_HASH_SIZE];
+	
+	
+	/* Cache of forwarding database entries */
+	kmem_cache_t *fdb_cache;
+
+    /* Cache of link structures */
+    kmem_cache_t *vdb_cache;
+
+	/* Template for virtual interfaces mac */
+	unsigned char vif_mac[ETH_ALEN];
+};
+
+
+struct net_switch_vdb_link {
+	struct list_head lh;
+	struct net_switch_port *port;
 };
 
 #define SW_PFL_DISABLED     0x01
@@ -183,6 +187,10 @@ static __inline__ int sw_mac_hash(const unsigned char *mac) {
 	x ^= x >> 8;
 
 	return x & (SW_HASH_SIZE - 1);
+}
+
+static __inline__ int sw_vlan_hash(const int vlan) {
+	return vlan % SW_VIF_HASH_SIZE; 
 }
 
 /* sw.c */
