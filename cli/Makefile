@@ -1,5 +1,5 @@
-CFLAGS = -g
-LDFLAGS = -lefence -lreadline -lcurses
+CFLAGS = -g -DDEBUG
+LDFLAGS = -lefence -lreadline -lcurses -lutil
 
 .PHONY: all clean
 
