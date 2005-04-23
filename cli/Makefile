@@ -1,5 +1,5 @@
-CFLAGS = -g -DDEBUG
-LDFLAGS = -lefence -lreadline -lcurses -lutil
+#CFLAGS = -g -DDEBUG
+LDFLAGS = -lreadline -lcurses -lutil
 
 # FIXME
 __LOGIN_PATH := \"$(shell pwd)/swlogin\"
