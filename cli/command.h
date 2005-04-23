@@ -18,6 +18,7 @@ typedef struct root {
     sw_command_t *cmd;
 } sw_command_root_t;
 
+
 extern sw_command_t shell_main[];
 extern sw_command_root_t command_root[];
 

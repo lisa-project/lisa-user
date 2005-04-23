@@ -1,6 +1,8 @@
+#include <assert.h>
 #include <stdio.h>
 #include <readline/readline.h>
 #include <readline/history.h>
+#include <unistd.h>
 
 #include "debug.h"
 #include "climain.h"
@@ -12,16 +14,20 @@ static struct cmd *search_set = shell_main;
 static int priv = 0;
 
 void swcli_invalid_cmd() {
-	printf("% No match\n");
+	printf("% Unrecognized command\n");
 }
 
 int list_current_options(int something, int key) {
-	int i = 0;
+	int i = 0, count = 0, c;
 	char *cmd, *lasttok;
+	char *spec = strdup("%%-%ds ");
+	char aspec[8];
+	FILE *pipe;
+	sw_match_t *matched;
+
 
 	printf("%c\n", key);
-	/* Establish a current search set based on the current 
-	  line buffer */
+	/* Establish a current search set based on the current line buffer */
 	select_search_scope(strdup(rl_line_buffer));
 	if (!search_set) {
 		swcli_invalid_cmd();
@@ -29,31 +35,51 @@ int list_current_options(int something, int key) {
 	else {
 		if (!strlen(rl_line_buffer) || rl_line_buffer[strlen(rl_line_buffer)-1] == ' ') {
 			/* List all commands in current set with help message */
+			/* output is piped to the unix command more */
+			if (!(pipe=popen("/bin/more", "w"))) {
+				perror("popen");
+				exit(1);
+			}
 			while (cmd = search_set[i].name) {
-                if(search_set[i].priv > priv)
-                    continue;
-				printf("  %-20s\t%s\n", cmd, search_set[i].doc);
+				if(search_set[i].priv > priv)
+					continue;
+				fprintf(pipe, "  %-20s\t%s\n", cmd, search_set[i].doc);
 				i++;
 			}
+//			for (i=0; i<100; i++) fprintf(pipe, "More functionality ;)\n");
+			pclose(pipe);
 		}
 		else {
 			/* List possible completions from the current search set */
 			for (lasttok=&rl_line_buffer[strlen(rl_line_buffer)-1]; 
 					lasttok!=rl_line_buffer && !whitespace(*lasttok); lasttok--);
 			if (lasttok != rl_line_buffer) lasttok++;
-			while (cmd = search_set[i].name) {
-                if(search_set[i].priv > priv)
-                    continue;
-				if (!strncmp(lasttok, cmd, strlen(lasttok))) {
-					printf("%s  ", cmd);
-				}
-				i++;
+			
+			matched = get_matches(&count, lasttok);
+			for (i=0; i<count; i++) {
+				if (i && !(i % MATCHES_PER_ROW))
+					printf("\n");
+				memset(aspec, 0, sizeof(aspec));
+				c = sprintf(aspec, spec, matched[i].pwidth);
+				assert(c < sizeof(aspec));
+				printf(aspec, matched[i].text);
 			}
-			printf("\n");
+			
+			if (!count) {
+				swcli_invalid_cmd();
+				goto out;
+			}
+			else { 
+				free(matched);
+				printf("\n");
+			}	
 		}
 		printf("\n");
 	}	
+
+out:	
 	rl_forced_update_display();
+	free(spec);
 	return 0;
 }
 
@@ -123,6 +149,11 @@ void select_search_scope(char *line_buffer) {
 	free(line_buffer);
 }
 
+void display_matches_hook(char **matches, int i, int j) {
+	printf("\n");
+	rl_forced_update_display();
+}
+
 /* Attempt to complete on the contents of TEXT. START and END
  * bound the region of rl_line_buffer that contains the word to
  * complete. TEXT is the word to complete. We can use the entire
@@ -136,6 +167,7 @@ char ** swcli_completion(const char *text, int start, int end) {
 	select_search_scope(strdup(rl_line_buffer));
 
 	rl_attempted_completion_over = 1;
+ 	rl_completion_display_matches_hook = display_matches_hook;
 	/*
 	  FIXME: override rl_completion_matches to obtain 
 	  cisco ios functionality 
@@ -178,6 +210,42 @@ char *swcli_generator(const char *text, int state) {
 	
 	/* if no matches found then return NULL */
 	return ((char *)NULL);
+}
+
+sw_match_t *get_matches(int *matched, char *token) {
+	int i=0, count = 0, j, num;
+	char *cmd;
+	sw_match_t *matches;
+
+	matches = (sw_match_t *) malloc(MATCHES_PER_ROW * sizeof(sw_match_t));
+	num = MATCHES_PER_ROW;
+	while (cmd = search_set[i].name) {
+		if(search_set[i].priv > priv)
+			continue;
+		if (!strncmp(token, cmd, strlen(token))) {
+			count++;
+			if (count - 1 >= num) {
+				num += MATCHES_PER_ROW;
+				matches = (sw_match_t *) realloc(matches, num * sizeof(sw_match_t));
+				assert(matches);
+			}
+			matches[count-1].text = cmd;
+			matches[count-1].pwidth = strlen(cmd);
+			if (count > MATCHES_PER_ROW) {
+				/* update pwidths backward */
+				j = count;
+				while (j - MATCHES_PER_ROW - 1 >= 0) {
+					if (matches[j - MATCHES_PER_ROW - 1].pwidth < strlen(cmd))
+						matches[j - MATCHES_PER_ROW - 1].pwidth = strlen(cmd);
+					j = j - MATCHES_PER_ROW;
+				}
+				
+			}
+		}
+		i++;
+	}
+	*matched = count;
+	return matches;
 }
 
 int climain(void) {
