@@ -7,7 +7,9 @@
 #include "command.h"
 
 
-static struct cmd *search_set = main_unpriv_commands;
+static struct cmd *search_set = shell_main;
+/* Current privilege level */
+static int priv = 0;
 
 void swcli_invalid_cmd() {
 	printf("% No match\n");
@@ -28,6 +30,8 @@ int list_current_options(int something, int key) {
 		if (!strlen(rl_line_buffer) || rl_line_buffer[strlen(rl_line_buffer)-1] == ' ') {
 			/* List all commands in current set with help message */
 			while (cmd = search_set[i].name) {
+                if(search_set[i].priv > priv)
+                    continue;
 				printf("  %-20s\t%s\n", cmd, search_set[i].doc);
 				i++;
 			}
@@ -38,6 +42,8 @@ int list_current_options(int something, int key) {
 					lasttok!=rl_line_buffer && !whitespace(*lasttok); lasttok--);
 			if (lasttok != rl_line_buffer) lasttok++;
 			while (cmd = search_set[i].name) {
+                if(search_set[i].priv > priv)
+                    continue;
 				if (!strncmp(lasttok, cmd, strlen(lasttok))) {
 					printf("%s  ", cmd);
 				}
@@ -73,14 +79,16 @@ void change_search_scope(char *match)  {
 
 	dbg("change_search_scope(%s): search_set at 0x%x\n", match, search_set);
 	if (!search_set) return;
-	while (name = search_set[i].name) {
-		if (!strcmp(match, name)) {
-			search_set = search_set[i].subcmd;
-			dbg("chage_search_scope(%s): new_search_set at 0x%x (pos=%d)\n", match, search_set, i);
-			break;
-		}
-		i++;
-	}
+    while (name = search_set[i].name) {
+        if(search_set[i].priv > priv)
+            continue;
+        if (!strcmp(match, name)) {
+            search_set = search_set[i].subcmd;
+            dbg("chage_search_scope(%s): new_search_set at 0x%x (pos=%d)\n", match, search_set, i);
+            break;
+        }
+        i++;
+    }
 }
 
 /*
@@ -96,7 +104,7 @@ void select_search_scope(char *line_buffer) {
 	dbg("\n");
 	start = line_buffer;
 	/* FIXME FIXME FIXME (I may be enabled or in conf-t) */
-	search_set = main_unpriv_commands;
+	search_set = shell_main;
 	do {
 		tmp = start;
 		while (whitespace(*tmp)) tmp++;	
@@ -158,8 +166,9 @@ char *swcli_generator(const char *text, int state) {
 	/* Return the next name which partially matches from the
 	 * command list */
 	while (name = search_set[list_index].name) {
-
 		list_index++;
+        if(search_set[list_index].priv > priv)
+            continue;
 		
 		if (strncmp(name, text, len) == 0) {
 			dbg("match: %s\n", name);
