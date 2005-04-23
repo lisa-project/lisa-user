@@ -1,5 +1,7 @@
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 #include <readline/readline.h>
 #include <readline/history.h>
 #include <unistd.h>
@@ -14,11 +16,11 @@ static struct cmd *search_set = shell_main;
 static int priv = 0;
 
 void swcli_invalid_cmd() {
-	printf("% Unrecognized command\n");
+	printf("%% Unrecognized command\n");
 }
 
 int list_current_options(int something, int key) {
-	int i = 0, count = 0, c;
+	int i, count = 0, c;
 	char *cmd, *lasttok;
 	char *spec = strdup("%%-%ds ");
 	char aspec[8];
@@ -40,11 +42,10 @@ int list_current_options(int something, int key) {
 				perror("popen");
 				exit(1);
 			}
-			while (cmd = search_set[i].name) {
+			for(i = 0; (cmd = search_set[i].name); i++) {
 				if(search_set[i].priv > priv)
 					continue;
 				fprintf(pipe, "  %-20s\t%s\n", cmd, search_set[i].doc);
-				i++;
 			}
 //			for (i=0; i<100; i++) fprintf(pipe, "More functionality ;)\n");
 			pclose(pipe);
@@ -93,6 +94,8 @@ int swcli_init_readline() {
 	/* Tell the completer we want a crack first */
 	rl_attempted_completion_function = swcli_completion;
 	rl_bind_key('?', list_current_options); 
+
+	return 0;
 }
 
 /*
@@ -100,20 +103,19 @@ int swcli_init_readline() {
   based on the value of match (current command token analysed)
  */
 void change_search_scope(char *match)  {
-	int i=0;
+	int i;
 	char *name;
 
-	dbg("change_search_scope(%s): search_set at 0x%x\n", match, search_set);
+	dbg("change_search_scope(%s): search_set at 0x%p\n", match, search_set);
 	if (!search_set) return;
-    while (name = search_set[i].name) {
+    for(i = 0; (name = search_set[i].name); i++) {
         if(search_set[i].priv > priv)
             continue;
         if (!strcmp(match, name)) {
             search_set = search_set[i].subcmd;
-            dbg("chage_search_scope(%s): new_search_set at 0x%x (pos=%d)\n", match, search_set, i);
+            dbg("chage_search_scope(%s): new_search_set at 0x%p (pos=%d)\n", match, search_set, i);
             break;
         }
-        i++;
     }
 }
 
@@ -182,9 +184,9 @@ char ** swcli_completion(const char *text, int start, int end) {
  * (i.e. STATE == 0), then we start at the top of the list. */
 char *swcli_generator(const char *text, int state) {
 	static int list_index, len;
-	char *name, *temp;
+	char *name;
 
-	dbg("generator: search_set at 0x%x\n", search_set);
+	dbg("generator: search_set at 0x%p\n", search_set);
 	
 	if (! search_set) 
 		return ((char *)NULL);
@@ -197,13 +199,12 @@ char *swcli_generator(const char *text, int state) {
 
 	/* Return the next name which partially matches from the
 	 * command list */
-	while (name = search_set[list_index].name) {
-		list_index++;
+	for(; (name = search_set[list_index].name); list_index++) {
         if(search_set[list_index].priv > priv)
             continue;
-		
 		if (strncmp(name, text, len) == 0) {
 			dbg("match: %s\n", name);
+			list_index++;
 			return strdup(name);
 		}
 	}
@@ -213,13 +214,13 @@ char *swcli_generator(const char *text, int state) {
 }
 
 sw_match_t *get_matches(int *matched, char *token) {
-	int i=0, count = 0, j, num;
+	int i, count = 0, j, num;
 	char *cmd;
 	sw_match_t *matches;
 
 	matches = (sw_match_t *) malloc(MATCHES_PER_ROW * sizeof(sw_match_t));
 	num = MATCHES_PER_ROW;
-	while (cmd = search_set[i].name) {
+	for(i = 0; (cmd = search_set[i].name); i++) {
 		if(search_set[i].priv > priv)
 			continue;
 		if (!strncmp(token, cmd, strlen(token))) {
@@ -242,7 +243,6 @@ sw_match_t *get_matches(int *matched, char *token) {
 				
 			}
 		}
-		i++;
 	}
 	*matched = count;
 	return matches;

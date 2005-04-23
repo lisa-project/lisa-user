@@ -6,4 +6,5 @@
 
 int main(int argc, char **argv) {
 	climain();
+	return 0;
 }
