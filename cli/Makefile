@@ -1,5 +1,4 @@
-CFLAGS = -Wall
-CFLAGS += -g #-DDEBUG
+CFLAGS = -g #-DDEBUG
 LDFLAGS = -lreadline -lcurses -lutil
 
 # FIXME

@@ -1,7 +1,5 @@
 #include <assert.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
 #include <readline/readline.h>
 #include <readline/history.h>
 #include <unistd.h>
@@ -18,11 +16,11 @@ static sw_command_t *search_set;
 static int priv = 0;
 
 void swcli_invalid_cmd() {
-	printf("%% Unrecognized command\n");
+	printf("% Unrecognized command\n");
 }
 
 int list_current_options(int something, int key) {
-	int i, count = 0, c;
+	int i = 0, count = 0, c;
 	char *cmd, *lasttok;
 	char *spec = strdup("%%-%ds ");
 	char aspec[8];
@@ -44,10 +42,11 @@ int list_current_options(int something, int key) {
 				perror("popen");
 				exit(1);
 			}
-			for(i = 0; (cmd = search_set[i].name); i++) {
+			while (cmd = search_set[i].name) {
 				if(search_set[i].priv > priv)
 					continue;
 				fprintf(pipe, "  %-20s\t%s\n", cmd, search_set[i].doc);
+				i++;
 			}
 //			for (i=0; i<100; i++) fprintf(pipe, "More functionality ;)\n");
 			pclose(pipe);
@@ -96,29 +95,31 @@ int swcli_init_readline() {
 	/* Tell the completer we want a crack first */
 	rl_attempted_completion_function = swcli_completion;
 	rl_bind_key('?', list_current_options); 
-
-	return 0;
 }
 
 /*
   Selects the current search command set 
   based on the value of match (current command token analysed)
  */
-void change_search_scope(char *match)  {
-	int i;
+int change_search_scope(char *match, char lookahead)  {
+	int i=0, count = 0;
+	int flag = 0;
 	char *name;
+	struct cmd *set = NULL;
 
-	dbg("change_search_scope(%s): search_set at 0x%p\n", match, search_set);
+	dbg("change_search_scope(%s): search_set at 0x%x\n", match, search_set);
 	if (!search_set) return;
-    for(i = 0; (name = search_set[i].name); i++) {
+    while (name = search_set[i].name) {
         if(search_set[i].priv > priv)
             continue;
-        if (!strcmp(match, name)) {
-            search_set = search_set[i].subcmd;
-            dbg("chage_search_scope(%s): new_search_set at 0x%p (pos=%d)\n", match, search_set, i);
-            break;
-        }
+		if (!strcmp(match,name) && (whitespace(lookahead))) {
+				search_set = search_set[i].subcmd;
+				return 0;
+		}
+        i++;
     }
+
+	return 1;
 }
 
 /*
@@ -143,7 +144,12 @@ void select_search_scope(char *line_buffer) {
 		while (*tmp!='\0' && !whitespace(*tmp)) tmp++;
 		c = *tmp;
 		*tmp = '\0';
-		change_search_scope(start);
+		/* if we didn't have exact matched followed by whitespace 
+		 then we must abandon right here */
+		if (change_search_scope(start, c)) {
+			*tmp = c;
+			break;
+		}
 		dbg("COMMAND TOKEN: '%s'\n", start);
 		*tmp = c;
 		if (c == '\0') break;
@@ -186,9 +192,9 @@ char ** swcli_completion(const char *text, int start, int end) {
  * (i.e. STATE == 0), then we start at the top of the list. */
 char *swcli_generator(const char *text, int state) {
 	static int list_index, len;
-	char *name;
+	char *name, *temp;
 
-	dbg("generator: search_set at 0x%p\n", search_set);
+	dbg("generator: search_set at 0x%x\n", search_set);
 	
 	if (! search_set) 
 		return ((char *)NULL);
@@ -201,12 +207,13 @@ char *swcli_generator(const char *text, int state) {
 
 	/* Return the next name which partially matches from the
 	 * command list */
-	for(; (name = search_set[list_index].name); list_index++) {
+	while (name = search_set[list_index].name) {
+		list_index++;
         if(search_set[list_index].priv > priv)
             continue;
+		
 		if (strncmp(name, text, len) == 0) {
 			dbg("match: %s\n", name);
-			list_index++;
 			return strdup(name);
 		}
 	}
@@ -216,13 +223,13 @@ char *swcli_generator(const char *text, int state) {
 }
 
 sw_match_t *get_matches(int *matched, char *token) {
-	int i, count = 0, j, num;
+	int i=0, count = 0, j, num;
 	char *cmd;
 	sw_match_t *matches;
 
 	matches = (sw_match_t *) malloc(MATCHES_PER_ROW * sizeof(sw_match_t));
 	num = MATCHES_PER_ROW;
-	for(i = 0; (cmd = search_set[i].name); i++) {
+	while (cmd = search_set[i].name) {
 		if(search_set[i].priv > priv)
 			continue;
 		if (!strncmp(token, cmd, strlen(token))) {
@@ -245,8 +252,13 @@ sw_match_t *get_matches(int *matched, char *token) {
 				
 			}
 		}
+		i++;
 	}
 	*matched = count;
+	if (!count) {
+		free(matches);
+		matches = NULL;
+	}
 	return matches;
 }
 

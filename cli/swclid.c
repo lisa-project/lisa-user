@@ -142,7 +142,7 @@ void main_loop() {
 	int status;
 	int maxfd;
 	fd_set readfds, writefds;
-	struct telnet_conn *c;
+	struct telnet_conn *c, *tmp;
 
 	do {
 		FD_ZERO(&readfds);
