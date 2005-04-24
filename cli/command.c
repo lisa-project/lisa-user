@@ -34,7 +34,27 @@ sw_command_t shell_main[] = {
 	{(char *)NULL, 0, (rl_icpfunc_t *) NULL, (char *) NULL, (sw_command_t *) NULL}
 };
 
+sw_command_t shell_config[] = {
+	{(char *)NULL, 0, (rl_icpfunc_t *) NULL, (char *) NULL, (sw_command_t *) NULL}
+};
+
+sw_command_t shell_config_if[] = {
+	{(char *)NULL, 0, (rl_icpfunc_t *) NULL, (char *) NULL, (sw_command_t *) NULL}
+};
+
+sw_command_t shell_config_vlan[] = {
+	{(char *)NULL, 0, (rl_icpfunc_t *) NULL, (char *) NULL, (sw_command_t *) NULL}
+};
+
+sw_command_t shell_vlan[] = {
+	{(char *)NULL, 0, (rl_icpfunc_t *) NULL, (char *) NULL, (sw_command_t *) NULL}
+};
+
 sw_command_root_t command_root[] = {
     {"%s%c",					shell_main},
+	{"%s(config)%c",			shell_config},
+	{"%s(config-if)%c",			shell_config_if},
+	{"%s(config-vlan)%c",		shell_config_vlan},
+	{"%s(vlan)%c",				shell_vlan},
 	{NULL,						NULL}
 };

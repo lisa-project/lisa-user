@@ -11,7 +11,9 @@
 #include "command.h"
 
 
-static struct cmd *search_set = shell_main;
+static sw_command_root_t *current_root = command_root;
+static sw_command_t *search_set;
+/* Initialization moved to main()   = current_root->cmd; */
 /* Current privilege level */
 static int priv = 0;
 
@@ -255,12 +257,14 @@ int climain(void) {
 
 	/* initialization */
 	swcli_init_readline();
+	search_set = current_root->cmd;
 	
-	gethostname(hostname, sizeof(hostname));
-	hostname[sizeof(hostname) - 1] = '\0';
-	sprintf(prompt, "%s>", hostname);
-
 	do {
+		/* Do this on every command because hostname may change. */
+		gethostname(hostname, sizeof(hostname));
+		hostname[sizeof(hostname) - 1] = '\0';
+		sprintf(prompt, current_root->prompt, hostname, priv ? '#' : '>');
+
 		if (cmd) {
 			free(cmd);
 			cmd = (char *)NULL;
