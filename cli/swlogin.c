@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
 	}
 	rl_redisplay_function = rl_redisplay;
 	if(i >= max_attempts) {
-		printf("% Bad passwords\r\n");
+		printf("%% Bad passwords\r\n");
 		return 1;
 	}
 

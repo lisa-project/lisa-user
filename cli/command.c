@@ -24,11 +24,8 @@ sw_command_t shell_main[] = {
 	{"exit",		0,	cmd_exit,		"Exit from the EXEC", NULL},
 	{"help",		0,	cmd_help,		"Description of the interactive help system", NULL},
 	{"logout", 0, cmd_exit, "Exit from the EXEC", NULL },
-	{"name-connection", 0, NULL, "Name an existing network connection", NULL},
 	{"ping", 0, NULL, "Send echo messages", NULL },
-	{"set", 0, NULL, "Set system parameter (not config)", NULL},
 	{"show", 0, NULL, "Show running system information", shell_main_show},
-	{"systat", 0, NULL, "Display information about terminal lines", NULL},
 	{"telnet", 0, NULL, "Open a telnet connection", NULL},
 	{"terminal", 0, NULL, "Set terminal line parameters", NULL},
 	{"traceroute", 0, NULL, "Trace route to destination", NULL},
@@ -36,27 +33,7 @@ sw_command_t shell_main[] = {
 	{(char *)NULL, 0, (rl_icpfunc_t *) NULL, (char *) NULL, (sw_command_t *) NULL}
 };
 
-sw_command_t shell_config[] = {
-	{(char *)NULL, 0, (rl_icpfunc_t *) NULL, (char *) NULL, (sw_command_t *) NULL}
-};
-
-sw_command_t shell_config_if[] = {
-	{(char *)NULL, 0, (rl_icpfunc_t *) NULL, (char *) NULL, (sw_command_t *) NULL}
-};
-
-sw_command_t shell_config_vlan[] = {
-	{(char *)NULL, 0, (rl_icpfunc_t *) NULL, (char *) NULL, (sw_command_t *) NULL}
-};
-
-sw_command_t shell_vlan[] = {
-	{(char *)NULL, 0, (rl_icpfunc_t *) NULL, (char *) NULL, (sw_command_t *) NULL}
-};
-
 sw_command_root_t command_root[] = {
     {"%s%c",					shell_main},
-	{"%s(config)%c",			shell_config},
-	{"%s(config-if)%c",			shell_config_if},
-	{"%s(config-vlan)%c",		shell_config_vlan},
-	{"%s(vlan)%c",				shell_vlan},
 	{NULL,						NULL}
 };
