@@ -10,7 +10,8 @@
 #include "command.h"
 
 
-static struct cmd *search_set = shell_main;
+static sw_command_root_t *cmd_root = command_root;
+static sw_command_t *search_set;
 char prompt[MAX_HOSTNAME + 32];
 static rl_icpfunc_t *handler = NULL;
 
@@ -182,8 +183,7 @@ int select_search_scope(char *line_buffer, char exec) {
 	if (!line_buffer) return ret;
 	dbg("\n");
 	start = line_buffer;
-	/* FIXME FIXME FIXME (I may be enabled or in conf-t) */
-	search_set = shell_main;
+	search_set = cmd_root->cmd;
 	handler = NULL;
 	do {
 		tmp = start;
@@ -345,15 +345,17 @@ int climain(void) {
 	/* initialization */
 	swcli_init_readline();
 	
-	gethostname(hostname, sizeof(hostname));
-	hostname[sizeof(hostname) - 1] = '\0';
-	sprintf(prompt, "%s>", hostname);
-
 	do {
 		if (cmd) {
 			free(cmd);
 			cmd = (char *)NULL;
 		}
+
+		gethostname(hostname, sizeof(hostname));
+		hostname[sizeof(hostname) - 1] = '\0';
+		sprintf(prompt, cmd_root->prompt, hostname, priv ? '#' : '>');
+		search_set = cmd_root->cmd;
+
 		cmd = readline(prompt);
 		if (cmd && *cmd) {
 			dbg("Command was: '%s'\n", cmd);
@@ -367,8 +369,13 @@ int climain(void) {
 
 
 /* Command Handlers implementation */
+int cmd_disable(char *arg) {
+	priv = 0;
+	return 0;
+}
+
 int cmd_enable(char *arg) {
-	printf("This the enable handler\n\n");
+	priv = 1;
 	return 0;
 }
 

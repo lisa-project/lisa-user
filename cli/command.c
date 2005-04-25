@@ -18,22 +18,25 @@ sw_command_t shell_main_show[] = {
 };
 
 sw_command_t shell_main[] = {
-	{"clear",		0,	NULL, 			"Reset functions", NULL },
-	{"disable",		0,	NULL,			"Turn off privileged commands", NULL},
-	{"enable",		0,	cmd_enable,		"Turn on privileged commands", NULL },
-	{"exit",		0,	cmd_exit,		"Exit from the EXEC", NULL},
-	{"help",		0,	cmd_help,		"Description of the interactive help system", NULL},
-	{"logout", 0, cmd_exit, "Exit from the EXEC", NULL },
-	{"ping", 0, NULL, "Send echo messages", NULL },
-	{"show", 0, NULL, "Show running system information", shell_main_show},
-	{"telnet", 0, NULL, "Open a telnet connection", NULL},
-	{"terminal", 0, NULL, "Set terminal line parameters", NULL},
-	{"traceroute", 0, NULL, "Trace route to destination", NULL},
-	{"where", 0, NULL, "List active connections", NULL},
+	{"clear",		0,	NULL, 					"Reset functions", NULL},
+	{"disable",		1,	cmd_disable,			"Turn off privileged commands", NULL},
+	{"enable",		0,	cmd_enable,				"Turn on privileged commands", NULL},
+	{"exit",		0,	cmd_exit,				"Exit from the EXEC", NULL},
+	{"help",		0,	cmd_help,				"Description of the interactive help system", NULL},
+	{"logout",		0,	cmd_exit,				"Exit from the EXEC", NULL},
+	{"ping",		0,	NULL,					"Send echo messages", NULL},
+	{"show",		0,	NULL,					"Show running system information", shell_main_show},
+	{"telnet",		0,	NULL,					"Open a telnet connection", NULL},
+	{"terminal",	0,	NULL,					"Set terminal line parameters", NULL},
+	{"traceroute",	0,	NULL,					"Trace route to destination", NULL},
+	{"where",		0,	NULL,					"List active connections", NULL},
 	{(char *)NULL, 0, (rl_icpfunc_t *) NULL, (char *) NULL, (sw_command_t *) NULL}
 };
 
 sw_command_root_t command_root[] = {
     {"%s%c",					shell_main},
+	{"%s(config)%c",			NULL},
+	{"%s(config-if)%c",			NULL},
+	{"%s(config-vlan)%c",		NULL},
 	{NULL,						NULL}
 };

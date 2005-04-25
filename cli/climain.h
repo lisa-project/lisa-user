@@ -13,6 +13,7 @@ typedef struct match {
 
 extern int climain(void);
 
+int cmd_disable __P((char *));
 int cmd_enable __P((char *));
 int cmd_help __P((char *));
 int cmd_exit __P((char *));
