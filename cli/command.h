@@ -8,6 +8,7 @@
 typedef struct cmd {
 	char *name;				/* User printable name of the function */
     int priv;               /* Minimum privilege level to execute this */
+	rl_icpfunc_t *valid;	/* Function to validate pattern-matching args */
 	rl_icpfunc_t *func;		/* Function call to do the job */
 	char *doc;				/* Documentation for this function */
 	struct cmd *subcmd;		/* Sub-commands */
