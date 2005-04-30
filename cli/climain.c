@@ -9,8 +9,7 @@
 #include "climain.h"
 #include "command.h"
 
-
-static sw_command_root_t *cmd_root = command_root;
+sw_command_root_t *cmd_root = &command_root_main;
 static sw_command_t *search_set;
 char prompt[MAX_HOSTNAME + 32];
 static rl_icpfunc_t *handler = NULL;
@@ -381,6 +380,13 @@ int cmd_enable(char *arg) {
 
 int cmd_exit(char *arg) {
 	exit(0);
+}
+
+int cmd_conf_t(char *arg) {
+	cmd_root = &command_root_config;
+	printf("Enter configuration commands, one per line.  End with CNTL/Z.\n");
+	/* FIXME binding readline pentru ^Z */
+	return 0;
 }
 
 int cmd_help(char *arg) {

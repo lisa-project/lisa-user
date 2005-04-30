@@ -20,6 +20,9 @@ typedef struct root {
 
 
 extern sw_command_t shell_main[];
-extern sw_command_root_t command_root[];
+extern sw_command_root_t command_root_main;
+extern sw_command_root_t command_root_config;
+extern sw_command_root_t command_root_config_if;
+extern sw_command_root_t command_root_config_vlan;
 
 #endif

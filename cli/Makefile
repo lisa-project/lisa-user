@@ -9,11 +9,11 @@ CFLAGS += -DLOGIN_PATH=$(__LOGIN_PATH)
 
 all: swcli swclid swlogin
 
-swcli: swcli.o climain.o command.o
+swcli: swcli.o climain.o command.o config.o
 
 swclid: swclid.o
 
-swlogin: swlogin.o climain.o command.o
+swlogin: swlogin.o climain.o command.o config.o
 
 clean:
 	rm -f *.o *~ swcli swclid swlogin
