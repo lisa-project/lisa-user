@@ -13,18 +13,33 @@ typedef struct match {
 	int pwidth;			/* Printing width */
 } sw_match_t;
 
+typedef struct execution {
+	sw_command_handler func;
+	int pipe_output;
+	int pipe_type;
+	int runnable;
+	char *func_args;
+} sw_execution_state_t;
+
 extern sw_command_root_t *cmd_root;
 extern int climain(void);
 
-extern int cmd_disable				__P((char *));
-extern int cmd_enable				__P((char *));
-extern int cmd_help					__P((char *));
-extern int cmd_exit					__P((char *));
-extern int cmd_conf_t				__P((char *));
+/* Command handlers */
+extern void cmd_disable				__P((FILE *, char *));
+extern void cmd_enable				__P((FILE *, char *));
+extern void cmd_help				__P((FILE *, char *));
+extern void cmd_exit				__P((FILE *, char *));
+extern void cmd_conf_t				__P((FILE *, char *));
+extern void cmd_history				__P((FILE *, char *));
 
+/* Validation handlers */
+extern int valid_regex				__P((char *));
+
+/* Misc functions */
 extern char *swcli_generator __P((const char *, int));
 extern char **swcli_completion __P((const char *, int, int));
-extern int select_search_scope(char *, char);
+extern int parse_command(char *, int (*)(char *, char *, char));
+extern int change_search_scope(char *, char *, char);
 extern sw_match_t *get_matches(int *, char *);
 
 #endif

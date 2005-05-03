@@ -12,10 +12,20 @@
 sw_command_root_t *cmd_root = &command_root_main;
 static sw_command_t *search_set;
 char prompt[MAX_HOSTNAME + 32];
-static rl_icpfunc_t *handler = NULL;
+static sw_command_handler handler = NULL;
+sw_execution_state_t exec_state;
 
 /* Current privilege level */
 static int priv = 0;
+
+/* If we use the default rl_completer_word_break_characters
+ then we totally fuck up completion when we have the following
+ characters: \'`@$><=;|&{(, getting some weird behavior for completion.
+ So, we set blank to be the only word separator */
+char *swcli_completion_word_break() {
+	rl_completer_word_break_characters = strdup(" ");
+	return NULL;
+}
 
 /* Error reporting & stuff */
 void swcli_invalid_cmd() {
@@ -24,6 +34,14 @@ void swcli_invalid_cmd() {
 
 void swcli_ambiguous_cmd(char *cmd) {
 	printf("%% Ambiguous command: \"%s\"\n", cmd);
+}
+
+void swcli_incomplete_cmd(char *cmd) {
+	printf("%% Incomplete command.\n");
+}
+
+void swcli_unimplemented_cmd(char *cmd) {
+	printf("%% Command not (yet) implemented.\n");
 }
 
 void swcli_extra_input(int off) {
@@ -35,6 +53,29 @@ void swcli_extra_input(int off) {
 
 void swcli_go_ahead() {
 	printf("  <cr>\n");
+}
+
+void init_exec_state(sw_execution_state_t *ex) {
+	ex->func = NULL;
+	ex->pipe_output = 0;
+	ex->pipe_type = 0;
+	ex->runnable = INCOMPLETE;
+	if (ex->func_args)
+		free(ex->func_args);
+	ex->func_args = NULL;
+}
+
+void dump_exec_state(sw_execution_state_t *ex) {
+	printf("\nExecution state dump: \n"
+		"func: %p\n"
+		"pipe_output: %d\n"
+		"pipe_type: %d\n"
+		"runnable: %d\n"
+		"func_args: %s\n\n",
+		ex->func, ex->pipe_output,
+		ex->pipe_type, ex->runnable, 
+		ex->func_args);
+		 
 }
 
 /* Help function called when the user
@@ -51,7 +92,7 @@ int list_current_options(int something, int key) {
 
 	printf("%c\n", key);
 	/* Establish a current search set based on the current line buffer */
-	if ((ret = select_search_scope(strdup(rl_line_buffer), 0)) > 1) {
+	if ((ret = parse_command(strdup(rl_line_buffer), change_search_scope)) > 1) {
 		swcli_ambiguous_cmd(rl_line_buffer);
 		goto out;
 	}
@@ -81,11 +122,10 @@ int list_current_options(int something, int key) {
 				continue;
 			fprintf(pipe, "  %-20s\t%s\n", cmd, search_set[i].doc);
 		}
+		pclose(pipe);
 		/* complete command with search set */
 		if (handler) 
 			swcli_go_ahead();
-//		for (i=0; i<100; i++) fprintf(pipe, "More functionality ;)\n");
-		pclose(pipe);
 		rl_prep_terminal(1);
 	}
 	else {
@@ -130,6 +170,11 @@ int swcli_init_readline() {
 
 	/* Tell the completer we want a crack first */
 	rl_attempted_completion_function = swcli_completion;
+	/* FIXME: this doesn't work with older readline (readline-4.3-7) 
+	   Used it sucessfuly on the latest readline (5.0)
+	 */
+	//rl_completion_word_break_hook = swcli_completion_word_break;
+	rl_completer_word_break_characters = strdup(" ");
 	rl_bind_key('?', list_current_options); 
 	return 0;
 }
@@ -137,14 +182,14 @@ int swcli_init_readline() {
 /*
   Selects the current search command set 
   based on the value of match (current command token analysed)
+  Used by the completion mechanism.
  */
-int change_search_scope(char *match, char lookahead)  {
+int change_search_scope(char *match, char *rest, char lookahead)  {
 	int i=0, count = 0;
 	char *name;
 	struct cmd *set = NULL;
-	rl_icpfunc_t *func = NULL;
+	sw_command_handler func = NULL;
 
-	dbg("change_search_scope(%s): search_set at 0x%x\n", match, search_set);
 	if (!search_set) return 0;
     for (i=0; (name = search_set[i].name); i++) {
         if(search_set[i].priv > priv)
@@ -158,6 +203,12 @@ int change_search_scope(char *match, char lookahead)  {
 				break;
 			}
 		}
+		else if (search_set[i].valid && search_set[i].valid(match)) {
+			count = 1;
+			set = search_set;
+			func = handler;
+			break;
+		}
     }
 
 	if (count==1) {
@@ -170,12 +221,62 @@ int change_search_scope(char *match, char lookahead)  {
 }
 
 /*
+  Selects the current command tree node 
+  based on the value of match (current command token analysed)
+  Used by the execution mechanism.
+ */
+int lookup_token(char *match, char *rest, char lookahead) {
+	char *name;
+	struct cmd *set = NULL;
+	int i=0, count = 0;
+
+	if (!search_set) {
+		exec_state.runnable = UNAVAILABLE;
+		return 0;
+	}
+    for (i=0; (name = search_set[i].name); i++) {
+		if (search_set[i].priv > priv)
+			continue;
+		if (!strncmp(match, name, strlen(match))) {
+			count++;
+			exec_state.runnable = search_set[i].state;
+			if (!strcmp(match, "|"))
+				exec_state.pipe_output = 1;
+			if (!exec_state.pipe_output)	
+				exec_state.func = search_set[i].func;
+			else if (search_set[i].state != RUNNABLE) {
+				exec_state.runnable = INCOMPLETE;
+				exec_state.pipe_type = search_set[i].state;
+			}
+			/* setup to advance */
+			set = search_set[i].subcmd;
+		}
+		else if (search_set[i].valid && search_set[i].valid(rest)) {
+			count = 1;
+			set = search_set;
+			exec_state.runnable = search_set[i].state;
+			if (!exec_state.func_args)
+				exec_state.func_args = strdup(rest);
+			break;
+		}
+	}
+
+	if (count == 1) {
+		search_set = set;
+		return count;
+	}
+	
+	return count;
+}
+
+
+/*
   Parses the command line buffer, splits it
   into tokens and invokes change_search_scope()
   on each token 
   */
-int select_search_scope(char *line_buffer, char exec) {
-	char *start, *tmp;
+int parse_command(char *line_buffer, int (* next_token)(char *, char *, char)) {
+	char *start, *tmp, *rest;
 	char c;
 	int ret = 0;
 
@@ -189,18 +290,22 @@ int select_search_scope(char *line_buffer, char exec) {
 		while (whitespace(*tmp)) tmp++;	
 		if (*tmp=='\0') break;
 		start = tmp;
+		rest = strdup(start);
 		while (*tmp!='\0' && !whitespace(*tmp)) tmp++;
 		c = *tmp;
 		*tmp = '\0';
 		/* if we didn't have a single match followed by whitespace 
 		 then we must abandon right here */
-		if ((ret = change_search_scope(start, exec?exec:c)) > 1) {
+		if ((ret = next_token(start, rest, c)) > 1) {
 			*tmp = c;
+			free(rest);
 			break;
 		}
-		else if (!ret && exec) {
+		else if (!ret) {
 			*tmp = c;
 			ret = line_buffer - start;
+			free(rest);
+			break;
 		}
 		dbg("COMMAND TOKEN: '%s'\n", start);
 		*tmp = c;
@@ -232,13 +337,15 @@ char ** swcli_completion(const char *text, int start, int end) {
 	char **matches;
 
 	matches = (char **)NULL;
-	
-	select_search_scope(strdup(rl_line_buffer), 0);
+
+	parse_command(strdup(rl_line_buffer), change_search_scope);
 
 	rl_attempted_completion_over = 1;
  	rl_completion_display_matches_hook = display_matches_hook;
 	matches = rl_completion_matches(text, swcli_generator);
 
+	if (!matches) /* Force redisplay, even when we have no match */
+		display_matches_hook(matches, start, end);
 	return (matches);
 }
 
@@ -266,8 +373,7 @@ char *swcli_generator(const char *text, int state) {
 	for (; (name = search_set[list_index].name); list_index++) {
         if(search_set[list_index].priv > priv)
             continue;
-		if (strncmp(name, text, len) == 0) {
-			dbg("match: %s\n", name);
+		if (strncmp(name, text, len) == 0 && !search_set[list_index].valid) {
 			list_index++;
 			return strdup(name);
 		}
@@ -287,7 +393,8 @@ sw_match_t *get_matches(int *matched, char *token) {
 	for (i=0; (cmd = search_set[i].name); i++) {
 		if(search_set[i].priv > priv)
 			continue;
-		if (!strncmp(token, cmd, strlen(token))) {
+		if (!strncmp(token, cmd, strlen(token)) || 
+				(search_set[i].valid && search_set[i].valid(token))) {
 			count++;
 			if (count - 1 >= num) {
 				num += MATCHES_PER_ROW;
@@ -316,30 +423,66 @@ sw_match_t *get_matches(int *matched, char *token) {
 	return matches;
 }
 
-void swcli_exec_cmd(char *cmd) {
-	int ret = select_search_scope(strdup(cmd), ' ');
+void swcli_piped_exec(sw_execution_state_t *exc) {
+	int nc;
+	char cmd_buf[MAX_LINE_WIDTH];
+	FILE *pipe;
 
-	if (ret > 1) {
-		swcli_ambiguous_cmd(cmd);
-		return;
+	memset(cmd_buf, 0, sizeof(cmd_buf));
+	if (!exc->pipe_output) {
+		nc = sprintf(cmd_buf, "%s", PAGER_PATH);
 	}
+	else {
+		/*
+			FIXME: FIXME: FIXME: 
+			Implementare escapeshellarg() pe cmd_buf
+			De altfel daca nu facem asta merge super beton
+			sa executi comenzi de shell intre `` !!!
+		 */
+		nc = sprintf(cmd_buf, "./filter %d %s", exc->pipe_type, exc->func_args);	
+	}
+	assert(nc < sizeof(cmd_buf));
+	assert((pipe = popen(cmd_buf, "w")));
+	exc->func(pipe, exc->func_args);
+	pclose(pipe);
+}
+
+void swcli_exec_cmd(char *cmd) {
+
+	init_exec_state(&exec_state);
+	int ret = parse_command(strdup(cmd), lookup_token);
+
 	if (ret <= 0) {
 		swcli_extra_input(abs(ret));
 		return;
 	}
-	
-	if (!search_set && handler) {
-		/* complete command */
-		handler(NULL);
+	if (ret > 1) {
+		swcli_ambiguous_cmd(cmd);
+		return;
 	}
-	else {
-		swcli_invalid_cmd();
+	
+	switch (exec_state.runnable) {
+	case INCOMPLETE:
+		swcli_incomplete_cmd(cmd);
+		break;
+	case UNAVAILABLE:
+		swcli_ambiguous_cmd(cmd);
+		break;
+	case RUNNABLE:
+		if (exec_state.func)
+			swcli_piped_exec(&exec_state);
+		else 
+			swcli_unimplemented_cmd(cmd);
+		break;
+	default:
+		dbg("%% unknown runnable flag = %d\n", exec_state.runnable);
 	}
 }
 
 int climain(void) {
 	char hostname[MAX_HOSTNAME];
 	char *cmd = NULL;
+	HIST_ENTRY *pentry;
 
 	/* initialization */
 	swcli_init_readline();
@@ -358,8 +501,14 @@ int climain(void) {
 		cmd = readline(prompt);
 		if (cmd && *cmd) {
 			dbg("Command was: '%s'\n", cmd);
+			if (history_length) {
+				pentry = history_get(history_length);
+				if (pentry && strcmp(pentry->line, cmd))
+					add_history(cmd);
+			}
+			else 
+				add_history(cmd);
 			swcli_exec_cmd(cmd);
-			add_history(cmd);
 		}
 	} while (cmd);
 	
@@ -368,29 +517,26 @@ int climain(void) {
 
 
 /* Command Handlers implementation */
-int cmd_disable(char *arg) {
+void cmd_disable(FILE *out, char *arg) {
 	priv = 0;
-	return 0;
 }
 
-int cmd_enable(char *arg) {
+void cmd_enable(FILE *out, char *arg) {
 	priv = 1;
-	return 0;
 }
 
-int cmd_exit(char *arg) {
+void cmd_exit(FILE *out, char *arg) {
 	exit(0);
 }
 
-int cmd_conf_t(char *arg) {
+void cmd_conf_t(FILE *out, char *arg) {
 	cmd_root = &command_root_config;
 	printf("Enter configuration commands, one per line.  End with CNTL/Z.\n");
 	/* FIXME binding readline pentru ^Z */
-	return 0;
 }
 
-int cmd_help(char *arg) {
-	printf(
+void cmd_help(FILE *out, char *arg) {
+	fprintf(out,
 		"Help may be requested at any point in a command by entering\n"
 		"a question mark '?'.  If nothing matches, the help list will\n"
 		"be empty and you must backup until entering a '?' shows the\n"
@@ -403,5 +549,22 @@ int cmd_help(char *arg) {
 		"   and you want to know what arguments match the input\n"
 		"   (e.g. 'show pr?'.)\n\n"
 		);
-	return 0;
+}
+
+void cmd_history(FILE *out, char *arg) {
+	HIST_ENTRY **history;
+	HIST_ENTRY *entry;
+	int i;
+
+	history = history_list();
+	if (history) {
+		for (i=0; (entry = history[i]); i++) {
+			fprintf(out, "   %s\n", entry->line);
+		}
+	}
+}
+
+/* Validation Handlers Implementation */
+int valid_regex(char *arg) {
+	return 1;
 }
