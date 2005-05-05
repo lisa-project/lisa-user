@@ -42,4 +42,6 @@ extern int parse_command(char *, int (*)(char *, char *, char));
 extern int change_search_scope(char *, char *, char);
 extern sw_match_t *get_matches(int *, char *);
 
+extern char eth_range[];
+
 #endif

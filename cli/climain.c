@@ -15,6 +15,8 @@ char prompt[MAX_HOSTNAME + 32];
 static sw_command_handler handler = NULL;
 sw_execution_state_t exec_state;
 
+char eth_range[32]; /* FIXME size */
+
 /* Current privilege level */
 static int priv = 0;
 
@@ -238,7 +240,7 @@ int lookup_token(char *match, char *rest, char lookahead) {
 	int i=0, count = 0;
 
 	if (!search_set) {
-		exec_state.runnable = UNAVAILABLE;
+		exec_state.runnable = NA;
 		return 0;
 	}
     for (i=0; (name = search_set[i].name); i++) {
@@ -472,7 +474,7 @@ void swcli_exec_cmd(char *cmd) {
 	case INCOMPLETE:
 		swcli_incomplete_cmd(cmd);
 		break;
-	case UNAVAILABLE:
+	case NA:
 		swcli_ambiguous_cmd(cmd);
 		break;
 	case RUNNABLE:
@@ -492,6 +494,7 @@ int climain(void) {
 	HIST_ENTRY *pentry;
 
 	/* initialization */
+	sprintf(eth_range, "<0-7>"); /* FIXME luate dinamic */
 	swcli_init_readline();
 	
 	do {

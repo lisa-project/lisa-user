@@ -9,7 +9,7 @@
 
 /* Command node state */
 enum {
-	UNAVAILABLE = MODE_GREP+1,
+	NA = MODE_GREP+1,
 	INCOMPLETE,
 	RUNNABLE
 };

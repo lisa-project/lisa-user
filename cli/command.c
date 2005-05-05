@@ -5,20 +5,20 @@
 
 sw_command_t shell_pipe_regex[] = {
 	{"LINE",				0,  valid_regex,	NULL,				RUNNABLE,	"Regular Expression",								NULL},
-	{(char *)NULL, 0, (rl_icpfunc_t *) NULL, (sw_command_handler) NULL, UNAVAILABLE, (char *) NULL, (sw_command_t *) NULL}
+	{NULL,					0,  NULL,			NULL,				NA,			NULL,												NULL}
 };
 
 sw_command_t shell_pipe_mod[] = {
 	{"begin",				0,  NULL,			NULL,				MODE_BEGIN,	"Begin with the line that matches",					shell_pipe_regex},
-	{"exclude",				0,  NULL,			NULL,				MODE_EXCLUDE, "Exclude lines that match",							shell_pipe_regex},
-	{"include",				0,  NULL,			NULL,				MODE_INCLUDE, "Include lines that match",							shell_pipe_regex},
+	{"exclude",				0,  NULL,			NULL,				MODE_EXCLUDE, "Exclude lines that match",						shell_pipe_regex},
+	{"include",				0,  NULL,			NULL,				MODE_INCLUDE, "Include lines that match",						shell_pipe_regex},
 	{"grep",				0,  NULL,			NULL,				MODE_GREP, "Linux grep functionality",							shell_pipe_regex},
-	{(char *)NULL, 0, (rl_icpfunc_t *) NULL, (sw_command_handler) NULL, UNAVAILABLE, (char *) NULL, (sw_command_t *) NULL}
+	{NULL,					0,  NULL,			NULL,				NA,			NULL,												NULL}
 };
 
 sw_command_t shell_pipe[] = {
 	{"|",					0,  NULL,			NULL,				INCOMPLETE, "Output modifiers",									shell_pipe_mod},
-	{(char *)NULL, 0, (rl_icpfunc_t *) NULL, (sw_command_handler) NULL, UNAVAILABLE, (char *) NULL, (sw_command_t *) NULL}
+	{NULL,					0,  NULL,			NULL,				NA,			NULL,												NULL}
 };
 
 sw_command_t shell_main_show[] = {
@@ -34,12 +34,12 @@ sw_command_t shell_main_show[] = {
 	{"users",				0,	NULL,			NULL,				RUNNABLE,	"Display information about terminal lines",			NULL},
 	{"version",				0,	NULL,			NULL,				RUNNABLE,	"System hardware and software status",				NULL},
 	{"vlan",				0,	NULL,			NULL,				RUNNABLE,	"VTP VLAN status",									NULL},
-	{(char *)NULL, 0, (rl_icpfunc_t *) NULL, (sw_command_handler) NULL, UNAVAILABLE, (char *) NULL, (sw_command_t *) NULL}
+	{NULL,					0,  NULL,			NULL,				NA,			NULL,												NULL}
 };
 
 sw_command_t shell_main_conf[] = {
 	{"terminal",			1,	NULL,			cmd_conf_t,			RUNNABLE,	"Configure from the terminal",						NULL},
-	{(char *)NULL, 0, (rl_icpfunc_t *) NULL, (sw_command_handler) NULL, 0, (char *) NULL, (sw_command_t *) NULL}
+	{NULL,					0,  NULL,			NULL,				NA,			NULL,												NULL}
 };
 
 sw_command_t shell_main[] = {
@@ -57,9 +57,8 @@ sw_command_t shell_main[] = {
 	{"terminal",			0,	NULL,			NULL,				INCOMPLETE, "Set terminal line parameters",						NULL},
 	{"traceroute",			0,	NULL,			NULL,				INCOMPLETE,	"Trace route to destination",						NULL},
 	{"where",				0,	NULL,			NULL,				RUNNABLE,	"List active connections",							NULL},
-	{(char *)NULL, 0, (rl_icpfunc_t *) NULL, (sw_command_handler) NULL, 0, (char *) NULL, (sw_command_t *) NULL}
+	{NULL,					0,  NULL,			NULL,				NA,			NULL,												NULL}
 };
 
 sw_command_root_t command_root_main =					{"%s%c",					shell_main};
-sw_command_root_t command_root_config_if =				{"%s(config-if)%c",			NULL};
 sw_command_root_t command_root_config_vlan =			{"%s(config-vlan)%c",		NULL};
