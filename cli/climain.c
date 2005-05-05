@@ -1,4 +1,7 @@
 #include <assert.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <readline/readline.h>
@@ -44,6 +47,18 @@ void swcli_incomplete_cmd(char *cmd) {
 
 void swcli_unimplemented_cmd(char *cmd) {
 	printf("%% Command not (yet) implemented.\n");
+}
+
+void swcli_sig_term(int sig) {
+	char hostname[MAX_HOSTNAME];
+	cmd_root = &command_root_main;
+	signal(SIGTSTP, SIG_IGN);
+	printf("\n");
+	gethostname(hostname, sizeof(hostname));
+	hostname[sizeof(hostname) - 1] = '\0';
+	sprintf(prompt, cmd_root->prompt, hostname, priv ? '#' : '>');
+	rl_set_prompt(prompt);
+	rl_forced_update_display();
 }
 
 void swcli_extra_input(int off) {
@@ -169,12 +184,17 @@ int do_nothing(int i, int j) {
 	return 0;
 }
 
+
 /* Override some readline defaults */
 int swcli_init_readline() {
 
 	dbg("Init readline\n");
 	/* Allow conditional parsing of ~/.inputrc file */
-//	rl_readline_name = "SwCli";
+	rl_readline_name = "SwCli";
+
+	/* Setup to ignore SIGINT and SIGSTP */
+	signal(SIGINT, SIG_IGN);
+	signal(SIGTSTP, SIG_IGN);
 
 	/* Tell the completer we want a crack first */
 	rl_attempted_completion_function = swcli_completion;
@@ -184,7 +204,7 @@ int swcli_init_readline() {
 	//rl_completion_word_break_hook = swcli_completion_word_break;
 	rl_completer_word_break_characters = strdup(" ");
 	rl_bind_key('?', list_current_options);
-	rl_set_key("\\C-j", do_nothing, rl_get_keymap());
+//	rl_set_key("\\C-j", do_nothing, rl_get_keymap());
 	return 0;
 }
 
@@ -512,6 +532,12 @@ int climain(void) {
 		search_set = cmd_root->cmd;
 
 		cmd = readline(prompt);
+		if (!cmd) {
+			 /* Avoid exiting on EOF */
+			 cmd = strdup("");
+			 rl_crlf();
+			 continue;
+		}
 		if (cmd && *cmd) {
 			dbg("Command was: '%s'\n", cmd);
 			if (history_length) {
@@ -545,7 +571,7 @@ void cmd_exit(FILE *out, char *arg) {
 void cmd_conf_t(FILE *out, char *arg) {
 	cmd_root = &command_root_config;
 	printf("Enter configuration commands, one per line.  End with CNTL/Z.\n");
-	/* FIXME binding readline pentru ^Z */
+	signal(SIGTSTP, swcli_sig_term);
 }
 
 void cmd_help(FILE *out, char *arg) {
