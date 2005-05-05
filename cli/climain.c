@@ -178,9 +178,9 @@ out:
 	return ret;
 }
 
-int do_nothing(int i, int j) {
-	printf("\nNope, not gonna do it...\n");
-	rl_forced_update_display();
+/* Hanlder that can be installed 
+   on a key sequence */
+int swcli_ignore_keyseq(int i, int j) {
 	return 0;
 }
 
@@ -204,7 +204,7 @@ int swcli_init_readline() {
 	//rl_completion_word_break_hook = swcli_completion_word_break;
 	rl_completer_word_break_characters = strdup(" ");
 	rl_bind_key('?', list_current_options);
-//	rl_set_key("\\C-j", do_nothing, rl_get_keymap());
+	rl_set_key("\\C-l", swcli_ignore_keyseq, rl_get_keymap());
 	return 0;
 }
 
