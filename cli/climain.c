@@ -264,6 +264,8 @@ int lookup_token(char *match, char *rest, char lookahead) {
 			count = 1;
 			set = search_set;
 			exec_state.runnable = search_set[i].state;
+			if (!exec_state.pipe_output)
+				exec_state.func = search_set[i].func;
 			if (!exec_state.func_args)
 				exec_state.func_args = strdup(rest);
 			break;
@@ -461,6 +463,7 @@ void swcli_exec_cmd(char *cmd) {
 	init_exec_state(&exec_state);
 	int ret = parse_command(strdup(cmd), lookup_token);
 
+//	dump_exec_state(&exec_state);
 	if (ret <= 0) {
 		swcli_extra_input(abs(ret));
 		return;
