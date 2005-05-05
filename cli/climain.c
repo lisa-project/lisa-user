@@ -161,12 +161,18 @@ out:
 	return ret;
 }
 
+int do_nothing(int i, int j) {
+	printf("\nNope, not gonna do it...\n");
+	rl_forced_update_display();
+	return 0;
+}
+
 /* Override some readline defaults */
 int swcli_init_readline() {
 
 	dbg("Init readline\n");
 	/* Allow conditional parsing of ~/.inputrc file */
-	rl_readline_name = "SwCli";
+//	rl_readline_name = "SwCli";
 
 	/* Tell the completer we want a crack first */
 	rl_attempted_completion_function = swcli_completion;
@@ -175,7 +181,8 @@ int swcli_init_readline() {
 	 */
 	//rl_completion_word_break_hook = swcli_completion_word_break;
 	rl_completer_word_break_characters = strdup(" ");
-	rl_bind_key('?', list_current_options); 
+	rl_bind_key('?', list_current_options);
+	rl_set_key("\\C-j", do_nothing, rl_get_keymap());
 	return 0;
 }
 
