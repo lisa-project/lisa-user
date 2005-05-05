@@ -60,7 +60,7 @@ __dbg_static inline void sw_skb_xmit(struct sk_buff *skb, struct net_device *dev
 	sw_vif_rx(skb);
 	return;
 	
-destroy:	
+/* destroy:	*/
 	dev_kfree_skb(skb);
 }
 

@@ -13,7 +13,7 @@ switch-objs := sw.o sw_fdb.o sw_proc.o sw_vdb.o sw_forward.o sw_ioctl.o sw_vif.o
 CFGFLAGS += -DNET_SWITCH_NOVLANFORIF=1
 
 # Enable debugging
-CFGFLAGS += -DDEBUG -g
+#CFGFLAGS += -DDEBUG -g
 
 ##
 # End of config section
