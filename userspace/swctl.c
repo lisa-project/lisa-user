@@ -16,13 +16,14 @@
  *    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include <linux/sockios.h>
+#include <linux/net_switch.h>
+#define _SYS_TYPES_H 1
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 
-#include <linux/sockios.h>
-#include <linux/net_switch.h>
-#include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 

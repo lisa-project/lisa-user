@@ -14,6 +14,8 @@ exista in vlan database, atunci nu primeste/trimite pachete in vlanul
 respectiv. Daca intretimp vlanul respectiv apare in vlan database, atunci
 interfata incepe sa primeasca/trimita pachete in vlan-ul respectiv imediat.
 
+Daca se adauga o interfata virtuala de vlan => se adauga automat vlan-ul
+respectiv cu numele VLANxxxx
 
 2. Cazuri de utilizare
 

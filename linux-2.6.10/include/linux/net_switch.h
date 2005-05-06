@@ -34,6 +34,8 @@
 #define SWCFG_ADDVIF		0x10	/* add virtual interface for vlan */
 #define SWCFG_DELVIF		0x11	/* remove virtual interface for vlan */
 
+#include <linux/time.h>
+
 struct net_switch_ioctl_arg {
 	unsigned char cmd;
 	int vlan;
