@@ -7,6 +7,9 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+
 
 #include "debug.h"
 #include "climain.h"
@@ -19,6 +22,7 @@ static sw_command_handler handler = NULL;
 sw_execution_state_t exec_state;
 
 char eth_range[32]; /* FIXME size */
+int sock_fd;
 
 /* Current privilege level */
 static int priv = 0;
@@ -519,6 +523,11 @@ int climain(void) {
 	/* initialization */
 	sprintf(eth_range, "<0-7>"); /* FIXME luate dinamic */
 	swcli_init_readline();
+	sock_fd = socket(PF_PACKET, SOCK_RAW, 0);
+	if(sock_fd == -1) {
+		perror("socket");
+		return 1;
+	}
 	
 	do {
 		if (cmd) {
@@ -551,6 +560,9 @@ int climain(void) {
 		}
 	} while (cmd);
 	
+	/* cleanup */
+	close(sock_fd);
+
 	return 0;
 }
 
@@ -562,10 +574,6 @@ void cmd_disable(FILE *out, char *arg) {
 
 void cmd_enable(FILE *out, char *arg) {
 	priv = 1;
-}
-
-void cmd_exit(FILE *out, char *arg) {
-	exit(0);
 }
 
 void cmd_conf_t(FILE *out, char *arg) {
@@ -606,4 +614,43 @@ void cmd_history(FILE *out, char *arg) {
 /* Validation Handlers Implementation */
 int valid_regex(char *arg) {
 	return 1;
+}
+
+int valid_eth(char *arg) {
+	int no;
+	if(sscanf(arg, "%d", &no) != 1)
+		return 0;
+	if(no < 0 || no > 7) /* FIXME max value */
+		return 0;
+	/* FIXME interfata e in switch */
+	return 1;
+}
+
+int valid_vlan(char *arg) {
+	int no;
+	if(sscanf(arg, "%d", &no) != 1)
+		return 0;
+	if(no < 1 || no > 4094)
+		return 0;
+	return 1;
+}
+
+char vlan_range[] = "<1-1094>\0";
+
+int parse_eth(char *arg) {
+	int no, status;
+
+	status = sscanf(arg, "%d", &no);
+	assert(status == 1);
+
+	return no;
+}
+
+int parse_vlan(char *arg) {
+	int no, status;
+
+	status = sscanf(arg, "%d", &no);
+	assert(status == 1);
+	assert(no >= 1 && no <= 4094);
+	return no;
 }

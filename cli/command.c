@@ -3,6 +3,10 @@
 #include "config.h"
 #include "filter.h"
 
+static void cmd_exit(FILE *out, char *arg) {
+	exit(0);
+}
+
 sw_command_t shell_pipe_regex[] = {
 	{"LINE",				0,  valid_regex,	NULL,				RUNNABLE,	"Regular Expression",								NULL},
 	{NULL,					0,  NULL,			NULL,				NA,			NULL,												NULL}

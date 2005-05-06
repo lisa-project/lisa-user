@@ -28,7 +28,6 @@ extern int climain(void);
 extern void cmd_disable				__P((FILE *, char *));
 extern void cmd_enable				__P((FILE *, char *));
 extern void cmd_help				__P((FILE *, char *));
-extern void cmd_exit				__P((FILE *, char *));
 extern void cmd_conf_t				__P((FILE *, char *));
 extern void cmd_history				__P((FILE *, char *));
 
@@ -43,5 +42,11 @@ extern int change_search_scope(char *, char *, char);
 extern sw_match_t *get_matches(int *, char *);
 
 extern char eth_range[];
+extern char vlan_range[];
 
+extern int valid_eth(char *);
+extern int valid_vlan(char *);
+extern int parse_eth(char *);
+extern int parse_vlan(char *);
+extern int sock_fd;
 #endif

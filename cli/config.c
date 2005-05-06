@@ -11,43 +11,13 @@ static void cmd_hostname(FILE *out, char *arg) {
 }
 
 static void cmd_int_eth(FILE *out, char *arg) {
-	int no, status;
-
-	status = sscanf(arg, "%d", &no);
-	assert(status == 1);
-
-	eth_no = no;
+	sprintf(sel_eth, "eth%d", parse_eth(arg));
 	cmd_root = &command_root_config_if_eth;
 }
 
 static void cmd_int_vlan(FILE *out, char *arg) {
-	int no, status;
-
-	status = sscanf(arg, "%d", &no);
-	assert(status == 1);
-	assert(no >= 1 && no <= 4094);
-
-	vlan_no = no;
+	sprintf(sel_vlan, "vlan%d", parse_vlan(arg));
 	cmd_root = &command_root_config_if_vlan;
-}
-
-static int valid_eth(char *arg) {
-	int no;
-	if(sscanf(arg, "%d", &no) != 1)
-		return 0;
-	if(no < 0 || no > 7) /* FIXME max value */
-		return 0;
-	/* FIXME interfata e in switch */
-	return 1;
-}
-
-static int valid_vlan(char *arg) {
-	int no;
-	if(sscanf(arg, "%d", &no) != 1)
-		return 0;
-	if(no < 1 || no > 4094)
-		return 0;
-	return 1;
 }
 
 static sw_command_t sh_int_eth[] = {
@@ -56,7 +26,7 @@ static sw_command_t sh_int_eth[] = {
 };
 
 static sw_command_t sh_int_vlan[] = {
-	{"<1-4094>",			1,	valid_vlan,	cmd_int_vlan,		RUNNABLE,	"Vlan interface number",						NULL},
+	{vlan_range,			1,	valid_vlan,	cmd_int_vlan,		RUNNABLE,	"Vlan interface number",						NULL},
 	{NULL,					0,	NULL,		NULL,				NA,			NULL,											NULL}
 };
 

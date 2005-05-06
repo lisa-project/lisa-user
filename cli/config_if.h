@@ -6,7 +6,9 @@
 extern sw_command_root_t command_root_config_if_eth;
 extern sw_command_root_t command_root_config_if_vlan;
 
-extern int eth_no;
-extern int vlan_no;
+/* Selected eth interface when entering in interface configuration mode */
+extern char sel_eth[];
+/* Selected vlan interface when entering in interface configuration mode */
+extern char sel_vlan[];
 
 #endif
