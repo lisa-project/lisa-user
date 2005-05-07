@@ -144,7 +144,7 @@ void sw_enable_port(struct net_switch_port *port) {
 	   now just set the disabled flag */
 	if(!(port->flags & SW_PFL_DISABLED) || port->flags & SW_PFL_ADMDISABLED)
 		return;
-	port->flags &= ~SW_PFL_DISABLED;
+	sw_res_port_flag(port, SW_PFL_DISABLED);
 	dbg("Enabled port %s\n", port->dev->name);
 }
 
@@ -155,7 +155,7 @@ void sw_disable_port(struct net_switch_port *port) {
 	   now just set the disabled flag */
 	if(port->flags & SW_PFL_DISABLED)
 		return;
-	port->flags |= SW_PFL_DISABLED;
+	sw_set_port_flag(port, SW_PFL_DISABLED);
 	dbg("Disabled port %s\n", port->dev->name);
 }
 

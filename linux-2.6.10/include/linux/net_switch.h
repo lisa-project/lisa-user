@@ -26,13 +26,16 @@
 #define SWCFG_RENAMEVLAN	0x05	/* rename vlan from vlan database */
 #define SWCFG_ADDVLANPORT	0x06	/* add a port to a vlan (trunk mode) */
 #define SWCFG_DELVLANPORT 	0x07	/* remove a port from a vlan (trunk mode) */
-#define SWCFG_SETTRUNK		0x08	/* put a port in trunk mode */
-#define SWCFG_SETPORTVLAN 	0x09	/* add a port in a vlan (non-trunk mode) */
-#define SWCFG_CLEARMACINT	0x0a	/* clear all macs for a given port */
-#define SWCFG_SETAGETIME	0x0b	/* set fdb entry aging time interval (in ms) */
-#define SWCFG_MACSTATIC		0x0c	/* add static mac */
+#define SWCFG_SETACCESS		0x08	/* put a port in access mode */
+#define SWCFG_SETTRUNK		0x09	/* put a port in trunk mode */
+#define SWCFG_SETPORTVLAN 	0x0a	/* add a port in a vlan (non-trunk mode) */
+#define SWCFG_CLEARMACINT	0x0b	/* clear all macs for a given port */
+#define SWCFG_SETAGETIME	0x0c	/* set fdb entry aging time interval (in ms) */
+#define SWCFG_MACSTATIC		0x0d	/* add static mac */
 #define SWCFG_ADDVIF		0x10	/* add virtual interface for vlan */
 #define SWCFG_DELVIF		0x11	/* remove virtual interface for vlan */
+#define SWCFG_DISABLEPORT	0x12	/* administratively disable port */
+#define SWCFG_ENABLEPORT	0x13	/* enable port */
 
 #include <linux/time.h>
 

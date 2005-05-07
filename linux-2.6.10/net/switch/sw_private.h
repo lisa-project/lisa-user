@@ -121,9 +121,10 @@ struct net_switch_vdb_link {
 };
 
 #define SW_PFL_DISABLED     0x01
-#define SW_PFL_TRUNK		0x02
-#define SW_PFL_DROPALL		0x04
-#define SW_PFL_ADMDISABLED	0x08
+#define SW_PFL_ACCESS		0x02
+#define SW_PFL_TRUNK		0x04
+#define SW_PFL_DROPALL		0x08
+#define SW_PFL_ADMDISABLED	0x10
 
 #define sw_disable_port_rcu(port) do {\
 	sw_disable_port(port);\

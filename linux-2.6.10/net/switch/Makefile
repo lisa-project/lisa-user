@@ -12,8 +12,11 @@ switch-objs := sw.o sw_fdb.o sw_proc.o sw_vdb.o sw_forward.o sw_ioctl.o sw_vif.o
 # 2			Shutdown the interface
 CFGFLAGS += -DNET_SWITCH_NOVLANFORIF=1
 
+# Force default vlans to always be allowed in trunk mode
+# CFGFLAGS += -DNET_SWITCH_TRUNKDEFAULTVLANS
+
 # Enable debugging
-#CFGFLAGS += -DDEBUG -g
+CFGFLAGS += -DDEBUG -g
 
 ##
 # End of config section

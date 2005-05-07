@@ -3,7 +3,7 @@
 
 #include "command.h"
 
-extern sw_command_t shell_conf;
+extern sw_command_t sh_conf_int[];
 extern sw_command_root_t command_root_config;
 
 #endif
