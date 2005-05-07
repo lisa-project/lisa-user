@@ -92,6 +92,7 @@ static int sw_addif(struct net_device *dev) {
 #else
 	memset(port->forbidden_vlans, 0, 512);
 	sw_forbid_vlan(port->forbidden_vlans, 0);
+	sw_forbid_vlan(port->forbidden_vlans, 4095);
 #endif
     sw_vdb_add_port(1, port);
 	list_add_tail_rcu(&port->lh, &sw.ports);
