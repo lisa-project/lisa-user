@@ -239,7 +239,7 @@ static void cmd_setethdesc(FILE *out, char *arg) {
 	ioctl_arg.if_name = sel_eth;
 	ioctl_arg.ext.iface_desc = arg;
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
-};
+}
 
 static void cmd_noethdesc(FILE *out, char *arg) {
 	struct net_switch_ioctl_arg ioctl_arg;
@@ -248,7 +248,61 @@ static void cmd_noethdesc(FILE *out, char *arg) {
 	ioctl_arg.if_name = sel_eth;
 	ioctl_arg.ext.iface_desc = "";
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
-};
+}
+
+static void cmd_sp_10(FILE *out, char *arg) {
+	struct net_switch_ioctl_arg ioctl_arg;
+
+	ioctl_arg.cmd = SWCFG_SETSPEED;
+	ioctl_arg.if_name = sel_eth;
+	ioctl_arg.ext.speed = SW_SPEED_10;
+	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
+}
+
+static void cmd_sp_100(FILE *out, char *arg) {
+	struct net_switch_ioctl_arg ioctl_arg;
+
+	ioctl_arg.cmd = SWCFG_SETSPEED;
+	ioctl_arg.if_name = sel_eth;
+	ioctl_arg.ext.speed = SW_SPEED_100;
+	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
+}
+
+static void cmd_sp_auto(FILE *out, char *arg) {
+	struct net_switch_ioctl_arg ioctl_arg;
+
+	ioctl_arg.cmd = SWCFG_SETSPEED;
+	ioctl_arg.if_name = sel_eth;
+	ioctl_arg.ext.speed = SW_SPEED_AUTO;
+	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
+}
+
+static void cmd_du_auto(FILE *out, char *arg) {
+	struct net_switch_ioctl_arg ioctl_arg;
+
+	ioctl_arg.cmd = SWCFG_SETDUPLEX;
+	ioctl_arg.if_name = sel_eth;
+	ioctl_arg.ext.duplex = SW_DUPLEX_AUTO;
+	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
+}
+
+static void cmd_du_full(FILE *out, char *arg) {
+	struct net_switch_ioctl_arg ioctl_arg;
+
+	ioctl_arg.cmd = SWCFG_SETDUPLEX;
+	ioctl_arg.if_name = sel_eth;
+	ioctl_arg.ext.duplex = SW_DUPLEX_FULL;
+	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
+}
+
+static void cmd_du_half(FILE *out, char *arg) {
+	struct net_switch_ioctl_arg ioctl_arg;
+
+	ioctl_arg.cmd = SWCFG_SETDUPLEX;
+	ioctl_arg.if_name = sel_eth;
+	ioctl_arg.ext.duplex = SW_DUPLEX_HALF;
+	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
+}
 
 char VLAN_IDs_of_the_allowed_VLANs[] =
 "VLAN IDs of the allowed VLANs when this port is in trunking mode\0";
@@ -344,22 +398,38 @@ static sw_command_t sh_ethdesc[] = {
 	{NULL,					0,	NULL,		NULL,			NA,			NULL,												NULL}
 };
 
+static sw_command_t sh_speed[] = {
+	{"10",					1,	NULL,		cmd_sp_10,		RUNNABLE,	"Force 10 Mbps operation",							NULL},
+	{"100",					1,	NULL,		cmd_sp_100,		RUNNABLE,	"Force 100 Mbps operation",							NULL},
+	{"auto",				1,	NULL,		cmd_sp_auto,	RUNNABLE,	"Enable AUTO speed configuration",					NULL},
+	{NULL,					0,	NULL,		NULL,			NA,			NULL,												NULL}
+};
+
+static sw_command_t sh_duplex[] = {
+	{"auto",				1,	NULL,		cmd_du_auto,	RUNNABLE,	"Enable AUTO duplex configuration",					NULL},
+	{"full",				1,	NULL,		cmd_du_full,	RUNNABLE,	"Force full duplex operation",						NULL},
+	{"half",				1,	NULL,		cmd_du_half,	RUNNABLE,	"Force half-duplex operation",						NULL},
+	{NULL,					0,	NULL,		NULL,			NA,			NULL,												NULL}
+};
+
 static sw_command_t sh_no[] = {
 	{"description",			1,	NULL,		cmd_noethdesc,	RUNNABLE,	"Interface specific description",					NULL},
+	{"duplex",				1,	NULL,		cmd_du_auto,	RUNNABLE,	"Configure duplex operation.",						NULL},
 	{"shutdown",			1,	NULL,		cmd_noshutd,	RUNNABLE,	"Shutdown the selected interface",					NULL},
+	{"speed",				1,	NULL,		cmd_sp_auto,	RUNNABLE,	"Configure speed operation.",						NULL},
 	{"switchport",			1,	NULL,		NULL,			INCOMPLETE,	"Set switching mode characteristics",				sh_noswitchport},
 	{NULL,					0,	NULL,		NULL,			NA,			NULL,												NULL}
 };
 
 static sw_command_t sh_eth[] = {
 	{"description",			1,	NULL,		NULL,			INCOMPLETE,	"Interface specific description",					sh_ethdesc},
-	{"duplex",				1,	NULL,		NULL,			INCOMPLETE,	"Configure duplex operation.",						NULL},
+	{"duplex",				1,	NULL,		NULL,			INCOMPLETE,	"Configure duplex operation.",						sh_duplex},
 	{"exit",				1,	NULL,		cmd_exit,		RUNNABLE,	"Exit from interface configuration mode",			NULL},
 	{"help",				1,	NULL,		cmd_help,		RUNNABLE,	"Description of the interactive help system",		NULL},
 	{"interface",			1,	NULL,		NULL,			INCOMPLETE,	"Select an interface to configure",					sh_conf_int},
 	{"no",					1,	NULL,		NULL,			INCOMPLETE,	"Negate a command or set its defaults",				sh_no},
 	{"shutdown",			1,	NULL,		cmd_shutd,		RUNNABLE,	"Shutdown the selected interface",					NULL},
-	{"speed",				1,	NULL,		NULL,			INCOMPLETE,	"Configure speed operation.",						NULL},
+	{"speed",				1,	NULL,		NULL,			INCOMPLETE,	"Configure speed operation.",						sh_speed},
 	{"switchport",			1,	NULL,		NULL,			INCOMPLETE,	"Set switching mode characteristics",				sh_switchport},
 	{NULL,					0,	NULL,		NULL,			NA,			NULL,												NULL}
 };

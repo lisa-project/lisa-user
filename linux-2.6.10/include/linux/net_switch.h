@@ -32,6 +32,7 @@
 #define SWCFG_CLEARMACINT	0x0b	/* clear all macs for a given port */
 #define SWCFG_SETAGETIME	0x0c	/* set fdb entry aging time interval (in ms) */
 #define SWCFG_MACSTATIC		0x0d	/* add static mac */
+#define SWCFG_GETIFCFG		0x0e	/* get physical port configuration and status */
 #define SWCFG_ADDVIF		0x10	/* add virtual interface for vlan */
 #define SWCFG_DELVIF		0x11	/* remove virtual interface for vlan */
 #define SWCFG_DISABLEPORT	0x12	/* administratively disable port */
@@ -40,8 +41,34 @@
 #define SWCFG_ADDTRUNKVLANS	0x15	/* add ports to the bitmap of forbidden trunk ports */
 #define SWCFG_DELTRUNKVLANS	0x16	/* remove ports from the bitmap of forbidden trunk ports */
 #define SWCFG_SETIFDESC		0x17	/* set interface description */
+#define SWCFG_SETSPEED		0x18
+#define SWCFG_SETDUPLEX		0x19
 
 #include <linux/time.h>
+
+#define SW_PFL_DISABLED     0x01
+#define SW_PFL_ACCESS		0x02
+#define SW_PFL_TRUNK		0x04
+#define SW_PFL_DROPALL		0x08
+#define SW_PFL_ADMDISABLED	0x10
+
+#define SW_SPEED_AUTO		0x01
+#define SW_SPEED_10			0x02
+#define SW_SPEED_100		0x03
+#define SW_SPEED_1000		0x04
+
+#define SW_DUPLEX_AUTO		0x01
+#define SW_DUPLEX_HALF		0x02
+#define SW_DUPLEX_FULL		0x03
+
+struct net_switch_ifcfg {
+	int flags;
+	int access_vlan;
+	unsigned char *forbidden_vlans;
+	char *description;
+	int speed;
+	int duplex;
+};
 
 struct net_switch_ioctl_arg {
 	unsigned char cmd;
@@ -55,6 +82,9 @@ struct net_switch_ioctl_arg {
 		unsigned char *bmp;
 		char *vlan_desc;
 		char *iface_desc;
+		int speed;
+		int duplex;
+		struct net_switch_ifcfg cfg;
 	} ext;
 };
 

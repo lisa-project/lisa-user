@@ -77,6 +77,10 @@ struct net_switch_port {
 
 	/* Port description */
 	char desc[SW_MAX_PORT_DESC];
+
+	/* Physical configuration settings */
+	int speed;
+	int duplex;
 };
 
 struct net_switch_vif_priv {
@@ -120,12 +124,6 @@ struct net_switch_vdb_link {
 	struct list_head lh;
 	struct net_switch_port *port;
 };
-
-#define SW_PFL_DISABLED     0x01
-#define SW_PFL_ACCESS		0x02
-#define SW_PFL_TRUNK		0x04
-#define SW_PFL_DROPALL		0x08
-#define SW_PFL_ADMDISABLED	0x10
 
 #define sw_disable_port_rcu(port) do {\
 	sw_disable_port(port);\

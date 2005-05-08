@@ -473,6 +473,25 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 		strncpy_from_user(port->desc, arg.ext.iface_desc, SW_MAX_PORT_DESC);
 		port->desc[SW_MAX_PORT_DESC - 1] = '\0';
 		break;
+	case SWCFG_SETSPEED:
+		PORT_GET;
+		port->speed = arg.ext.speed;
+		break;
+	case SWCFG_SETDUPLEX:
+		PORT_GET;
+		port->duplex = arg.ext.duplex;
+		break;
+	case SWCFG_GETIFCFG:
+		PORT_GET;
+		arg.ext.cfg.flags = port->flags;
+		arg.ext.cfg.access_vlan = port->vlan;
+		if(arg.ext.cfg.forbidden_vlans != NULL)
+			copy_to_user(arg.ext.cfg.forbidden_vlans, port->forbidden_vlans);
+		if(arg.ext.cfg.description != NULL)
+			strcpy_to_user(arg.ext.cfg.description, port->desc);
+		arg.ext.cfg.speed = port->speed;
+		arg.ext.cfg.duplex = port->duplex;
+		break;
 	}
 
 	return err;
