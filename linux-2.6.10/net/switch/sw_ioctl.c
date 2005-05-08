@@ -338,7 +338,10 @@ static int sw_set_port_vlan(struct net_switch_port *port, int vlan) {
 }
 
 #define DEV_GET if(1) {\
-	strncpy_from_user(if_name, arg.if_name, IFNAMSIZ);\
+	if(strncpy_from_user(if_name, arg.if_name, IFNAMSIZ) != IFNAMSIZ) {\
+		err = -EFAULT;\
+		break;\
+	}\
 	if_name[IFNAMSIZ - 1] = '\0';\
 	if((dev = dev_get_by_name(if_name)) == NULL) {\
 		err = -ENODEV;\
@@ -362,7 +365,7 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 	struct net_switch_ioctl_arg arg;
 	unsigned char bitmap[SW_VLAN_BMP_NO];
 	char if_name[IFNAMSIZ];
-	int err = -EINVAL;
+	int err = -EINVAL, status;
 
 	if(!capable(CAP_NET_ADMIN))
 		return -EPERM;
@@ -427,15 +430,18 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 	case SWCFG_CLEARMACINT:
 		PORT_GET;
 		fdb_cleanup_port(port);
+		err = 0;
 		break;
 	case SWCFG_SETAGETIME:
 		if (arg.ext.ts.tv_sec <= 0)
 			return -EINVAL;
 		atomic_set(&sw.fdb_age_time, timespec_to_jiffies(&arg.ext.ts));
+		err = 0;
 		break;
 	case SWCFG_MACSTATIC:
 		PORT_GET;
 		fdb_learn(arg.ext.mac, port, arg.vlan, SW_FDB_STATIC);
+		err = 0;
 		break;
 	case SWCFG_ADDVIF:
 		err = sw_vif_addif(&sw, arg.vlan);
@@ -447,50 +453,80 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 		PORT_GET;
 		sw_set_port_flag(port, SW_PFL_ADMDISABLED);
 		sw_disable_port(port);
+		err = 0;
 		break;
 	case SWCFG_ENABLEPORT:
 		PORT_GET;
 		sw_res_port_flag(port, SW_PFL_ADMDISABLED);
 		sw_enable_port(port);
+		err = 0;
 		break;
 	case SWCFG_SETTRUNKVLANS:
 		PORT_GET;
-		copy_from_user(bitmap, arg.ext.bmp, SW_VLAN_BMP_NO);
+		status = copy_from_user(bitmap, arg.ext.bmp, SW_VLAN_BMP_NO);
+		if(status != SW_VLAN_BMP_NO) {
+			err = -EFAULT;
+			break;
+		}
 		err = sw_set_port_forbidden_vlans(port, bitmap);
 		break;
 	case SWCFG_ADDTRUNKVLANS:
 		PORT_GET;
-		copy_from_user(bitmap, arg.ext.bmp, SW_VLAN_BMP_NO);
+		status = copy_from_user(bitmap, arg.ext.bmp, SW_VLAN_BMP_NO);
+		if(status != SW_VLAN_BMP_NO) {
+			err = -EFAULT;
+			break;
+		}
 		err = sw_add_port_forbidden_vlans(port, bitmap);
 		break;
 	case SWCFG_DELTRUNKVLANS:
 		PORT_GET;
-		copy_from_user(bitmap, arg.ext.bmp, SW_VLAN_BMP_NO);
+		status = copy_from_user(bitmap, arg.ext.bmp, SW_VLAN_BMP_NO);
+		if(status != SW_VLAN_BMP_NO) {
+			err = -EFAULT;
+			break;
+		}
 		err = sw_del_port_forbidden_vlans(port, bitmap);
 		break;
 	case SWCFG_SETIFDESC:
 		PORT_GET;
-		strncpy_from_user(port->desc, arg.ext.iface_desc, SW_MAX_PORT_DESC);
+		status = strncpy_from_user(port->desc, arg.ext.iface_desc, SW_MAX_PORT_DESC);
 		port->desc[SW_MAX_PORT_DESC - 1] = '\0';
+		err = 0;
 		break;
 	case SWCFG_SETSPEED:
 		PORT_GET;
 		port->speed = arg.ext.speed;
+		err = 0;
 		break;
 	case SWCFG_SETDUPLEX:
 		PORT_GET;
 		port->duplex = arg.ext.duplex;
+		err = 0;
 		break;
 	case SWCFG_GETIFCFG:
 		PORT_GET;
 		arg.ext.cfg.flags = port->flags;
 		arg.ext.cfg.access_vlan = port->vlan;
-		if(arg.ext.cfg.forbidden_vlans != NULL)
-			copy_to_user(arg.ext.cfg.forbidden_vlans, port->forbidden_vlans);
-		if(arg.ext.cfg.description != NULL)
-			strcpy_to_user(arg.ext.cfg.description, port->desc);
+		if(arg.ext.cfg.forbidden_vlans != NULL) {
+			status = copy_to_user(arg.ext.cfg.forbidden_vlans,
+					port->forbidden_vlans, SW_VLAN_BMP_NO);
+			if(status != SW_VLAN_BMP_NO) {
+				err = -EFAULT;
+				break;
+			}
+		}
+		if(arg.ext.cfg.description != NULL) {
+			status = copy_to_user(arg.ext.cfg.description, port->desc,
+					strlen(port->desc) + 1);
+			if(status != strlen(port->desc) + 1) {
+				err = -EFAULT;
+				break;
+			}
+		}
 		arg.ext.cfg.speed = port->speed;
 		arg.ext.cfg.duplex = port->duplex;
+		err = 0;
 		break;
 	}
 
