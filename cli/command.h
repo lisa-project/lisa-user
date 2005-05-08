@@ -31,11 +31,16 @@ typedef struct root {
     sw_command_t *cmd;
 } sw_command_root_t;
 
+extern void cmd_help				__P((FILE *, char *));
 
-extern sw_command_t shell_main[];
+extern char eth_range[];
+extern char vlan_range[];
+
+extern int valid_eth(char *);
+extern int valid_vlan(char *);
+extern int parse_eth(char *);
+extern int parse_vlan(char *);
+
 extern sw_command_root_t command_root_main;
-extern sw_command_root_t command_root_config;
-extern sw_command_root_t command_root_config_if;
-extern sw_command_root_t command_root_config_vlan;
 
 #endif

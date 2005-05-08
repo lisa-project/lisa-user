@@ -42,7 +42,14 @@ static void cmd_int_eth(FILE *out, char *arg) {
 }
 
 static void cmd_int_vlan(FILE *out, char *arg) {
-	sprintf(sel_vlan, "vlan%d", parse_vlan(arg));
+	struct net_switch_ioctl_arg ioctl_arg;
+	int vlan = parse_vlan(arg);
+
+	ioctl_arg.cmd = SWCFG_ADDVIF;
+	ioctl_arg.vlan = vlan;
+	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
+
+	sprintf(sel_vlan, "vlan%d", vlan);
 	cmd_root = &command_root_config_if_vlan;
 }
 

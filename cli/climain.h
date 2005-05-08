@@ -24,16 +24,6 @@ typedef struct execution {
 extern sw_command_root_t *cmd_root;
 extern int climain(void);
 
-/* Command handlers */
-extern void cmd_disable				__P((FILE *, char *));
-extern void cmd_enable				__P((FILE *, char *));
-extern void cmd_help				__P((FILE *, char *));
-extern void cmd_conf_t				__P((FILE *, char *));
-extern void cmd_history				__P((FILE *, char *));
-
-/* Validation handlers */
-extern int valid_regex				__P((char *));
-
 /* Misc functions */
 extern char *swcli_generator __P((const char *, int));
 extern char **swcli_completion __P((const char *, int, int));
@@ -41,12 +31,9 @@ extern int parse_command(char *, int (*)(char *, char *, char));
 extern int change_search_scope(char *, char *, char);
 extern sw_match_t *get_matches(int *, char *);
 
-extern char eth_range[];
-extern char vlan_range[];
-
-extern int valid_eth(char *);
-extern int valid_vlan(char *);
-extern int parse_eth(char *);
-extern int parse_vlan(char *);
 extern int sock_fd;
+extern int priv;
+extern char prompt[];
+extern FILE *mk_tmp_stream(char *, char *);
+extern void copy_data(FILE *, FILE *);
 #endif

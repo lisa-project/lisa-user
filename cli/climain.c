@@ -1,9 +1,9 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <signal.h>
 #include <readline/readline.h>
 #include <readline/history.h>
 #include <unistd.h>
@@ -25,7 +25,7 @@ char eth_range[32]; /* FIXME size */
 int sock_fd;
 
 /* Current privilege level */
-static int priv = 0;
+int priv = 0;
 
 /* If we use the default rl_completer_word_break_characters
  then we totally fuck up completion when we have the following
@@ -51,18 +51,6 @@ void swcli_incomplete_cmd(char *cmd) {
 
 void swcli_unimplemented_cmd(char *cmd) {
 	printf("%% Command not (yet) implemented.\n");
-}
-
-void swcli_sig_term(int sig) {
-	char hostname[MAX_HOSTNAME];
-	cmd_root = &command_root_main;
-	signal(SIGTSTP, SIG_IGN);
-	printf("\n");
-	gethostname(hostname, sizeof(hostname));
-	hostname[sizeof(hostname) - 1] = '\0';
-	sprintf(prompt, cmd_root->prompt, hostname, priv ? '#' : '>');
-	rl_set_prompt(prompt);
-	rl_forced_update_display();
 }
 
 void swcli_extra_input(int off) {
@@ -566,91 +554,22 @@ int climain(void) {
 	return 0;
 }
 
+FILE *mk_tmp_stream(char *name, char *mode) {
+	char tmp_name[] = "/tmp/swcli.XXXXXX\0";
+	int tmp_fd;
 
-/* Command Handlers implementation */
-void cmd_disable(FILE *out, char *arg) {
-	priv = 0;
+	tmp_fd = mkstemp(tmp_name);
+	if(tmp_fd == -1)
+		return NULL;
+	if(name != NULL)
+		strcpy(name, tmp_name);
+	return fdopen(tmp_fd, mode);
 }
 
-void cmd_enable(FILE *out, char *arg) {
-	priv = 1;
-}
+void copy_data(FILE *dst, FILE *src) {
+	unsigned char buf[4096];
+	size_t nmemb;
 
-void cmd_conf_t(FILE *out, char *arg) {
-	cmd_root = &command_root_config;
-	printf("Enter configuration commands, one per line.  End with CNTL/Z.\n");
-	signal(SIGTSTP, swcli_sig_term);
-}
-
-void cmd_help(FILE *out, char *arg) {
-	fprintf(out,
-		"Help may be requested at any point in a command by entering\n"
-		"a question mark '?'.  If nothing matches, the help list will\n"
-		"be empty and you must backup until entering a '?' shows the\n"
-		"available options.\n"
-		"Two styles of help are provided:\n"
-		"1. Full help is available when you are ready to enter a\n"
-		"   command argument (e.g. 'show ?') and describes each possible\n"
-		"   argument.\n"
-		"2. Partial help is provided when an abbreviated argument is entered\n"
-		"   and you want to know what arguments match the input\n"
-		"   (e.g. 'show pr?'.)\n\n"
-		);
-}
-
-void cmd_history(FILE *out, char *arg) {
-	HIST_ENTRY **history;
-	HIST_ENTRY *entry;
-	int i;
-
-	history = history_list();
-	if (history) {
-		for (i=0; (entry = history[i]); i++) {
-			fprintf(out, "   %s\n", entry->line);
-		}
-	}
-}
-
-/* Validation Handlers Implementation */
-int valid_regex(char *arg) {
-	return 1;
-}
-
-int valid_eth(char *arg) {
-	int no;
-	if(sscanf(arg, "%d", &no) != 1)
-		return 0;
-	if(no < 0 || no > 7) /* FIXME max value */
-		return 0;
-	/* FIXME interfata e in switch */
-	return 1;
-}
-
-int valid_vlan(char *arg) {
-	int no;
-	if(sscanf(arg, "%d", &no) != 1)
-		return 0;
-	if(no < 1 || no > 4094)
-		return 0;
-	return 1;
-}
-
-char vlan_range[] = "<1-1094>\0";
-
-int parse_eth(char *arg) {
-	int no, status;
-
-	status = sscanf(arg, "%d", &no);
-	assert(status == 1);
-
-	return no;
-}
-
-int parse_vlan(char *arg) {
-	int no, status;
-
-	status = sscanf(arg, "%d", &no);
-	assert(status == 1);
-	assert(no >= 1 && no <= 4094);
-	return no;
+	while((nmemb = fread(buf, 1, sizeof(buf), src)))
+		fwrite(buf, nmemb, 1, dst);
 }
