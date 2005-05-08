@@ -25,7 +25,7 @@ int sw_vdb_add_vlan(struct net_switch *sw, int vlan, char *name) {
 	struct net_switch_port *port;
 	struct net_device *dev;
 
-    if(vlan < 1 || vlan > 4095)
+    if(sw_invalid_vlan(vlan))
         return -EINVAL;
     if(sw->vdb[vlan])
         return -EEXIST;
@@ -63,7 +63,7 @@ int sw_vdb_add_vlan(struct net_switch *sw, int vlan, char *name) {
 int sw_vdb_add_vlan_default(struct net_switch *sw, int vlan) {
 	char buf[9];
 	
-    if(vlan < 1 || vlan > 4095)
+    if(sw_invalid_vlan(vlan))
         return -EINVAL;
 	/* TODO If we're vtp client, ignore this request and return */
 	sprintf(buf, "VLAN%04d", vlan);
@@ -75,7 +75,7 @@ int sw_vdb_del_vlan(struct net_switch *sw, int vlan) {
 	struct net_switch_vdb_entry *entry;
 	struct net_switch_vdb_link *link, *tmp;
 
-	if(vlan < 1 || vlan > 4095)
+	if(sw_invalid_vlan(vlan))
 		return -EINVAL;
 	if(!(entry = sw->vdb[vlan]))
 		return -ENOENT;
@@ -103,7 +103,7 @@ int sw_vdb_del_vlan(struct net_switch *sw, int vlan) {
 int sw_vdb_set_vlan_name(struct net_switch *sw, int vlan, char *name) {
 	struct net_switch_vdb_entry *entry, *old;
 
-    if(vlan < 1 || vlan > 4095)
+    if(sw_invalid_vlan(vlan))
         return -EINVAL;
     if(!(old = sw->vdb[vlan]))
         return -ENOENT;
@@ -142,7 +142,7 @@ void __init sw_vdb_init(struct net_switch *sw) {
 void __exit sw_vdb_exit(struct net_switch *sw) {
 	int vlan;
 
-	for(vlan = 1; vlan <= 4095; vlan++)
+	for(vlan = SW_MIN_VLAN; vlan <= SW_MAX_VLAN; vlan++)
 		sw_vdb_del_vlan(sw, vlan);
 	kmem_cache_destroy(sw->vdb_cache);
 }
@@ -152,7 +152,7 @@ int sw_vdb_add_port(int vlan, struct net_switch_port *port) {
 	struct net_switch *sw;
 	struct net_switch_vdb_link *link;
 
-    if(vlan < 1 || vlan > 4095)
+    if(sw_invalid_vlan(vlan))
         return -EINVAL;
 		
 	if (!port) 
@@ -188,7 +188,7 @@ int sw_vdb_del_port(int vlan, struct net_switch_port *port) {
 	struct net_switch_vdb_link *link;
 	struct list_head *lh;
 
-    if(vlan < 1 || vlan > 4095)
+    if(sw_invalid_vlan(vlan))
         return -EINVAL;
 		
 	if (!port) 

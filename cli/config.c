@@ -1,11 +1,15 @@
 #include <linux/sockios.h>
 #include <linux/net_switch.h>
+#include <linux/if.h>
 #define _SYS_TYPES_H 1
 #include <sys/ioctl.h>
 
 #include "command.h"
 #include "climain.h"
 #include "config_if.h"
+
+#include <errno.h>
+extern int errno;
 
 static void cmd_end(FILE *out, char *arg) {
 	cmd_root = &command_root_main;
@@ -17,13 +21,24 @@ static void cmd_hostname(FILE *out, char *arg) {
 
 static void cmd_int_eth(FILE *out, char *arg) {
 	struct net_switch_ioctl_arg ioctl_arg;
+	char if_name[IFNAMSIZ];
 	
-	sprintf(sel_eth, "eth%d", parse_eth(arg));
-	cmd_root = &command_root_config_if_eth;
+	sprintf(if_name, "eth%d", parse_eth(arg));
 
 	ioctl_arg.cmd = SWCFG_ADDIF;
-	ioctl_arg.name = sel_eth;
-	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
+	ioctl_arg.if_name = if_name;
+	do {
+		if(!ioctl(sock_fd, SIOCSWCFG, &ioctl_arg))
+			break;
+		if(errno == ENODEV) {
+			fprintf(out, "Command rejected: device %s does not exist\n",
+					if_name);
+			return;
+		}
+	} while(0);
+
+	cmd_root = &command_root_config_if_eth;
+	strcpy(sel_eth, if_name);
 }
 
 static void cmd_int_vlan(FILE *out, char *arg) {

@@ -82,9 +82,7 @@ struct net_switch_vif_priv {
 	struct net_switch_port bogo_port;
 };
 
-#define SW_MAX_VLANS 4096
-#define SW_VLAN_BMP_NO SW_MAX_VLANS/8
-
+/* Hashing constant for the vlan virtual interfaces hash */
 #define SW_VIF_HASH_SIZE 97
 
 struct net_switch {
@@ -95,7 +93,7 @@ struct net_switch {
 	struct net_switch_bucket fdb[SW_HASH_SIZE];
 
 	/* Vlan database */
-	struct net_switch_vdb_entry * volatile vdb[SW_MAX_VLANS];
+	struct net_switch_vdb_entry * volatile vdb[SW_MAX_VLAN + 1];
 
 	/* Forwarding database entry aging time */
 	atomic_t fdb_age_time;
@@ -167,10 +165,6 @@ struct skb_extra {
 	int has_vlan_tag;
 };
 
-#define sw_allow_vlan(bitmap, vlan) ((bitmap)[(vlan) / 8] &= ~(1 << ((vlan) % 8)))
-#define sw_forbid_vlan(bitmap, vlan) ((bitmap)[(vlan) / 8] |= (1 << ((vlan) % 8)))
-#define sw_forbidden_vlan(bitmap, vlan) ((bitmap)[(vlan) / 8] & (1 << ((vlan) % 8)))
-
 #define sw_port_forbidden_vlan(port, vlan) sw_forbidden_vlan((port)->forbidden_vlans, vlan)
 
 extern struct net_switch sw;
@@ -219,7 +213,7 @@ extern int sw_vdb_add_port(int, struct net_switch_port *);
 extern int sw_vdb_del_port(int, struct net_switch_port *);
 
 #define sw_vdb_vlan_exists(sw, vlan) \
-	((vlan) >= 1 && (vlan) <= 4095 && (sw)->vdb[vlan])
+	(sw_valid_vlan(vlan) && (sw)->vdb[vlan])
 
 /* sw_proc.c */
 extern int init_switch_proc(void);

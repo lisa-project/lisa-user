@@ -155,7 +155,7 @@ static int proc_read_vlan(char *page, char **start,
 	
 	rcu_read_lock();
 
-	for (vlan = 1; vlan < SW_MAX_VLANS; vlan++) {
+	for (vlan = SW_MIN_VLAN; vlan <= SW_MAX_VLAN; vlan++) {
 		if (! sw.vdb[vlan]) continue;
 		len += sprintf(page+len, "%-4d %-32s active    ", vlan, sw.vdb[vlan]->name);
 		/* FIXME: functie de listat porturile paginat */

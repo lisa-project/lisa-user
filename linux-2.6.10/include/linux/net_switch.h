@@ -36,15 +36,49 @@
 #define SWCFG_DELVIF		0x11	/* remove virtual interface for vlan */
 #define SWCFG_DISABLEPORT	0x12	/* administratively disable port */
 #define SWCFG_ENABLEPORT	0x13	/* enable port */
+#define SWCFG_SETTRUNKVLANS	0x14	/* set the bitmap of forbidden trunk ports */
+#define SWCFG_ADDTRUNKVLANS	0x15	/* add ports to the bitmap of forbidden trunk ports */
+#define SWCFG_DELTRUNKVLANS	0x16	/* remove ports from the bitmap of forbidden trunk ports */
 
 #include <linux/time.h>
 
 struct net_switch_ioctl_arg {
 	unsigned char cmd;
+	char *if_name;
 	int vlan;
-	char *name;
-	struct timespec ts;
-	unsigned char *mac;
+	union {
+		int access;
+		int trunk;
+		struct timespec ts;
+		unsigned char *mac;
+		unsigned char *bmp;
+		char *vlan_desc;
+		char *iface_desc;
+	} ext;
 };
+
+/* Minimum number a vlan may have */
+#define SW_MIN_VLAN 1
+
+/* Maximum number a vlan may have. Note that vlan-related vectors
+   must be at least SW_MAX_VLAN + 1 sized, because SW_MAX_VLAN
+   should be a valid index.
+ */
+#define SW_MAX_VLAN 4094
+
+/* Number of octet bitmaps that are necessary to store binary
+   information about vlans (i.e. allowed or forbidden on a certain
+   port).
+ */
+#define SW_VLAN_BMP_NO (SW_MAX_VLAN / 8 + 1)
+
+#define sw_valid_vlan(vlan) \
+	((vlan) >= SW_MIN_VLAN && (vlan) <= SW_MAX_VLAN)
+#define sw_invalid_vlan(vlan) \
+	((vlan) < SW_MIN_VLAN || (vlan) > SW_MAX_VLAN)
+
+#define sw_allow_vlan(bitmap, vlan) ((bitmap)[(vlan) / 8] &= ~(1 << ((vlan) % 8)))
+#define sw_forbid_vlan(bitmap, vlan) ((bitmap)[(vlan) / 8] |= (1 << ((vlan) % 8)))
+#define sw_forbidden_vlan(bitmap, vlan) ((bitmap)[(vlan) / 8] & (1 << ((vlan) % 8)))
 
 #endif

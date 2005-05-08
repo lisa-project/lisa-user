@@ -230,6 +230,11 @@ static int sw_set_port_forbidden_vlans(struct net_switch_port *port,
 #ifdef NET_SWITCH_TRUNKDEFAULTVLANS
 	__sw_allow_default_vlans(forbidden_vlans);
 #endif
+	/* FIXME hardcoded 0 and 4095; normally we should forbid
+	   all vlans below SW_VLAN_MIN and above SW_VLAN_MAX
+	 */
+	sw_forbid_vlan(forbidden_vlans, 0);
+	sw_forbid_vlan(forbidden_vlans, 4095);
 	if(port->flags & SW_PFL_TRUNK) {
 		for(n = 0; n < 512; n++, old++, new++) {
 			for(mask = 1; mask; mask <<= 1, vlan++) {
@@ -331,9 +336,13 @@ static int sw_set_port_vlan(struct net_switch_port *port, int vlan) {
 	return 0;
 }
 
-#define DEV_GET if((dev = dev_get_by_name(arg.name)) == NULL) {\
-	err = -ENODEV;\
-	break;\
+#define DEV_GET if(1) {\
+	strncpy_from_user(if_name, arg.if_name, IFNAMSIZ);\
+	if_name[IFNAMSIZ - 1] = '\0';\
+	if((dev = dev_get_by_name(if_name)) == NULL) {\
+		err = -ENODEV;\
+		break;\
+	}\
 }
 
 #define PORT_GET do {\
@@ -351,6 +360,7 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 	struct net_switch_port *port = NULL;
 	struct net_switch_ioctl_arg arg;
 	unsigned char bitmap[SW_VLAN_BMP_NO];
+	char if_name[IFNAMSIZ];
 	int err = -EINVAL;
 
 	if(!capable(CAP_NET_ADMIN))
@@ -364,7 +374,6 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 
 	memset(bitmap, 0xFF, SW_VLAN_BMP_NO);
 
-	/* FIXME zona indicata de arg.name trebuie copiata din userspace */
 	switch(arg.cmd) {
 	case SWCFG_ADDIF:
 		DEV_GET;
@@ -379,13 +388,15 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 		break;
 	
 	case SWCFG_ADDVLAN:
-		err = sw_vdb_add_vlan(&sw, arg.vlan, arg.name);
+		/* FIXME copy arg.ext.vlan_desc from userspace */
+		err = sw_vdb_add_vlan(&sw, arg.vlan, arg.ext.vlan_desc);
 		break;
 	case SWCFG_DELVLAN:
 		err = sw_vdb_del_vlan(&sw, arg.vlan);
 		break;
 	case SWCFG_RENAMEVLAN:
-		err = sw_vdb_set_vlan_name(&sw, arg.vlan, arg.name);
+		/* FIXME copy arg.ext.vlan_desc from userspace */
+		err = sw_vdb_set_vlan_name(&sw, arg.vlan, arg.ext.vlan_desc);
 		break;
 	case SWCFG_ADDVLANPORT:
 		DEV_GET;
@@ -402,11 +413,11 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 		break;
 	case SWCFG_SETACCESS:
 		DEV_GET;
-		err = sw_set_port_access(rcu_dereference(dev->sw_port), arg.vlan);
+		err = sw_set_port_access(rcu_dereference(dev->sw_port), arg.ext.access);
 		break;
 	case SWCFG_SETTRUNK:
 		DEV_GET;
-		err = sw_set_port_trunk(rcu_dereference(dev->sw_port), arg.vlan);
+		err = sw_set_port_trunk(rcu_dereference(dev->sw_port), arg.ext.trunk);
 		break;
 	case SWCFG_SETPORTVLAN:	
 		DEV_GET;
@@ -417,13 +428,13 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 		fdb_cleanup_port(port);
 		break;
 	case SWCFG_SETAGETIME:
-		if (arg.ts.tv_sec <= 0)
+		if (arg.ext.ts.tv_sec <= 0)
 			return -EINVAL;
-		atomic_set(&sw.fdb_age_time, timespec_to_jiffies(&arg.ts));
+		atomic_set(&sw.fdb_age_time, timespec_to_jiffies(&arg.ext.ts));
 		break;
 	case SWCFG_MACSTATIC:
 		PORT_GET;
-		fdb_learn(arg.mac, port, arg.vlan, SW_FDB_STATIC);
+		fdb_learn(arg.ext.mac, port, arg.vlan, SW_FDB_STATIC);
 		break;
 	case SWCFG_ADDVIF:
 		err = sw_vif_addif(&sw, arg.vlan);
@@ -440,6 +451,21 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 		PORT_GET;
 		sw_res_port_flag(port, SW_PFL_ADMDISABLED);
 		sw_enable_port(port);
+		break;
+	case SWCFG_SETTRUNKVLANS:
+		PORT_GET;
+		copy_from_user(bitmap, arg.ext.bmp, SW_VLAN_BMP_NO);
+		err = sw_set_port_forbidden_vlans(port, bitmap);
+		break;
+	case SWCFG_ADDTRUNKVLANS:
+		PORT_GET;
+		copy_from_user(bitmap, arg.ext.bmp, SW_VLAN_BMP_NO);
+		err = sw_add_port_forbidden_vlans(port, bitmap);
+		break;
+	case SWCFG_DELTRUNKVLANS:
+		PORT_GET;
+		copy_from_user(bitmap, arg.ext.bmp, SW_VLAN_BMP_NO);
+		err = sw_del_port_forbidden_vlans(port, bitmap);
 		break;
 	}
 
