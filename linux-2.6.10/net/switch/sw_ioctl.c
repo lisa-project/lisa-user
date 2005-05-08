@@ -86,6 +86,7 @@ static int sw_addif(struct net_device *dev) {
 	port->dev = dev;
 	port->sw = &sw;
     port->vlan = 1; /* By default all ports are in vlan 1 */
+	port->desc[0] = '\0';
 #ifdef NET_SWITCH_TRUNKDEFAULTVLANS
 	memset(port->forbidden_vlans, 0xff, 512);
 	__sw_allow_default_vlans(port->forbidden_vlans);
@@ -466,6 +467,11 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 		PORT_GET;
 		copy_from_user(bitmap, arg.ext.bmp, SW_VLAN_BMP_NO);
 		err = sw_del_port_forbidden_vlans(port, bitmap);
+		break;
+	case SWCFG_SETIFDESC:
+		PORT_GET;
+		strncpy_from_user(port->desc, arg.ext.iface_desc, SW_MAX_PORT_DESC);
+		port->desc[SW_MAX_PORT_DESC - 1] = '\0';
 		break;
 	}
 

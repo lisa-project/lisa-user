@@ -228,6 +228,28 @@ static void cmd_remvlans(FILE *out, char *arg) {
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
+static int valid_desc(char *arg) {
+	return 1;
+}
+
+static void cmd_setethdesc(FILE *out, char *arg) {
+	struct net_switch_ioctl_arg ioctl_arg;
+
+	ioctl_arg.cmd = SWCFG_SETIFDESC;
+	ioctl_arg.if_name = sel_eth;
+	ioctl_arg.ext.iface_desc = arg;
+	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
+};
+
+static void cmd_noethdesc(FILE *out, char *arg) {
+	struct net_switch_ioctl_arg ioctl_arg;
+
+	ioctl_arg.cmd = SWCFG_SETIFDESC;
+	ioctl_arg.if_name = sel_eth;
+	ioctl_arg.ext.iface_desc = "";
+	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
+};
+
 char VLAN_IDs_of_the_allowed_VLANs[] =
 "VLAN IDs of the allowed VLANs when this port is in trunking mode\0";
 
@@ -317,14 +339,20 @@ static sw_command_t sh_noswitchport[] = {
 	{NULL,					0,	NULL,		NULL,			NA,			NULL,												NULL}
 };
 
+static sw_command_t sh_ethdesc[] = {
+	{"LINE",				1,	valid_desc,	cmd_setethdesc,	RUNNABLE,	"A character string describing this interface",		NULL},
+	{NULL,					0,	NULL,		NULL,			NA,			NULL,												NULL}
+};
+
 static sw_command_t sh_no[] = {
+	{"description",			1,	NULL,		cmd_noethdesc,	RUNNABLE,	"Interface specific description",					NULL},
 	{"shutdown",			1,	NULL,		cmd_noshutd,	RUNNABLE,	"Shutdown the selected interface",					NULL},
 	{"switchport",			1,	NULL,		NULL,			INCOMPLETE,	"Set switching mode characteristics",				sh_noswitchport},
 	{NULL,					0,	NULL,		NULL,			NA,			NULL,												NULL}
 };
 
 static sw_command_t sh_eth[] = {
-	{"description",			1,	NULL,		NULL,			INCOMPLETE,	"Interface specific description",					NULL},
+	{"description",			1,	NULL,		NULL,			INCOMPLETE,	"Interface specific description",					sh_ethdesc},
 	{"duplex",				1,	NULL,		NULL,			INCOMPLETE,	"Configure duplex operation.",						NULL},
 	{"exit",				1,	NULL,		cmd_exit,		RUNNABLE,	"Exit from interface configuration mode",			NULL},
 	{"help",				1,	NULL,		cmd_help,		RUNNABLE,	"Description of the interactive help system",		NULL},

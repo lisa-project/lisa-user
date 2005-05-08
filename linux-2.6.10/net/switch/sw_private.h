@@ -74,6 +74,9 @@ struct net_switch_port {
 	   512 * 8 bits = 4096 bits => 4096 vlans
 	 */
 	unsigned char *forbidden_vlans;
+
+	/* Port description */
+	char desc[SW_MAX_PORT_DESC];
 };
 
 struct net_switch_vif_priv {

@@ -39,6 +39,7 @@
 #define SWCFG_SETTRUNKVLANS	0x14	/* set the bitmap of forbidden trunk ports */
 #define SWCFG_ADDTRUNKVLANS	0x15	/* add ports to the bitmap of forbidden trunk ports */
 #define SWCFG_DELTRUNKVLANS	0x16	/* remove ports from the bitmap of forbidden trunk ports */
+#define SWCFG_SETIFDESC		0x17	/* set interface description */
 
 #include <linux/time.h>
 
@@ -80,5 +81,8 @@ struct net_switch_ioctl_arg {
 #define sw_allow_vlan(bitmap, vlan) ((bitmap)[(vlan) / 8] &= ~(1 << ((vlan) % 8)))
 #define sw_forbid_vlan(bitmap, vlan) ((bitmap)[(vlan) / 8] |= (1 << ((vlan) % 8)))
 #define sw_forbidden_vlan(bitmap, vlan) ((bitmap)[(vlan) / 8] & (1 << ((vlan) % 8)))
+
+/* Maximum length of port description */
+#define SW_MAX_PORT_DESC	32
 
 #endif
