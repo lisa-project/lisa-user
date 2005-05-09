@@ -36,4 +36,7 @@ extern int priv;
 extern char prompt[];
 extern FILE *mk_tmp_stream(char *, char *);
 extern void copy_data(FILE *, FILE *);
+
+#define is_digit(arg) ((arg) >= '0' && (arg) <= '9')
+
 #endif

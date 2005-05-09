@@ -3,6 +3,7 @@
 #include <linux/if.h>
 #define _SYS_TYPES_H 1
 #include <sys/ioctl.h>
+#include <unistd.h>
 
 #include "command.h"
 #include "climain.h"
@@ -10,6 +11,7 @@
 
 #include <errno.h>
 extern int errno;
+char hostname_default[] = "Switch\0";
 
 static void cmd_end(FILE *out, char *arg) {
 	cmd_root = &command_root_main;
@@ -17,6 +19,11 @@ static void cmd_end(FILE *out, char *arg) {
 }
 
 static void cmd_hostname(FILE *out, char *arg) {
+	sethostname(arg, strlen(arg));
+}
+
+static void cmd_nohostname(FILE *out, char *arg) {
+	sethostname(hostname_default, strlen(hostname_default));
 }
 
 static void cmd_int_eth(FILE *out, char *arg) {
@@ -53,8 +60,18 @@ static void cmd_int_vlan(FILE *out, char *arg) {
 	cmd_root = &command_root_config_if_vlan;
 }
 
+static sw_command_t sh_no_int_eth[] = {
+	{eth_range,				1,	valid_eth,	cmd_int_eth,		RUNNABLE,	"Ethernet interface number",					NULL},
+	{NULL,					0,	NULL,		NULL,				NA,			NULL,											NULL}
+};
+
 static sw_command_t sh_int_eth[] = {
 	{eth_range,				1,	valid_eth,	cmd_int_eth,		RUNNABLE,	"Ethernet interface number",					NULL},
+	{NULL,					0,	NULL,		NULL,				NA,			NULL,											NULL}
+};
+
+static sw_command_t sh_no_int_vlan[] = {
+	{vlan_range,			1,	valid_vlan,	cmd_int_vlan,		RUNNABLE,	"Vlan interface number",						NULL},
 	{NULL,					0,	NULL,		NULL,				NA,			NULL,											NULL}
 };
 
@@ -63,9 +80,21 @@ static sw_command_t sh_int_vlan[] = {
 	{NULL,					0,	NULL,		NULL,				NA,			NULL,											NULL}
 };
 
+static sw_command_t sh_no_int[] = {
+	{"ethernet",			1,	NULL,		NULL,				INCOMPLETE, "Ethernet IEEE 802.3",							sh_no_int_eth},
+	{"vlan",				1,	NULL,		NULL,				INCOMPLETE, "LMS Vlans",									sh_no_int_vlan},
+	{NULL,					0,	NULL,		NULL,				NA,			NULL,											NULL}
+};
+
 sw_command_t sh_conf_int[] = {
 	{"ethernet",			1,	NULL,		NULL,				INCOMPLETE, "Ethernet IEEE 802.3",							sh_int_eth},
 	{"vlan",				1,	NULL,		NULL,				INCOMPLETE, "LMS Vlans",									sh_int_vlan},
+	{NULL,					0,	NULL,		NULL,				NA,			NULL,											NULL}
+};
+
+static sw_command_t sh_no[] = {
+	{"hostname",			1,	NULL,		cmd_nohostname,		RUNNABLE,	"Set system's network name",					NULL},
+	{"interface",			1,	NULL,		NULL,				INCOMPLETE,	"Select an interface to configure",				sh_no_int},
 	{NULL,					0,	NULL,		NULL,				NA,			NULL,											NULL}
 };
 
@@ -76,7 +105,7 @@ static sw_command_t sh[] = {
 	{"hostname",			1,	NULL,		cmd_hostname,		INCOMPLETE,	"Set system's network name",					NULL},
 	{"interface",			1,	NULL,		NULL,				INCOMPLETE,	"Select an interface to configure",				sh_conf_int},
 	{"mac-address-table",	1,	NULL,		NULL,				INCOMPLETE,	"Configure the MAC address table",				NULL},
-	{"no",					1,	NULL,		NULL,				INCOMPLETE, "Negate a command or set its defaults",			NULL},
+	{"no",					1,	NULL,		NULL,				INCOMPLETE, "Negate a command or set its defaults",			sh_no},
 	{NULL,					0,	NULL,		NULL,				NA,			NULL,											NULL}
 };
 

@@ -9,6 +9,7 @@
 #include "command.h"
 #include "climain.h"
 #include "config.h"
+#include "build_config.h"
 #include "filter.h"
 
 static void swcli_sig_term(int sig) {
@@ -71,21 +72,9 @@ static void cmd_exit(FILE *out, char *arg) {
 	exit(0);
 }
 
-int build_int_eth_cfg(FILE *out, int num) {
-	char if_name[IFNAMSIZ];
-	struct net_switch_ioctl_arg ioctl_arg;
-
-	sprintf(if_name, "eth%d", num);
-	ioctl_arg.cmd = SWCFG_GETIFCFG;
-	ioctl_arg.if_name = if_name;
-
-	fprintf(out, "test\n");
-	return 0;
-}
-
 static void cmd_int_eth(FILE *out, char *arg) {
 	int status;
-	FILE *tmp;
+	FILE *tmp = NULL;
 	char tmp_name[MAXPATHLEN];
 
 	fprintf(out, "Building configuration...\n");
@@ -94,10 +83,10 @@ static void cmd_int_eth(FILE *out, char *arg) {
 		tmp = mk_tmp_stream(tmp_name, "w+");
 		if(tmp == NULL)
 			break;
-		status = build_int_eth_cfg(tmp, parse_eth(arg));
+		status = build_int_eth_config(tmp, parse_eth(arg));
 		if(status)
 			break;
-		fprintf(out, "\nCurrent configuration:\n");
+		fprintf(out, "\nCurrent configuration : %ld bytes\n", ftell(tmp));
 		rewind(tmp);
 		copy_data(out, tmp);
 		fclose(tmp);
@@ -106,6 +95,41 @@ static void cmd_int_eth(FILE *out, char *arg) {
 		fflush(out);
 		return;
 	} while(0);
+	if(tmp != NULL) {
+		fclose(tmp);
+		unlink(tmp_name);
+	}
+	fprintf(out, "Command rejected: device not present\n");
+	return;
+}
+
+static void cmd_show_run(FILE *out, char *arg) {
+	int status;
+	FILE *tmp = NULL;
+	char tmp_name[MAXPATHLEN];
+
+	fprintf(out, "Building configuration...\n");
+	fflush(out);
+	do {
+		tmp = mk_tmp_stream(tmp_name, "w+");
+		if(tmp == NULL)
+			break;
+		status = build_config(tmp);
+		if(status)
+			break;
+		fprintf(out, "\nCurrent configuration : %ld bytes\n", ftell(tmp));
+		rewind(tmp);
+		copy_data(out, tmp);
+		fclose(tmp);
+		unlink(tmp_name);
+		fprintf(out, "!\nend\n\n");
+		fflush(out);
+		return;
+	} while(0);
+	if(tmp != NULL) {
+		fclose(tmp);
+		unlink(tmp_name);
+	}
 	fprintf(out, "Oops! Something went terribly wrong :(\n");
 	return;
 }
@@ -205,7 +229,7 @@ static sw_command_t sh_show[] = {
 	{"ip",					0,	NULL,			NULL,			RUNNABLE,	"IP information",									NULL},
 	{"mac",					0,	NULL,			NULL,			RUNNABLE,	"MAC configuration",								NULL},
 	{"mac-address-table",	0,	NULL,			NULL,			RUNNABLE,	"MAC forwarding table",								NULL},
-	{"running-config",		1,	NULL,			NULL,			RUNNABLE,	"Current operating configuration",					sh_show_run},
+	{"running-config",		1,	NULL,			cmd_show_run,	RUNNABLE,	"Current operating configuration",					sh_show_run},
 	{"sessions",			0,	NULL,			NULL,			RUNNABLE,	"Information about Telnet connections",				NULL},
 	{"startup-config",		0,	NULL,			NULL,			RUNNABLE,	"Contents of startup configuration",				NULL},
 	{"users",				0,	NULL,			NULL,			RUNNABLE,	"Display information about terminal lines",			NULL},

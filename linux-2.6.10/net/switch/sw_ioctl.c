@@ -87,6 +87,9 @@ static int sw_addif(struct net_device *dev) {
 	port->sw = &sw;
     port->vlan = 1; /* By default all ports are in vlan 1 */
 	port->desc[0] = '\0';
+	port->speed = SW_SPEED_AUTO;
+	port->duplex = SW_DUPLEX_AUTO;
+	/* FIXME configure physical characteristics of device (i.e. speed) */
 #ifdef NET_SWITCH_TRUNKDEFAULTVLANS
 	memset(port->forbidden_vlans, 0xff, 512);
 	__sw_allow_default_vlans(port->forbidden_vlans);
@@ -349,12 +352,14 @@ static int sw_set_port_vlan(struct net_switch_port *port, int vlan) {
 	}\
 }
 
-#define PORT_GET do {\
+#define PORT_GET if(1) {\
 	DEV_GET;\
 	port = rcu_dereference(dev->sw_port);\
-	if(!port)\
-		return -EINVAL;\
-} while(0)
+	if(!port) {\
+		err = -EINVAL;\
+		break;\
+	}\
+}
 
 /* Handle "deviceless" ioctls. These ioctls are not specific to a certain
    device; they control the switching engine as a whole.
@@ -365,7 +370,7 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 	struct net_switch_ioctl_arg arg;
 	unsigned char bitmap[SW_VLAN_BMP_NO];
 	char if_name[IFNAMSIZ];
-	int err = -EINVAL, status;
+	int err = -EINVAL;
 
 	if(!capable(CAP_NET_ADMIN))
 		return -EPERM;
@@ -508,23 +513,25 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 		arg.ext.cfg.flags = port->flags;
 		arg.ext.cfg.access_vlan = port->vlan;
 		if(arg.ext.cfg.forbidden_vlans != NULL) {
-			status = copy_to_user(arg.ext.cfg.forbidden_vlans,
-					port->forbidden_vlans, SW_VLAN_BMP_NO);
-			if(status != SW_VLAN_BMP_NO) {
+			if(copy_to_user(arg.ext.cfg.forbidden_vlans,
+						port->forbidden_vlans, SW_VLAN_BMP_NO)) {
 				err = -EFAULT;
 				break;
 			}
 		}
 		if(arg.ext.cfg.description != NULL) {
-			status = copy_to_user(arg.ext.cfg.description, port->desc,
-					strlen(port->desc) + 1);
-			if(status != strlen(port->desc) + 1) {
+			if(copy_to_user(arg.ext.cfg.description, port->desc,
+						strlen(port->desc) + 1)) {
 				err = -EFAULT;
 				break;
 			}
 		}
 		arg.ext.cfg.speed = port->speed;
 		arg.ext.cfg.duplex = port->duplex;
+		if(copy_to_user(uarg, &arg, sizeof(struct net_switch_ioctl_arg))) {
+			err = -EFAULT;
+			break;
+		}
 		err = 0;
 		break;
 	}

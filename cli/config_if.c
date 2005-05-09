@@ -82,8 +82,6 @@ static void cmd_nomode(FILE *out, char *arg) {
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
-#define is_digit(arg) ((arg) >= '0' && (arg) <= '9')
-
 static int valid_vlst(char *arg) {
 	return is_digit(*arg);
 }

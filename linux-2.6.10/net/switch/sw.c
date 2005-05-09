@@ -197,7 +197,8 @@ static int switch_init(void) {
 	init_switch(&sw);
 	swioctl_set(sw_deviceless_ioctl);
 	sw_handle_frame_hook = sw_handle_frame;
-	dbg("Switch module initialized\n");
+	dbg("Switch module initialized, switch_init at 0x%p, "
+			"sw_handle_frame at 0x%p\n", switch_init, sw_handle_frame);
 	return 0;
 }
 

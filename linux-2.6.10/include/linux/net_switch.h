@@ -111,6 +111,7 @@ struct net_switch_ioctl_arg {
 #define sw_allow_vlan(bitmap, vlan) ((bitmap)[(vlan) / 8] &= ~(1 << ((vlan) % 8)))
 #define sw_forbid_vlan(bitmap, vlan) ((bitmap)[(vlan) / 8] |= (1 << ((vlan) % 8)))
 #define sw_forbidden_vlan(bitmap, vlan) ((bitmap)[(vlan) / 8] & (1 << ((vlan) % 8)))
+#define sw_allowed_vlan(bitmap, vlan) (!sw_forbidden_vlan(bitmap, vlan))
 
 /* Maximum length of port description */
 #define SW_MAX_PORT_DESC	32
