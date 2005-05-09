@@ -3,7 +3,6 @@
 
 #include <stdio.h>
 #include <readline/readline.h>
-#include <readline/history.h>
 
 #include "filter.h"
 
@@ -31,6 +30,7 @@ typedef struct root {
     sw_command_t *cmd;
 } sw_command_root_t;
 
+extern void cmd_sh_int				__P((FILE *, char *));
 extern void cmd_help				__P((FILE *, char *));
 
 extern char eth_range[];

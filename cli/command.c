@@ -11,6 +11,7 @@
 #include "config.h"
 #include "build_config.h"
 #include "filter.h"
+#include "if.h"
 
 static void swcli_sig_term(int sig) {
 	char hostname[MAX_HOSTNAME];
@@ -69,6 +70,7 @@ static void cmd_history(FILE *out, char *arg) {
 }
 
 static void cmd_exit(FILE *out, char *arg) {
+	pclose(out);
 	exit(0);
 }
 
@@ -225,7 +227,7 @@ static sw_command_t sh_show[] = {
 	{"arp",					0,	NULL,			NULL,			RUNNABLE,	"ARP table",										NULL},
 	{"clock",				0,	NULL,			NULL,			RUNNABLE,	"Display the system clock",							NULL},
 	{"history",				0,	NULL,			cmd_history,	RUNNABLE,	"Display the session command history",				sh_pipe},
-	{"interfaces",			0,	NULL,			NULL,			RUNNABLE,	"Interface status and configuration",				NULL},
+	{"interfaces",			0,	NULL,			cmd_sh_int,		RUNNABLE,	"Interface status and configuration",				NULL},
 	{"ip",					0,	NULL,			NULL,			RUNNABLE,	"IP information",									NULL},
 	{"mac",					0,	NULL,			NULL,			RUNNABLE,	"MAC configuration",								NULL},
 	{"mac-address-table",	0,	NULL,			NULL,			RUNNABLE,	"MAC forwarding table",								NULL},

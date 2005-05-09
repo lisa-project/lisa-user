@@ -271,6 +271,10 @@ int lookup_token(char *match, char *rest, char lookahead) {
 			}
 			/* setup to advance */
 			set = search_set[i].subcmd;
+			if (!strcmp(match, name)) {
+				count = 1;
+				break;
+			}
 		}
 		else if (search_set[i].valid && search_set[i].valid(rest)) {
 			count = 1;
@@ -476,6 +480,7 @@ void swcli_exec_cmd(char *cmd) {
 	int ret = parse_command(strdup(cmd), lookup_token);
 
 //	dump_exec_state(&exec_state);
+//	printf("ret: %d\n", ret);
 	if (ret <= 0) {
 		swcli_extra_input(abs(ret));
 		return;
