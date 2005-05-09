@@ -502,13 +502,62 @@ void sh_iface_print(FILE *out, struct user_net_device *entry) {
 			entry->xstats.tx_carrier_errors, entry->xstats.tx_compressed);
 }
 
-void cmd_sh_int(FILE *out, char *arg) {
+static void do_cleanup_ifaces() {
 	struct user_net_device *entry, *tmp;
 
+	list_for_each_entry_safe(entry, tmp, &interfaces, lh) {
+		list_del(&entry->lh);
+		free(entry);
+	}
+}
+
+static void do_get_ifaces() {
+	do_cleanup_ifaces();
+	INIT_LIST_HEAD(&interfaces);
 	get_kern_comm();
 	get_switch_ifaces();
 	get_interfaces_proc();
 	end_kern_comm();
+}
+
+void cmd_int_eth(FILE *out, char *arg) {
+	struct user_net_device *entry, *tmp;
+	int eth_no = parse_eth(arg), n;
+	char buf[IFNAMSIZ];
+
+	n = sprintf(buf, "eth%d", eth_no);
+	assert(n < IFNAMSIZ);
+	do_get_ifaces();
+
+	list_for_each_entry_safe(entry, tmp, &interfaces, lh) {
+		if (!strcmp(entry->name, buf)) {
+			sh_iface_print(out, entry);
+			break;
+		}
+	}
+}
+
+void cmd_int_vlan(FILE *out, char *arg) {
+	struct user_net_device *entry, *tmp;
+	int vlan_no = parse_vlan(arg), n;
+	char buf[IFNAMSIZ];
+
+	n = sprintf(buf, "vlan%d", vlan_no);
+	assert(n < IFNAMSIZ);
+	do_get_ifaces();
+
+	list_for_each_entry_safe(entry, tmp, &interfaces, lh) {
+		if (!strcmp(entry->name, buf)) {
+			sh_iface_print(out, entry);
+			break;
+		}
+	}
+}
+
+void cmd_sh_int(FILE *out, char *arg) {
+	struct user_net_device *entry, *tmp;
+
+	do_get_ifaces();
 	list_for_each_entry_safe(entry, tmp, &interfaces, lh) {
 		sh_iface_print(out, entry);
 		fprintf(out, "\n");

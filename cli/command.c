@@ -73,7 +73,7 @@ static void cmd_exit(FILE *out, char *arg) {
 	exit(0);
 }
 
-static void cmd_int_eth(FILE *out, char *arg) {
+static void cmd_run_eth(FILE *out, char *arg) {
 	int status;
 	FILE *tmp = NULL;
 	char tmp_name[MAXPATHLEN];
@@ -135,7 +135,7 @@ static void cmd_show_run(FILE *out, char *arg) {
 	return;
 }
 
-static void cmd_int_vlan(FILE *out, char *arg) {
+static void cmd_run_vlan(FILE *out, char *arg) {
 }
 
 /* Validation Handlers Implementation */
@@ -201,18 +201,34 @@ sw_command_t sh_pipe[] = {
 };
 
 static sw_command_t sh_int_eth[] = {
-	{eth_range,				1,	valid_eth,		cmd_int_eth,	RUNNABLE,	"Ethernet interface number",						NULL},
+	{eth_range,				0,	valid_eth,		cmd_int_eth,	RUNNABLE,	"Ethernet interface number",						NULL},
 	{NULL,					0,	NULL,			NULL,			NA,			NULL,												NULL}
 };
 
 static sw_command_t sh_int_vlan[] = {
-	{vlan_range,			1,	valid_vlan,		cmd_int_vlan,	RUNNABLE,	"Vlan interface number",							NULL},
+	{vlan_range,			0,	valid_vlan,		cmd_int_vlan,	RUNNABLE,	"Vlan interface number",							NULL},
+	{NULL,					0,	NULL,			NULL,			NA,			NULL,												NULL}
+};
+
+static sw_command_t sh_run_eth[] = {
+	{eth_range,				1,	valid_eth,		cmd_run_eth,	RUNNABLE,	"Ethernet interface number",						NULL},
+	{NULL,					0,	NULL,			NULL,			NA,			NULL,												NULL}
+};
+
+static sw_command_t sh_run_vlan[] = {
+	{vlan_range,			1,	valid_vlan,		cmd_run_vlan,	RUNNABLE,	"Vlan interface number",							NULL},
+	{NULL,					0,	NULL,			NULL,			NA,			NULL,												NULL}
+};
+
+static sw_command_t sh_sh_int[] = {
+	{"ethernet",			0,	NULL,			NULL,			INCOMPLETE, "Ethernet IEEE 802.3",								sh_int_eth},
+	{"vlan",				0,	NULL,			NULL,			INCOMPLETE, "LMS Vlans",										sh_int_vlan},
 	{NULL,					0,	NULL,			NULL,			NA,			NULL,												NULL}
 };
 
 static sw_command_t sh_sh_run_int[] = {
-	{"ethernet",			1,	NULL,			NULL,			INCOMPLETE, "Ethernet IEEE 802.3",								sh_int_eth},
-	{"vlan",				1,	NULL,			NULL,			INCOMPLETE, "LMS Vlans",										sh_int_vlan},
+	{"ethernet",			1,	NULL,			NULL,			INCOMPLETE, "Ethernet IEEE 802.3",								sh_run_eth},
+	{"vlan",				1,	NULL,			NULL,			INCOMPLETE, "LMS Vlans",										sh_run_vlan},
 	{NULL,					0,	NULL,			NULL,			NA,			NULL,												NULL}
 };
 
@@ -226,7 +242,7 @@ static sw_command_t sh_show[] = {
 	{"arp",					0,	NULL,			NULL,			RUNNABLE,	"ARP table",										NULL},
 	{"clock",				0,	NULL,			NULL,			RUNNABLE,	"Display the system clock",							NULL},
 	{"history",				0,	NULL,			cmd_history,	RUNNABLE,	"Display the session command history",				sh_pipe},
-	{"interfaces",			0,	NULL,			cmd_sh_int,		RUNNABLE,	"Interface status and configuration",				NULL},
+	{"interfaces",			0,	NULL,			cmd_sh_int,		RUNNABLE,	"Interface status and configuration",				sh_sh_int},
 	{"ip",					0,	NULL,			NULL,			RUNNABLE,	"IP information",									NULL},
 	{"mac",					0,	NULL,			NULL,			RUNNABLE,	"MAC configuration",								NULL},
 	{"mac-address-table",	0,	NULL,			NULL,			RUNNABLE,	"MAC forwarding table",								NULL},

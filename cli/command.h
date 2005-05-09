@@ -3,6 +3,8 @@
 
 #include <stdio.h>
 #include <readline/readline.h>
+/* FIXME: cu readline 5.0 nu se compileaza cu include-ul de jos */
+#include <readline/history.h>
 
 #include "filter.h"
 

@@ -2,8 +2,9 @@
 #define _IF_H
 
 #include <sys/types.h>
-#include <sys/socket.h>
 #include <sys/ioctl.h>
+#include <sys/socket.h>
+
 #include <linux/netdevice.h>
 
 #include <ctype.h>
@@ -14,9 +15,12 @@
 #include <unistd.h>
 
 
+#include "command.h"
 #include "list.h"
 
 extern void cmd_sh_int(FILE *, char *);
+extern void cmd_int_eth(FILE *, char *);
+extern void cmd_int_vlan(FILE *, char *);
 
 /* network interface ioctl's for MII commands */
 #ifndef SIOCGMIIPHY
