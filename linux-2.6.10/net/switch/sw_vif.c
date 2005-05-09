@@ -91,7 +91,7 @@ int sw_vif_addif(struct net_switch *sw, int vlan) {
 	struct net_switch_vif_priv *priv;
 	int result;
 	
-	if(vlan < 1 || vlan > 4095)
+	if(sw_invalid_vlan(vlan))
 		return -EINVAL;
 	if(sw_vif_find(sw, vlan))
 		return -EEXIST;
@@ -154,7 +154,7 @@ int sw_vif_delif(struct net_switch *sw, int vlan) {
 	struct net_device *dev;
 
 	dbg("sw_vif_delif called (vlan=%d).\n", vlan);
-	if(vlan < 1 || vlan > 4095)
+	if(sw_invalid_vlan(vlan))
 		return -EINVAL;
 	if((dev = sw_vif_find(sw, vlan)) == NULL)
 		return -ENOENT;

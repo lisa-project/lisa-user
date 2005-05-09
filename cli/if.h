@@ -6,6 +6,8 @@
 #include <sys/socket.h>
 
 #include <linux/netdevice.h>
+#include <linux/net_switch.h>
+#include <linux/sockios.h>
 
 #include <ctype.h>
 #include <errno.h>
@@ -15,6 +17,7 @@
 #include <unistd.h>
 
 
+#include "climain.h"
 #include "command.h"
 #include "list.h"
 
@@ -121,7 +124,7 @@ struct mii_data {
 
 
 #define PROCNETDEV_PATH "/proc/net/dev"
-#define PROCNETSWITCH_PATH "/proc/net/switch/ifaces"
+#define PROCNETSWITCH_PATH "/proc/net/switch/vif"
 #define LMS_VIRT_PREFIX "vlan"
 
 #define print_sockaddr_ip(out, desc, _sockaddr) \

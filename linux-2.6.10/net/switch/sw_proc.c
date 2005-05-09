@@ -26,7 +26,7 @@
 #define INITIAL_OFFSET 22
 
 static struct proc_dir_entry *switch_dir, *iface_file,
-							 *mac_file, *vlan_file;
+							 *mac_file, *vlan_file, *vif_file;
 
 
 static int read_vlan_bitmap(char *page, struct net_switch_port *port, int initial_offset) {
@@ -174,6 +174,18 @@ static int proc_read_vlan(char *page, char **start,
 	return len;	
 }	
 
+static int proc_read_vif(char *page, char **start,
+		off_t off, int count,
+		int *eof, void *data) {
+	int len = 0, vlan;
+
+	for (vlan=SW_MIN_VLAN; vlan<=SW_MAX_VLAN; vlan++) {
+		if (sw_vif_find(&sw, vlan))
+			len += sprintf(page+len, "vlan%d\n", vlan);
+	}
+	return len;
+}	
+
 int init_switch_proc(void) {
 
 	/* Create our own directory under /proc/net */
@@ -198,8 +210,8 @@ int init_switch_proc(void) {
 	mac_file = create_proc_read_entry(SW_PROCFS_MAC, 0644,
 			switch_dir, proc_read_mac, NULL);
 	if (!mac_file) {
-		remove_proc_entry(SW_PROCFS_DIR, proc_net);
 		remove_proc_entry(SW_PROCFS_IFACES, switch_dir);
+		remove_proc_entry(SW_PROCFS_DIR, proc_net);
 		return -ENOMEM;
 	}
 	mac_file->owner = THIS_MODULE;
@@ -207,12 +219,21 @@ int init_switch_proc(void) {
 	vlan_file = create_proc_read_entry(SW_PROCFS_VLAN, 0644,
 			switch_dir, proc_read_vlan, NULL);
 	if (!vlan_file) {
-		remove_proc_entry(SW_PROCFS_DIR, proc_net);
 		remove_proc_entry(SW_PROCFS_IFACES, switch_dir);
 		remove_proc_entry(SW_PROCFS_MAC, switch_dir);
+		remove_proc_entry(SW_PROCFS_DIR, proc_net);
 		return -ENOMEM;
 	}
 	vlan_file->owner = THIS_MODULE;
+
+	vif_file = create_proc_read_entry(SW_PROCFS_VIF, 0644,
+			switch_dir, proc_read_vif, NULL);
+	if (!vif_file) {
+		remove_proc_entry(SW_PROCFS_IFACES, switch_dir);
+		remove_proc_entry(SW_PROCFS_MAC, switch_dir);
+		remove_proc_entry(SW_PROCFS_VLAN, switch_dir);
+		remove_proc_entry(SW_PROCFS_DIR, proc_net);
+	}
 
 	dbg("sw_proc initialized\n");
 	return 0;
@@ -222,5 +243,6 @@ void cleanup_switch_proc(void) {
 	remove_proc_entry(SW_PROCFS_IFACES, switch_dir);
 	remove_proc_entry(SW_PROCFS_MAC, switch_dir);
 	remove_proc_entry(SW_PROCFS_VLAN, switch_dir);
+	remove_proc_entry(SW_PROCFS_VIF, switch_dir);
 	remove_proc_entry(SW_PROCFS_DIR, proc_net);
 }

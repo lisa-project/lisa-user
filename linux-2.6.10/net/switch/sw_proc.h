@@ -25,5 +25,6 @@
 #define SW_PROCFS_IFACES "ifaces"
 #define SW_PROCFS_MAC "mac"
 #define SW_PROCFS_VLAN "vlan"
+#define SW_PROCFS_VIF "vif"
 
 #endif

@@ -46,26 +46,17 @@ int sockfd;
 
 static int fetch_interface(struct user_net_device *);
 
-static struct user_net_device *add_interface(char *ifname,
-		int check_name) {
+static struct user_net_device *add_interface(char *ifname) {
 	struct user_net_device *netdev;
 	struct user_net_device *entry, *tmp;
-	
+
 	list_for_each_entry_safe(entry, tmp, &interfaces, lh) {
-		if (!strncmp(entry->name, ifname, IFNAMSIZ))
+		if (!strncmp(entry->name, ifname, IFNAMSIZ)) {
+			fetch_interface(entry);
 			return entry;
+		}	
 	}	
 
-	/* 
-		if we're called from get_interfaces_proc() 
-	 we must check that we add only lms virtual 
-	 interfaces in our list (ethernet interfaces
-	 are already there, and we return pointers
-	 to them from the loop above
-	 */
-	if (check_name && strncmp(ifname, LMS_VIRT_PREFIX,
-				strlen(LMS_VIRT_PREFIX)))
-		return NULL;
 
 	netdev = (struct user_net_device *)malloc(sizeof(struct user_net_device));
 	if (!netdev) {
@@ -78,7 +69,7 @@ static struct user_net_device *add_interface(char *ifname,
 		free(netdev);
 		return NULL;
 	}
-	/* FIXME: testare alte flag-uri? */
+	/* FIXME: sortare prin insertie ?? */
 	list_add_tail(&netdev->lh, &interfaces);
 	return netdev;
 }
@@ -138,7 +129,8 @@ static int get_interfaces_ifconf(void) {
 	ifreq = ifconf.ifc_req;
 
 	for (i = 0; i < ifconf.ifc_len; i+= sizeof(struct ifreq)) {
-		add_interface(ifreq->ifr_name, 1);
+		/* FIXME: verificare sa fie virtuala / in switch */
+		add_interface(ifreq->ifr_name);
 		ifreq++;
 	}
 
@@ -187,11 +179,32 @@ static void get_dev_xstats(char *pos, struct user_net_device *iface) {
 	       &iface->xstats.tx_compressed);
 }
 
-static int get_interfaces_proc(void) {
+static int get_virtual_interfaces() {
 	FILE *fh;
 	char buf[512];
+
+	fh = fopen(PROCNETSWITCH_PATH, "r");
+	if (!fh) {
+		perror("fopen");
+		exit(-1);
+	}
+
+	while (fgets(buf, sizeof(buf), fh)) {
+		buf[strlen(buf)-1] = '\0';
+		add_interface(buf);
+	}
+
+	return 0;
+}
+
+static int get_interfaces_proc(void) {
+	FILE *fh;
+	int ret;
+	char buf[512];
 	char name[IFNAMSIZ], *s;
+	char desc[SW_MAX_PORT_DESC];
 	struct user_net_device *iface;
+	struct net_switch_ioctl_arg ioctl_arg;
 
 	fh = fopen(PROCNETDEV_PATH, "r");
 	if (!fh) {
@@ -203,31 +216,20 @@ static int get_interfaces_proc(void) {
 	fgets(buf, sizeof(buf), fh);
 	while (fgets(buf, sizeof(buf), fh)) {
 		s = get_dev_name(name, buf);
-		iface = add_interface(name, 1);
+		ioctl_arg.cmd = SWCFG_GETIFCFG;
+		ioctl_arg.if_name = name;
+		ioctl_arg.ext.cfg.forbidden_vlans = NULL;
+		ioctl_arg.ext.cfg.description = desc;
+		iface = NULL;
+		ret = ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
+		/* Daca e interfata virtuala sau e in switch */
+		if (!ret || !strncmp(name, LMS_VIRT_PREFIX, strlen(LMS_VIRT_PREFIX)))
+			iface = add_interface(name);
 		if (!iface)
 			continue;
 		get_dev_xstats(s, iface);
-
 	}
 	fclose(fh);
-	return 0;
-}
-
-static int get_switch_ifaces() {
-	FILE *fh;
-	char buf[512];
-	char name[IFNAMSIZ];
-	
-	fh = fopen(PROCNETSWITCH_PATH, "r");
-	if (!fh)
-		return -1;
-	/* read 2 header lines */
-	fgets(buf, sizeof(buf), fh); 
-	fgets(buf, sizeof(buf), fh);
-	while (fgets(buf, sizeof(buf), fh)) {
-		get_dev_name(name, buf);
-		add_interface(name, 0);
-	}
 	return 0;
 }
 
@@ -367,7 +369,7 @@ void sh_iface_print(FILE *out, struct user_net_device *entry) {
 	fprintf(out, "line protocol is ");
 	if (!strncmp(entry->name, LMS_VIRT_PREFIX, 
 				strlen(LMS_VIRT_PREFIX))) {
-		fprintf(out, "up\n");
+		fprintf(out, "%s\n", (entry->flags & IFF_UP)?"up":"down");
 		virtual = 1;
 		line_proto_down = 0;
 	}	
@@ -515,7 +517,7 @@ static void do_get_ifaces() {
 	do_cleanup_ifaces();
 	INIT_LIST_HEAD(&interfaces);
 	get_kern_comm();
-	get_switch_ifaces();
+    get_virtual_interfaces();
 	get_interfaces_proc();
 	end_kern_comm();
 }
@@ -566,7 +568,6 @@ void cmd_sh_int(FILE *out, char *arg) {
 /*
 int main(int argc, char *argv[]) {
 	get_kern_comm();
-	get_switch_ifaces();
 	get_interfaces_proc();
 	end_kern_comm();
 	cmd_sh_int(stdout, NULL);
