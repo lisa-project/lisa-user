@@ -227,6 +227,11 @@ static int get_interfaces_proc(void) {
 			iface = add_interface(name);
 		if (!iface)
 			continue;
+		memset(iface->desc, 0, SW_MAX_PORT_DESC);
+		if (!ret) {
+			if (desc && strlen(desc))
+				strncpy(iface->desc, desc, SW_MAX_PORT_DESC);
+		}	
 		get_dev_xstats(s, iface);
 	}
 	fclose(fh);
@@ -391,7 +396,8 @@ void sh_iface_print(FILE *out, struct user_net_device *entry) {
 			entry->mac[0], entry->mac[1], entry->mac[2],
 			entry->mac[3], entry->mac[4], entry->mac[5]
 		   );
-	/* FIXME FIXME FIXME: get description */
+	if (entry->desc && strlen(entry->desc))
+		fprintf(out, "  Description: %s\n", entry->desc);
 	fprintf(out, "  MTU %d bytes, ", entry->mtu);
 	if (virtual)
 		fprintf(out, "BW 10000 Kbit, DLY 1000 usec,\n");

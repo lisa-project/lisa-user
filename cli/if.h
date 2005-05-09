@@ -94,6 +94,7 @@ extern void cmd_int_vlan(FILE *, char *);
 /* userland net device information */
 struct user_net_device {
 	char name[IFNAMSIZ];					/* interface name */
+	char desc[SW_MAX_PORT_DESC];			/* interface description */
 	short type;								/* interface type */
 	short flags;							/* interface flags */
 	int metric;								/* routing metric */
