@@ -338,7 +338,7 @@ static int sw_set_port_vlan(struct net_switch_port *port, int vlan) {
 }
 
 #define DEV_GET if(1) {\
-	if(strncpy_from_user(if_name, arg.if_name, IFNAMSIZ) != IFNAMSIZ) {\
+	if(!strncpy_from_user(if_name, arg.if_name, IFNAMSIZ)) {\
 		err = -EFAULT;\
 		break;\
 	}\
@@ -370,8 +370,8 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 	if(!capable(CAP_NET_ADMIN))
 		return -EPERM;
 
-	if ((err = copy_from_user(&arg, uarg, sizeof(struct net_switch_ioctl_arg))))
-		return -EINVAL;
+	if (copy_from_user(&arg, uarg, sizeof(struct net_switch_ioctl_arg)))
+		return -EFAULT;
 
 	if(cmd != SIOCSWCFG)
 		return -EINVAL;
@@ -384,13 +384,11 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 		err = sw_addif(dev);
 		dev_put(dev);
 		break;
-		
 	case SWCFG_DELIF:
 		DEV_GET;
 		err = sw_delif(dev);
 		dev_put(dev);
 		break;
-	
 	case SWCFG_ADDVLAN:
 		/* FIXME copy arg.ext.vlan_desc from userspace */
 		err = sw_vdb_add_vlan(&sw, arg.vlan, arg.ext.vlan_desc);
@@ -463,8 +461,7 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 		break;
 	case SWCFG_SETTRUNKVLANS:
 		PORT_GET;
-		status = copy_from_user(bitmap, arg.ext.bmp, SW_VLAN_BMP_NO);
-		if(status != SW_VLAN_BMP_NO) {
+		if(copy_from_user(bitmap, arg.ext.bmp, SW_VLAN_BMP_NO)) {
 			err = -EFAULT;
 			break;
 		}
@@ -472,8 +469,7 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 		break;
 	case SWCFG_ADDTRUNKVLANS:
 		PORT_GET;
-		status = copy_from_user(bitmap, arg.ext.bmp, SW_VLAN_BMP_NO);
-		if(status != SW_VLAN_BMP_NO) {
+		if(copy_from_user(bitmap, arg.ext.bmp, SW_VLAN_BMP_NO)) {
 			err = -EFAULT;
 			break;
 		}
@@ -481,8 +477,7 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 		break;
 	case SWCFG_DELTRUNKVLANS:
 		PORT_GET;
-		status = copy_from_user(bitmap, arg.ext.bmp, SW_VLAN_BMP_NO);
-		if(status != SW_VLAN_BMP_NO) {
+		if(copy_from_user(bitmap, arg.ext.bmp, SW_VLAN_BMP_NO)) {
 			err = -EFAULT;
 			break;
 		}
@@ -490,7 +485,11 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 		break;
 	case SWCFG_SETIFDESC:
 		PORT_GET;
-		status = strncpy_from_user(port->desc, arg.ext.iface_desc, SW_MAX_PORT_DESC);
+		if(!strncpy_from_user(port->desc, arg.ext.iface_desc,
+					SW_MAX_PORT_DESC)) {
+			err = -EFAULT;
+			break;
+		}
 		port->desc[SW_MAX_PORT_DESC - 1] = '\0';
 		err = 0;
 		break;

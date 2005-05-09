@@ -66,7 +66,7 @@ static void cmd_trunk(FILE *out, char *arg) {
 
 	ioctl_arg.cmd = SWCFG_SETTRUNK;
 	ioctl_arg.if_name = sel_eth;
-	ioctl_arg.vlan = 1;
+	ioctl_arg.ext.trunk = 1;
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
