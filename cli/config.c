@@ -1,7 +1,6 @@
-#include <linux/sockios.h>
 #include <linux/net_switch.h>
-#include <linux/if.h>
-#define _SYS_TYPES_H 1
+#include <linux/sockios.h>
+#include <net/if.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
 

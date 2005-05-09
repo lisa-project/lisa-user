@@ -1,7 +1,6 @@
-#include <linux/net_switch.h>
-#include <linux/if.h>
-#define _SYS_TYPES_H 1
-#define _TIME_H
+#include <stdio.h>
+#include <readline/readline.h>
+#include <readline/history.h>
 #include <sys/param.h>
 #include <signal.h>
 #include <stdlib.h>

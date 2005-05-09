@@ -1,9 +1,6 @@
-#include <linux/if.h>
-/* Hack to get around conflicting linux/types.h and sys/types.h */
-#define _SYS_TYPES_H 1
-#include <linux/sockios.h>
 #include <linux/net_switch.h>
-
+#include <linux/sockios.h>
+#include <net/if.h>
 #include <sys/ioctl.h>
 
 #include "climain.h"

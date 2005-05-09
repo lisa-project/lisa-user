@@ -44,8 +44,6 @@
 #define SWCFG_SETSPEED		0x18
 #define SWCFG_SETDUPLEX		0x19
 
-#include <linux/time.h>
-
 #define SW_PFL_DISABLED     0x01
 #define SW_PFL_ACCESS		0x02
 #define SW_PFL_TRUNK		0x04
@@ -69,6 +67,12 @@ struct net_switch_ifcfg {
 	int speed;
 	int duplex;
 };
+
+#ifdef __KERNEL__
+#include <linux/time.h>
+#else
+#include <sys/time.h>
+#endif
 
 struct net_switch_ioctl_arg {
 	unsigned char cmd;
