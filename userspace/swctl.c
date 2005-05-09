@@ -18,7 +18,6 @@
 
 #include <linux/sockios.h>
 #include <linux/net_switch.h>
-#define _SYS_TYPES_H 1
 
 #include <stdio.h>
 #include <string.h>
