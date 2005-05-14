@@ -368,6 +368,7 @@ static int sw_get_mac(struct net_switch_mac_arg *marg, struct net_switch_port *p
 				break;
 			}
 			len += sizeof(struct net_switch_mac);
+			ret = len;
 			if (!is_null_mac(marg->addr))
 				break;
 		}

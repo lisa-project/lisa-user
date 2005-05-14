@@ -10,4 +10,5 @@ swctl: swctl.o
 	$(CC) $(LDFLAGS) -o swctl $? ../lib/misc.o
 
 clean:
+	cd ../lib && make clean
 	rm -f *.o *~ swctl

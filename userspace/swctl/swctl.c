@@ -28,7 +28,10 @@
 
 #include <assert.h>
 
+#define INITIAL_BUF_SIZE 4096
 #define ETH_ALEN 6
+
+extern void cmd_showmac(FILE *, char *);
 
 unsigned char *parse_hw_addr(char *mac) {
 	unsigned char *buf = calloc(sizeof(unsigned char), ETH_ALEN+1);
@@ -82,6 +85,7 @@ void usage() {
 		"  \t\t\t\t\tgiven vlan\n"
 		"  delvif vlan_no\t\t\tRemoves the virtual interface for\n"
 		"  \t\t\t\t\tgiven vlan\n"
+		"  showmac\tPrints switch forwarding database\n"
 		"\n"
 	);
 }
@@ -90,6 +94,7 @@ int main(int argc, char **argv) {
 	int sock;
 	int status;
 	struct net_switch_ioctl_arg user_arg;
+	char *buf;
 
 	if (argc < 2) {
 		usage();
@@ -292,6 +297,34 @@ int main(int argc, char **argv) {
 		status = ioctl(sock, SIOCSWCFG, &user_arg);
 		if (status)
 			perror("delvif failed");
+		return 0;
+	}
+
+	if (!strcmp(argv[1], "showmac")) {
+		buf = (char *)malloc(INITIAL_BUF_SIZE);
+		user_arg.cmd = SWCFG_GETMAC;
+
+		do {
+			user_arg.ext.marg.buf_size = sizeof(buf);
+			user_arg.ext.marg.buf = buf;
+			status = ioctl(sock, SIOCSWCFG, &user_arg);
+			if (status == -1) {
+				perror("ioctl");
+				break;
+			}
+			if (status == SW_INSUFFICIENT_SPACE) {
+				printf("Insufficient buffer space. Realloc'ing ... \n");
+				buf = realloc(buf, sizeof(buf)+INITIAL_BUF_SIZE);
+				assert(buf);
+			}	
+			else {
+				// FIXME: quick hack
+				user_arg.cmd = status;
+				cmd_showmac(stdout, (char *)&user_arg);
+				break;
+			}	
+		} while (status);
+		
 		return 0;
 	}
 
