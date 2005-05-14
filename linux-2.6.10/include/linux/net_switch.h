@@ -43,6 +43,7 @@
 #define SWCFG_SETIFDESC		0x17	/* set interface description */
 #define SWCFG_SETSPEED		0x18
 #define SWCFG_SETDUPLEX		0x19
+#define SWCFG_GETMAC		0x20
 
 #define SW_PFL_DISABLED     0x01
 #define SW_PFL_ACCESS		0x02
@@ -59,6 +60,17 @@
 #define SW_DUPLEX_HALF		0x02
 #define SW_DUPLEX_FULL		0x03
 
+#ifdef __KERNEL__
+#include <linux/time.h>
+#include <linux/if.h>
+#else
+#include <sys/time.h>
+#ifndef _LINUX_IF_H
+#include <net/if.h>
+#include <net/ethernet.h>
+#endif
+#endif
+
 struct net_switch_ifcfg {
 	int flags;
 	int access_vlan;
@@ -68,11 +80,19 @@ struct net_switch_ifcfg {
 	int duplex;
 };
 
-#ifdef __KERNEL__
-#include <linux/time.h>
-#else
-#include <sys/time.h>
-#endif
+struct net_switch_mac {
+	unsigned char addr[ETH_ALEN];
+	int addr_type;
+	int vlan;
+	char port[IFNAMSIZ];
+};
+
+struct net_switch_mac_arg {
+	unsigned char addr[ETH_ALEN];
+	int buf_size;
+	int addr_type;
+	char *buf;
+};
 
 struct net_switch_ioctl_arg {
 	unsigned char cmd;
@@ -89,8 +109,17 @@ struct net_switch_ioctl_arg {
 		int speed;
 		int duplex;
 		struct net_switch_ifcfg cfg;
+		struct net_switch_mac_arg marg;
 	} ext;
 };
+
+/* Insufficient space allocated in the mac buffer (ioctl_arg.ext.mac) */
+#define SW_INSUFFICIENT_SPACE 1
+
+/* Mac Address types (any, static, dynamic) */
+#define SW_FDB_DYN	0
+#define SW_FDB_STATIC 1
+#define SW_FDB_ANY 2
 
 /* Minimum number a vlan may have */
 #define SW_MIN_VLAN 1

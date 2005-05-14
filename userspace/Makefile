@@ -1,13 +1,7 @@
-CFLAGS = -I../linux-2.6.10/include -Wall
-LDFLAGS =
-
-.PHONY: all clean
-
-all: swctl
-
-swctl: swctl.o
-	cd ../lib && make
-	$(CC) -o swctl $< ../lib/misc.o
+all:
+	cd cli && make
+	cd swctl && make
 
 clean:
-	rm -f *.o *~ swctl
+	cd cli && make clean
+	cd swctl && make clean

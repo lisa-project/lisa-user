@@ -340,6 +340,43 @@ static int sw_set_port_vlan(struct net_switch_port *port, int vlan) {
 	return 0;
 }
 
+static int sw_get_mac(struct net_switch_mac_arg *marg, struct net_switch_port *port,
+		int vlan) {
+	struct net_switch_fdb_entry *entry;
+	struct net_switch_mac mac; 
+	int i, ret = 0, len = 0;
+
+	rcu_read_lock();
+	for (i=0; i<SW_HASH_SIZE; i++) {
+		list_for_each_entry_rcu(entry, &sw.fdb[i].entries, lh) {
+			if (vlan && vlan != entry->vlan) continue;
+			if (port && port != entry->port) continue;
+			if (marg->addr_type!=SW_FDB_ANY && marg->addr_type!=entry->is_static)
+				continue;
+			if (!is_null_mac(marg->addr) && memcmp(marg->addr, entry->mac, ETH_ALEN))
+				continue;
+			if (len >= marg->buf_size) {
+				ret = SW_INSUFFICIENT_SPACE;
+				break;
+			}
+			memcpy(mac.addr, entry->mac, ETH_ALEN);
+			mac.addr_type = entry->is_static;
+			mac.vlan = entry->vlan;
+			strncpy(mac.port, entry->port->dev->name, IFNAMSIZ);
+			if (copy_to_user(marg->buf+len, &mac, sizeof(struct net_switch_mac))) {
+				ret = -EFAULT;
+				break;
+			}
+			len += sizeof(struct net_switch_mac);
+			if (!is_null_mac(marg->addr))
+				break;
+		}
+	}
+	rcu_read_unlock();
+
+	return ret;
+}
+
 #define DEV_GET if(1) {\
 	if(!strncpy_from_user(if_name, arg.if_name, IFNAMSIZ)) {\
 		err = -EFAULT;\
@@ -350,6 +387,7 @@ static int sw_set_port_vlan(struct net_switch_port *port, int vlan) {
 		err = -ENODEV;\
 		break;\
 	}\
+	do_put = 1;\
 }
 
 #define PORT_GET if(1) {\
@@ -365,12 +403,13 @@ static int sw_set_port_vlan(struct net_switch_port *port, int vlan) {
    device; they control the switching engine as a whole.
  */
 int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
-	struct net_device *dev;
+	struct net_device *dev = NULL;
 	struct net_switch_port *port = NULL;
 	struct net_switch_ioctl_arg arg;
 	unsigned char bitmap[SW_VLAN_BMP_NO];
 	char if_name[IFNAMSIZ];
 	int err = -EINVAL;
+	int do_put = 0;
 
 	if(!capable(CAP_NET_ADMIN))
 		return -EPERM;
@@ -387,12 +426,10 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 	case SWCFG_ADDIF:
 		DEV_GET;
 		err = sw_addif(dev);
-		dev_put(dev);
 		break;
 	case SWCFG_DELIF:
 		DEV_GET;
 		err = sw_delif(dev);
-		dev_put(dev);
 		break;
 	case SWCFG_ADDVLAN:
 		/* FIXME copy arg.ext.vlan_desc from userspace */
@@ -436,8 +473,10 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 		err = 0;
 		break;
 	case SWCFG_SETAGETIME:
-		if (arg.ext.ts.tv_sec <= 0)
-			return -EINVAL;
+		if (arg.ext.ts.tv_sec <= 0) { 
+			err = -EINVAL;
+			break;
+		}	
 		atomic_set(&sw.fdb_age_time, timespec_to_jiffies(&arg.ext.ts));
 		err = 0;
 		break;
@@ -534,7 +573,19 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 		}
 		err = 0;
 		break;
+	case SWCFG_GETMAC:
+		if (arg.if_name)
+			PORT_GET;
+		if (arg.ext.marg.buf_size < sizeof(struct net_switch_mac)) {
+			err = -EINVAL;
+			break;
+		}	
+		err = sw_get_mac(&arg.ext.marg, port, arg.vlan);
+		break;
 	}
+
+	if (do_put)
+		dev_put(dev);
 
 	return err;
 }

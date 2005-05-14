@@ -1,4 +1,4 @@
-CFLAGS = -g -Wall -I../linux-2.6.10/include #-DDEBUG
+CFLAGS = -g -Wall -I../../linux-2.6.10/include #-DDEBUG
 LDFLAGS = -lreadline -lcurses -lutil
 
 # FIXME

@@ -32,8 +32,6 @@
 
 #define SW_DEFAULT_AGE_TIME HZ*15
 
-#define SW_FDB_DYN	0
-#define SW_FDB_STATIC 1
 
 /* Hash bucket */
 struct net_switch_bucket {
