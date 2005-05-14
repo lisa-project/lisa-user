@@ -92,7 +92,7 @@ void usage() {
 
 int main(int argc, char **argv) {
 	int sock;
-	int status;
+	int status, size;
 	struct net_switch_ioctl_arg user_arg;
 	char *buf;
 
@@ -302,20 +302,25 @@ int main(int argc, char **argv) {
 
 	if (!strcmp(argv[1], "showmac")) {
 		buf = (char *)malloc(INITIAL_BUF_SIZE);
+		size = INITIAL_BUF_SIZE;
+		assert(buf);
 		user_arg.cmd = SWCFG_GETMAC;
 
 		do {
-			user_arg.ext.marg.buf_size = sizeof(buf);
+			user_arg.if_name = NULL;
+			user_arg.ext.marg.buf_size = size;
 			user_arg.ext.marg.buf = buf;
 			status = ioctl(sock, SIOCSWCFG, &user_arg);
+			printf("status %d\n", status);
 			if (status == -1) {
 				perror("ioctl");
 				break;
 			}
 			if (status == SW_INSUFFICIENT_SPACE) {
 				printf("Insufficient buffer space. Realloc'ing ... \n");
-				buf = realloc(buf, sizeof(buf)+INITIAL_BUF_SIZE);
+				buf = realloc(buf, size+INITIAL_BUF_SIZE);
 				assert(buf);
+				size += INITIAL_BUF_SIZE;
 			}	
 			else {
 				// FIXME: quick hack
