@@ -200,19 +200,20 @@ static inline int __fdb_learn(struct net_switch_bucket *bucket,
 /* This is called from both softirq and user context, so we do locking with
    softirqs disabled
  */
-void fdb_learn(unsigned char *mac, struct net_switch_port *port,
+int fdb_learn(unsigned char *mac, struct net_switch_port *port,
 		int vlan, int is_static, int is_mcast) {
 	struct net_switch_bucket *bucket = &port->sw->fdb[sw_mac_hash(mac)];
 	struct net_switch_fdb_entry *entry;
 
 	if(__fdb_learn(bucket, mac, is_mcast ? port : NULL, vlan, &entry)) {
 		/* we found a matching entry */
-		if (entry->is_static) return; /* don't modify a static fdb entry */
+		if (entry->is_static)
+			return -EBUSY; /* don't modify a static fdb entry */
 		entry->port = port; /* FIXME this should be atomic ??? */
 		entry->stamp = jiffies;
 		if (is_static && !entry->is_static) 
 			__fdb_change_to_static(entry);
-		return;
+		return 0;
 	}
 
 	/* No matching entry. This time lock bucket, but search for the entry
@@ -221,13 +222,14 @@ void fdb_learn(unsigned char *mac, struct net_switch_port *port,
 	spin_lock_bh(&bucket->lock);
 	if(__fdb_learn(bucket, mac, is_mcast ? port : NULL, vlan, &entry)) {
 		/* we found a matching entry */
-		if (entry->is_static) return;
+		if (entry->is_static)
+			return -EBUSY;
 		entry->port = port;
 		entry->stamp = jiffies;
 		if (is_static && !entry->is_static)
 			__fdb_change_to_static(entry);
 		spin_unlock_bh(&bucket->lock);
-		return;
+		return 0;
 	}
 
 	/*
@@ -238,7 +240,7 @@ void fdb_learn(unsigned char *mac, struct net_switch_port *port,
 	if (!entry) {
 		spin_unlock_bh(&bucket->lock);
 		dbg("cache out of memory");
-		return;
+		return -ENOMEM;
 	}
 
 	memcpy(entry->mac, mac, ETH_ALEN);
@@ -253,6 +255,7 @@ void fdb_learn(unsigned char *mac, struct net_switch_port *port,
 	/* FIXME smp_wmb() here ?? */
 	list_add_tail_rcu(&entry->lh, &bucket->entries);
 	spin_unlock_bh(&bucket->lock);
+	return 0;
 }
 
 #ifdef DEBUG

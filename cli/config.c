@@ -47,6 +47,17 @@ static void cmd_int_eth(FILE *out, char *arg) {
 	strcpy(sel_eth, if_name);
 }
 
+static void cmd_no_int_eth(FILE *out, char *arg) {
+	struct net_switch_ioctl_arg ioctl_arg;
+	char if_name[IFNAMSIZ];
+	
+	sprintf(if_name, "eth%d", parse_eth(arg));
+
+	ioctl_arg.cmd = SWCFG_DELIF;
+	ioctl_arg.if_name = if_name;
+	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
+}
+
 static void cmd_int_vlan(FILE *out, char *arg) {
 	struct net_switch_ioctl_arg ioctl_arg;
 	int vlan = parse_vlan(arg);
@@ -59,8 +70,12 @@ static void cmd_int_vlan(FILE *out, char *arg) {
 	cmd_root = &command_root_config_if_vlan;
 }
 
+static void cmd_no_int_vlan(FILE *out, char *arg) {
+	fprintf(out, "FIXME\n");
+}
+
 static sw_command_t sh_no_int_eth[] = {
-	{eth_range,				1,	valid_eth,	cmd_int_eth,		RUNNABLE,	"Ethernet interface number",					NULL},
+	{eth_range,				1,	valid_eth,	cmd_no_int_eth,		RUNNABLE,	"Ethernet interface number",					NULL},
 	{NULL,					0,	NULL,		NULL,				NA,			NULL,											NULL}
 };
 
@@ -70,7 +85,7 @@ static sw_command_t sh_int_eth[] = {
 };
 
 static sw_command_t sh_no_int_vlan[] = {
-	{vlan_range,			1,	valid_vlan,	cmd_int_vlan,		RUNNABLE,	"Vlan interface number",						NULL},
+	{vlan_range,			1,	valid_vlan,	cmd_no_int_vlan,	RUNNABLE,	"Vlan interface number",						NULL},
 	{NULL,					0,	NULL,		NULL,				NA,			NULL,											NULL}
 };
 
