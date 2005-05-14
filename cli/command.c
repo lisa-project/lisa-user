@@ -138,6 +138,21 @@ static void cmd_show_run(FILE *out, char *arg) {
 static void cmd_run_vlan(FILE *out, char *arg) {
 }
 
+static void cmd_sh_addr(FILE *out, char *arg) {
+}
+
+static void cmd_mac_eth(FILE *out, char *arg) {
+}
+
+static void cmd_mac_vlan(FILE *out, char *arg) {
+}
+
+static void cmd_sh_dynamic(FILE *out, char *arg) {
+}
+
+static void cmd_sh_static(FILE *out, char *arg) {
+}
+
 /* Validation Handlers Implementation */
 int valid_regex(char *arg) {
 	return 1;
@@ -162,6 +177,12 @@ int valid_vlan(char *arg) {
 	return 1;
 }
 
+int valid_mac(char *arg) {
+	unsigned short a0, a1, a2;
+
+	return (sscanf(arg, "%hx.%hx.%hx", &a0, &a1, &a2) == ETH_ALEN/2);
+}
+
 char vlan_range[] = "<1-1094>\0";
 
 int parse_eth(char *arg) {
@@ -180,6 +201,28 @@ int parse_vlan(char *arg) {
 	assert(status == 1);
 	assert(no >= 1 && no <= 4094);
 	return no;
+}
+
+int parse_mac(char *arg, char **mac) {
+	unsigned char *buf = calloc(sizeof(unsigned char), ETH_ALEN+1);
+	unsigned short a0, a1, a2;
+
+	assert(buf); /* enough memory */
+	if (sscanf(arg, "%hx.%hx.%hx", &a0, &a1, &a2) != ETH_ALEN/2) {
+		free(buf);
+		*mac = NULL;
+	}
+
+	buf[0] = a0 / 0x100;
+	buf[1] = a0 % 0x100;
+	buf[2] = a1 / 0x100;
+	buf[3] = a1 % 0x100;
+	buf[4] = a2 / 0x100;
+	buf[5] = a2 % 0x100;
+
+	*mac = buf;
+
+	return 0;
 }
 
 static sw_command_t sh_pipe_regex[] = {
@@ -220,6 +263,16 @@ static sw_command_t sh_run_vlan[] = {
 	{NULL,					0,	NULL,			NULL,			NA,			NULL,												NULL}
 };
 
+static sw_command_t sh_mac_eth[] = {
+	{eth_range,				0,	valid_eth,		cmd_mac_eth,	RUNNABLE,	"Ethernet interface number",						NULL},
+	{NULL,					0,	NULL,			NULL,			NA,			NULL,												NULL}
+};
+
+static sw_command_t sh_mac_vlan[] = {
+	{vlan_range,			0,	valid_vlan,		cmd_mac_vlan,	RUNNABLE,	"Vlan interface number",							NULL},
+	{NULL,					0,	NULL,			NULL,			NA,			NULL,												NULL}
+};
+
 static sw_command_t sh_sh_int[] = {
 	{"ethernet",			0,	NULL,			NULL,			INCOMPLETE, "Ethernet IEEE 802.3",								sh_int_eth},
 	{"vlan",				0,	NULL,			NULL,			INCOMPLETE, "LMS Vlans",										sh_int_vlan},
@@ -229,6 +282,27 @@ static sw_command_t sh_sh_int[] = {
 static sw_command_t sh_sh_run_int[] = {
 	{"ethernet",			1,	NULL,			NULL,			INCOMPLETE, "Ethernet IEEE 802.3",								sh_run_eth},
 	{"vlan",				1,	NULL,			NULL,			INCOMPLETE, "LMS Vlans",										sh_run_vlan},
+	{NULL,					0,	NULL,			NULL,			NA,			NULL,												NULL}
+};
+
+static sw_command_t sh_sh_mac_int[] = {
+	{"ethernet",			0,	NULL,			NULL,			INCOMPLETE, "Ethernet IEEE 802.3",								sh_mac_eth},
+	{NULL,					0,	NULL,			NULL,			NA,			NULL,												NULL}
+};
+
+static sw_command_t sh_sh_mac_addr[] = {
+	{"H.H.H",				0,	valid_mac,		cmd_sh_addr,	RUNNABLE, 	"48 bit mac address",								NULL},
+	{NULL,					0,	NULL,			NULL,			NA,			NULL,												NULL}
+};
+
+static sw_command_t sh_mac_addr_table[] = {
+	{"address",				0,	NULL,			NULL,			INCOMPLETE,	"address keyword",									sh_sh_mac_addr},
+	{"aging-time",			0,	NULL,			NULL,			RUNNABLE,	"aging-time keyword",								NULL},
+	{"dynamic",				0,	NULL,			cmd_sh_dynamic,	RUNNABLE,	"dynamic entry type",								NULL},
+	{"interface",			0,	NULL,			NULL,			INCOMPLETE,	"interface keyword",								sh_sh_mac_int},
+	{"static",				0,	NULL,			cmd_sh_static,	RUNNABLE,	"static entry type",								NULL},
+	{"vlan",				0,	NULL,			NULL,			INCOMPLETE, "VLAN keyword",										sh_mac_vlan},
+	{"|",					0,	NULL,			NULL,			INCOMPLETE,	"Output modifiers",									sh_pipe_mod},
 	{NULL,					0,	NULL,			NULL,			NA,			NULL,												NULL}
 };
 
@@ -245,7 +319,7 @@ static sw_command_t sh_show[] = {
 	{"interfaces",			0,	NULL,			cmd_sh_int,		RUNNABLE,	"Interface status and configuration",				sh_sh_int},
 	{"ip",					0,	NULL,			NULL,			RUNNABLE,	"IP information",									NULL},
 	{"mac",					0,	NULL,			NULL,			RUNNABLE,	"MAC configuration",								NULL},
-	{"mac-address-table",	0,	NULL,			NULL,			RUNNABLE,	"MAC forwarding table",								NULL},
+	{"mac-address-table",	0,	NULL,			NULL,			RUNNABLE,	"MAC forwarding table",								sh_mac_addr_table},
 	{"running-config",		1,	NULL,			cmd_show_run,	RUNNABLE,	"Current operating configuration",					sh_show_run},
 	{"sessions",			0,	NULL,			NULL,			RUNNABLE,	"Information about Telnet connections",				NULL},
 	{"startup-config",		0,	NULL,			NULL,			RUNNABLE,	"Contents of startup configuration",				NULL},
