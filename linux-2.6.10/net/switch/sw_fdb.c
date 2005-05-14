@@ -205,6 +205,9 @@ int fdb_learn(unsigned char *mac, struct net_switch_port *port,
 	struct net_switch_bucket *bucket = &port->sw->fdb[sw_mac_hash(mac)];
 	struct net_switch_fdb_entry *entry;
 
+	if(is_l2_mac(mac))
+		return -EINVAL;
+
 	if(__fdb_learn(bucket, mac, is_mcast ? port : NULL, vlan, &entry)) {
 		/* we found a matching entry */
 		if (entry->is_static)
