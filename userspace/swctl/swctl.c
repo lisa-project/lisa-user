@@ -305,9 +305,11 @@ int main(int argc, char **argv) {
 		size = INITIAL_BUF_SIZE;
 		assert(buf);
 		user_arg.cmd = SWCFG_GETMAC;
+		user_arg.if_name = NULL;
+		user_arg.vlan = 0;
+		user_arg.ext.marg.addr_type = SW_FDB_ANY;
 
 		do {
-			user_arg.if_name = NULL;
 			user_arg.ext.marg.buf_size = size;
 			user_arg.ext.marg.buf = buf;
 			status = ioctl(sock, SIOCSWCFG, &user_arg);

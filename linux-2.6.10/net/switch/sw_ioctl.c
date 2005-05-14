@@ -345,18 +345,21 @@ static int sw_get_mac(struct net_switch_mac_arg *marg, struct net_switch_port *p
 	struct net_switch_fdb_entry *entry;
 	struct net_switch_mac mac; 
 	int i, ret, len, do_brk;
+	int cmp_mac = !is_null_mac(marg->addr);
 
 	ret = len = do_brk = 0;
 	rcu_read_lock();
 	for (i=0; i<SW_HASH_SIZE; i++) {
 		list_for_each_entry_rcu(entry, &sw.fdb[i].entries, lh) {
-			if (!is_null_mac(marg->addr) && memcmp(marg->addr, entry->mac, ETH_ALEN))
+			if (cmp_mac && memcmp(marg->addr, entry->mac, ETH_ALEN))
 				continue;
-			if (vlan && vlan != entry->vlan) continue;
-			if (port && port != entry->port) continue;
-			if (marg->addr_type!=SW_FDB_ANY && marg->addr_type!=entry->is_static)
+			if (vlan && vlan != entry->vlan)
 				continue;
-			if (len >= marg->buf_size) {
+			if (port && port != entry->port)
+				continue;
+			if (marg->addr_type != SW_FDB_ANY && marg->addr_type != entry->is_static)
+				continue;
+			if (len + sizeof(struct net_switch_mac) > marg->buf_size) {
 				ret = SW_INSUFFICIENT_SPACE;
 				do_brk = 1;
 				break;
@@ -374,7 +377,8 @@ static int sw_get_mac(struct net_switch_mac_arg *marg, struct net_switch_port *p
 			len += sizeof(struct net_switch_mac);
 			ret = len;
 		}
-		if (do_brk) break;
+		if (do_brk)
+			break;
 	}
 	rcu_read_unlock();
 
