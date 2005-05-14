@@ -188,7 +188,7 @@ static inline int __fdb_learn(struct net_switch_bucket *bucket,
 	struct net_switch_fdb_entry *entry;
 
 	list_for_each_entry_rcu(entry, &bucket->entries, lh) {
-		if(entry->vlan == vlan &&
+		if(entry->vlan == vlan && (port == NULL || entry->port == port) &&
 				!memcmp(entry->mac, mac, ETH_ALEN)) {
 			*pentry = entry;
 			return 1;
@@ -197,15 +197,15 @@ static inline int __fdb_learn(struct net_switch_bucket *bucket,
 	return 0;
 }
 
-/* This is always called from softirq context, so we do locking without
-   disabling softirqs
+/* This is called from both softirq and user context, so we do locking with
+   softirqs disabled
  */
 void fdb_learn(unsigned char *mac, struct net_switch_port *port,
-		int vlan, int is_static) {
+		int vlan, int is_static, int is_mcast) {
 	struct net_switch_bucket *bucket = &port->sw->fdb[sw_mac_hash(mac)];
 	struct net_switch_fdb_entry *entry;
 
-	if(__fdb_learn(bucket, mac, port, vlan, &entry)) {
+	if(__fdb_learn(bucket, mac, is_mcast ? port : NULL, vlan, &entry)) {
 		/* we found a matching entry */
 		if (entry->is_static) return; /* don't modify a static fdb entry */
 		entry->port = port; /* FIXME this should be atomic ??? */
@@ -218,15 +218,15 @@ void fdb_learn(unsigned char *mac, struct net_switch_port *port,
 	/* No matching entry. This time lock bucket, but search for the entry
 	   again, because someone might have added it in the meantime.
 	 */
-	spin_lock(&bucket->lock);
-	if(__fdb_learn(bucket, mac, port, vlan, &entry)) {
+	spin_lock_bh(&bucket->lock);
+	if(__fdb_learn(bucket, mac, is_mcast ? port : NULL, vlan, &entry)) {
 		/* we found a matching entry */
 		if (entry->is_static) return;
 		entry->port = port;
 		entry->stamp = jiffies;
 		if (is_static && !entry->is_static)
 			__fdb_change_to_static(entry);
-		spin_unlock(&bucket->lock);
+		spin_unlock_bh(&bucket->lock);
 		return;
 	}
 
@@ -236,10 +236,10 @@ void fdb_learn(unsigned char *mac, struct net_switch_port *port,
 	*/
 	entry = kmem_cache_alloc(port->sw->fdb_cache, GFP_ATOMIC);
 	if (!entry) {
-		spin_unlock(&bucket->lock);
+		spin_unlock_bh(&bucket->lock);
 		dbg("cache out of memory");
 		return;
-	}	
+	}
 
 	memcpy(entry->mac, mac, ETH_ALEN);
 	entry->vlan = vlan;
@@ -252,7 +252,7 @@ void fdb_learn(unsigned char *mac, struct net_switch_port *port,
 				(unsigned long)entry, entry->stamp + sw_age_time(entry));
 	/* FIXME smp_wmb() here ?? */
 	list_add_tail_rcu(&entry->lh, &bucket->entries);
-	spin_unlock(&bucket->lock);
+	spin_unlock_bh(&bucket->lock);
 }
 
 #ifdef DEBUG

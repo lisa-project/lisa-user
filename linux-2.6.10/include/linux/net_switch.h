@@ -120,4 +120,11 @@ struct net_switch_ioctl_arg {
 /* Maximum length of port description */
 #define SW_MAX_PORT_DESC	32
 
+#define is_mcast_mac(ptr) \
+	((ptr)[0] == 0x01 && (ptr)[1] == 0x00 && (ptr)[2] == 0x5e)
+#define is_null_mac(ptr) \
+	(((ptr)[0] | (ptr)[1] | (ptr)[2] | (ptr)[3] | (ptr)[4] | (ptr)[5]) == 0)
+#define is_bcast_mac(ptr) \
+	(((ptr)[0] & (ptr)[1] & (ptr)[2] & (ptr)[3] & (ptr)[4] & (ptr)[5]) == 0xff)
+
 #endif

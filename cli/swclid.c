@@ -40,7 +40,7 @@ void telnet_listen() {
 	assert(status != -1);
 
 	bind_addr.sin_family = AF_INET;
-	bind_addr.sin_port = htons(8023);
+	bind_addr.sin_port = htons(23);
 	bind_addr.sin_addr.s_addr = INADDR_ANY;
 	status = bind(telnet_sockfd, (struct sockaddr *)&bind_addr,
 			sizeof(struct sockaddr));

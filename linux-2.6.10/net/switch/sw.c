@@ -126,8 +126,19 @@ __dbg_static int sw_handle_frame(struct net_switch_port *port, struct sk_buff **
 		goto free_skb;
 	}
 
+	/* Perform some sanity checks on source mac */
+	if(is_null_mac(skb->mac.raw)) {
+		dbg("Received null-smac packet on %s\n", port->dev->name);
+		goto free_skb;
+	}
+
+	if(is_bcast_mac(skb->mac.raw)) {
+		dbg("Received bcast-smac packet on %s\n", port->dev->name);
+		goto free_skb;
+	}
+
 	/* Update the fdb */
-	fdb_learn(skb->mac.raw + 6, port, skb_e.vlan, SW_FDB_DYN);
+	fdb_learn(skb->mac.raw + 6, port, skb_e.vlan, SW_FDB_DYN, 0);
 
 	sw_forward(port, skb, &skb_e);
 	return NET_RX_SUCCESS;
