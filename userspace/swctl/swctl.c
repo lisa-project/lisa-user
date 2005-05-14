@@ -85,7 +85,7 @@ void usage() {
 		"  \t\t\t\t\tgiven vlan\n"
 		"  delvif vlan_no\t\t\tRemoves the virtual interface for\n"
 		"  \t\t\t\t\tgiven vlan\n"
-		"  showmac\tPrints switch forwarding database\n"
+		"  showmac\t\t\t\tPrints switch forwarding database\n"
 		"\n"
 	);
 }
