@@ -6,6 +6,8 @@ LDFLAGS =
 all: swctl
 
 swctl: swctl.o
+	cd ../lib && make
+	$(CC) -o swctl $< ../lib/misc.o
 
 clean:
 	rm -f *.o *~ swctl

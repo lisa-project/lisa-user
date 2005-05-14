@@ -112,13 +112,24 @@ static sw_command_t sh_no[] = {
 	{NULL,					0,	NULL,		NULL,				NA,			NULL,											NULL}
 };
 
+static sw_command_t sh_macstatic[] = {
+	{"H.H.H",				1,	NULL,		NULL,				INCOMPLETE,	"48 bit mac address",							NULL},
+	{NULL,					0,	NULL,		NULL,				NA,			NULL,											NULL}
+};
+
+static sw_command_t sh_mac[] = {
+	{"aging-time",			1,	NULL,		NULL,				INCOMPLETE,	"Set MAC address table entry maximum age",		NULL},
+	{"static",				1,	NULL,		NULL,				INCOMPLETE,	"static keyword",								sh_macstatic},
+	{NULL,					0,	NULL,		NULL,				NA,			NULL,											NULL}
+};
+
 static sw_command_t sh[] = {
 	{"enable",				1,	NULL,		NULL,				INCOMPLETE, "Modify enable password parameters",			NULL},
 	{"end",					1,	NULL,		cmd_end,			RUNNABLE,	"Exit from configure mode",						NULL},
 	{"exit",				1,	NULL,		cmd_end,			RUNNABLE,	"Exit from configure mode",						NULL},
 	{"hostname",			1,	NULL,		cmd_hostname,		INCOMPLETE,	"Set system's network name",					NULL},
 	{"interface",			1,	NULL,		NULL,				INCOMPLETE,	"Select an interface to configure",				sh_conf_int},
-	{"mac-address-table",	1,	NULL,		NULL,				INCOMPLETE,	"Configure the MAC address table",				NULL},
+	{"mac-address-table",	1,	NULL,		NULL,				INCOMPLETE,	"Configure the MAC address table",				sh_mac},
 	{"no",					1,	NULL,		NULL,				INCOMPLETE, "Negate a command or set its defaults",			sh_no},
 	{NULL,					0,	NULL,		NULL,				NA,			NULL,											NULL}
 };
