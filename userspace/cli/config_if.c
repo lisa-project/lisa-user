@@ -303,134 +303,134 @@ char VLAN_IDs_of_the_allowed_VLANs[] =
 "VLAN IDs of the allowed VLANs when this port is in trunking mode\0";
 
 static sw_command_t sh_acc_vlan[] = {
-	{vlan_range,			0,	valid_vlan,	cmd_acc_vlan,	RUNNABLE,	"VLAN ID of the VLAN when this port is in access mode",	NULL},
-	{NULL,					0,	NULL,		NULL,			NA,			NULL,												NULL}
+	{vlan_range,			0,	valid_vlan,	cmd_acc_vlan,	RUN,		"VLAN ID of the VLAN when this port is in access mode",	NULL},
+	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
 };
 
 static sw_command_t sh_access[] = {
-	{"vlan",				0,	NULL,		NULL,			INCOMPLETE,	"Set VLAN when interface is in access mode",		sh_acc_vlan},
-	{NULL,					0,	NULL,		NULL,			NA,			NULL,												NULL}
+	{"vlan",				0,	NULL,		NULL,			0,			"Set VLAN when interface is in access mode",		sh_acc_vlan},
+	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
 };
 
 static sw_command_t sh_noaccess[] = {
-	{"vlan",				0,	NULL,		cmd_noacc_vlan,	RUNNABLE,	"Set VLAN when interface is in access mode",		NULL},
-	{NULL,					0,	NULL,		NULL,			NA,			NULL,												NULL}
+	{"vlan",				0,	NULL,		cmd_noacc_vlan,	RUN,		"Set VLAN when interface is in access mode",		NULL},
+	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
 };
 
 static sw_command_t sh_mode[] = {
-	{"access",				1,	NULL,		cmd_access,		RUNNABLE,	"Set trunking mode to ACCESS unconditionally",		NULL},
-	{"trunk",				1,	NULL,		cmd_trunk,		RUNNABLE,	"Set trunking mode to TRUNK unconditionally",		NULL},
-	{NULL,					0,	NULL,		NULL,			NA,			NULL,												NULL}
+	{"access",				1,	NULL,		cmd_access,		RUN,		"Set trunking mode to ACCESS unconditionally",		NULL},
+	{"trunk",				1,	NULL,		cmd_trunk,		RUN,		"Set trunking mode to TRUNK unconditionally",		NULL},
+	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
 };
 
 static sw_command_t sh_addvlan[] = {
-	{"WORD",				1,	valid_vlst,	cmd_addvlans,	RUNNABLE,	VLAN_IDs_of_the_allowed_VLANs,						NULL},
-	{NULL,					0,	NULL,		NULL,			NA,			NULL,												NULL}
+	{"WORD",				1,	valid_vlst,	cmd_addvlans,	RUN,		VLAN_IDs_of_the_allowed_VLANs,						NULL},
+	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
 };
 
 static sw_command_t sh_excvlan[] = {
-	{"WORD",				1,	valid_vlst,	cmd_excvlans,	RUNNABLE,	VLAN_IDs_of_the_allowed_VLANs,						NULL},
-	{NULL,					0,	NULL,		NULL,			NA,			NULL,												NULL}
+	{"WORD",				1,	valid_vlst,	cmd_excvlans,	RUN,		VLAN_IDs_of_the_allowed_VLANs,						NULL},
+	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
 };
 
 static sw_command_t sh_remvlan[] = {
-	{"WORD",				1,	valid_vlst,	cmd_remvlans,	RUNNABLE,	VLAN_IDs_of_the_allowed_VLANs,						NULL},
-	{NULL,					0,	NULL,		NULL,			NA,			NULL,												NULL}
+	{"WORD",				1,	valid_vlst,	cmd_remvlans,	RUN,		VLAN_IDs_of_the_allowed_VLANs,						NULL},
+	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
 };
 
 static sw_command_t sh_all_vlan[] = {
-	{"WORD",				1,	valid_vlst,	cmd_setvlans,	RUNNABLE,	VLAN_IDs_of_the_allowed_VLANs,						NULL},
-	{"add",					1,	NULL,		NULL,			INCOMPLETE,	"add VLANs to the current list",					sh_addvlan},
-	{"all",					1,	NULL,		cmd_allvlans,	RUNNABLE,	"all VLANs",										NULL},
-	{"except",				1,	NULL,		NULL,			INCOMPLETE,	"all VLANs except the following",					sh_excvlan},
-	{"none",				1,	NULL,		cmd_novlans,	RUNNABLE,	"no VLANs",											NULL},
-	{"remove",				1,	NULL,		NULL,			INCOMPLETE,	"remove VLANs from the current list",				sh_remvlan},
-	{NULL,					0,	NULL,		NULL,			NA,			NULL,												NULL}
+	{"WORD",				1,	valid_vlst,	cmd_setvlans,	RUN,		VLAN_IDs_of_the_allowed_VLANs,						NULL},
+	{"add",					1,	NULL,		NULL,			0,			"add VLANs to the current list",					sh_addvlan},
+	{"all",					1,	NULL,		cmd_allvlans,	RUN,		"all VLANs",										NULL},
+	{"except",				1,	NULL,		NULL,			0,			"all VLANs except the following",					sh_excvlan},
+	{"none",				1,	NULL,		cmd_novlans,	RUN,		"no VLANs",											NULL},
+	{"remove",				1,	NULL,		NULL,			0,			"remove VLANs from the current list",				sh_remvlan},
+	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
 };
 
 static char Set_allowed_VLANs[] =
 "Set allowed VLANs when interface is in trunking mode\0";
 
 static sw_command_t sh_allowed[] = {
-	{"vlan",				1,	NULL,		NULL,			INCOMPLETE,	Set_allowed_VLANs,									sh_all_vlan},
-	{NULL,					0,	NULL,		NULL,			NA,			NULL,												NULL}
+	{"vlan",				1,	NULL,		NULL,			0,			Set_allowed_VLANs,									sh_all_vlan},
+	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
 };
 
 static sw_command_t sh_noallowed[] = {
-	{"vlan",				1,	NULL,		cmd_allvlans,	RUNNABLE,	Set_allowed_VLANs,									NULL},
-	{NULL,					0,	NULL,		NULL,			NA,			NULL,												NULL}
+	{"vlan",				1,	NULL,		cmd_allvlans,	RUN,		Set_allowed_VLANs,									NULL},
+	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
 };
 
 static char Set_allowed_VLAN_characteristics[] =
 "Set allowed VLAN characteristics when interface is in trunking mode\0";
 
 static sw_command_t sh_trunk[] = {
-	{"allowed",				1,	NULL,		NULL,			INCOMPLETE,	Set_allowed_VLAN_characteristics,					sh_allowed},
-	{NULL,					0,	NULL,		NULL,			NA,			NULL,												NULL}
+	{"allowed",				1,	NULL,		NULL,			0,			Set_allowed_VLAN_characteristics,					sh_allowed},
+	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
 };
 
 static sw_command_t sh_notrunk[] = {
-	{"allowed",				1,	NULL,		NULL,			INCOMPLETE,	Set_allowed_VLAN_characteristics,					sh_noallowed},
-	{NULL,					0,	NULL,		NULL,			NA,			NULL,												NULL}
+	{"allowed",				1,	NULL,		NULL,			0,			Set_allowed_VLAN_characteristics,					sh_noallowed},
+	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
 };
 
 static sw_command_t sh_switchport[] = {
-	{"access",				1,	NULL,		NULL,			INCOMPLETE,	"Set access mode characteristics of the interface",	sh_access},
-	{"mode",				1,	NULL,		NULL,			INCOMPLETE,	"Set trunking mode of the interface",				sh_mode},
-	{"trunk",				1,	NULL,		NULL,			INCOMPLETE,	"Set trunking characteristics of the interface",	sh_trunk},
-	{NULL,					0,	NULL,		NULL,			NA,			NULL,												NULL}
+	{"access",				1,	NULL,		NULL,			0,			"Set access mode characteristics of the interface",	sh_access},
+	{"mode",				1,	NULL,		NULL,			0,			"Set trunking mode of the interface",				sh_mode},
+	{"trunk",				1,	NULL,		NULL,			0,			"Set trunking characteristics of the interface",	sh_trunk},
+	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
 };
 
 static sw_command_t sh_noswitchport[] = {
-	{"access",				1,	NULL,		NULL,			INCOMPLETE,	"Set access mode characteristics of the interface",	sh_noaccess},
-	{"mode",				1,	NULL,		cmd_nomode,		RUNNABLE,	"Set trunking mode of the interface",				NULL},
-	{"trunk",				1,	NULL,		NULL,			INCOMPLETE,	"Set trunking characteristics of the interface",	sh_notrunk},
-	{NULL,					0,	NULL,		NULL,			NA,			NULL,												NULL}
+	{"access",				1,	NULL,		NULL,			0,			"Set access mode characteristics of the interface",	sh_noaccess},
+	{"mode",				1,	NULL,		cmd_nomode,		RUN,		"Set trunking mode of the interface",				NULL},
+	{"trunk",				1,	NULL,		NULL,			0,			"Set trunking characteristics of the interface",	sh_notrunk},
+	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
 };
 
 static sw_command_t sh_ethdesc[] = {
-	{"LINE",				1,	valid_desc,	cmd_setethdesc,	RUNNABLE,	"A character string describing this interface",		NULL},
-	{NULL,					0,	NULL,		NULL,			NA,			NULL,												NULL}
+	{"LINE",				1,	valid_desc,	cmd_setethdesc,	RUN,		"A character string describing this interface",		NULL},
+	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
 };
 
 static sw_command_t sh_speed[] = {
-	{"10",					1,	NULL,		cmd_sp_10,		RUNNABLE,	"Force 10 Mbps operation",							NULL},
-	{"100",					1,	NULL,		cmd_sp_100,		RUNNABLE,	"Force 100 Mbps operation",							NULL},
-	{"auto",				1,	NULL,		cmd_sp_auto,	RUNNABLE,	"Enable AUTO speed configuration",					NULL},
-	{NULL,					0,	NULL,		NULL,			NA,			NULL,												NULL}
+	{"10",					1,	NULL,		cmd_sp_10,		RUN,		"Force 10 Mbps operation",							NULL},
+	{"100",					1,	NULL,		cmd_sp_100,		RUN,		"Force 100 Mbps operation",							NULL},
+	{"auto",				1,	NULL,		cmd_sp_auto,	RUN,		"Enable AUTO speed configuration",					NULL},
+	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
 };
 
 static sw_command_t sh_duplex[] = {
-	{"auto",				1,	NULL,		cmd_du_auto,	RUNNABLE,	"Enable AUTO duplex configuration",					NULL},
-	{"full",				1,	NULL,		cmd_du_full,	RUNNABLE,	"Force full duplex operation",						NULL},
-	{"half",				1,	NULL,		cmd_du_half,	RUNNABLE,	"Force half-duplex operation",						NULL},
-	{NULL,					0,	NULL,		NULL,			NA,			NULL,												NULL}
+	{"auto",				1,	NULL,		cmd_du_auto,	RUN,		"Enable AUTO duplex configuration",					NULL},
+	{"full",				1,	NULL,		cmd_du_full,	RUN,		"Force full duplex operation",						NULL},
+	{"half",				1,	NULL,		cmd_du_half,	RUN,		"Force half-duplex operation",						NULL},
+	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
 };
 
 static sw_command_t sh_no[] = {
-	{"description",			1,	NULL,		cmd_noethdesc,	RUNNABLE,	"Interface specific description",					NULL},
-	{"duplex",				1,	NULL,		cmd_du_auto,	RUNNABLE,	"Configure duplex operation.",						NULL},
-	{"shutdown",			1,	NULL,		cmd_noshutd,	RUNNABLE,	"Shutdown the selected interface",					NULL},
-	{"speed",				1,	NULL,		cmd_sp_auto,	RUNNABLE,	"Configure speed operation.",						NULL},
-	{"switchport",			1,	NULL,		NULL,			INCOMPLETE,	"Set switching mode characteristics",				sh_noswitchport},
-	{NULL,					0,	NULL,		NULL,			NA,			NULL,												NULL}
+	{"description",			1,	NULL,		cmd_noethdesc,	RUN,		"Interface specific description",					NULL},
+	{"duplex",				1,	NULL,		cmd_du_auto,	RUN,		"Configure duplex operation.",						NULL},
+	{"shutdown",			1,	NULL,		cmd_noshutd,	RUN,		"Shutdown the selected interface",					NULL},
+	{"speed",				1,	NULL,		cmd_sp_auto,	RUN,		"Configure speed operation.",						NULL},
+	{"switchport",			1,	NULL,		NULL,			0,			"Set switching mode characteristics",				sh_noswitchport},
+	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
 };
 
 static sw_command_t sh_eth[] = {
-	{"description",			1,	NULL,		NULL,			INCOMPLETE,	"Interface specific description",					sh_ethdesc},
-	{"duplex",				1,	NULL,		NULL,			INCOMPLETE,	"Configure duplex operation.",						sh_duplex},
-	{"exit",				1,	NULL,		cmd_exit,		RUNNABLE,	"Exit from interface configuration mode",			NULL},
-	{"help",				1,	NULL,		cmd_help,		RUNNABLE,	"Description of the interactive help system",		NULL},
-	{"interface",			1,	NULL,		NULL,			INCOMPLETE,	"Select an interface to configure",					sh_conf_int},
-	{"no",					1,	NULL,		NULL,			INCOMPLETE,	"Negate a command or set its defaults",				sh_no},
-	{"shutdown",			1,	NULL,		cmd_shutd,		RUNNABLE,	"Shutdown the selected interface",					NULL},
-	{"speed",				1,	NULL,		NULL,			INCOMPLETE,	"Configure speed operation.",						sh_speed},
-	{"switchport",			1,	NULL,		NULL,			INCOMPLETE,	"Set switching mode characteristics",				sh_switchport},
-	{NULL,					0,	NULL,		NULL,			NA,			NULL,												NULL}
+	{"description",			1,	NULL,		NULL,			0,			"Interface specific description",					sh_ethdesc},
+	{"duplex",				1,	NULL,		NULL,			0,			"Configure duplex operation.",						sh_duplex},
+	{"exit",				1,	NULL,		cmd_exit,		RUN,		"Exit from interface configuration mode",			NULL},
+	{"help",				1,	NULL,		cmd_help,		RUN,		"Description of the interactive help system",		NULL},
+	{"interface",			1,	NULL,		NULL,			0,			"Select an interface to configure",					sh_conf_int},
+	{"no",					1,	NULL,		NULL,			0,			"Negate a command or set its defaults",				sh_no},
+	{"shutdown",			1,	NULL,		cmd_shutd,		RUN,		"Shutdown the selected interface",					NULL},
+	{"speed",				1,	NULL,		NULL,			0,			"Configure speed operation.",						sh_speed},
+	{"switchport",			1,	NULL,		NULL,			0,			"Set switching mode characteristics",				sh_switchport},
+	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
 };
 
 static sw_command_t sh_vlan[] = {
-	{NULL,					0,	NULL,		NULL,			NA,			NULL,											NULL}
+	{NULL,					0,	NULL,		NULL,			0,			NULL,											NULL}
 };
 
 sw_command_root_t command_root_config_if_eth =			{"%s(config-if)%c",			sh_eth};

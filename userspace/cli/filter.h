@@ -21,11 +21,11 @@ MODE_GREP: this is the feature to have grep "full option" as our
 	output modifier, because we're a linux switch, not just a stupid 
 	ignorant cisco switch ;-)
 */
-enum {
-	MODE_INCLUDE = 0,
-	MODE_EXCLUDE = REG_NOMATCH,
-	MODE_BEGIN,
-	MODE_GREP
-};
+
+#define MODE_INCLUDE 	0x0000
+#define MODE_EXCLUDE 	0x0001
+#define MODE_BEGIN		0x0002
+#define MODE_GREP		0x0003
+#define MODE_MASK		0x000f
 
 #endif

@@ -21,7 +21,7 @@ void pass_filter(int mode, regex_t *reg) {
 	char line[MAX_LINE_WIDTH];
 
 	while (NULL != fgets(line, MAX_LINE_WIDTH, stdin))
-		if (mode == regexec(reg, line, 1, &result, 0))
+		if ((mode != MODE_INCLUDE) != !regexec(reg, line, 1, &result, 0))
 			printf("%s", line);
 }
 

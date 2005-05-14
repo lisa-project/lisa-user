@@ -9,11 +9,15 @@
 #include "filter.h"
 
 /* Command node state */
-enum {
-	NA = MODE_GREP+1,
-	INCOMPLETE,
-	RUNNABLE
-};
+/* Node is runnable (command can be executed at this point) */
+#define RUN			0x0010
+/* Node is a pattern that ends at the first space and node
+   has subnodes.
+ */
+#define PTCNT		0x0020
+/* Command is ambiguous */
+#define NA			0x0040
+#define FLAGS_MASK	0x00f0
 
 typedef void (*sw_command_handler)(FILE *, char *);
 
@@ -42,6 +46,7 @@ extern int valid_eth(char *);
 extern int valid_vlan(char *);
 extern int parse_eth(char *);
 extern int parse_vlan(char *);
+extern int valid_mac(char *);
 
 extern sw_command_root_t command_root_main;
 

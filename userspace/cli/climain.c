@@ -68,7 +68,7 @@ void init_exec_state(sw_execution_state_t *ex) {
 	ex->func = NULL;
 	ex->pipe_output = 0;
 	ex->pipe_type = 0;
-	ex->runnable = INCOMPLETE;
+	ex->runnable = 0;
 	if (ex->func_args)
 		free(ex->func_args);
 	ex->func_args = NULL;
@@ -265,9 +265,9 @@ int lookup_token(char *match, char *rest, char lookahead) {
 				exec_state.pipe_output = 1;
 			if (!exec_state.pipe_output)	
 				exec_state.func = search_set[i].func;
-			else if (search_set[i].state != RUNNABLE) {
-				exec_state.runnable = INCOMPLETE;
-				exec_state.pipe_type = search_set[i].state;
+			else if (!(search_set[i].state & RUN)) {
+				exec_state.runnable = 0;
+				exec_state.pipe_type = search_set[i].state & MODE_MASK;
 			}
 			/* setup to advance */
 			set = search_set[i].subcmd;
@@ -490,22 +490,18 @@ void swcli_exec_cmd(char *cmd) {
 		return;
 	}
 	
-	switch (exec_state.runnable) {
-	case INCOMPLETE:
-		swcli_incomplete_cmd(cmd);
-		break;
-	case NA:
+	if(exec_state.runnable & NA) {
 		swcli_ambiguous_cmd(cmd);
-		break;
-	case RUNNABLE:
+		return;
+	}
+	if(exec_state.runnable & RUN) {
 		if (exec_state.func)
 			swcli_piped_exec(&exec_state);
 		else 
 			swcli_unimplemented_cmd(cmd);
-		break;
-	default:
-		dbg("%% unknown runnable flag = %d\n", exec_state.runnable);
+		return;
 	}
+	swcli_incomplete_cmd(cmd);
 }
 
 int climain(void) {
