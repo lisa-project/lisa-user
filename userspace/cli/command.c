@@ -139,19 +139,8 @@ static void cmd_show_run(FILE *out, char **argv) {
 static void cmd_run_vlan(FILE *out, char **argv) {
 }
 
-static void cmd_sh_addr(FILE *out, char **argv) {
-}
-
-static void cmd_mac_eth(FILE *out, char **argv) {
-}
-
-static void cmd_mac_vlan(FILE *out, char **argv) {
-}
-
-static void cmd_sh_dynamic(FILE *out, char **argv) {
-}
-
-static void cmd_sh_static(FILE *out, char **argv) {
+static void cmd_show_mac(FILE *out, char **argv) {
+	printf("cmd_show_mac was called\n");
 }
 
 /* Validation Handlers Implementation */
@@ -273,12 +262,13 @@ static sw_command_t sh_run_vlan[] = {
 };
 
 static sw_command_t sh_mac_eth[] = {
-	{eth_range,				0,	valid_eth,		cmd_mac_eth,	RUN,		"Ethernet interface number",						NULL},
+	{eth_range,				0,	valid_eth,		cmd_show_mac,	RUN|PTCNT,	"Ethernet interface number",						sh_pipe},
 	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
 };
 
 static sw_command_t sh_mac_vlan[] = {
-	{vlan_range,			0,	valid_vlan,		cmd_mac_vlan,	RUN,		"Vlan interface number",							NULL},
+	{vlan_range,			0,	valid_vlan,		cmd_show_mac,	RUN|PTCNT,	"Vlan interface number",							NULL},
+	{"|",					0,	NULL,			NULL,			0,			"Output modifiers",									sh_pipe_mod},
 	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
 };
 
@@ -300,7 +290,7 @@ static sw_command_t sh_sh_mac_int[] = {
 };
 
 static sw_command_t sh_sh_mac_addr[] = {
-	{"H.H.H",				0,	valid_mac,		cmd_sh_addr,	RUN, 		"48 bit mac address",								NULL},
+	{"H.H.H",				0,	valid_mac,		cmd_show_mac,	RUN, 		"48 bit mac address",								NULL},
 	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
 };
 
@@ -315,9 +305,9 @@ static sw_command_t sh_sh_mac_sel[] = {
 static sw_command_t sh_mac_addr_table[] = {
 	{"address",				0,	NULL,			NULL,			0,			"address keyword",									sh_sh_mac_addr},
 	{"aging-time",			0,	NULL,			NULL,			RUN,		"aging-time keyword",								NULL},
-	{"dynamic",				0,	valid_dyn,		cmd_sh_dynamic,	RUN|CMPL|PTCNT,	"dynamic entry type",								sh_sh_mac_sel},
+	{"dynamic",				0,	valid_dyn,		cmd_show_mac,	RUN|CMPL|PTCNT,	"dynamic entry type",								sh_sh_mac_sel},
 	{"interface",			0,	NULL,			NULL,			0,			"interface keyword",								sh_sh_mac_int},
-	{"static",				0,	valid_static,	cmd_sh_static,	RUN|CMPL|PTCNT,	"static entry type",								sh_sh_mac_sel},
+	{"static",				0,	valid_static,	cmd_show_mac,	RUN|CMPL|PTCNT,	"static entry type",								sh_sh_mac_sel},
 	{"vlan",				0,	NULL,			NULL,			0,			 "VLAN keyword",									sh_mac_vlan},
 	{"|",					0,	NULL,			NULL,			0,			"Output modifiers",									sh_pipe_mod},
 	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
@@ -336,7 +326,7 @@ static sw_command_t sh_show[] = {
 	{"interfaces",			0,	NULL,			cmd_sh_int,		RUN,		"Interface status and configuration",				sh_sh_int},
 	{"ip",					0,	NULL,			NULL,			RUN,		"IP information",									NULL},
 	{"mac",					0,	NULL,			NULL,			RUN,		"MAC configuration",								NULL},
-	{"mac-address-table",	0,	NULL,			NULL,			RUN,		"MAC forwarding table",								sh_mac_addr_table},
+	{"mac-address-table",	0,	NULL,			cmd_show_mac,	RUN,		"MAC forwarding table",								sh_mac_addr_table},
 	{"running-config",		1,	NULL,			cmd_show_run,	RUN,		"Current operating configuration",					sh_show_run},
 	{"sessions",			0,	NULL,			NULL,			RUN,		"Information about Telnet connections",				NULL},
 	{"startup-config",		0,	NULL,			NULL,			RUN,		"Contents of startup configuration",				NULL},

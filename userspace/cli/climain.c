@@ -216,7 +216,7 @@ int swcli_init_readline() {
  */
 int change_search_scope(char *match, char *rest, char lookahead)  {
 	int i=0, count = 0;
-	char *name;
+	char *name, *arg;
 	struct cmd *set = NULL;
 	sw_command_handler func = NULL;
 
@@ -233,11 +233,17 @@ int change_search_scope(char *match, char *rest, char lookahead)  {
 				break;
 			}
 		}
-		else if (search_set[i].valid && search_set[i].valid(match)) {
-			count = 1;
-			set = search_set;
-			func = handler;
-			break;
+		else if (search_set[i].valid) {
+			arg = (search_set[i].state & PTCNT)? match: rest;
+			if (search_set[i].valid(arg)) {
+				count = 1;
+				if (search_set[i].state & PTCNT && whitespace(lookahead))
+					set = search_set[i].subcmd;
+				else 
+					set = search_set;
+				func = handler;
+				break;
+			}	
 		}
     }
 
@@ -271,7 +277,10 @@ int lookup_token(char *match, char *rest, char lookahead) {
 			arg = (search_set[i].state & PTCNT)? match: rest;
 			if (search_set[i].valid(arg)) {
 				count = 1;
-				set = search_set;
+				if (search_set[i].state & PTCNT && whitespace(lookahead))
+					set = search_set[i].subcmd;
+				else 
+					set = search_set;
 				exec_state.runnable = search_set[i].state;
 				if (!exec_state.pipe_output)
 					exec_state.func = search_set[i].func;
@@ -284,8 +293,6 @@ int lookup_token(char *match, char *rest, char lookahead) {
 				exec_state.func_args[exec_state.num++] = strdup(arg);
 				break;
 			}
-			if (search_set[i].state & PTCNT)
-				set = search_set[i].subcmd;
 		}
 		else if (!strncmp(match, name, strlen(match))) {
 			count++;
