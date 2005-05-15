@@ -528,7 +528,8 @@ static void do_get_ifaces() {
 	end_kern_comm();
 }
 
-void cmd_int_eth(FILE *out, char *arg) {
+void cmd_int_eth(FILE *out, char **argv) {
+	char *arg = *argv;
 	struct user_net_device *entry, *tmp;
 	int eth_no = parse_eth(arg), n;
 	char buf[IFNAMSIZ];
@@ -545,7 +546,8 @@ void cmd_int_eth(FILE *out, char *arg) {
 	}
 }
 
-void cmd_int_vlan(FILE *out, char *arg) {
+void cmd_int_vlan(FILE *out, char **argv) {
+	char *arg = *argv;
 	struct user_net_device *entry, *tmp;
 	int vlan_no = parse_vlan(arg), n;
 	char buf[IFNAMSIZ];
@@ -562,7 +564,7 @@ void cmd_int_vlan(FILE *out, char *arg) {
 	}
 }
 
-void cmd_sh_int(FILE *out, char *arg) {
+void cmd_sh_int(FILE *out, char **argv) {
 	struct user_net_device *entry, *tmp;
 
 	do_get_ifaces();

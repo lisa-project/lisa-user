@@ -21,9 +21,9 @@
 #include "command.h"
 #include "list.h"
 
-extern void cmd_sh_int(FILE *, char *);
-extern void cmd_int_eth(FILE *, char *);
-extern void cmd_int_vlan(FILE *, char *);
+extern void cmd_sh_int(FILE *, char **);
+extern void cmd_int_eth(FILE *, char **);
+extern void cmd_int_vlan(FILE *, char **);
 
 /* network interface ioctl's for MII commands */
 #ifndef SIOCGMIIPHY

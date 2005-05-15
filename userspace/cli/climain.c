@@ -470,7 +470,7 @@ void swcli_piped_exec(sw_execution_state_t *exc) {
 	}
 	assert(nc < sizeof(cmd_buf));
 	assert((pipe = popen(cmd_buf, "w")));
-	exc->func(pipe, exc->func_args);
+	exc->func(pipe, &exc->func_args); //FIXME pointer la arg
 	pclose(pipe);
 }
 

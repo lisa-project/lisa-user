@@ -11,11 +11,12 @@ char sel_eth[IFNAMSIZ];
 char sel_vlan[IFNAMSIZ];
 int int_type;
 
-static void cmd_exit(FILE *out, char *arg) {
+static void cmd_exit(FILE *out, char **argv) {
 	cmd_root = &command_root_config;
 }
 
-static void cmd_acc_vlan(FILE *out, char *arg) {
+static void cmd_acc_vlan(FILE *out, char **argv) {
+	char *arg = *argv;
 	struct net_switch_ioctl_arg ioctl_arg;
 
 	ioctl_arg.cmd = SWCFG_SETPORTVLAN;
@@ -24,7 +25,7 @@ static void cmd_acc_vlan(FILE *out, char *arg) {
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
-static void cmd_noacc_vlan(FILE *out, char *arg) {
+static void cmd_noacc_vlan(FILE *out, char **argv) {
 	struct net_switch_ioctl_arg ioctl_arg;
 
 	ioctl_arg.cmd = SWCFG_SETPORTVLAN;
@@ -33,7 +34,7 @@ static void cmd_noacc_vlan(FILE *out, char *arg) {
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
-static void cmd_shutd(FILE *out, char *arg) {
+static void cmd_shutd(FILE *out, char **argv) {
 	struct net_switch_ioctl_arg ioctl_arg;
 
 	ioctl_arg.cmd = SWCFG_DISABLEPORT;
@@ -41,7 +42,7 @@ static void cmd_shutd(FILE *out, char *arg) {
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
-static void cmd_noshutd(FILE *out, char *arg) {
+static void cmd_noshutd(FILE *out, char **argv) {
 	struct net_switch_ioctl_arg ioctl_arg;
 
 	ioctl_arg.cmd = SWCFG_ENABLEPORT;
@@ -49,7 +50,7 @@ static void cmd_noshutd(FILE *out, char *arg) {
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
-static void cmd_access(FILE *out, char *arg) {
+static void cmd_access(FILE *out, char **argv) {
 	struct net_switch_ioctl_arg ioctl_arg;
 
 	ioctl_arg.cmd = SWCFG_SETACCESS;
@@ -58,7 +59,7 @@ static void cmd_access(FILE *out, char *arg) {
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
-static void cmd_trunk(FILE *out, char *arg) {
+static void cmd_trunk(FILE *out, char **argv) {
 	struct net_switch_ioctl_arg ioctl_arg;
 
 	ioctl_arg.cmd = SWCFG_SETTRUNK;
@@ -67,7 +68,7 @@ static void cmd_trunk(FILE *out, char *arg) {
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
-static void cmd_nomode(FILE *out, char *arg) {
+static void cmd_nomode(FILE *out, char **argv) {
 	struct net_switch_ioctl_arg ioctl_arg;
 
 	ioctl_arg.cmd = SWCFG_SETTRUNK;
@@ -154,7 +155,8 @@ static int parse_vlan_list(char *list, unsigned char *bmp) {
 	return;\
 }
 
-static void cmd_setvlans(FILE *out, char *arg) {
+static void cmd_setvlans(FILE *out, char **argv) {
+	char *arg = *argv;
 	struct net_switch_ioctl_arg ioctl_arg;
 	unsigned char bmp[SW_VLAN_BMP_NO];
 
@@ -165,7 +167,8 @@ static void cmd_setvlans(FILE *out, char *arg) {
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
-static void cmd_addvlans(FILE *out, char *arg) {
+static void cmd_addvlans(FILE *out, char **argv) {
+	char *arg = *argv;
 	struct net_switch_ioctl_arg ioctl_arg;
 	unsigned char bmp[SW_VLAN_BMP_NO];
 
@@ -176,7 +179,7 @@ static void cmd_addvlans(FILE *out, char *arg) {
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
-static void cmd_allvlans(FILE *out, char *arg) {
+static void cmd_allvlans(FILE *out, char **argv) {
 	struct net_switch_ioctl_arg ioctl_arg;
 	unsigned char bmp[SW_VLAN_BMP_NO];
 
@@ -187,7 +190,8 @@ static void cmd_allvlans(FILE *out, char *arg) {
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
-static void cmd_excvlans(FILE *out, char *arg) {
+static void cmd_excvlans(FILE *out, char **argv) {
+	char *arg = *argv;
 	struct net_switch_ioctl_arg ioctl_arg;
 	unsigned char bmp[SW_VLAN_BMP_NO];
 	int i;
@@ -201,7 +205,7 @@ static void cmd_excvlans(FILE *out, char *arg) {
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
-static void cmd_novlans(FILE *out, char *arg) {
+static void cmd_novlans(FILE *out, char **argv) {
 	struct net_switch_ioctl_arg ioctl_arg;
 	unsigned char bmp[SW_VLAN_BMP_NO];
 
@@ -212,7 +216,8 @@ static void cmd_novlans(FILE *out, char *arg) {
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
-static void cmd_remvlans(FILE *out, char *arg) {
+static void cmd_remvlans(FILE *out, char **argv) {
+	char *arg = *argv;
 	struct net_switch_ioctl_arg ioctl_arg;
 	unsigned char bmp[SW_VLAN_BMP_NO];
 
@@ -223,11 +228,12 @@ static void cmd_remvlans(FILE *out, char *arg) {
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
-static int valid_desc(char *arg) {
+static int valid_desc(char *argv) {
 	return 1;
 }
 
-static void cmd_setethdesc(FILE *out, char *arg) {
+static void cmd_setethdesc(FILE *out, char **argv) {
+	char *arg = *argv;
 	struct net_switch_ioctl_arg ioctl_arg;
 
 	ioctl_arg.cmd = SWCFG_SETIFDESC;
@@ -236,7 +242,7 @@ static void cmd_setethdesc(FILE *out, char *arg) {
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
-static void cmd_noethdesc(FILE *out, char *arg) {
+static void cmd_noethdesc(FILE *out, char **argv) {
 	struct net_switch_ioctl_arg ioctl_arg;
 
 	ioctl_arg.cmd = SWCFG_SETIFDESC;
@@ -245,7 +251,7 @@ static void cmd_noethdesc(FILE *out, char *arg) {
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
-static void cmd_sp_10(FILE *out, char *arg) {
+static void cmd_sp_10(FILE *out, char **argv) {
 	struct net_switch_ioctl_arg ioctl_arg;
 
 	ioctl_arg.cmd = SWCFG_SETSPEED;
@@ -254,7 +260,7 @@ static void cmd_sp_10(FILE *out, char *arg) {
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
-static void cmd_sp_100(FILE *out, char *arg) {
+static void cmd_sp_100(FILE *out, char **argv) {
 	struct net_switch_ioctl_arg ioctl_arg;
 
 	ioctl_arg.cmd = SWCFG_SETSPEED;
@@ -263,7 +269,7 @@ static void cmd_sp_100(FILE *out, char *arg) {
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
-static void cmd_sp_auto(FILE *out, char *arg) {
+static void cmd_sp_auto(FILE *out, char **argv) {
 	struct net_switch_ioctl_arg ioctl_arg;
 
 	ioctl_arg.cmd = SWCFG_SETSPEED;
@@ -272,7 +278,7 @@ static void cmd_sp_auto(FILE *out, char *arg) {
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
-static void cmd_du_auto(FILE *out, char *arg) {
+static void cmd_du_auto(FILE *out, char **argv) {
 	struct net_switch_ioctl_arg ioctl_arg;
 
 	ioctl_arg.cmd = SWCFG_SETDUPLEX;
@@ -281,7 +287,7 @@ static void cmd_du_auto(FILE *out, char *arg) {
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
-static void cmd_du_full(FILE *out, char *arg) {
+static void cmd_du_full(FILE *out, char **argv) {
 	struct net_switch_ioctl_arg ioctl_arg;
 
 	ioctl_arg.cmd = SWCFG_SETDUPLEX;
@@ -290,7 +296,7 @@ static void cmd_du_full(FILE *out, char *arg) {
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
-static void cmd_du_half(FILE *out, char *arg) {
+static void cmd_du_half(FILE *out, char **argv) {
 	struct net_switch_ioctl_arg ioctl_arg;
 
 	ioctl_arg.cmd = SWCFG_SETDUPLEX;

@@ -19,7 +19,7 @@
 #define NA			0x0040
 #define FLAGS_MASK	0x00f0
 
-typedef void (*sw_command_handler)(FILE *, char *);
+typedef void (*sw_command_handler)(FILE *, char **);
 
 typedef struct cmd {
 	char *name;					/* User printable name of the function */
@@ -36,8 +36,8 @@ typedef struct root {
     sw_command_t *cmd;
 } sw_command_root_t;
 
-extern void cmd_sh_int				__P((FILE *, char *));
-extern void cmd_help				__P((FILE *, char *));
+extern void cmd_sh_int				__P((FILE *, char **));
+extern void cmd_help				__P((FILE *, char **));
 
 extern char eth_range[];
 extern char vlan_range[];

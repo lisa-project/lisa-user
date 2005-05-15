@@ -12,20 +12,22 @@
 extern int errno;
 char hostname_default[] = "Switch\0";
 
-static void cmd_end(FILE *out, char *arg) {
+static void cmd_end(FILE *out, char **argv) {
 	cmd_root = &command_root_main;
 	/* FIXME scoatere binding ^Z */
 }
 
-static void cmd_hostname(FILE *out, char *arg) {
+static void cmd_hostname(FILE *out, char **argv) {
+	char *arg = *argv;
 	sethostname(arg, strlen(arg));
 }
 
-static void cmd_nohostname(FILE *out, char *arg) {
+static void cmd_nohostname(FILE *out, char **argv) {
 	sethostname(hostname_default, strlen(hostname_default));
 }
 
-static void cmd_int_eth(FILE *out, char *arg) {
+static void cmd_int_eth(FILE *out, char **argv) {
+	char *arg = *argv;
 	struct net_switch_ioctl_arg ioctl_arg;
 	char if_name[IFNAMSIZ];
 	
@@ -47,7 +49,8 @@ static void cmd_int_eth(FILE *out, char *arg) {
 	strcpy(sel_eth, if_name);
 }
 
-static void cmd_no_int_eth(FILE *out, char *arg) {
+static void cmd_no_int_eth(FILE *out, char **argv) {
+	char *arg = *argv;
 	struct net_switch_ioctl_arg ioctl_arg;
 	char if_name[IFNAMSIZ];
 	
@@ -58,7 +61,8 @@ static void cmd_no_int_eth(FILE *out, char *arg) {
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
-static void cmd_int_vlan(FILE *out, char *arg) {
+static void cmd_int_vlan(FILE *out, char **argv) {
+	char *arg = *argv;
 	struct net_switch_ioctl_arg ioctl_arg;
 	int vlan = parse_vlan(arg);
 
@@ -70,8 +74,11 @@ static void cmd_int_vlan(FILE *out, char *arg) {
 	cmd_root = &command_root_config_if_vlan;
 }
 
-static void cmd_no_int_vlan(FILE *out, char *arg) {
+static void cmd_no_int_vlan(FILE *out, char **argv) {
 	fprintf(out, "FIXME\n");
+}
+
+static void cmd_macstatic(FILE *out, char **argv) {
 }
 
 static sw_command_t sh_no_int_eth[] = {
@@ -95,8 +102,8 @@ static sw_command_t sh_int_vlan[] = {
 };
 
 static sw_command_t sh_no_int[] = {
-	{"ethernet",			1,	NULL,		NULL,				0,			 "Ethernet IEEE 802.3",							sh_no_int_eth},
-	{"vlan",				1,	NULL,		NULL,				0,			 "LMS Vlans",									sh_no_int_vlan},
+	{"ethernet",			1,	NULL,		NULL,				0,			"Ethernet IEEE 802.3",							sh_no_int_eth},
+	{"vlan",				1,	NULL,		NULL,				0,			"LMS Vlans",									sh_no_int_vlan},
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
 
@@ -112,8 +119,33 @@ static sw_command_t sh_no[] = {
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
 
+static sw_command_t sh_macstatic_ifp[] = {
+	{eth_range,				1,	valid_eth,	cmd_macstatic,		RUN|PTCNT,	"Ethernet interface number",					NULL},
+	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+};
+
+static sw_command_t sh_macstatic_if[] = {
+	{"ethernet",			1,	NULL,		NULL,				0,			"Ethernet IEEE 802.3",							sh_macstatic_ifp},
+	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+};
+
+static sw_command_t sh_macstatic_i[] = {
+	{"interface",			1,	NULL,		NULL,				0,			"interface",									sh_macstatic_if},
+	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+};
+
+static sw_command_t sh_macstatic_vp[] = {
+	{vlan_range,			1,	valid_vlan,	NULL,				PTCNT,		"VLAN id of mac address table",					sh_macstatic_i},
+	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+};
+
+static sw_command_t sh_macstatic_v[] = {
+	{"vlan",				1,	NULL,		NULL,				0,			"VLAN keyword",									sh_macstatic_vp},
+	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+};
+
 static sw_command_t sh_macstatic[] = {
-	{"H.H.H",				1,	valid_mac,	NULL,				0,			"48 bit mac address",							NULL},
+	{"H.H.H",				1,	valid_mac,	NULL,				PTCNT,		"48 bit mac address",							sh_macstatic_v},
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
 

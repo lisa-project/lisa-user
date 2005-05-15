@@ -25,21 +25,21 @@ static void swcli_sig_term(int sig) {
 }
 
 /* Command Handlers implementation */
-static void cmd_disable(FILE *out, char *arg) {
+static void cmd_disable(FILE *out, char **argv) {
 	priv = 0;
 }
 
-static void cmd_enable(FILE *out, char *arg) {
+static void cmd_enable(FILE *out, char **argv) {
 	priv = 1;
 }
 
-static void cmd_conf_t(FILE *out, char *arg) {
+static void cmd_conf_t(FILE *out, char **argv) {
 	cmd_root = &command_root_config;
 	printf("Enter configuration commands, one per line.  End with CNTL/Z.\n");
 	signal(SIGTSTP, swcli_sig_term);
 }
 
-void cmd_help(FILE *out, char *arg) {
+void cmd_help(FILE *out, char **argv) {
 	fprintf(out,
 		"Help may be requested at any point in a command by entering\n"
 		"a question mark '?'.  If nothing matches, the help list will\n"
@@ -55,7 +55,7 @@ void cmd_help(FILE *out, char *arg) {
 		);
 }
 
-static void cmd_history(FILE *out, char *arg) {
+static void cmd_history(FILE *out, char **argv) {
 	HIST_ENTRY **history;
 	HIST_ENTRY *entry;
 	int i;
@@ -68,12 +68,13 @@ static void cmd_history(FILE *out, char *arg) {
 	}
 }
 
-static void cmd_exit(FILE *out, char *arg) {
+static void cmd_exit(FILE *out, char **argv) {
 	pclose(out);
 	exit(0);
 }
 
-static void cmd_run_eth(FILE *out, char *arg) {
+static void cmd_run_eth(FILE *out, char **argv) {
+	char *arg = *argv;
 	int status;
 	FILE *tmp = NULL;
 	char tmp_name[MAXPATHLEN];
@@ -104,7 +105,7 @@ static void cmd_run_eth(FILE *out, char *arg) {
 	return;
 }
 
-static void cmd_show_run(FILE *out, char *arg) {
+static void cmd_show_run(FILE *out, char **argv) {
 	int status;
 	FILE *tmp = NULL;
 	char tmp_name[MAXPATHLEN];
@@ -135,22 +136,22 @@ static void cmd_show_run(FILE *out, char *arg) {
 	return;
 }
 
-static void cmd_run_vlan(FILE *out, char *arg) {
+static void cmd_run_vlan(FILE *out, char **argv) {
 }
 
-static void cmd_sh_addr(FILE *out, char *arg) {
+static void cmd_sh_addr(FILE *out, char **argv) {
 }
 
-static void cmd_mac_eth(FILE *out, char *arg) {
+static void cmd_mac_eth(FILE *out, char **argv) {
 }
 
-static void cmd_mac_vlan(FILE *out, char *arg) {
+static void cmd_mac_vlan(FILE *out, char **argv) {
 }
 
-static void cmd_sh_dynamic(FILE *out, char *arg) {
+static void cmd_sh_dynamic(FILE *out, char **argv) {
 }
 
-static void cmd_sh_static(FILE *out, char *arg) {
+static void cmd_sh_static(FILE *out, char **argv) {
 }
 
 /* Validation Handlers Implementation */
