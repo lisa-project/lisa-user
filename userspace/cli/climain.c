@@ -65,26 +65,35 @@ void swcli_go_ahead() {
 }
 
 void init_exec_state(sw_execution_state_t *ex) {
+	int i;
+
 	ex->func = NULL;
 	ex->pipe_output = 0;
 	ex->pipe_type = 0;
 	ex->runnable = 0;
-	if (ex->func_args)
+	if (ex->func_args) {
+		for (i=0; i<ex->num; i++)
+			free(ex->func_args[i]);
 		free(ex->func_args);
-	ex->func_args = NULL;
+	}	
+	ex->func_args = (char **) malloc(INITIAL_ARGS_NUM *sizeof(char *));
+	ex->size = INITIAL_ARGS_NUM;
+	ex->num = 0;
 }
 
 void dump_exec_state(sw_execution_state_t *ex) {
+	int i;
 	printf("\nExecution state dump: \n"
 		"func: %p\n"
 		"pipe_output: %d\n"
 		"pipe_type: %d\n"
-		"runnable: %d\n"
-		"func_args: %s\n\n",
+		"runnable: %d\n",
 		ex->func, ex->pipe_output,
-		ex->pipe_type, ex->runnable, 
-		ex->func_args);
-		 
+		ex->pipe_type, ex->runnable);
+	printf("func_args: ");
+	for (i=0; i<ex->num; i++)
+		printf("%s ", ex->func_args[i]);
+	printf("\n\n");
 }
 
 /* Help function called when the user
@@ -247,7 +256,7 @@ int change_search_scope(char *match, char *rest, char lookahead)  {
   Used by the execution mechanism.
  */
 int lookup_token(char *match, char *rest, char lookahead) {
-	char *name;
+	char *name, *arg;
 	struct cmd *set = NULL;
 	int i=0, count = 0;
 
@@ -258,7 +267,27 @@ int lookup_token(char *match, char *rest, char lookahead) {
     for (i=0; (name = search_set[i].name); i++) {
 		if (search_set[i].priv > priv)
 			continue;
-		if (!strncmp(match, name, strlen(match))) {
+		if (search_set[i].valid) {
+			arg = (search_set[i].state & PTCNT)? match: rest;
+			if (search_set[i].valid(arg)) {
+				count = 1;
+				set = search_set;
+				exec_state.runnable = search_set[i].state;
+				if (!exec_state.pipe_output)
+					exec_state.func = search_set[i].func;
+				if (exec_state.num >= exec_state.size) {
+					exec_state.func_args = realloc(exec_state.func_args,
+							(exec_state.size + INITIAL_ARGS_NUM)*sizeof(char *));
+					assert(exec_state.func_args);
+					exec_state.size += INITIAL_ARGS_NUM;
+				}
+				exec_state.func_args[exec_state.num++] = strdup(arg);
+				break;
+			}
+			if (search_set[i].state & PTCNT)
+				set = search_set[i].subcmd;
+		}
+		else if (!strncmp(match, name, strlen(match))) {
 			count++;
 			exec_state.runnable = search_set[i].state;
 			if (!strcmp(match, "|"))
@@ -275,16 +304,6 @@ int lookup_token(char *match, char *rest, char lookahead) {
 				count = 1;
 				break;
 			}
-		}
-		else if (search_set[i].valid && search_set[i].valid(rest)) {
-			count = 1;
-			set = search_set;
-			exec_state.runnable = search_set[i].state;
-			if (!exec_state.pipe_output)
-				exec_state.func = search_set[i].func;
-			if (!exec_state.func_args)
-				exec_state.func_args = strdup(rest);
-			break;
 		}
 	}
 
@@ -467,11 +486,18 @@ void swcli_piped_exec(sw_execution_state_t *exc) {
 			De altfel daca nu facem asta merge super beton
 			sa executi comenzi de shell intre `` !!!
 		 */
-		nc = sprintf(cmd_buf, "./filter %d %s", exc->pipe_type, exc->func_args);	
+		nc = sprintf(cmd_buf, "./filter %d %s", exc->pipe_type, exc->func_args[0]);	
 	}
 	assert(nc < sizeof(cmd_buf));
 	assert((pipe = popen(cmd_buf, "w")));
-	exc->func(pipe, &exc->func_args); //FIXME pointer la arg
+	if (exc->num >= exc->size) {
+		exc->func_args = realloc(exc->func_args,
+				(exc->size + 1) *sizeof(char *));
+		assert(exc->func_args);
+		exc->size ++;
+	}
+	exc->func_args[exc->num++] = NULL;
+	exc->func(pipe, exc->func_args); //FIXME pointer la arg
 	pclose(pipe);
 }
 

@@ -3,6 +3,7 @@
 
 #define MAX_HOSTNAME 32
 #define MATCHES_PER_ROW 5
+#define INITIAL_ARGS_NUM 8
 
 #define PAGER_PATH "/bin/more"
 
@@ -18,7 +19,9 @@ typedef struct execution {
 	int pipe_output;
 	int pipe_type;
 	int runnable;
-	char *func_args;
+	int size;
+	int num;
+	char **func_args;
 } sw_execution_state_t;
 
 extern sw_command_root_t *cmd_root;

@@ -315,9 +315,9 @@ static sw_command_t sh_sh_mac_sel[] = {
 static sw_command_t sh_mac_addr_table[] = {
 	{"address",				0,	NULL,			NULL,			0,			"address keyword",									sh_sh_mac_addr},
 	{"aging-time",			0,	NULL,			NULL,			RUN,		"aging-time keyword",								NULL},
-	{"dynamic",				0,	valid_dyn,		cmd_sh_dynamic,	RUN|CMPL,	"dynamic entry type",								sh_sh_mac_sel},
+	{"dynamic",				0,	valid_dyn,		cmd_sh_dynamic,	RUN|CMPL|PTCNT,	"dynamic entry type",								sh_sh_mac_sel},
 	{"interface",			0,	NULL,			NULL,			0,			"interface keyword",								sh_sh_mac_int},
-	{"static",				0,	valid_static,	cmd_sh_static,	RUN|CMPL,	"static entry type",								sh_sh_mac_sel},
+	{"static",				0,	valid_static,	cmd_sh_static,	RUN|CMPL|PTCNT,	"static entry type",								sh_sh_mac_sel},
 	{"vlan",				0,	NULL,			NULL,			0,			 "VLAN keyword",									sh_mac_vlan},
 	{"|",					0,	NULL,			NULL,			0,			"Output modifiers",									sh_pipe_mod},
 	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
