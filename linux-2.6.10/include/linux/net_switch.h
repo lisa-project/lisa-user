@@ -90,6 +90,7 @@ struct net_switch_mac {
 struct net_switch_mac_arg {
 	unsigned char addr[ETH_ALEN];
 	int buf_size;
+	int actual_size;
 	int addr_type;
 	char *buf;
 };

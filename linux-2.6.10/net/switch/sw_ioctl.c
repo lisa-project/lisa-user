@@ -360,6 +360,7 @@ static int sw_get_mac(struct net_switch_mac_arg *marg, struct net_switch_port *p
 			if (marg->addr_type != SW_FDB_ANY && marg->addr_type != entry->is_static)
 				continue;
 			if (len + sizeof(struct net_switch_mac) > marg->buf_size) {
+				dbg("insufficient space in buffer\n");
 				ret = SW_INSUFFICIENT_SPACE;
 				do_brk = 1;
 				break;
@@ -369,11 +370,15 @@ static int sw_get_mac(struct net_switch_mac_arg *marg, struct net_switch_port *p
 			mac.vlan = entry->vlan;
 			strncpy(mac.port, entry->port->dev->name, IFNAMSIZ);
 			mac.port[IFNAMSIZ-1] = '\0';
+			rcu_read_unlock();
 			if (copy_to_user(marg->buf+len, &mac, sizeof(struct net_switch_mac))) {
+				rcu_read_lock();
+				dbg("copy_to_user failed (i=%d)\n", i);
 				ret = -EFAULT;
 				do_brk = 1;
 				break;
 			}
+			else rcu_read_lock();
 			len += sizeof(struct net_switch_mac);
 			ret = len;
 		}
@@ -584,7 +589,6 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 	case SWCFG_GETMAC:
 		if (arg.if_name)
 			PORT_GET;
-		dbg("buf size: %d\n", arg.ext.marg.buf_size);		
 		if (arg.ext.marg.buf_size < sizeof(struct net_switch_mac)) {
 			err = -EINVAL;
 			break;

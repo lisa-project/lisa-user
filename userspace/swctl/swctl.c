@@ -304,16 +304,16 @@ int main(int argc, char **argv) {
 		buf = (char *)malloc(INITIAL_BUF_SIZE);
 		size = INITIAL_BUF_SIZE;
 		assert(buf);
-		user_arg.cmd = SWCFG_GETMAC;
 		user_arg.if_name = NULL;
-		user_arg.vlan = 0;
+		user_arg.cmd = SWCFG_GETMAC;
+		memset(&user_arg.ext.marg.addr, 0, ETH_ALEN);
 		user_arg.ext.marg.addr_type = SW_FDB_ANY;
+		user_arg.vlan = 0;
 
 		do {
 			user_arg.ext.marg.buf_size = size;
 			user_arg.ext.marg.buf = buf;
 			status = ioctl(sock, SIOCSWCFG, &user_arg);
-			printf("status %d\n", status);
 			if (status == -1) {
 				perror("ioctl");
 				break;
@@ -325,8 +325,7 @@ int main(int argc, char **argv) {
 				size += INITIAL_BUF_SIZE;
 			}	
 			else {
-				// FIXME: quick hack
-				user_arg.cmd = status;
+				user_arg.ext.marg.actual_size = status;
 				cmd_showmac(stdout, (char *)&user_arg);
 				break;
 			}	

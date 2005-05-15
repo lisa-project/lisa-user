@@ -5,10 +5,10 @@
 void cmd_showmac(FILE *out, char *arg)  {
 	struct net_switch_mac *mac;
 	struct net_switch_ioctl_arg *user_arg = (struct net_switch_ioctl_arg *)arg;
-	int size = 0, actual_size = user_arg->cmd;
+	int size = 0, actual_size = user_arg->ext.marg.actual_size;
 	char *buf = user_arg->ext.marg.buf;
-	
 
+	
 	fprintf(out, "Destination Address  Address Type  VLAN  Destination Port\n"
 			"-------------------  ------------  ----  ----------------\n");
 	while (size < actual_size) {
