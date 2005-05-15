@@ -314,6 +314,7 @@ int main(int argc, char **argv) {
 			user_arg.ext.marg.buf_size = size;
 			user_arg.ext.marg.buf = buf;
 			status = ioctl(sock, SIOCSWCFG, &user_arg);
+			printf("status %d\n", status);
 			if (status == -1) {
 				perror("ioctl");
 				break;

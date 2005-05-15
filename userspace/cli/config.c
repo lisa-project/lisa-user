@@ -29,7 +29,6 @@ static void cmd_nohostname(FILE *out, char **argv) {
 static void cmd_int_eth(FILE *out, char **argv) {
 	char *arg = *argv;
 	struct net_switch_ioctl_arg ioctl_arg;
-	char if_name[IFNAMSIZ];
 	
 	ioctl_arg.cmd = SWCFG_ADDIF;
 	ioctl_arg.if_name = if_name_eth(arg);
@@ -38,13 +37,13 @@ static void cmd_int_eth(FILE *out, char **argv) {
 			break;
 		if(errno == ENODEV) {
 			fprintf(out, "Command rejected: device %s does not exist\n",
-					if_name);
+					ioctl_arg.if_name);
 			return;
 		}
 	} while(0);
 
 	cmd_root = &command_root_config_if_eth;
-	strcpy(sel_eth, if_name);
+	strcpy(sel_eth, ioctl_arg.if_name);
 }
 
 static void cmd_no_int_eth(FILE *out, char **argv) {

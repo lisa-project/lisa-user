@@ -20,6 +20,7 @@
 #include <linux/module.h>
 #include <linux/switch.h>
 #include <linux/netdevice.h>
+#include <linux/rtnetlink.h>
 #include <linux/slab.h>
 #include <linux/if_ether.h>
 #include <asm/semaphore.h>
@@ -156,6 +157,9 @@ void sw_enable_port(struct net_switch_port *port) {
 	if(!(port->flags & SW_PFL_DISABLED) || port->flags & SW_PFL_ADMDISABLED)
 		return;
 	sw_res_port_flag(port, SW_PFL_DISABLED);
+	down(&rtnl_sem);
+	dev_open(port->dev);
+	up(&rtnl_sem);
 	dbg("Enabled port %s\n", port->dev->name);
 }
 
@@ -167,6 +171,9 @@ void sw_disable_port(struct net_switch_port *port) {
 	if(port->flags & SW_PFL_DISABLED)
 		return;
 	sw_set_port_flag(port, SW_PFL_DISABLED);
+	down(&rtnl_sem);
+	dev_close(port->dev);
+	up(&rtnl_sem);
 	dbg("Disabled port %s\n", port->dev->name);
 }
 

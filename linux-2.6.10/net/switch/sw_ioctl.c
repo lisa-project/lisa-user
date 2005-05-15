@@ -89,6 +89,7 @@ static int sw_addif(struct net_device *dev) {
 	port->desc[0] = '\0';
 	port->speed = SW_SPEED_AUTO;
 	port->duplex = SW_DUPLEX_AUTO;
+	port->flags = SW_PFL_DISABLED;
 	/* FIXME configure physical characteristics of device (i.e. speed) */
 #ifdef NET_SWITCH_TRUNKDEFAULTVLANS
 	memset(port->forbidden_vlans, 0xff, 512);
@@ -103,6 +104,7 @@ static int sw_addif(struct net_device *dev) {
 	rcu_assign_pointer(dev->sw_port, port);
 	dev_hold(dev);
 	dev_set_promiscuity(dev, 1);
+	sw_enable_port(port);
 	dbg("Added device %s to switch\n", dev->name);
 	return 0;
 }
