@@ -181,6 +181,7 @@ void sw_disable_port(struct net_switch_port *port) {
 static void init_switch(struct net_switch *sw) {
 	int i;
 	
+	memset(sw, 0, sizeof(struct net_switch));
 	INIT_LIST_HEAD(&sw->ports);
 	for (i=0; i<SW_VIF_HASH_SIZE; i++) {
 		INIT_LIST_HEAD(&sw->vif[i]);

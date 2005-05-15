@@ -14,6 +14,7 @@
 #include "debug.h"
 #include "climain.h"
 #include "command.h"
+#include "shared.h"
 
 sw_command_root_t *cmd_root = &command_root_main;
 static sw_command_t *search_set;
@@ -25,7 +26,7 @@ char eth_range[32]; /* FIXME size */
 int sock_fd;
 
 /* Current privilege level */
-int priv = 0;
+int priv = 1;
 
 /* If we use the default rl_completer_word_break_characters
  then we totally fuck up completion when we have the following
@@ -545,9 +546,12 @@ int climain(void) {
 	char hostname[MAX_HOSTNAME];
 	char *cmd = NULL;
 	HIST_ENTRY *pentry;
+	int status;
 
 	/* initialization */
 	sprintf(eth_range, "<0-7>"); /* FIXME luate dinamic */
+	status = cfg_init();
+	assert(!status);
 	swcli_init_readline();
 	sock_fd = socket(PF_PACKET, SOCK_RAW, 0);
 	if(sock_fd == -1) {
@@ -563,7 +567,7 @@ int climain(void) {
 
 		gethostname(hostname, sizeof(hostname));
 		hostname[sizeof(hostname) - 1] = '\0';
-		sprintf(prompt, cmd_root->prompt, hostname, priv ? '#' : '>');
+		sprintf(prompt, cmd_root->prompt, hostname, priv > 1 ? '#' : '>');
 		search_set = cmd_root->cmd;
 
 		cmd = readline(prompt);

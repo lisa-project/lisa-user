@@ -9,15 +9,15 @@ CFLAGS += -DLOGIN_PATH=$(__LOGIN_PATH)
 
 all: swcli swclid swlogin filter
 
-swcli: swcli.o climain.o command.o config.o config_if.o build_config.o if.o
+swcli: swcli.o climain.o command.o config.o config_if.o build_config.o if.o shared.o
 	cd ../lib && make
 	$(CC) $(LDFLAGS) -o $@ $^ ../lib/misc.o
 
-swclid: swclid.o
+swclid: swclid.o shared.o
 
 filter: filter.o
 
-swlogin: swlogin.o climain.o command.o config.o config_if.o build_config.o if.o
+swlogin: swlogin.o climain.o command.o config.o config_if.o build_config.o if.o shared.o
 	cd ../lib && make
 	$(CC) $(LDFLAGS) -o $@ $^ ../lib/misc.o
 

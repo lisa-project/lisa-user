@@ -28,11 +28,16 @@ static void swcli_sig_term(int sig) {
 
 /* Command Handlers implementation */
 static void cmd_disable(FILE *out, char **argv) {
-	priv = 0;
+	priv = 1;
 }
 
 static void cmd_enable(FILE *out, char **argv) {
-	priv = 1;
+	int req;
+
+	req = argv[0] == NULL ? 15 : atoi(argv[0]);
+	if(req > priv) {
+	}
+	priv = 15;
 }
 
 static void cmd_conf_t(FILE *out, char **argv) {
@@ -105,6 +110,11 @@ static void cmd_run_eth(FILE *out, char **argv) {
 	}
 	fprintf(out, "Command rejected: device not present\n");
 	return;
+}
+
+static void cmd_show_priv(FILE *out, char **argv) {
+	fprintf(out, "Current privilege level is %d\n", priv);
+	fflush(out);
 }
 
 static void cmd_show_run(FILE *out, char **argv) {
@@ -349,52 +359,61 @@ int parse_mac(char *arg, unsigned char *mac) {
 	return 0;
 }
 
+static int valid_priv(char *arg) {
+	int n;
+
+	n = atoi(arg);
+	if(n >= 1 && n <= 15)
+		return 1;
+	return 0;
+}
+
 static sw_command_t sh_pipe_regex[] = {
-	{"LINE",				0,  valid_regex,	NULL,			RUN,		"Regular Expression",								NULL},
+	{"LINE",				1,  valid_regex,	NULL,			RUN,		"Regular Expression",								NULL},
 	{NULL,					0,  NULL,			NULL,			0,			NULL,												NULL}
 };
 
 static sw_command_t sh_pipe_mod[] = {
-	{"begin",				0,  NULL,			NULL,			MODE_BEGIN,		"Begin with the line that matches",				sh_pipe_regex},
-	{"exclude",				0,  NULL,			NULL,			MODE_EXCLUDE,	"Exclude lines that match",						sh_pipe_regex},
-	{"include",				0,  NULL,			NULL,			MODE_INCLUDE,	"Include lines that match",						sh_pipe_regex},
-	{"grep",				0,  NULL,			NULL,			MODE_GREP,		"Linux grep functionality",						sh_pipe_regex},
+	{"begin",				1,  NULL,			NULL,			MODE_BEGIN,		"Begin with the line that matches",				sh_pipe_regex},
+	{"exclude",				1,  NULL,			NULL,			MODE_EXCLUDE,	"Exclude lines that match",						sh_pipe_regex},
+	{"include",				1,  NULL,			NULL,			MODE_INCLUDE,	"Include lines that match",						sh_pipe_regex},
+	{"grep",				1,  NULL,			NULL,			MODE_GREP,		"Linux grep functionality",						sh_pipe_regex},
 	{NULL,					0,  NULL,			NULL,			0,			NULL,												NULL}
 };
 
 sw_command_t sh_pipe[] = {
-	{"|",					0,  NULL,			NULL,			0,			"Output modifiers",									sh_pipe_mod},
+	{"|",					1,  NULL,			NULL,			0,			"Output modifiers",									sh_pipe_mod},
 	{NULL,					0,  NULL,			NULL,			0,			NULL,												NULL}
 };
 
 static sw_command_t sh_int_eth[] = {
-	{eth_range,				0,	valid_eth,		cmd_int_eth,	RUN,		"Ethernet interface number",						NULL},
+	{eth_range,				1,	valid_eth,		cmd_int_eth,	RUN,		"Ethernet interface number",						NULL},
 	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
 };
 
 static sw_command_t sh_int_vlan[] = {
-	{vlan_range,			0,	valid_vlan,		cmd_int_vlan,	RUN,		"Vlan interface number",							NULL},
+	{vlan_range,			1,	valid_vlan,		cmd_int_vlan,	RUN,		"Vlan interface number",							NULL},
 	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
 };
 
 static sw_command_t sh_run_eth[] = {
-	{eth_range,				1,	valid_eth,		cmd_run_eth,	RUN,		"Ethernet interface number",						NULL},
+	{eth_range,				2,	valid_eth,		cmd_run_eth,	RUN,		"Ethernet interface number",						NULL},
 	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
 };
 
 static sw_command_t sh_run_vlan[] = {
-	{vlan_range,			1,	valid_vlan,		cmd_run_vlan,	RUN,		"Vlan interface number",							NULL},
+	{vlan_range,			2,	valid_vlan,		cmd_run_vlan,	RUN,		"Vlan interface number",							NULL},
 	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
 };
 
 static sw_command_t sh_mac_vlan[] = {
-	{vlan_range,			0,	valid_vlan,		cmd_sh_mac_vlan,RUN|PTCNT,	"Vlan interface number",							sh_pipe},
+	{vlan_range,			1,	valid_vlan,		cmd_sh_mac_vlan,RUN|PTCNT,	"Vlan interface number",							sh_pipe},
 	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
 };
 
 static sw_command_t sh_sh_m_eth[] = {
-	{"vlan",				0,	NULL,			NULL,			0,			 "VLAN keyword",									sh_mac_vlan},
-	{"|",					0,	NULL,			NULL,			0,			"Output modifiers",									sh_pipe_mod},
+	{"vlan",				1,	NULL,			NULL,			0,			 "VLAN keyword",									sh_mac_vlan},
+	{"|",					1,	NULL,			NULL,			0,			"Output modifiers",									sh_pipe_mod},
 	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
 };
 
@@ -404,89 +423,95 @@ static sw_command_t sh_mac_eth[] = {
 };
 
 static sw_command_t sh_sh_int[] = {
-	{"ethernet",			0,	NULL,			NULL,			0,			"Ethernet IEEE 802.3",								sh_int_eth},
-	{"vlan",				0,	NULL,			NULL,			0,			"LMS Vlans",										sh_int_vlan},
+	{"ethernet",			1,	NULL,			NULL,			0,			"Ethernet IEEE 802.3",								sh_int_eth},
+	{"vlan",				1,	NULL,			NULL,			0,			"LMS Vlans",										sh_int_vlan},
 	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
 };
 
 static sw_command_t sh_sh_run_int[] = {
-	{"ethernet",			1,	NULL,			NULL,			0,			"Ethernet IEEE 802.3",								sh_run_eth},
-	{"vlan",				1,	NULL,			NULL,			0,			"LMS Vlans",										sh_run_vlan},
+	{"ethernet",			2,	NULL,			NULL,			0,			"Ethernet IEEE 802.3",								sh_run_eth},
+	{"vlan",				2,	NULL,			NULL,			0,			"LMS Vlans",										sh_run_vlan},
 	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
 };
 
 static sw_command_t sh_sh_mac_int[] = {
-	{"ethernet",			0,	NULL,			NULL,			0,			"Ethernet IEEE 802.3",								sh_mac_eth},
+	{"ethernet",			1,	NULL,			NULL,			0,			"Ethernet IEEE 802.3",								sh_mac_eth},
 	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
 };
 
 static sw_command_t sh_sh_mac_addr[] = {
-	{"H.H.H",				0,	valid_mac,		cmd_sh_addr,	RUN|PTCNT,	"48 bit mac address",								NULL},
+	{"H.H.H",				1,	valid_mac,		cmd_show_mac,	RUN|PTCNT,	"48 bit mac address",								NULL},
 	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
 };
 
 static sw_command_t sh_sh_mac_sel[] = {
-	{"address",				0,	NULL,			NULL,			0,			"address keyword",									sh_sh_mac_addr},
-	{"interface",			0,	NULL,			NULL,			0,			"interface keyword",								sh_sh_mac_int},
-	{"vlan",				0,	NULL,			NULL,			0,			 "VLAN keyword",									sh_mac_vlan},
-	{"|",					0,	NULL,			NULL,			0,			"Output modifiers",									sh_pipe_mod},
+	{"address",				1,	NULL,			NULL,			0,			"address keyword",									sh_sh_mac_addr},
+	{"interface",			1,	NULL,			NULL,			0,			"interface keyword",								sh_sh_mac_int},
+	{"vlan",				1,	NULL,			NULL,			0,			 "VLAN keyword",									sh_mac_vlan},
+	{"|",					1,	NULL,			NULL,			0,			"Output modifiers",									sh_pipe_mod},
 	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
 };
 
 static sw_command_t sh_mac_addr_table[] = {
-	{"address",				0,	NULL,			NULL,			0,			"address keyword",									sh_sh_mac_addr},
-	{"aging-time",			0,	NULL,			NULL,			RUN,		"aging-time keyword",								NULL},
-	{"dynamic",				0,	valid_dyn,		cmd_show_mac,	RUN|CMPL|PTCNT,	"dynamic entry type",								sh_sh_mac_sel},
-	{"interface",			0,	NULL,			NULL,			0,			"interface keyword",								sh_sh_mac_int},
-	{"static",				0,	valid_static,	cmd_show_mac,	RUN|CMPL|PTCNT,	"static entry type",								sh_sh_mac_sel},
-	{"vlan",				0,	NULL,			NULL,			0,			 "VLAN keyword",									sh_mac_vlan},
-	{"|",					0,	NULL,			NULL,			0,			"Output modifiers",									sh_pipe_mod},
+	{"address",				1,	NULL,			NULL,			0,			"address keyword",									sh_sh_mac_addr},
+	{"aging-time",			1,	NULL,			NULL,			RUN,		"aging-time keyword",								NULL},
+	{"dynamic",				1,	valid_dyn,		cmd_show_mac,	RUN|CMPL|PTCNT,	"dynamic entry type",								sh_sh_mac_sel},
+	{"interface",			1,	NULL,			NULL,			0,			"interface keyword",								sh_sh_mac_int},
+	{"static",				1,	valid_static,	cmd_show_mac,	RUN|CMPL|PTCNT,	"static entry type",								sh_sh_mac_sel},
+	{"vlan",				1,	NULL,			NULL,			0,			 "VLAN keyword",									sh_mac_vlan},
+	{"|",					1,	NULL,			NULL,			0,			"Output modifiers",									sh_pipe_mod},
 	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
 };
 
 static sw_command_t sh_show_run[] = {
-	{"interface",			0,	NULL,			NULL,			0,			"Show interface configuration",						sh_sh_run_int},
-	{"|",					0,  NULL,			NULL,			0,			"Output modifiers",									sh_pipe_mod},
+	{"interface",			1,	NULL,			NULL,			0,			"Show interface configuration",						sh_sh_run_int},
+	{"|",					1,  NULL,			NULL,			0,			"Output modifiers",									sh_pipe_mod},
 	{NULL,					0,  NULL,			NULL,			0,			NULL,												NULL}
 };
 
 static sw_command_t sh_show[] = {
-	{"arp",					0,	NULL,			NULL,			RUN,		"ARP table",										NULL},
-	{"clock",				0,	NULL,			NULL,			RUN,		"Display the system clock",							NULL},
-	{"history",				0,	NULL,			cmd_history,	RUN,		"Display the session command history",				sh_pipe},
-	{"interfaces",			0,	NULL,			cmd_sh_int,		RUN,		"Interface status and configuration",				sh_sh_int},
-	{"ip",					0,	NULL,			NULL,			RUN,		"IP information",									NULL},
-	{"mac",					0,	NULL,			NULL,			RUN,		"MAC configuration",								NULL},
-	{"mac-address-table",	0,	NULL,			cmd_show_mac,	RUN,		"MAC forwarding table",								sh_mac_addr_table},
-	{"running-config",		1,	NULL,			cmd_show_run,	RUN,		"Current operating configuration",					sh_show_run},
-	{"sessions",			0,	NULL,			NULL,			RUN,		"Information about Telnet connections",				NULL},
-	{"startup-config",		0,	NULL,			NULL,			RUN,		"Contents of startup configuration",				NULL},
-	{"users",				0,	NULL,			NULL,			RUN,		"Display information about terminal lines",			NULL},
-	{"version",				0,	NULL,			NULL,			RUN,		"System hardware and software status",				NULL},
-	{"vlan",				0,	NULL,			NULL,			RUN,		"VTP VLAN status",									NULL},
+	{"arp",					1,	NULL,			NULL,			RUN,		"ARP table",										NULL},
+	{"clock",				1,	NULL,			NULL,			RUN,		"Display the system clock",							NULL},
+	{"history",				1,	NULL,			cmd_history,	RUN,		"Display the session command history",				sh_pipe},
+	{"interfaces",			1,	NULL,			cmd_sh_int,		RUN,		"Interface status and configuration",				sh_sh_int},
+	{"ip",					1,	NULL,			NULL,			RUN,		"IP information",									NULL},
+	{"mac",					1,	NULL,			NULL,			RUN,		"MAC configuration",								NULL},
+	{"mac-address-table",	1,	NULL,			cmd_show_mac,	RUN,		"MAC forwarding table",								sh_mac_addr_table},
+	{"privilege",			2,	NULL,			cmd_show_priv,	RUN,		"Show current privilege level",						NULL},
+	{"running-config",		2,	NULL,			cmd_show_run,	RUN,		"Current operating configuration",					sh_show_run},
+	{"sessions",			1,	NULL,			NULL,			RUN,		"Information about Telnet connections",				NULL},
+	{"startup-config",		1,	NULL,			NULL,			RUN,		"Contents of startup configuration",				NULL},
+	{"users",				1,	NULL,			NULL,			RUN,		"Display information about terminal lines",			NULL},
+	{"version",				1,	NULL,			NULL,			RUN,		"System hardware and software status",				NULL},
+	{"vlan",				1,	NULL,			NULL,			RUN,		"VTP VLAN status",									NULL},
 	{NULL,					0,  NULL,			NULL,			0,			NULL,												NULL}
 };
 
 static sw_command_t sh_conf[] = {
-	{"terminal",			1,	NULL,			cmd_conf_t,		RUN,		"Configure from the terminal",						NULL},
+	{"terminal",			2,	NULL,			cmd_conf_t,		RUN,		"Configure from the terminal",						NULL},
+	{NULL,					0,  NULL,			NULL,			0,			NULL,												NULL}
+};
+
+static sw_command_t sh_enable[] = {
+	{"<1-15>",				1,	valid_priv,		cmd_enable,		RUN|PTCNT,	"Enable level",										NULL},
 	{NULL,					0,  NULL,			NULL,			0,			NULL,												NULL}
 };
 
 static sw_command_t sh[] = {
-	{"clear",				0,	NULL, 			NULL,			0,			"Reset functions",									NULL},
-	{"configure",			1,	NULL,			NULL,			0,			"Enter configuration mode",							sh_conf},
-	{"disable",				1,	NULL,			cmd_disable,	RUN,		"Turn off privileged commands",						NULL},
-	{"enable",				0,	NULL,			cmd_enable,		RUN,		"Turn on privileged commands",						NULL},
-	{"exit",				0,	NULL,			cmd_exit,		RUN,		"Exit from the EXEC",								NULL},
-	{"help",				0,	NULL,			cmd_help,		RUN,		"Description of the interactive help system",		NULL},
-	{"logout",				0,	NULL,			cmd_exit,		RUN,		"Exit from the EXEC",								NULL},
-	{"ping",				0,	NULL,			NULL,			0,			"Send echo messages",								NULL},
-	{"quit",				0,	NULL,			cmd_exit,		RUN,		"Exit from the EXEC",								NULL},
-	{"show",				0,	NULL,			NULL,			0,			"Show running system information",					sh_show},
-	{"telnet",				0,	NULL,			NULL,			0,			"Open a telnet connection",							NULL},
-	{"terminal",			0,	NULL,			NULL,			0,			"Set terminal line parameters",						NULL},
-	{"traceroute",			0,	NULL,			NULL,			0,			"Trace route to destination",						NULL},
-	{"where",				0,	NULL,			NULL,			RUN,		"List active connections",							NULL},
+	{"clear",				1,	NULL, 			NULL,			0,			"Reset functions",									NULL},
+	{"configure",			2,	NULL,			NULL,			0,			"Enter configuration mode",							sh_conf},
+	{"disable",				2,	NULL,			cmd_disable,	RUN,		"Turn off privileged commands",						NULL},
+	{"enable",				1,	NULL,			cmd_enable,		RUN,		"Turn on privileged commands",						sh_enable},
+	{"exit",				1,	NULL,			cmd_exit,		RUN,		"Exit from the EXEC",								NULL},
+	{"help",				1,	NULL,			cmd_help,		RUN,		"Description of the interactive help system",		NULL},
+	{"logout",				1,	NULL,			cmd_exit,		RUN,		"Exit from the EXEC",								NULL},
+	{"ping",				1,	NULL,			NULL,			0,			"Send echo messages",								NULL},
+	{"quit",				1,	NULL,			cmd_exit,		RUN,		"Exit from the EXEC",								NULL},
+	{"show",				1,	NULL,			NULL,			0,			"Show running system information",					sh_show},
+	{"telnet",				1,	NULL,			NULL,			0,			"Open a telnet connection",							NULL},
+	{"terminal",			1,	NULL,			NULL,			0,			"Set terminal line parameters",						NULL},
+	{"traceroute",			1,	NULL,			NULL,			0,			"Trace route to destination",						NULL},
+	{"where",				1,	NULL,			NULL,			RUN,		"List active connections",							NULL},
 	{NULL,					0,  NULL,			NULL,			0,			NULL,												NULL}
 };
 
