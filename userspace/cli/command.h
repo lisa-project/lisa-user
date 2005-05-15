@@ -11,12 +11,12 @@
 /* Command node state */
 /* Node is runnable (command can be executed at this point) */
 #define RUN			0x0010
-/* Node is a pattern that ends at the first space and node
-   has subnodes.
- */
+/* Node is a pattern that ends at the first space */
 #define PTCNT		0x0020
 /* Command is ambiguous */
 #define NA			0x0040
+/* Node is a pattern that needs completion */
+#define CMPL		0x0080
 #define FLAGS_MASK	0x00f0
 
 typedef void (*sw_command_handler)(FILE *, char **);

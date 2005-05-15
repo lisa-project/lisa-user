@@ -400,7 +400,8 @@ char *swcli_generator(const char *text, int state) {
 	for (; (name = search_set[list_index].name); list_index++) {
         if(search_set[list_index].priv > priv)
             continue;
-		if (strncmp(name, text, len) == 0 && !search_set[list_index].valid) {
+		if (strncmp(name, text, len) == 0 && 
+				(search_set[list_index].state & CMPL || !search_set[list_index].valid)) {
 			list_index++;
 			return strdup(name);
 		}

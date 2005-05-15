@@ -184,6 +184,14 @@ int valid_mac(char *arg) {
 	return (sscanf(arg, "%hx.%hx.%hx", &a0, &a1, &a2) == ETH_ALEN/2);
 }
 
+int valid_dyn(char *arg) {
+	return (strcmp(arg, "dynamic") == 0);
+}
+
+int valid_static(char *arg) {
+	return (strcmp(arg, "static") == 0);
+}
+
 char vlan_range[] = "<1-1094>\0";
 
 int parse_eth(char *arg) {
@@ -296,13 +304,21 @@ static sw_command_t sh_sh_mac_addr[] = {
 	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
 };
 
+static sw_command_t sh_sh_mac_sel[] = {
+	{"address",				0,	NULL,			NULL,			0,			"address keyword",									sh_sh_mac_addr},
+	{"interface",			0,	NULL,			NULL,			0,			"interface keyword",								sh_sh_mac_int},
+	{"vlan",				0,	NULL,			NULL,			0,			 "VLAN keyword",									sh_mac_vlan},
+	{"|",					0,	NULL,			NULL,			0,			"Output modifiers",									sh_pipe_mod},
+	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
+};
+
 static sw_command_t sh_mac_addr_table[] = {
 	{"address",				0,	NULL,			NULL,			0,			"address keyword",									sh_sh_mac_addr},
 	{"aging-time",			0,	NULL,			NULL,			RUN,		"aging-time keyword",								NULL},
-	{"dynamic",				0,	NULL,			cmd_sh_dynamic,	RUN,		"dynamic entry type",								NULL},
+	{"dynamic",				0,	valid_dyn,		cmd_sh_dynamic,	RUN|CMPL,	"dynamic entry type",								sh_sh_mac_sel},
 	{"interface",			0,	NULL,			NULL,			0,			"interface keyword",								sh_sh_mac_int},
-	{"static",				0,	NULL,			cmd_sh_static,	RUN,		"static entry type",								NULL},
-	{"vlan",				0,	NULL,			NULL,			0,			 "VLAN keyword",										sh_mac_vlan},
+	{"static",				0,	valid_static,	cmd_sh_static,	RUN|CMPL,	"static entry type",								sh_sh_mac_sel},
+	{"vlan",				0,	NULL,			NULL,			0,			 "VLAN keyword",									sh_mac_vlan},
 	{"|",					0,	NULL,			NULL,			0,			"Output modifiers",									sh_pipe_mod},
 	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
 };
