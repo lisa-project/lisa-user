@@ -237,11 +237,14 @@ int change_search_scope(char *match, char *rest, char lookahead)  {
 			arg = (search_set[i].state & PTCNT)? match: rest;
 			if (search_set[i].valid(arg)) {
 				count = 1;
-				if (search_set[i].state & PTCNT && whitespace(lookahead))
+				if (search_set[i].state & PTCNT && whitespace(lookahead)) {
+					func = search_set[i].func;
 					set = search_set[i].subcmd;
-				else 
+				}	
+				else  {
 					set = search_set;
-				func = handler;
+					func = handler;
+				}	
 				break;
 			}	
 		}
