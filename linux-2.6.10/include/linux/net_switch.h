@@ -32,7 +32,8 @@
 #define SWCFG_CLEARMACINT	0x0b	/* clear all macs for a given port */
 #define SWCFG_SETAGETIME	0x0c	/* set fdb entry aging time interval (in ms) */
 #define SWCFG_MACSTATIC		0x0d	/* add static mac */
-#define SWCFG_GETIFCFG		0x0e	/* get physical port configuration and status */
+#define SWCFG_DELMACSTATIC	0x0e	/* delete static mac */
+#define SWCFG_GETIFCFG		0x0f	/* get physical port configuration and status */
 #define SWCFG_ADDVIF		0x10	/* add virtual interface for vlan */
 #define SWCFG_DELVIF		0x11	/* remove virtual interface for vlan */
 #define SWCFG_DISABLEPORT	0x12	/* administratively disable port */

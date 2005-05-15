@@ -31,10 +31,8 @@ static void cmd_int_eth(FILE *out, char **argv) {
 	struct net_switch_ioctl_arg ioctl_arg;
 	char if_name[IFNAMSIZ];
 	
-	sprintf(if_name, "eth%d", parse_eth(arg));
-
 	ioctl_arg.cmd = SWCFG_ADDIF;
-	ioctl_arg.if_name = if_name;
+	ioctl_arg.if_name = if_name_eth(arg);
 	do {
 		if(!ioctl(sock_fd, SIOCSWCFG, &ioctl_arg))
 			break;
@@ -50,14 +48,11 @@ static void cmd_int_eth(FILE *out, char **argv) {
 }
 
 static void cmd_no_int_eth(FILE *out, char **argv) {
-	char *arg = *argv;
+	char *arg = argv[1]; /* argv[0] is "no" */
 	struct net_switch_ioctl_arg ioctl_arg;
-	char if_name[IFNAMSIZ];
 	
-	sprintf(if_name, "eth%d", parse_eth(arg));
-
 	ioctl_arg.cmd = SWCFG_DELIF;
-	ioctl_arg.if_name = if_name;
+	ioctl_arg.if_name = if_name_eth(arg);
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
@@ -79,6 +74,34 @@ static void cmd_no_int_vlan(FILE *out, char **argv) {
 }
 
 static void cmd_macstatic(FILE *out, char **argv) {
+	struct net_switch_ioctl_arg ioctl_arg;
+	int status;
+	unsigned char mac[ETH_ALEN];
+
+	ioctl_arg.cmd = SWCFG_MACSTATIC;
+	if(!strcmp(argv[0], "no")) {
+		ioctl_arg.cmd = SWCFG_DELMACSTATIC;
+		argv++;
+	}
+	status = parse_mac(argv[0], mac);
+	assert(!status);
+	ioctl_arg.ext.mac = mac;
+	ioctl_arg.vlan = parse_vlan(argv[1]);
+	ioctl_arg.if_name = if_name_eth(argv[2]);
+	status = ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
+	if(ioctl_arg.cmd == SWCFG_DELMACSTATIC && status == -1) {
+		fprintf(out, "MAC address could not be removed\n"
+				"Address not found\n\n");
+		fflush(out);
+	}
+}
+
+int valid_host(char *arg) {
+	return 1;
+}
+
+int valid_no(char *arg) {
+	return !strcmp(arg, "no");
 }
 
 static sw_command_t sh_no_int_eth[] = {
@@ -113,12 +136,6 @@ sw_command_t sh_conf_int[] = {
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
 
-static sw_command_t sh_no[] = {
-	{"hostname",			1,	NULL,		cmd_nohostname,		RUN,		"Set system's network name",					NULL},
-	{"interface",			1,	NULL,		NULL,				0,			"Select an interface to configure",				sh_no_int},
-	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
-};
-
 static sw_command_t sh_macstatic_ifp[] = {
 	{eth_range,				1,	valid_eth,	cmd_macstatic,		RUN|PTCNT,	"Ethernet interface number",					NULL},
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
@@ -149,9 +166,27 @@ static sw_command_t sh_macstatic[] = {
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
 
+static sw_command_t sh_nomac[] = {
+	{"aging-time",			1,	NULL,		NULL,				0,			"Set MAC address table entry maximum age",		NULL},
+	{"static",				1,	NULL,		NULL,				0,			"static keyword",								sh_macstatic},
+	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+};
+
 static sw_command_t sh_mac[] = {
 	{"aging-time",			1,	NULL,		NULL,				0,			"Set MAC address table entry maximum age",		NULL},
 	{"static",				1,	NULL,		NULL,				0,			"static keyword",								sh_macstatic},
+	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+};
+
+static sw_command_t sh_hostname[] = {
+	{"WORD",				1,	valid_host,	cmd_hostname,		RUN|PTCNT,	"This system's network name",					NULL},
+	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+};
+
+static sw_command_t sh_no[] = {
+	{"hostname",			1,	NULL,		cmd_nohostname,		RUN,		"Set system's network name",					NULL},
+	{"interface",			1,	NULL,		NULL,				0,			"Select an interface to configure",				sh_no_int},
+	{"mac-address-table",	1,	NULL,		NULL,				0,			"Configure the MAC address table",				sh_nomac},
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
 
@@ -159,10 +194,10 @@ static sw_command_t sh[] = {
 	{"enable",				1,	NULL,		NULL,				0,			"Modify enable password parameters",			NULL},
 	{"end",					1,	NULL,		cmd_end,			RUN,		"Exit from configure mode",						NULL},
 	{"exit",				1,	NULL,		cmd_end,			RUN,		"Exit from configure mode",						NULL},
-	{"hostname",			1,	NULL,		cmd_hostname,		0,			"Set system's network name",					NULL},
+	{"hostname",			1,	NULL,		NULL,				0,			"Set system's network name",					sh_hostname},
 	{"interface",			1,	NULL,		NULL,				0,			"Select an interface to configure",				sh_conf_int},
 	{"mac-address-table",	1,	NULL,		NULL,				0,			"Configure the MAC address table",				sh_mac},
-	{"no",					1,	NULL,		NULL,				0, 			"Negate a command or set its defaults",			sh_no},
+	{"no",					1,	valid_no,	NULL,				PTCNT|CMPL, "Negate a command or set its defaults",			sh_no},
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
 

@@ -45,8 +45,10 @@ extern char vlan_range[];
 extern int valid_eth(char *);
 extern int valid_vlan(char *);
 extern int parse_eth(char *);
+extern char *if_name_eth(char *);
 extern int parse_vlan(char *);
 extern int valid_mac(char *);
+extern int parse_mac(char *, unsigned char *);
 
 extern sw_command_root_t command_root_main;
 

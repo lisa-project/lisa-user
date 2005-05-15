@@ -192,6 +192,13 @@ int parse_eth(char *arg) {
 	return no;
 }
 
+static char if_name[IFNAMSIZ];
+
+char *if_name_eth(char *arg) {
+	sprintf(if_name, "eth%d", parse_eth(arg));
+	return if_name;
+}
+
 int parse_vlan(char *arg) {
 	int no, status;
 
@@ -201,24 +208,18 @@ int parse_vlan(char *arg) {
 	return no;
 }
 
-int parse_mac(char *arg, char **mac) {
-	unsigned char *buf = calloc(sizeof(unsigned char), ETH_ALEN+1);
+int parse_mac(char *arg, unsigned char *mac) {
 	unsigned short a0, a1, a2;
 
-	assert(buf); /* enough memory */
-	if (sscanf(arg, "%hx.%hx.%hx", &a0, &a1, &a2) != ETH_ALEN/2) {
-		free(buf);
-		*mac = NULL;
-	}
+	if (sscanf(arg, "%hx.%hx.%hx", &a0, &a1, &a2) != ETH_ALEN/2)
+		return EINVAL;
 
-	buf[0] = a0 / 0x100;
-	buf[1] = a0 % 0x100;
-	buf[2] = a1 / 0x100;
-	buf[3] = a1 % 0x100;
-	buf[4] = a2 / 0x100;
-	buf[5] = a2 % 0x100;
-
-	*mac = buf;
+	mac[0] = a0 / 0x100;
+	mac[1] = a0 % 0x100;
+	mac[2] = a1 / 0x100;
+	mac[3] = a1 % 0x100;
+	mac[4] = a2 / 0x100;
+	mac[5] = a2 % 0x100;
 
 	return 0;
 }

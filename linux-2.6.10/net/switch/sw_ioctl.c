@@ -138,7 +138,7 @@ int sw_delif(struct net_device *dev) {
 	/* Now nobody can add references to this port, so we can safely clean
 	   up all existing references from the fdb
 	 */
-	fdb_cleanup_port(port);
+	fdb_cleanup_port(port, SW_FDB_ANY);
 	/* Clean up vlan references: if the port was non-trunk, remove it from
 	   its single vlan; otherwise use the disallowed vlans bitmap to remove
 	   it from all vlans
@@ -186,7 +186,7 @@ static int sw_set_port_trunk(struct net_switch_port *port, int trunk) {
 		sw_set_port_flag_rcu(port, SW_PFL_DROPALL);
 		__sw_remove_from_vlans(port);
 		sw_res_port_flag(port, SW_PFL_TRUNK);
-		fdb_cleanup_port(port);
+		fdb_cleanup_port(port, SW_FDB_DYN);
 		status = sw_vdb_add_port(port->vlan, port);
 #if NET_SWITCH_NOVLANFORIF == 2
 		if(status)
@@ -200,7 +200,7 @@ static int sw_set_port_trunk(struct net_switch_port *port, int trunk) {
 		sw_vdb_del_port(port->vlan, port);
 		sw_set_port_flag(port, SW_PFL_TRUNK);
 		sw_res_port_flag(port, SW_PFL_ACCESS);
-		fdb_cleanup_port(port);
+		fdb_cleanup_port(port, SW_FDB_DYN);
 		__sw_add_to_vlans(port);
 		/* Make sure it was not disabled by assigning a non-existent vlan */
 		sw_enable_port(port);
@@ -482,7 +482,7 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 		break;
 	case SWCFG_CLEARMACINT:
 		PORT_GET;
-		fdb_cleanup_port(port);
+		fdb_cleanup_port(port, SW_FDB_DYN);
 		err = 0;
 		break;
 	case SWCFG_SETAGETIME:
@@ -497,6 +497,10 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 		PORT_GET;
 		err = fdb_learn(arg.ext.mac, port, arg.vlan, SW_FDB_STATIC,
 				is_mcast_mac(arg.ext.mac));
+		break;
+	case SWCFG_DELMACSTATIC:
+		PORT_GET;
+		err = fdb_del(&sw, arg.ext.mac, port, arg.vlan, SW_FDB_STATIC) ? 0 : -ENOENT;
 		break;
 	case SWCFG_ADDVIF:
 		err = sw_vif_addif(&sw, arg.vlan);

@@ -83,7 +83,7 @@ static void sw_timer_add(struct timer_list *timer,
    change it. While holding the lock search for the entry again to
    avoid races.
  */
-void fdb_cleanup_port(struct net_switch_port *port) {
+void fdb_cleanup_port(struct net_switch_port *port, int addr_type) {
     struct net_switch *sw = port->sw;
     struct net_switch_fdb_entry *entry, *tmp;
 	struct list_head *entry_lh, *tmp_lh;
@@ -92,7 +92,7 @@ void fdb_cleanup_port(struct net_switch_port *port) {
 	
 	for (i = 0; i < SW_HASH_SIZE; i++) {
 		list_for_each_entry_rcu(entry, &sw->fdb[i].entries, lh) {
-			if(entry->port == port)
+			if(entry->port == port && (addr_type == SW_FDB_ANY || entry->is_static == addr_type))
                 break;
 		}
         if(&entry->lh == &sw->fdb[i].entries)
@@ -101,7 +101,7 @@ void fdb_cleanup_port(struct net_switch_port *port) {
         spin_lock_bh(&sw->fdb[i].lock);
 		list_for_each_safe_rcu(entry_lh, tmp_lh, &sw->fdb[i].entries) {
 			entry = list_entry(entry_lh, struct net_switch_fdb_entry, lh);
-			if(entry->port == port) {
+			if(entry->port == port && (addr_type == SW_FDB_ANY || entry->is_static == addr_type)) {
 				if (!entry->is_static)
 					del_timer(&entry->age_timer);
                 list_del_rcu(&entry->lh);
@@ -160,6 +160,57 @@ void fdb_cleanup_vlan(struct net_switch *sw, int vlan) {
 				entry, entry->port->dev->name);
 		kmem_cache_free(sw->fdb_cache, entry);
 	}
+}
+
+/* Delete all entries having a specific address.
+   
+   This is (should be) always called from user space, so locking is
+   done _with_ softirqs disabled (spin_lock_bh()).
+
+   Writing is done in a transactional manner: first check if we need
+   to change a bucket, and then lock the bucket only if we need to
+   change it. While holding the lock search for the entry again to
+   avoid races.
+ */
+int fdb_del(struct net_switch *sw, unsigned char *mac,
+		struct net_switch_port *port, int vlan, int addr_type) {
+	struct net_switch_fdb_entry *entry, *tmp;
+	struct list_head *entry_lh, *tmp_lh;
+	LIST_HEAD(del_list);
+	int i;
+	struct net_switch_bucket *bucket = &sw->fdb[sw_mac_hash(mac)];
+	int ret = 0;
+
+	list_for_each_entry_rcu(entry, &bucket->entries, lh) {
+		if((!vlan || entry->vlan == vlan) && (!port || entry->port == port) &&
+				(addr_type = SW_FDB_ANY || entry->is_static == addr_type) &&
+				!memcmp(entry->mac, mac, ETH_ALEN))
+			break;
+	}
+	if(&entry->lh == &bucket->entries)
+		return ret;
+	/* We found entries; lock for write and delete them */
+	spin_lock_bh(&bucket->lock);
+	list_for_each_safe_rcu(entry_lh, tmp_lh, &bucket->entries) {
+		entry = list_entry(entry_lh, struct net_switch_fdb_entry, lh);
+		if((!vlan || entry->vlan == vlan) && (!port || entry->port == port) &&
+				(addr_type = SW_FDB_ANY || entry->is_static == addr_type) &&
+				!memcmp(entry->mac, mac, ETH_ALEN)) {
+			if (!entry->is_static)
+				del_timer(&entry->age_timer);
+			list_del_rcu(&entry->lh);
+			list_add(&entry->lh, &del_list);
+		}
+	}
+	spin_unlock_bh(&sw->fdb[i].lock);
+	synchronize_kernel();
+	list_for_each_entry_safe(entry, tmp, &del_list, lh) {
+		dbg("About to free fdb entry at 0x%p for port %s\n",
+				entry, entry->port->dev->name);
+		kmem_cache_free(sw->fdb_cache, entry);
+		ret++;
+	}
+	return ret;
 }
 
 static void __fdb_change_to_static(struct net_switch_fdb_entry *entry) {
