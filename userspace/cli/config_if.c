@@ -80,7 +80,7 @@ static void cmd_nomode(FILE *out, char **argv) {
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
-static int valid_vlst(char *arg) {
+static int valid_vlst(char *arg, char lookahead) {
 	return is_digit(*arg);
 }
 
@@ -228,7 +228,7 @@ static void cmd_remvlans(FILE *out, char **argv) {
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
-static int valid_desc(char *argv) {
+static int valid_desc(char *argv, char lookahead) {
 	return 1;
 }
 

@@ -96,11 +96,11 @@ static void cmd_macstatic(FILE *out, char **argv) {
 	}
 }
 
-int valid_host(char *arg) {
+int valid_host(char *arg, char lookahead) {
 	return 1;
 }
 
-int valid_no(char *arg) {
+int valid_no(char *arg, char lookahead) {
 	return !strcmp(arg, "no");
 }
 

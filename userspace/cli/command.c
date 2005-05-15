@@ -12,6 +12,8 @@
 #include "filter.h"
 #include "if.h"
 
+static char if_name[IFNAMSIZ];
+
 static void swcli_sig_term(int sig) {
 	char hostname[MAX_HOSTNAME];
 	cmd_root = &command_root_main;
@@ -139,16 +141,132 @@ static void cmd_show_run(FILE *out, char **argv) {
 static void cmd_run_vlan(FILE *out, char **argv) {
 }
 
+static void init_mac_filter(struct net_switch_ioctl_arg *user_arg) {
+	user_arg->if_name = NULL;
+	user_arg->cmd = SWCFG_GETMAC;
+	memset(&user_arg->ext.marg.addr, 0, ETH_ALEN);
+	user_arg->ext.marg.addr_type = SW_FDB_ANY;
+	user_arg->vlan = 0;
+}
+
+static void do_mac_filter(FILE *out, struct net_switch_ioctl_arg *user_arg, int size, char *buf) {
+	int status;
+
+	do {
+		user_arg->ext.marg.buf_size = size;
+		user_arg->ext.marg.buf = buf;
+		status = ioctl(sock_fd, SIOCSWCFG, user_arg);
+		if (status == -1) {
+			perror("ioctl");
+			break;
+		}
+		if (status == SW_INSUFFICIENT_SPACE) {
+			dbg("Insufficient buffer space. Realloc'ing ...\n");
+			buf = realloc(buf, size+INITIAL_BUF_SIZE);
+			assert(buf);
+			size+=INITIAL_BUF_SIZE;
+		}
+		else {
+			user_arg->ext.marg.actual_size = status;
+			cmd_showmac(out, (char *)user_arg);
+			break;
+		}	
+	} while(status);
+}
+
 static void cmd_show_mac(FILE *out, char **argv) {
-	printf("cmd_show_mac was called\n");
+	int i, size;
+	char *arg, *buf;
+	struct net_switch_ioctl_arg user_arg;
+
+	buf = (char *)malloc(INITIAL_BUF_SIZE);
+	size = INITIAL_BUF_SIZE;
+	init_mac_filter(&user_arg);
+	for (i=0; (arg = argv[i]); i++) {
+		if (strcmp(arg, "dynamic") == 0) {
+			user_arg.ext.marg.addr_type = SW_FDB_DYN;
+			continue;
+		}
+		if (strcmp(arg, "static") == 0) {
+			user_arg.ext.marg.addr_type = SW_FDB_STATIC;
+		}
+	}
+	do_mac_filter(out, &user_arg, size, buf);
+	fprintf(out, "\n");
+}
+
+static void cmd_sh_mac_eth(FILE *out, char **argv) {
+	char *arg, *buf;
+	struct net_switch_ioctl_arg user_arg;
+	int i, size;
+
+
+	buf = (char *)malloc(INITIAL_BUF_SIZE);
+	size = INITIAL_BUF_SIZE;
+	init_mac_filter(&user_arg);
+
+	for (i=0; (arg = argv[i]); i++) {
+		if (strcmp(arg, "dynamic") == 0) {
+			user_arg.ext.marg.addr_type = SW_FDB_DYN;
+			continue;
+		}
+		if (strcmp(arg, "static") == 0) {
+			user_arg.ext.marg.addr_type = SW_FDB_STATIC;
+			continue;
+		}
+		if (valid_eth(arg, arg[strlen(arg)-1]) && !user_arg.if_name) {
+			user_arg.if_name = if_name_eth(arg);
+		}
+	}
+
+	do_mac_filter(out, &user_arg, size, buf);
+	fprintf(out, "\n");
+}
+
+static void cmd_sh_mac_vlan(FILE *out, char **argv) {
+	char *arg, *buf;
+	struct net_switch_ioctl_arg user_arg;
+	int i, size, a[2], cnt=0, k;
+
+	
+	buf = (char *)malloc(INITIAL_BUF_SIZE);
+	size = INITIAL_BUF_SIZE;
+	init_mac_filter(&user_arg);
+	
+	for (i=0; (arg = argv[i]); i++) {
+		if (strcmp(arg, "dynamic") == 0) {
+			user_arg.ext.marg.addr_type = SW_FDB_DYN;
+			continue;
+		}
+		if (strcmp(arg, "static") == 0) {
+			user_arg.ext.marg.addr_type = SW_FDB_STATIC;
+			continue;
+		}
+		if (sscanf(arg, "%d", &k)) {
+			a[cnt++] = k;
+		}
+	}
+	if (cnt > 1) { /* si eth si vlan */
+		sprintf(if_name, "eth%d", a[0]);
+		user_arg.if_name = if_name;
+		user_arg.vlan = a[1];
+	}
+	else user_arg.vlan = a[0];
+
+	do_mac_filter(out, &user_arg, size, buf);
+	fprintf(out, "\n");
+}
+
+static void cmd_sh_addr(FILE *out, char **argv) {
+	printf("sh_mac_addr\n");
 }
 
 /* Validation Handlers Implementation */
-int valid_regex(char *arg) {
+int valid_regex(char *arg, char lookahead) {
 	return 1;
 }
 
-int valid_eth(char *arg) {
+int valid_eth(char *arg, char lookahead) {
 	int no;
 	if(sscanf(arg, "%d", &no) != 1)
 		return 0;
@@ -158,7 +276,7 @@ int valid_eth(char *arg) {
 	return 1;
 }
 
-int valid_vlan(char *arg) {
+int valid_vlan(char *arg, char lookahead) {
 	int no;
 	if(sscanf(arg, "%d", &no) != 1)
 		return 0;
@@ -167,17 +285,26 @@ int valid_vlan(char *arg) {
 	return 1;
 }
 
-int valid_mac(char *arg) {
-	unsigned short a0, a1, a2;
+int valid_mac(char *arg, char lookahead) {
+	regex_t regex;
+	regmatch_t result;
+	int res;
 
-	return (sscanf(arg, "%hx.%hx.%hx", &a0, &a1, &a2) == ETH_ALEN/2);
+	if (regcomp(&regex, whitespace(lookahead)? 
+				"^[0-9a-f]{1,4}(\\.[0-9a-f]{1,4}){2}$":"^[0-9a-f]{1,4}(\\.[0-9a-f]{0,4}){0,2}$", 
+				REG_ICASE|REG_EXTENDED)) {
+		perror("regcomp");
+		return 0;
+	}
+	res = regexec(&regex, arg, 1, &result, 0);
+	return (res == 0);
 }
 
-int valid_dyn(char *arg) {
+int valid_dyn(char *arg, char lookahead) {
 	return (strcmp(arg, "dynamic") == 0);
 }
 
-int valid_static(char *arg) {
+int valid_static(char *arg, char lookahead) {
 	return (strcmp(arg, "static") == 0);
 }
 
@@ -191,8 +318,6 @@ int parse_eth(char *arg) {
 
 	return no;
 }
-
-static char if_name[IFNAMSIZ];
 
 char *if_name_eth(char *arg) {
 	sprintf(if_name, "eth%d", parse_eth(arg));
@@ -262,14 +387,19 @@ static sw_command_t sh_run_vlan[] = {
 	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
 };
 
-static sw_command_t sh_mac_eth[] = {
-	{eth_range,				0,	valid_eth,		cmd_show_mac,	RUN|PTCNT,	"Ethernet interface number",						sh_pipe},
+static sw_command_t sh_mac_vlan[] = {
+	{vlan_range,			0,	valid_vlan,		cmd_sh_mac_vlan,RUN|PTCNT,	"Vlan interface number",							sh_pipe},
 	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
 };
 
-static sw_command_t sh_mac_vlan[] = {
-	{vlan_range,			0,	valid_vlan,		cmd_show_mac,	RUN|PTCNT,	"Vlan interface number",							NULL},
+static sw_command_t sh_sh_m_eth[] = {
+	{"vlan",				0,	NULL,			NULL,			0,			 "VLAN keyword",									sh_mac_vlan},
 	{"|",					0,	NULL,			NULL,			0,			"Output modifiers",									sh_pipe_mod},
+	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
+};
+
+static sw_command_t sh_mac_eth[] = {
+	{eth_range,				0,	valid_eth,		cmd_sh_mac_eth,	RUN|PTCNT,	"Ethernet interface number",						sh_sh_m_eth},
 	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
 };
 
@@ -291,7 +421,7 @@ static sw_command_t sh_sh_mac_int[] = {
 };
 
 static sw_command_t sh_sh_mac_addr[] = {
-	{"H.H.H",				0,	valid_mac,		cmd_show_mac,	RUN, 		"48 bit mac address",								NULL},
+	{"H.H.H",				0,	valid_mac,		cmd_sh_addr,	RUN|PTCNT,	"48 bit mac address",								NULL},
 	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
 };
 

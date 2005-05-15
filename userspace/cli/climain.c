@@ -235,7 +235,7 @@ int change_search_scope(char *match, char *rest, char lookahead)  {
 		}
 		else if (search_set[i].valid) {
 			arg = (search_set[i].state & PTCNT)? match: rest;
-			if (search_set[i].valid(arg)) {
+			if (search_set[i].valid(arg, lookahead)) {
 				count = 1;
 				if (search_set[i].state & PTCNT && whitespace(lookahead)) {
 					func = search_set[i].func;
@@ -278,7 +278,7 @@ int lookup_token(char *match, char *rest, char lookahead) {
 			continue;
 		if (search_set[i].valid) {
 			arg = (search_set[i].state & PTCNT)? match: rest;
-			if (search_set[i].valid(arg)) {
+			if (search_set[i].valid(arg, lookahead)) {
 				count = 1;
 				if (search_set[i].state & PTCNT && whitespace(lookahead))
 					set = search_set[i].subcmd;
@@ -451,7 +451,7 @@ sw_match_t *get_matches(int *matched, char *token) {
 		if(search_set[i].priv > priv)
 			continue;
 		if (!strncmp(token, cmd, strlen(token)) || 
-				(search_set[i].valid && search_set[i].valid(token))) {
+				(search_set[i].valid && search_set[i].valid(token, token[strlen(token)-1]))) {
 			count++;
 			if (count - 1 >= num) {
 				num += MATCHES_PER_ROW;
@@ -496,7 +496,7 @@ void swcli_piped_exec(sw_execution_state_t *exc) {
 			De altfel daca nu facem asta merge super beton
 			sa executi comenzi de shell intre `` !!!
 		 */
-		nc = sprintf(cmd_buf, "./filter %d %s", exc->pipe_type, exc->func_args[0]);	
+		nc = sprintf(cmd_buf, "./filter %d %s", exc->pipe_type, exc->func_args[exc->num-1]);	
 	}
 	assert(nc < sizeof(cmd_buf));
 	assert((pipe = popen(cmd_buf, "w")));
