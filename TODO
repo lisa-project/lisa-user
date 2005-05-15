@@ -1,0 +1,10 @@
+CLI
+
+* Accept multiple interfaces when adding or deleting static MACs
+* Group identical static MACs in a single command when building config
+
+
+MLS
+
+* When we have static multicast macs, forward matching packets to
+  all appropriate ports, not just the first

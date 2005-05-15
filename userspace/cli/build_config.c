@@ -126,6 +126,53 @@ int build_int_eth_config(FILE *out, int num) {
 	return 0;
 }
 
+#define INITIAL_BUF_SIZE 4096
+void dump_static_macs(FILE *out) {
+	char *buf, *ptr;
+	int status, size;
+	struct net_switch_ioctl_arg ioctl_arg;
+
+	buf = (char *)malloc(INITIAL_BUF_SIZE);
+	size = INITIAL_BUF_SIZE;
+	assert(buf);
+	ioctl_arg.if_name = NULL;
+	ioctl_arg.cmd = SWCFG_GETMAC;
+	memset(&ioctl_arg.ext.marg.addr, 0, ETH_ALEN);
+	ioctl_arg.ext.marg.addr_type = SW_FDB_STATIC;
+	ioctl_arg.vlan = 0;
+
+	do {
+		ioctl_arg.ext.marg.buf_size = size;
+		ioctl_arg.ext.marg.buf = buf;
+		status = ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
+		if (status == -1) {
+			free(buf);
+			return;
+		}
+		if (status == SW_INSUFFICIENT_SPACE) {
+			buf = realloc(buf, size+INITIAL_BUF_SIZE);
+			assert(buf);
+			size += INITIAL_BUF_SIZE;
+		}
+	} while (status == SW_INSUFFICIENT_SPACE);
+	/* status holds sizeof(struct) * count */
+	for(ptr = buf; ptr - buf < status; ptr += sizeof(struct net_switch_mac)) {
+		struct net_switch_mac *mac = (struct net_switch_mac *)ptr;
+		unsigned char *addr = mac->addr;
+		int eth_no;
+
+		if(ptr == buf)
+			fprintf(out, "!\n");
+		sscanf(mac->port, "eth%d", &eth_no);
+		fprintf(out, "mac-address-table static "
+				"%02hhx%02hhx.%02hhx%02hhx.%02hhx%02hhx "
+				"vlan %d interface ethernet %d\n",
+				addr[0], addr[1], addr[2], addr[3], addr[4], addr[5],
+				mac->vlan, eth_no);
+	}
+	free(buf);
+}
+
 int build_config(FILE *out) {
 	char buf[4096], *p1, *p2;
 	FILE *f;
@@ -150,6 +197,8 @@ int build_config(FILE *out) {
 			continue;
 		build_int_eth_config(out, atoi(p1));
 	}
+	/* static macs */
+	dump_static_macs(out);
 
 	return 0;
 }
