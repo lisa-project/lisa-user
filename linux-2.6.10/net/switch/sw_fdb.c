@@ -83,12 +83,12 @@ static void sw_timer_add(struct timer_list *timer,
    change it. While holding the lock search for the entry again to
    avoid races.
  */
-void fdb_cleanup_port(struct net_switch_port *port, int addr_type) {
+int fdb_cleanup_port(struct net_switch_port *port, int addr_type) {
     struct net_switch *sw = port->sw;
     struct net_switch_fdb_entry *entry, *tmp;
 	struct list_head *entry_lh, *tmp_lh;
 	LIST_HEAD(del_list);
-    int i;
+    int i, ret = 0;
 	
 	for (i = 0; i < SW_HASH_SIZE; i++) {
 		list_for_each_entry_rcu(entry, &sw->fdb[i].entries, lh) {
@@ -115,7 +115,9 @@ void fdb_cleanup_port(struct net_switch_port *port, int addr_type) {
 		dbg("About to free fdb entry at 0x%p for port %s\n",
 				entry, entry->port->dev->name);
 		kmem_cache_free(sw->fdb_cache, entry);
+		ret++;
 	}
+	return ret;
 }
 
 /* Walk the fdb and delete all entries referencing a given vlan.
@@ -128,11 +130,11 @@ void fdb_cleanup_port(struct net_switch_port *port, int addr_type) {
    change it. While holding the lock search for the entry again to
    avoid races.
  */
-void fdb_cleanup_vlan(struct net_switch *sw, int vlan) {
+int fdb_cleanup_vlan(struct net_switch *sw, int vlan) {
     struct net_switch_fdb_entry *entry, *tmp;
 	struct list_head *entry_lh, *tmp_lh;
 	LIST_HEAD(del_list);
-    int i;
+    int i, ret = 0;
 	
 	for (i = 0; i < SW_HASH_SIZE; i++) {
 		list_for_each_entry_rcu(entry, &sw->fdb[i].entries, lh) {
@@ -159,7 +161,9 @@ void fdb_cleanup_vlan(struct net_switch *sw, int vlan) {
 		dbg("About to free fdb entry at 0x%p for port %s\n",
 				entry, entry->port->dev->name);
 		kmem_cache_free(sw->fdb_cache, entry);
+		ret++;
 	}
+	return ret;
 }
 
 /* Delete all entries having a specific address.

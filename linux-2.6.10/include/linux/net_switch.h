@@ -45,6 +45,7 @@
 #define SWCFG_SETSPEED		0x18
 #define SWCFG_SETDUPLEX		0x19
 #define SWCFG_GETMAC		0x20
+#define SWCFG_DELMACDYN		0x21
 
 #define SW_PFL_DISABLED     0x01
 #define SW_PFL_ACCESS		0x02

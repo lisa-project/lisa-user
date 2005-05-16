@@ -511,6 +511,10 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 		break;
 	case SWCFG_DELMACSTATIC:
 		PORT_GET;
+		if (is_null_mac(arg.ext.mac)) {
+			err = -EINVAL;
+			break;
+		}
 		err = fdb_del(&sw, arg.ext.mac, port, arg.vlan, SW_FDB_STATIC) ? 0 : -ENOENT;
 		break;
 	case SWCFG_ADDVIF:
@@ -609,6 +613,17 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 			break;
 		}	
 		err = sw_get_mac(&arg, port);
+		break;
+	case SWCFG_DELMACDYN:
+		if (arg.if_name) 
+			PORT_GET;
+	
+		if (!is_null_mac(arg.ext.mac)) 
+			err = fdb_del(&sw, arg.ext.mac, port, arg.vlan, SW_FDB_ANY);
+		if (port)
+			err = fdb_cleanup_port(port, SW_FDB_DYN);
+		if (arg.vlan)
+			err = fdb_cleanup_vlan(&sw, arg.vlan);
 		break;
 	}
 

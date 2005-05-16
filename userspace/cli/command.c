@@ -318,32 +318,53 @@ static void cmd_trace(FILE *out, char **argv) {
 }
 
 static void cmd_clr_mac_eth(FILE *out, char **argv) {
-	int i;
-	char *arg;
+	struct net_switch_ioctl_arg ioctl_arg;
+	int status;
 
-	fprintf(out, "cmd_clr_mac_eth\n");
-	for (i=0; (arg = argv[i]); i++) {
-		fprintf(out, "arg(%d): %s\n", i, arg);
+	ioctl_arg.cmd = SWCFG_DELMACDYN;
+	ioctl_arg.vlan = 0;
+	memset(ioctl_arg.ext.mac, 0, ETH_ALEN);
+	ioctl_arg.if_name = if_name_eth(argv[0]);
+	status = ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
+	if (status == -1) {
+		fprintf(out, "MAC address could not be removed\n"
+				"Address not found\n\n");
+		fflush(out);
 	}
 }
 
 static void cmd_clr_mac(FILE *out, char **argv) {
-	int i;
-	char *arg;
+	struct net_switch_ioctl_arg ioctl_arg;
+	int status;
+	unsigned char mac[ETH_ALEN];
 
-	fprintf(out, "cmd_clr_mac\n");
-	for (i=0; (arg = argv[i]); i++) {
-		fprintf(out, "arg(%d): %s\n", i, arg);
+	ioctl_arg.cmd = SWCFG_DELMACDYN;
+	status = parse_mac(argv[0], mac);
+	assert(!status);
+	ioctl_arg.ext.mac = mac;
+	ioctl_arg.vlan = 0;
+	ioctl_arg.if_name = NULL;
+	status = ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
+	if (status == -1) {
+		fprintf(out, "MAC address could not be removed\n"
+				"Address not found\n\n");
+		fflush(out);
 	}
 }
 
 static void cmd_clr_mac_vl(FILE *out, char **argv) {
-	int i;
-	char *arg;
+	struct net_switch_ioctl_arg ioctl_arg;
+	int status;
 
-	fprintf(out, "cmd_clr_mac_eth\n");
-	for (i=0; (arg = argv[i]); i++) {
-		fprintf(out, "arg(%d): %s\n", i, arg);
+	ioctl_arg.cmd = SWCFG_DELMACDYN;
+	ioctl_arg.vlan = parse_vlan(argv[0]);
+	memset(ioctl_arg.ext.mac, 0, ETH_ALEN);
+	ioctl_arg.if_name = NULL;
+	status = ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
+	if (status == -1) {
+		fprintf(out, "MAC address could not be removed\n"
+				"Address not found\n\n");
+		fflush(out);
 	}
 }
 
@@ -642,7 +663,7 @@ static sw_command_t sh_clear[] = {
 };
 
 static sw_command_t sh[] = {
-	{"clear",				1,	NULL, 			NULL,			0,			"Reset functions",									sh_clear},
+	{"clear",				2,	NULL, 			NULL,			0,			"Reset functions",									sh_clear},
 	{"configure",			2,	NULL,			NULL,			0,			"Enter configuration mode",							sh_conf},
 	{"disable",				2,	NULL,			cmd_disable,	RUN,		"Turn off privileged commands",						NULL},
 	{"enable",				1,	NULL,			cmd_enable,		RUN,		"Turn on privileged commands",						sh_enable},
