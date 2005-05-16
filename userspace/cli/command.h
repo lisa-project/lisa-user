@@ -9,6 +9,12 @@
 #include "filter.h"
 #include "debug.h"
 
+#define PING_PATH "/bin/ping"
+#define TRACEROUTE_PATH "/usr/sbin/traceroute"
+
+#define PING_INTERVAL 0
+#define PING_COUNT 5
+
 /* Command node state */
 /* Node is runnable (command can be executed at this point) */
 #define RUN			0x0010

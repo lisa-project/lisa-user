@@ -268,7 +268,54 @@ static void cmd_sh_mac_vlan(FILE *out, char **argv) {
 }
 
 static void cmd_sh_addr(FILE *out, char **argv) {
-	printf("sh_mac_addr\n");
+	char *arg, *buf;
+	struct net_switch_ioctl_arg user_arg;
+	int i, size;
+	
+	buf = (char *)malloc(INITIAL_BUF_SIZE);
+	size = INITIAL_BUF_SIZE;
+	init_mac_filter(&user_arg);
+	
+	for (i=0; (arg = argv[i]); i++) {
+		if (strcmp(arg, "dynamic") == 0) {
+			user_arg.ext.marg.addr_type = SW_FDB_DYN;
+			continue;
+		}
+		if (strcmp(arg, "static") == 0) {
+			user_arg.ext.marg.addr_type = SW_FDB_STATIC;
+			continue;
+		}
+		if (valid_mac(arg, ' ')) {
+			parse_mac(arg, user_arg.ext.marg.addr);
+		}
+	}
+	
+	do_mac_filter(out, &user_arg, size, buf);
+	fprintf(out, "\n");
+}
+
+static void cmd_ping(FILE *out, char **argv) {
+	FILE *p;
+	char cmd_buf[MAX_LINE_WIDTH];
+	int nc;
+
+	memset(cmd_buf, 0, sizeof(cmd_buf));
+	nc = sprintf(cmd_buf, "%s -i %d -c %d %s", PING_PATH, PING_INTERVAL, PING_COUNT, argv[0]);
+	assert(nc < sizeof(cmd_buf));
+	assert((p =	popen(cmd_buf, "w")));
+	pclose(p);
+}
+
+static void cmd_trace(FILE *out, char **argv) {
+	FILE *p;
+	char cmd_buf[MAX_LINE_WIDTH];
+	int nc;
+
+	memset(cmd_buf, 0, sizeof(cmd_buf));
+	nc = sprintf(cmd_buf, "%s %s", TRACEROUTE_PATH, argv[0]);
+	assert(nc < sizeof(cmd_buf));
+	assert((p =	popen(cmd_buf, "w")));
+	pclose(p);
 }
 
 /* Validation Handlers Implementation */
@@ -492,26 +539,36 @@ static sw_command_t sh_conf[] = {
 	{NULL,					0,  NULL,			NULL,			0,			NULL,												NULL}
 };
 
+static sw_command_t sw_ping[] = {
+	{"WORD",				0,	valid_regex,	cmd_ping,		RUN|PTCNT,	"Ping destination address or hostname",				NULL},
+	{NULL,					0,  NULL,			NULL,			0,			NULL,												NULL}
+};
+
+static sw_command_t sw_trace[] = {
+	{"WORD",				0,	valid_regex,	cmd_trace,		RUN|PTCNT,	"Ping destination address or hostname",				NULL},
+	{NULL,					0,  NULL,			NULL,			0,			NULL,												NULL}
+};
+
 static sw_command_t sh_enable[] = {
 	{"<1-15>",				1,	valid_priv,		cmd_enable,		RUN|PTCNT,	"Enable level",										NULL},
 	{NULL,					0,  NULL,			NULL,			0,			NULL,												NULL}
 };
 
 static sw_command_t sh[] = {
-	{"clear",				1,	NULL, 			NULL,			0,			"Reset functions",									NULL},
-	{"configure",			2,	NULL,			NULL,			0,			"Enter configuration mode",							sh_conf},
-	{"disable",				2,	NULL,			cmd_disable,	RUN,		"Turn off privileged commands",						NULL},
-	{"enable",				1,	NULL,			cmd_enable,		RUN,		"Turn on privileged commands",						sh_enable},
-	{"exit",				1,	NULL,			cmd_exit,		RUN,		"Exit from the EXEC",								NULL},
-	{"help",				1,	NULL,			cmd_help,		RUN,		"Description of the interactive help system",		NULL},
-	{"logout",				1,	NULL,			cmd_exit,		RUN,		"Exit from the EXEC",								NULL},
-	{"ping",				1,	NULL,			NULL,			0,			"Send echo messages",								NULL},
-	{"quit",				1,	NULL,			cmd_exit,		RUN,		"Exit from the EXEC",								NULL},
-	{"show",				1,	NULL,			NULL,			0,			"Show running system information",					sh_show},
-	{"telnet",				1,	NULL,			NULL,			0,			"Open a telnet connection",							NULL},
-	{"terminal",			1,	NULL,			NULL,			0,			"Set terminal line parameters",						NULL},
-	{"traceroute",			1,	NULL,			NULL,			0,			"Trace route to destination",						NULL},
-	{"where",				1,	NULL,			NULL,			RUN,		"List active connections",							NULL},
+	{"clear",				0,	NULL, 			NULL,			0,			"Reset functions",									NULL},
+	{"configure",			1,	NULL,			NULL,			0,			"Enter configuration mode",							sh_conf},
+	{"disable",				1,	NULL,			cmd_disable,	RUN,		"Turn off privileged commands",						NULL},
+	{"enable",				0,	NULL,			cmd_enable,		RUN,		"Turn on privileged commands",						sh_enable},
+	{"exit",				0,	NULL,			cmd_exit,		RUN,		"Exit from the EXEC",								NULL},
+	{"help",				0,	NULL,			cmd_help,		RUN,		"Description of the interactive help system",		NULL},
+	{"logout",				0,	NULL,			cmd_exit,		RUN,		"Exit from the EXEC",								NULL},
+	{"ping",				0,	NULL,			NULL,			0,			"Send echo messages",								sw_ping},
+	{"quit",				0,	NULL,			cmd_exit,		RUN,		"Exit from the EXEC",								NULL},
+	{"show",				0,	NULL,			NULL,			0,			"Show running system information",					sh_show},
+	{"telnet",				0,	NULL,			NULL,			0,			"Open a telnet connection",							NULL},
+	{"terminal",			0,	NULL,			NULL,			0,			"Set terminal line parameters",						NULL},
+	{"traceroute",			0,	NULL,			NULL,			0,			"Trace route to destination",						sw_trace},
+	{"where",				0,	NULL,			NULL,			RUN,		"List active connections",							NULL},
 	{NULL,					0,  NULL,			NULL,			0,			NULL,												NULL}
 };
 
