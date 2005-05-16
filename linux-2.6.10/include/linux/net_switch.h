@@ -115,9 +115,6 @@ struct net_switch_ioctl_arg {
 	} ext;
 };
 
-/* Insufficient space allocated in the mac buffer (ioctl_arg.ext.mac) */
-#define SW_INSUFFICIENT_SPACE 1
-
 /* Mac Address types (any, static, dynamic) */
 #define SW_FDB_DYN	0
 #define SW_FDB_STATIC 1

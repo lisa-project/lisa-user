@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <stdio.h>
 #include <readline/readline.h>
 #include <readline/history.h>
@@ -167,21 +168,19 @@ static void do_mac_filter(FILE *out, struct net_switch_ioctl_arg *user_arg, int 
 		user_arg->ext.marg.buf = buf;
 		status = ioctl(sock_fd, SIOCSWCFG, user_arg);
 		if (status == -1) {
+			if (errno == ENOMEM) {
+				dbg("Insufficient buffer space. Realloc'ing ...\n");
+				buf = realloc(buf, size+INITIAL_BUF_SIZE);
+				assert(buf);
+				size+=INITIAL_BUF_SIZE;
+				continue;
+			}
 			perror("ioctl");
-			break;
+			return;
 		}
-		if (status == SW_INSUFFICIENT_SPACE) {
-			dbg("Insufficient buffer space. Realloc'ing ...\n");
-			buf = realloc(buf, size+INITIAL_BUF_SIZE);
-			assert(buf);
-			size+=INITIAL_BUF_SIZE;
-		}
-		else {
-			user_arg->ext.marg.actual_size = status;
-			cmd_showmac(out, (char *)user_arg);
-			break;
-		}	
-	} while(status);
+	} while(0);
+	user_arg->ext.marg.actual_size = status;
+	cmd_showmac(out, (char *)user_arg);
 }
 
 static void cmd_show_mac(FILE *out, char **argv) {

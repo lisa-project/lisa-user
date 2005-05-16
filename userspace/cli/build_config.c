@@ -146,15 +146,16 @@ void dump_static_macs(FILE *out) {
 		ioctl_arg.ext.marg.buf = buf;
 		status = ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 		if (status == -1) {
+			if (errno == ENOMEM) {
+				buf = realloc(buf, size+INITIAL_BUF_SIZE);
+				assert(buf);
+				size += INITIAL_BUF_SIZE;
+				continue;
+			}
 			free(buf);
 			return;
 		}
-		if (status == SW_INSUFFICIENT_SPACE) {
-			buf = realloc(buf, size+INITIAL_BUF_SIZE);
-			assert(buf);
-			size += INITIAL_BUF_SIZE;
-		}
-	} while (status == SW_INSUFFICIENT_SPACE);
+	} while (0);
 	/* status holds sizeof(struct) * count */
 	for(ptr = buf; ptr - buf < status; ptr += sizeof(struct net_switch_mac)) {
 		struct net_switch_mac *mac = (struct net_switch_mac *)ptr;

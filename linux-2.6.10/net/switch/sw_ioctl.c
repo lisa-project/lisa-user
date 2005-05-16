@@ -342,51 +342,60 @@ static int sw_set_port_vlan(struct net_switch_port *port, int vlan) {
 	return 0;
 }
 
-static int sw_get_mac(struct net_switch_mac_arg *marg, struct net_switch_port *port,
-		int vlan) {
+static int sw_get_mac_loop(int hash_pos, struct net_switch_ioctl_arg *arg,
+		struct net_switch_port *port, int len) {
 	struct net_switch_fdb_entry *entry;
-	struct net_switch_mac mac; 
-	int i, ret, len, do_brk;
+	struct net_switch_mac mac;
+	struct net_switch_mac_arg *marg = &arg->ext.marg;
 	int cmp_mac = !is_null_mac(marg->addr);
+	int vlan = arg->vlan;
 
-	ret = len = do_brk = 0;
-	rcu_read_lock();
-	for (i=0; i<SW_HASH_SIZE; i++) {
-		list_for_each_entry_rcu(entry, &sw.fdb[i].entries, lh) {
-			if (cmp_mac && memcmp(marg->addr, entry->mac, ETH_ALEN))
-				continue;
-			if (vlan && vlan != entry->vlan)
-				continue;
-			if (port && port != entry->port)
-				continue;
-			if (marg->addr_type != SW_FDB_ANY && marg->addr_type != entry->is_static)
-				continue;
-			if (len + sizeof(struct net_switch_mac) > marg->buf_size) {
-				dbg("insufficient space in buffer\n");
-				ret = SW_INSUFFICIENT_SPACE;
-				do_brk = 1;
-				break;
-			}
-			memcpy(mac.addr, entry->mac, ETH_ALEN);
-			mac.addr_type = entry->is_static;
-			mac.vlan = entry->vlan;
-			strncpy(mac.port, entry->port->dev->name, IFNAMSIZ);
-			mac.port[IFNAMSIZ-1] = '\0';
-			rcu_read_unlock();
-			if (copy_to_user(marg->buf+len, &mac, sizeof(struct net_switch_mac))) {
-				rcu_read_lock();
-				dbg("copy_to_user failed (i=%d)\n", i);
-				ret = -EFAULT;
-				do_brk = 1;
-				break;
-			}
-			else rcu_read_lock();
-			len += sizeof(struct net_switch_mac);
-			ret = len;
-		}
-		if (do_brk)
+	list_for_each_entry_rcu(entry, &sw.fdb[hash_pos].entries, lh) {
+		if (cmp_mac && memcmp(marg->addr, entry->mac, ETH_ALEN))
+			continue;
+		if (vlan && vlan != entry->vlan)
+			continue;
+		if (port && port != entry->port)
+			continue;
+		if (marg->addr_type != SW_FDB_ANY && marg->addr_type != entry->is_static)
+			continue;
+		if (len + sizeof(struct net_switch_mac) > marg->buf_size) {
+			dbg("sw_get_mac_loop: insufficient buffer space\n");
+			len = -ENOMEM;
 			break;
+		}
+		memcpy(mac.addr, entry->mac, ETH_ALEN);
+		mac.addr_type = entry->is_static;
+		mac.vlan = entry->vlan;
+		strncpy(mac.port, entry->port->dev->name, IFNAMSIZ);
+		mac.port[IFNAMSIZ-1] = '\0';
+		rcu_read_unlock();
+		if (copy_to_user(marg->buf+len, &mac, sizeof(struct net_switch_mac))) {
+			rcu_read_lock();
+			dbg("copy_to_user failed (hash_pos=%d)\n", hash_pos);
+			len = -EFAULT;
+			break;
+		}
+		else 
+			rcu_read_lock();
+		len += sizeof(struct net_switch_mac);
 	}
+
+	return len;
+}
+
+static int sw_get_mac(struct net_switch_ioctl_arg *arg, struct net_switch_port *port) {
+	int i, ret = 0;
+
+	rcu_read_lock();
+	if (!is_null_mac(arg->ext.marg.addr)) 
+		ret = sw_get_mac_loop(sw_mac_hash(arg->ext.marg.addr), arg, port, ret);
+	else 
+		for (i=0; i<SW_HASH_SIZE; i++) {
+			ret = sw_get_mac_loop(i, arg, port, ret);
+			if (ret < 0)
+				break;
+		}
 	rcu_read_unlock();
 
 	return ret;
@@ -599,7 +608,7 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 			err = -EINVAL;
 			break;
 		}	
-		err = sw_get_mac(&arg.ext.marg, port, arg.vlan);
+		err = sw_get_mac(&arg, port);
 		break;
 	}
 
