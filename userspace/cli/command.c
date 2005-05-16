@@ -318,8 +318,44 @@ static void cmd_trace(FILE *out, char **argv) {
 	pclose(p);
 }
 
+static void cmd_clr_mac_eth(FILE *out, char **argv) {
+	int i;
+	char *arg;
+
+	fprintf(out, "cmd_clr_mac_eth\n");
+	for (i=0; (arg = argv[i]); i++) {
+		fprintf(out, "arg(%d): %s\n", i, arg);
+	}
+}
+
 static void cmd_clr_mac(FILE *out, char **argv) {
-	fprintf(out, "cmd_clr_mac");
+	int i;
+	char *arg;
+
+	fprintf(out, "cmd_clr_mac\n");
+	for (i=0; (arg = argv[i]); i++) {
+		fprintf(out, "arg(%d): %s\n", i, arg);
+	}
+}
+
+static void cmd_clr_mac_vl(FILE *out, char **argv) {
+	int i;
+	char *arg;
+
+	fprintf(out, "cmd_clr_mac_eth\n");
+	for (i=0; (arg = argv[i]); i++) {
+		fprintf(out, "arg(%d): %s\n", i, arg);
+	}
+}
+
+static void cmd_clr_mac_adr(FILE *out, char **argv) {
+	int i;
+	char *arg;
+
+	fprintf(out, "cmd_clr_mac_adr\n");
+	for (i=0; (arg = argv[i]); i++) {
+		fprintf(out, "arg(%d): %s\n", i, arg);
+	}
 }
 
 /* Validation Handlers Implementation */
@@ -564,12 +600,12 @@ static sw_command_t sh_enable[] = {
 };
 
 static sw_command_t sh_clr_eth[] = {
-	{eth_range,				2,	valid_eth,		cmd_clr_mac,	RUN|PTCNT,	"Ethernet interface number",						NULL},
+	{eth_range,				2,	valid_eth,		cmd_clr_mac_eth,RUN|PTCNT,	"Ethernet interface number",						NULL},
 	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
 };
 
 static sw_command_t sh_clr_sel_addr[] = {
-	{"H.H.H",				2,	valid_mac,		cmd_clr_mac,	RUN|PTCNT,	"48 bit mac address",								NULL},
+	{"H.H.H",				2,	valid_mac,		cmd_clr_mac_adr,RUN|PTCNT,	"48 bit mac address",								NULL},
 	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
 };
 
@@ -579,7 +615,7 @@ static sw_command_t sh_clr_sel_int[] = {
 };
 
 static sw_command_t sh_clr_sel_vlan[] = {
-	{vlan_range,			2,	valid_vlan,		cmd_clr_mac,	RUN|PTCNT,	"Vlan interface number",							NULL},
+	{vlan_range,			2,	valid_vlan,		cmd_clr_mac_vl,RUN|PTCNT,	"Vlan interface number",							NULL},
 	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
 };
 
@@ -591,7 +627,7 @@ static sw_command_t sh_clr_sel[] = {
 };
 
 static sw_command_t sh_clr_mac_addr[] = {
-	{"dynamic",				2,	valid_dyn,		cmd_clr_mac,	RUN|PTCNT|CMPL,	"dynamic entry type",								sh_clr_sel},
+	{"dynamic",				2,	NULL,			cmd_clr_mac,	RUN,		"dynamic entry type",								sh_clr_sel},
 	{NULL,					0,  NULL,			NULL,			0,			NULL,												NULL}
 };
 
