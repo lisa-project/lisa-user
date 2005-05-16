@@ -19,6 +19,7 @@
 #include <linux/sockios.h>
 #include <linux/net_switch.h>
 
+#include <errno.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -316,21 +317,19 @@ int main(int argc, char **argv) {
 			status = ioctl(sock, SIOCSWCFG, &user_arg);
 			printf("status %d\n", status);
 			if (status == -1) {
+				if (errno == ENOMEM) {
+					printf("Insufficient buffer space. Realloc'ing ... \n");
+					buf = realloc(buf, size+INITIAL_BUF_SIZE);
+					assert(buf);
+					size += INITIAL_BUF_SIZE;
+					continue;
+				}
 				perror("ioctl");
-				break;
+				return (-1);
 			}
-			if (status == SW_INSUFFICIENT_SPACE) {
-				printf("Insufficient buffer space. Realloc'ing ... \n");
-				buf = realloc(buf, size+INITIAL_BUF_SIZE);
-				assert(buf);
-				size += INITIAL_BUF_SIZE;
-			}	
-			else {
-				user_arg.ext.marg.actual_size = status;
-				cmd_showmac(stdout, (char *)&user_arg);
-				break;
-			}	
-		} while (status);
+		} while (0);
+		user_arg.ext.marg.actual_size = status;
+		cmd_showmac(stdout, (char *)&user_arg);
 		
 		return 0;
 	}
