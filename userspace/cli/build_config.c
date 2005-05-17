@@ -155,7 +155,7 @@ void dump_static_macs(FILE *out) {
 			free(buf);
 			return;
 		}
-	} while (0);
+	} while (status < 0);
 	/* status holds sizeof(struct) * count */
 	for(ptr = buf; ptr - buf < status; ptr += sizeof(struct net_switch_mac)) {
 		struct net_switch_mac *mac = (struct net_switch_mac *)ptr;

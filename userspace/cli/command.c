@@ -178,7 +178,7 @@ static void do_mac_filter(FILE *out, struct net_switch_ioctl_arg *user_arg, int 
 			perror("ioctl");
 			return;
 		}
-	} while(0);
+	} while(status < 0);
 	user_arg->ext.marg.actual_size = status;
 	cmd_showmac(out, (char *)user_arg);
 }

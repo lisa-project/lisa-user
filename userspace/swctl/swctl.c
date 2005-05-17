@@ -327,7 +327,7 @@ int main(int argc, char **argv) {
 				perror("ioctl");
 				return (-1);
 			}
-		} while (0);
+		} while (status < 0);
 		user_arg.ext.marg.actual_size = status;
 		cmd_showmac(stdout, (char *)&user_arg);
 		
