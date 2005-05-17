@@ -2,7 +2,7 @@ CLI
 
 * Accept multiple interfaces when adding or deleting static MACs
 * Group identical static MACs in a single command when building config
-
+* Timeout in "Password:" prompt
 
 MLS
 

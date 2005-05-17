@@ -20,5 +20,6 @@ extern struct cli_config *cfg;
 extern int cfg_init(void);
 extern int cfg_lock(void);
 extern int cfg_unlock(void);
+extern int cfg_checkpass(int, int (*)(char *, void *), void *);
 
 #endif

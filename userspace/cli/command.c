@@ -12,6 +12,7 @@
 #include "build_config.h"
 #include "filter.h"
 #include "if.h"
+#include "shared.h"
 
 static char if_name[IFNAMSIZ];
 
@@ -34,9 +35,24 @@ static void cmd_disable(FILE *out, char **argv) {
 
 static void cmd_enable(FILE *out, char **argv) {
 	int req;
+	int fail = 0;
+	char secret[CLI_SECRET_LEN + 1];
 
 	req = argv[0] == NULL ? 15 : atoi(argv[0]);
 	if(req > priv) {
+		fail = 1;
+		cfg_lock();
+		strcpy(secret, cfg->enable_secret[req]);
+		cfg_unlock();
+		if(secret[0] == '\0') {
+			fprintf(out, "%% No password set\n");
+			return;
+		}
+		fail = 0;
+	}
+	if(fail) {
+		fprintf(out, "%% Bad secrets\n\n");
+		return;
 	}
 	priv = 15;
 }

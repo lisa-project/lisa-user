@@ -1,3 +1,6 @@
+#include <stdio.h>
+#include <readline/readline.h>
+#include <readline/history.h>
 #include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/types.h>
@@ -56,4 +59,24 @@ int cfg_lock(void) {
 int cfg_unlock(void) {
 	//FIXME unlock sema
 	return 0;
+}
+
+static void sw_redisplay(void) {
+	fprintf(rl_outstream, "\rPassword: ");
+	fflush(rl_outstream);
+}
+
+int cfg_checkpass(int retries, int (*validator)(char *, void *), void *arg) {
+	rl_voidfunc_t *old_redisplay = rl_redisplay_function;
+	char *pw;
+	int i;
+
+	rl_redisplay_function = sw_redisplay;
+	for(i = 0; i < retries; i++) {
+		pw = readline(NULL);
+		if(validator(pw, arg))
+			break;
+	}
+	rl_redisplay_function = old_redisplay;
+	return i < retries;
 }
