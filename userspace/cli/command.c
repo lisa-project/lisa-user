@@ -515,7 +515,7 @@ int parse_mac(char *arg, unsigned char *mac) {
 	return 0;
 }
 
-static int valid_priv(char *arg, char lookahead) {
+int valid_priv(char *arg, char lookahead) {
 	int n;
 
 	n = atoi(arg);
@@ -669,8 +669,10 @@ static sw_command_t sw_trace[] = {
 	{NULL,					0,  NULL,			NULL,			0,			NULL,												NULL}
 };
 
+char priv_range[] = "<1-15>\0";
+
 static sw_command_t sh_enable[] = {
-	{"<1-15>",				1,	valid_priv,		cmd_enable,		RUN|PTCNT,	"Enable level",										NULL},
+	{priv_range,			1,	valid_priv,		cmd_enable,		RUN|PTCNT,	"Enable level",										NULL},
 	{NULL,					0,  NULL,			NULL,			0,			NULL,												NULL}
 };
 
@@ -719,7 +721,7 @@ static sw_command_t sh_clear[] = {
 
 static sw_command_t sh[] = {
 	{"clear",				2,	NULL, 			NULL,			0,			"Reset functions",									sh_clear},
-	{"configure",			2,	NULL,			NULL,			0,			"Enter configuration mode",							sh_conf},
+	{"configure",			15,	NULL,			NULL,			0,			"Enter configuration mode",							sh_conf},
 	{"disable",				2,	NULL,			cmd_disable,	RUN,		"Turn off privileged commands",						NULL},
 	{"enable",				1,	NULL,			cmd_enable,		RUN,		"Turn on privileged commands",						sh_enable},
 	{"exit",				1,	NULL,			cmd_exit,		RUN,		"Exit from the EXEC",								NULL},

@@ -95,12 +95,27 @@ static void cmd_macstatic(FILE *out, char **argv) {
 	}
 }
 
+static void cmd_setenpw(FILE *out, char **argv) {
+}
+
 int valid_host(char *arg, char lookahead) {
 	return 1;
 }
 
 int valid_no(char *arg, char lookahead) {
 	return !strcmp(arg, "no");
+}
+
+int valid_0(char *arg, char lookahead) {
+	return !strcmp(arg, "0");
+}
+
+int valid_5(char *arg, char lookahead) {
+	return !strcmp(arg, "5");
+}
+
+int valid_lin(char *arg, char lookahead) {
+	return 1;
 }
 
 static sw_command_t sh_no_int_eth[] = {
@@ -189,8 +204,38 @@ static sw_command_t sh_no[] = {
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
 
+static sw_command_t sh_secret_line[] = {
+	{"LINE",				15,	valid_lin,	cmd_setenpw,		0,			"The UNENCRYPTED (cleartext) 'enable' secret",	NULL},
+	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+};
+
+static sw_command_t sh_secret_lev_x[] = {
+	{"0",					15,	valid_0,	NULL,				PTCNT,		"Specifies an UNENCRYPTED password will follow",sh_secret_line},
+	{"5",					15,	valid_5,	NULL,				PTCNT,		"Specifies an ENCRYPTED secret will follow",	sh_secret_line},
+	{"LINE",				15,	valid_lin,	cmd_setenpw,		0,			"The UNENCRYPTED (cleartext) 'enable' secret",	NULL},
+	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+};
+
+static sw_command_t sh_secret_level[] = {
+	{priv_range,			1,	valid_priv,	NULL,				PTCNT,		"Level number",									sh_secret_lev_x},
+	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+};
+
+static sw_command_t sh_secret[] = {
+	{"0",					15,	valid_0,	NULL,				PTCNT,		"Specifies an UNENCRYPTED password will follow",sh_secret_line},
+	{"5",					15,	valid_5,	NULL,				PTCNT,		"Specifies an ENCRYPTED secret will follow",	sh_secret_line},
+	{"LINE",				15,	valid_lin,	cmd_setenpw,		0,			"The UNENCRYPTED (cleartext) 'enable' secret",	NULL},
+	{"level",				15,	NULL,		NULL,				0,			"Set exec level password",						sh_secret_level},
+	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+};
+
+static sw_command_t sh_enable[] = {
+	{"secret",				15,	NULL,		NULL,				0,			"Assign the privileged level secret",			sh_secret},
+	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+};
+
 static sw_command_t sh[] = {
-	{"enable",				2,	NULL,		NULL,				0,			"Modify enable password parameters",			NULL},
+	{"enable",				2,	NULL,		NULL,				0,			"Modify enable password parameters",			sh_enable},
 	{"end",					2,	NULL,		cmd_end,			RUN,		"Exit from configure mode",						NULL},
 	{"exit",				2,	NULL,		cmd_end,			RUN,		"Exit from configure mode",						NULL},
 	{"hostname",			2,	NULL,		NULL,				0,			"Set system's network name",					sh_hostname},
