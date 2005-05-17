@@ -191,6 +191,8 @@ static __inline__ int sw_vlan_hash(const int vlan) {
 extern void dump_packet(const struct sk_buff *);
 extern void sw_enable_port(struct net_switch_port *);
 extern void sw_disable_port(struct net_switch_port *);
+extern void sw_device_up(struct net_device *);
+extern void sw_device_down(struct net_device *);
 
 /* sw_fdb.c */
 extern void sw_fdb_init(struct net_switch *);
@@ -236,6 +238,8 @@ extern int sw_forward(struct net_switch_port *,
 extern struct net_device *sw_vif_find(struct net_switch *, int);
 extern int sw_vif_addif(struct net_switch *, int);
 extern int sw_vif_delif(struct net_switch *, int);
+extern int sw_vif_enable(struct net_switch *, int);
+extern int sw_vif_disable(struct net_switch *, int);
 extern void sw_vif_cleanup(struct net_switch *);
 extern void sw_vif_rx(struct sk_buff *);
 

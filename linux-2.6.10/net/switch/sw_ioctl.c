@@ -519,9 +519,13 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 		break;
 	case SWCFG_ADDVIF:
 		err = sw_vif_addif(&sw, arg.vlan);
+		if (!err)
+			err = sw_vif_enable(&sw, arg.vlan);
 		break;
 	case SWCFG_DELVIF:
 		err = sw_vif_delif(&sw, arg.vlan);
+		if (!err)
+			err = sw_vif_disable(&sw, arg.vlan);
 		break;
 	case SWCFG_DISABLEPORT:
 		PORT_GET;
@@ -630,6 +634,12 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 			err = fdb_del(&sw, arg.ext.mac, port, arg.vlan, SW_FDB_DYN);
 		else 
 			err = fdb_cleanup_by_type(&sw, SW_FDB_DYN);
+		break;
+	case SWCFG_ENABLEVIF:
+		err = sw_vif_enable(&sw, arg.vlan);
+		break;
+	case SWCFG_DISABLEVIF:
+		err = sw_vif_disable(&sw, arg.vlan);
 		break;
 	}
 

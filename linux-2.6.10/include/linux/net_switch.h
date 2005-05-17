@@ -42,10 +42,12 @@
 #define SWCFG_ADDTRUNKVLANS	0x15	/* add ports to the bitmap of forbidden trunk ports */
 #define SWCFG_DELTRUNKVLANS	0x16	/* remove ports from the bitmap of forbidden trunk ports */
 #define SWCFG_SETIFDESC		0x17	/* set interface description */
-#define SWCFG_SETSPEED		0x18
-#define SWCFG_SETDUPLEX		0x19
-#define SWCFG_GETMAC		0x20
-#define SWCFG_DELMACDYN		0x21
+#define SWCFG_SETSPEED		0x18	/* set port speed parameter */
+#define SWCFG_SETDUPLEX		0x19	/* set port duplex parameter */
+#define SWCFG_GETMAC		0x20	/* fetch mac addresses from the fdb */
+#define SWCFG_DELMACDYN		0x21	/* clear dynamic mac addresses from the fdb */
+#define SWCFG_ENABLEVIF		0x22	/* administratively enable virtual interface */
+#define SWCFG_DISABLEVIF	0x23	/* administratively disable virtual interface */
 
 #define SW_PFL_DISABLED     0x01
 #define SW_PFL_ACCESS		0x02

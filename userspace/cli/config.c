@@ -29,7 +29,7 @@ static void cmd_nohostname(FILE *out, char **argv) {
 static void cmd_int_eth(FILE *out, char **argv) {
 	char *arg = *argv;
 	struct net_switch_ioctl_arg ioctl_arg;
-	
+
 	ioctl_arg.cmd = SWCFG_ADDIF;
 	ioctl_arg.if_name = if_name_eth(arg);
 	do {

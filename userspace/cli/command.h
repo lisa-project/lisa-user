@@ -11,6 +11,7 @@
 
 #define PING_PATH "/bin/ping"
 #define TRACEROUTE_PATH "/usr/sbin/traceroute"
+#define VLAN_FILE_PATH "/proc/net/switch/vlan"
 
 #define PING_INTERVAL 0
 #define PING_COUNT 5

@@ -194,6 +194,7 @@ static int get_virtual_interfaces() {
 		add_interface(buf);
 	}
 
+	fclose(fh);
 	return 0;
 }
 

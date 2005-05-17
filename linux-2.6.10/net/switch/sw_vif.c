@@ -163,6 +163,34 @@ int sw_vif_delif(struct net_switch *sw, int vlan) {
 	return 0;
 }
 
+/* Administratively enable the virtual interface */
+/* FIXME: bogo_port flags ? */
+int sw_vif_enable(struct net_switch *sw, int vlan) {
+	struct net_device *dev;
+	
+	if (sw_invalid_vlan(vlan))
+		return -EINVAL;
+	if ((dev = sw_vif_find(sw, vlan)) == NULL)
+		return -ENOENT;
+	
+	sw_device_up(dev);
+	return 0;
+}
+
+/* Administratively disable the virtual interface */
+/* FIXME: bogo_port flags ? */
+int sw_vif_disable(struct net_switch *sw, int vlan) {
+	struct net_device *dev;
+	
+	if (sw_invalid_vlan(vlan))
+		return -EINVAL;
+	if ((dev = sw_vif_find(sw, vlan)) == NULL)
+		return -ENOENT;
+
+	sw_device_down(dev);
+	return 0;
+}
+
 void sw_vif_cleanup(struct net_switch *sw) {
 	struct net_switch_vif_priv *priv, *tmp;
 	int i;

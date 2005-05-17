@@ -390,6 +390,27 @@ static void cmd_clr_mac_adr(FILE *out, char **argv) {
 	}
 }
 
+/* FIXME: quick hack
+   ar tb facut ca la show mac (selectori id si name) 
+ */
+static void cmd_show_vlan(FILE *out, char **argv) {
+	FILE *in;
+	char buf[512];
+
+	fprintf(out, "\n");
+	if ((in = fopen(VLAN_FILE_PATH, "r")) == NULL) {
+		perror("fopen");
+		exit(-1);
+	}
+	
+	while (fgets(buf, sizeof(buf), in)) {
+		buf[strlen(buf)-1] = '\0';
+		fprintf(out, "%s\n", buf);
+	}
+
+	fclose(in);
+}
+
 /* Validation Handlers Implementation */
 int valid_regex(char *arg, char lookahead) {
 	return 1;
@@ -593,6 +614,12 @@ static sw_command_t sh_sh_mac[] = {
 	{NULL,					0,  NULL,			NULL,			0,			NULL,												NULL}
 };
 
+static sw_command_t sh_show_vlan[] = {
+	{"brief",				1, 	NULL,			cmd_show_vlan,	RUN,		"VTP all VLAN status in brief",						sh_pipe},
+	{"|",					1,  NULL,			NULL,			0,			"Output modifiers",									sh_pipe_mod},
+	{NULL,					0,  NULL,			NULL,			0,			NULL,												NULL}
+};
+
 static sw_command_t sh_show[] = {
 	{"arp",					1,	NULL,			NULL,			RUN,		"ARP table",										NULL},
 	{"clock",				1,	NULL,			NULL,			RUN,		"Display the system clock",							NULL},
@@ -607,7 +634,7 @@ static sw_command_t sh_show[] = {
 	{"startup-config",		1,	NULL,			NULL,			RUN,		"Contents of startup configuration",				NULL},
 	{"users",				1,	NULL,			NULL,			RUN,		"Display information about terminal lines",			NULL},
 	{"version",				1,	NULL,			NULL,			RUN,		"System hardware and software status",				NULL},
-	{"vlan",				1,	NULL,			NULL,			RUN,		"VTP VLAN status",									NULL},
+	{"vlan",				1,	NULL,			cmd_show_vlan,	RUN,		"VTP VLAN status",									sh_show_vlan},
 	{NULL,					0,  NULL,			NULL,			0,			NULL,												NULL}
 };
 

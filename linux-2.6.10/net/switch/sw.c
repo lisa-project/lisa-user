@@ -149,6 +149,18 @@ free_skb:
 	return NET_RX_DROP;
 }
 
+void sw_device_up(struct net_device *dev) {
+	down(&rtnl_sem);
+	dev_open(dev);
+	up(&rtnl_sem);
+}
+
+void sw_device_down(struct net_device *dev) {
+	down(&rtnl_sem);
+	dev_close(dev);
+	up(&rtnl_sem);
+}
+
 /* Enable a port */
 void sw_enable_port(struct net_switch_port *port) {
 	/* Someday this will trigger some user-space callback to help
@@ -157,9 +169,7 @@ void sw_enable_port(struct net_switch_port *port) {
 	if(!(port->flags & SW_PFL_DISABLED) || port->flags & SW_PFL_ADMDISABLED)
 		return;
 	sw_res_port_flag(port, SW_PFL_DISABLED);
-	down(&rtnl_sem);
-	dev_open(port->dev);
-	up(&rtnl_sem);
+	sw_device_up(port->dev);
 	dbg("Enabled port %s\n", port->dev->name);
 }
 
@@ -171,9 +181,7 @@ void sw_disable_port(struct net_switch_port *port) {
 	if(port->flags & SW_PFL_DISABLED)
 		return;
 	sw_set_port_flag(port, SW_PFL_DISABLED);
-	down(&rtnl_sem);
-	dev_close(port->dev);
-	up(&rtnl_sem);
+	sw_device_down(port->dev);
 	dbg("Disabled port %s\n", port->dev->name);
 }
 

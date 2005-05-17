@@ -121,7 +121,7 @@ int list_current_options(int something, int key) {
 	}
 	else if (!search_set && handler) {
 		/* complete command with no search set */
-		if (!ret)
+		if (ret <= 0)
 			swcli_invalid_cmd();
 		else 
 			swcli_go_ahead();
@@ -131,6 +131,10 @@ int list_current_options(int something, int key) {
 	if (!strlen(rl_line_buffer) || rl_line_buffer[strlen(rl_line_buffer)-1] == ' ') {
 		/* List all commands in current set with help message */
 		/* output is piped to the unix command more */
+		if (ret < 0){
+			swcli_invalid_cmd();
+			goto out;
+		}
 		rl_deprep_terminal();
 		if (!(pipe=popen(PAGER_PATH, "w"))) {
 			perror("popen");

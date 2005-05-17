@@ -34,6 +34,22 @@ static void cmd_noacc_vlan(FILE *out, char **argv) {
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
+static void cmd_shutd_v(FILE *out, char **argv) {
+	struct net_switch_ioctl_arg ioctl_arg;
+
+	ioctl_arg.cmd = SWCFG_DISABLEVIF;
+	sscanf(sel_vlan, "vlan%d", &ioctl_arg.vlan);
+	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
+}
+
+static void cmd_noshutd_v(FILE *out, char **argv) {
+	struct net_switch_ioctl_arg ioctl_arg;
+
+	ioctl_arg.cmd = SWCFG_ENABLEVIF;
+	sscanf(sel_vlan, "vlan%d", &ioctl_arg.vlan);
+	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
+}
+
 static void cmd_shutd(FILE *out, char **argv) {
 	struct net_switch_ioctl_arg ioctl_arg;
 
@@ -422,9 +438,15 @@ static sw_command_t sh_no[] = {
 	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
 };
 
+static sw_command_t sh_no_vlan[] = {
+	{"shutdown",			2,	NULL,		cmd_noshutd_v,	RUN,		"Shutdown the selected interface",					NULL},
+	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
+};
+
 static sw_command_t sh_eth[] = {
 	{"description",			2,	NULL,		NULL,			0,			"Interface specific description",					sh_ethdesc},
 	{"duplex",				2,	NULL,		NULL,			0,			"Configure duplex operation.",						sh_duplex},
+	{"end"	,				2,	NULL,		cmd_exit,		RUN,		"End interface configuration mode",					NULL},
 	{"exit",				2,	NULL,		cmd_exit,		RUN,		"Exit from interface configuration mode",			NULL},
 	{"help",				2,	NULL,		cmd_help,		RUN,		"Description of the interactive help system",		NULL},
 	{"interface",			2,	NULL,		NULL,			0,			"Select an interface to configure",					sh_conf_int},
@@ -436,6 +458,11 @@ static sw_command_t sh_eth[] = {
 };
 
 static sw_command_t sh_vlan[] = {
+	{"end",					2,	NULL,		cmd_exit,		RUN,		"Exit from interface configuration mode",			NULL},
+	{"exit",				2,	NULL,		cmd_exit,		RUN,		"End interface configuration mode",					NULL},
+	{"help",				2,	NULL,		cmd_help,		RUN,		"Description of the interactive help system",		NULL},
+	{"no",					2,	NULL,		NULL,			0,			"Negate a command or set its defaults",				sh_no_vlan},
+	{"shutdown",			2,	NULL,		cmd_shutd_v,	RUN,		"Shutdown the selected interface",					NULL},
 	{NULL,					0,	NULL,		NULL,			0,			NULL,											NULL}
 };
 
