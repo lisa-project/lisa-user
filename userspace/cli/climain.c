@@ -194,7 +194,7 @@ int swcli_init_readline() {
 	/* Allow conditional parsing of ~/.inputrc file */
 	rl_readline_name = "SwCli";
 
-	/* Setup to ignore SIGINT and SIGSTP */
+	/* Setup to ignore SIGINT and SIGTSTP */
 	signal(SIGINT, SIG_IGN);
 	signal(SIGTSTP, SIG_IGN);
 

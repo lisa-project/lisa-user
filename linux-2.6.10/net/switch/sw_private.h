@@ -195,7 +195,8 @@ extern void sw_disable_port(struct net_switch_port *);
 /* sw_fdb.c */
 extern void sw_fdb_init(struct net_switch *);
 extern int fdb_cleanup_port(struct net_switch_port *, int);
-extern int fdb_cleanup_vlan(struct net_switch *, int);
+extern int fdb_cleanup_vlan(struct net_switch *, int, int);
+extern int fdb_cleanup_by_type(struct net_switch *, int);
 extern int fdb_learn(unsigned char *, struct net_switch_port *, int, int, int);
 extern int fdb_del(struct net_switch *, unsigned char *,
 		struct net_switch_port *, int, int);

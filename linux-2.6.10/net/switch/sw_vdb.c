@@ -87,7 +87,7 @@ int sw_vdb_del_vlan(struct net_switch *sw, int vlan) {
 	/* Now nobody learns macs on this vlan, so we can safely remove
 	   all entrues from the fdb
 	 */
-	fdb_cleanup_vlan(sw, vlan);
+	fdb_cleanup_vlan(sw, vlan, SW_FDB_ANY);
 	list_for_each_entry_safe(link, tmp, &entry->trunk_ports, lh) {
 		kmem_cache_free(sw->vdb_cache, link);
 	}

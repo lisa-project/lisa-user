@@ -19,7 +19,7 @@ static void swcli_sig_term(int sig) {
 	char hostname[MAX_HOSTNAME];
 	cmd_root = &command_root_main;
 	signal(SIGTSTP, SIG_IGN);
-	printf("\n");
+	printf("^Z\n");
 	gethostname(hostname, sizeof(hostname));
 	hostname[sizeof(hostname) - 1] = '\0';
 	sprintf(prompt, cmd_root->prompt, hostname, priv ? '#' : '>');
@@ -320,10 +320,12 @@ static void cmd_trace(FILE *out, char **argv) {
 static void cmd_clr_mac_eth(FILE *out, char **argv) {
 	struct net_switch_ioctl_arg ioctl_arg;
 	int status;
+	unsigned char mac[ETH_ALEN];
 
 	ioctl_arg.cmd = SWCFG_DELMACDYN;
 	ioctl_arg.vlan = 0;
-	memset(ioctl_arg.ext.mac, 0, ETH_ALEN);
+	memset(mac, 0, ETH_ALEN);
+	ioctl_arg.ext.mac = mac;
 	ioctl_arg.if_name = if_name_eth(argv[0]);
 	status = ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 	if (status == -1) {
@@ -339,8 +341,7 @@ static void cmd_clr_mac(FILE *out, char **argv) {
 	unsigned char mac[ETH_ALEN];
 
 	ioctl_arg.cmd = SWCFG_DELMACDYN;
-	status = parse_mac(argv[0], mac);
-	assert(!status);
+	memset(mac, 0, ETH_ALEN);
 	ioctl_arg.ext.mac = mac;
 	ioctl_arg.vlan = 0;
 	ioctl_arg.if_name = NULL;
@@ -355,10 +356,12 @@ static void cmd_clr_mac(FILE *out, char **argv) {
 static void cmd_clr_mac_vl(FILE *out, char **argv) {
 	struct net_switch_ioctl_arg ioctl_arg;
 	int status;
+	unsigned char mac[ETH_ALEN];
 
 	ioctl_arg.cmd = SWCFG_DELMACDYN;
 	ioctl_arg.vlan = parse_vlan(argv[0]);
-	memset(ioctl_arg.ext.mac, 0, ETH_ALEN);
+	memset(mac, 0, ETH_ALEN);
+	ioctl_arg.ext.mac = mac;
 	ioctl_arg.if_name = NULL;
 	status = ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 	if (status == -1) {
@@ -369,12 +372,21 @@ static void cmd_clr_mac_vl(FILE *out, char **argv) {
 }
 
 static void cmd_clr_mac_adr(FILE *out, char **argv) {
-	int i;
-	char *arg;
+	struct net_switch_ioctl_arg ioctl_arg;
+	int status;
+	unsigned char mac[ETH_ALEN];
 
-	fprintf(out, "cmd_clr_mac_adr\n");
-	for (i=0; (arg = argv[i]); i++) {
-		fprintf(out, "arg(%d): %s\n", i, arg);
+	ioctl_arg.cmd = SWCFG_DELMACDYN;
+	status = parse_mac(argv[0], mac);
+	assert(!status);
+	ioctl_arg.ext.mac = mac;
+	ioctl_arg.vlan = 0;
+	ioctl_arg.if_name = NULL;
+	status = ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
+	if (status == -1) {
+		fprintf(out, "MAC address could not be removed\n"
+				"Address not found\n\n");
+		fflush(out);
 	}
 }
 
@@ -587,7 +599,7 @@ static sw_command_t sh_show[] = {
 	{"history",				1,	NULL,			cmd_history,	RUN,		"Display the session command history",				sh_pipe},
 	{"interfaces",			1,	NULL,			cmd_sh_int,		RUN,		"Interface status and configuration",				sh_sh_int},
 	{"ip",					1,	NULL,			NULL,			RUN,		"IP information",									NULL},
-	{"mac",					1,	NULL,			NULL,			RUN,		"MAC configuration",								sh_sh_mac},
+	{"mac",					1,	NULL,			NULL,			0,		"MAC configuration",								sh_sh_mac},
 	{"mac-address-table",	1,	NULL,			cmd_show_mac,	RUN,		"MAC forwarding table",								sh_mac_addr_table},
 	{"privilege",			2,	NULL,			cmd_show_priv,	RUN,		"Show current privilege level",						NULL},
 	{"running-config",		2,	NULL,			cmd_show_run,	RUN,		"Current operating configuration",					sh_show_run},
