@@ -9,6 +9,7 @@ extern int errno;
 #include <unistd.h>
 
 #include "climain.h"
+#include "shared.h"
 
 int list_vlans_token(unsigned char *bmp, int vlan, char *token) {
 	int i, min;
@@ -177,11 +178,24 @@ void dump_static_macs(FILE *out) {
 int build_config(FILE *out) {
 	char buf[4096], *p1, *p2;
 	FILE *f;
+	int i;
 
 	/* hostname */
 	gethostname(buf, sizeof(buf));
 	buf[sizeof(buf) - 1] = '\0'; /* paranoia :P */
 	fprintf(out, "!\nhostname %s\n", buf);
+	/* enable secrets */
+	fputs("!\n", out);
+	cfg_lock();
+	for(i = 1; i < CLI_MAX_ENABLE; i++) {
+		if(cfg->enable_secret[i][0] == '\0')
+			continue;
+		fprintf(out, "enable secret level %d 5 %s\n", i, cfg->enable_secret[i]);
+	}
+	if(cfg->enable_secret[CLI_MAX_ENABLE][0] != '\0') {
+		fprintf(out, "enable secret 5 %s\n", cfg->enable_secret[i]);
+	}
+	cfg_unlock();
 	/* physical interfaces */
 	f = fopen("/proc/net/dev", "r");
 	assert(f != NULL);

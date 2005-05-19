@@ -3,10 +3,14 @@
 #include <net/if.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <regex.h>
 
 #include "command.h"
 #include "climain.h"
 #include "config_if.h"
+#include "shared.h"
 
 #include <errno.h>
 extern int errno;
@@ -95,7 +99,45 @@ static void cmd_macstatic(FILE *out, char **argv) {
 	}
 }
 
+static void __setenpw(FILE *out, int lev, char **argv) {
+	int type = 0, status;
+	char secret[CLI_SECRET_LEN + 1];
+	regex_t regex;
+	regmatch_t result;
+	
+	if(argv[0] == NULL)
+		return;
+	if(argv[1] != NULL) {
+		type = atoi(*argv);
+		argv++;
+	}
+	if(type) {
+		/* encrypted password; need to check syntax */
+		status = regcomp(&regex, "^\\$1\\$[a-zA-Z0-9\\./]{4}\\$[a-zA-Z0-9\\./]{22}$", REG_EXTENDED);
+		assert(!status);
+		if(regexec(&regex, *argv, 1, &result, 0)) {
+			fputs("ERROR: The secret you entered is not a valid encrypted secret.\n"
+					"To enter an UNENCRYPTED secret, do not specify type 5 encryption.\n"
+					"When you properly enter an UNENCRYPTED secret, it will be encrypted.\n\n",
+					out);
+			return;
+		}
+		strcpy(secret, *argv);
+	} else {
+		/* unencrypted password; need to crypt() */
+	}
+	cfg_lock();
+	strcpy(cfg->enable_secret[lev], secret);
+	cfg_unlock();
+}
+
 static void cmd_setenpw(FILE *out, char **argv) {
+	__setenpw(out, CLI_MAX_ENABLE, argv);
+}
+
+static void cmd_setenpwlev(FILE *out, char **argv) {
+	int lev = atoi(*argv);
+	__setenpw(out, lev, argv + 1);
 }
 
 int valid_host(char *arg, char lookahead) {
@@ -205,14 +247,29 @@ static sw_command_t sh_no[] = {
 };
 
 static sw_command_t sh_secret_line[] = {
-	{"LINE",				15,	valid_lin,	cmd_setenpw,		0,			"The UNENCRYPTED (cleartext) 'enable' secret",	NULL},
+	{"LINE",				15,	valid_lin,	cmd_setenpw,		RUN,		"The UNENCRYPTED (cleartext) 'enable' secret",	NULL},
+	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+};
+
+static sw_command_t sh_secret_lineenc[] = {
+	{"LINE",				15,	valid_lin,	cmd_setenpw,		RUN,		"The ENCRYPTED 'enable' secret string",			NULL},
+	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+};
+
+static sw_command_t sh_secret_linelev[] = {
+	{"LINE",				15,	valid_lin,	cmd_setenpwlev,		RUN,		"The UNENCRYPTED (cleartext) 'enable' secret",	NULL},
+	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+};
+
+static sw_command_t sh_secret_lineenclev[] = {
+	{"LINE",				15,	valid_lin,	cmd_setenpwlev,		RUN,		"The ENCRYPTED 'enable' secret string",			NULL},
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
 
 static sw_command_t sh_secret_lev_x[] = {
-	{"0",					15,	valid_0,	NULL,				PTCNT,		"Specifies an UNENCRYPTED password will follow",sh_secret_line},
-	{"5",					15,	valid_5,	NULL,				PTCNT,		"Specifies an ENCRYPTED secret will follow",	sh_secret_line},
-	{"LINE",				15,	valid_lin,	cmd_setenpw,		0,			"The UNENCRYPTED (cleartext) 'enable' secret",	NULL},
+	{"0",					15,	valid_0,	NULL,				PTCNT,		"Specifies an UNENCRYPTED password will follow",sh_secret_linelev},
+	{"5",					15,	valid_5,	NULL,				PTCNT,		"Specifies an ENCRYPTED secret will follow",	sh_secret_lineenclev},
+	{"LINE",				15,	valid_lin,	cmd_setenpwlev,		RUN,		"The UNENCRYPTED (cleartext) 'enable' secret",	NULL},
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
 
@@ -223,8 +280,8 @@ static sw_command_t sh_secret_level[] = {
 
 static sw_command_t sh_secret[] = {
 	{"0",					15,	valid_0,	NULL,				PTCNT,		"Specifies an UNENCRYPTED password will follow",sh_secret_line},
-	{"5",					15,	valid_5,	NULL,				PTCNT,		"Specifies an ENCRYPTED secret will follow",	sh_secret_line},
-	{"LINE",				15,	valid_lin,	cmd_setenpw,		0,			"The UNENCRYPTED (cleartext) 'enable' secret",	NULL},
+	{"5",					15,	valid_5,	NULL,				PTCNT,		"Specifies an ENCRYPTED secret will follow",	sh_secret_lineenc},
+//	{"LINE",				15,	valid_lin,	cmd_setenpw,		RUN,		"The UNENCRYPTED (cleartext) 'enable' secret",	NULL},
 	{"level",				15,	NULL,		NULL,				0,			"Set exec level password",						sh_secret_level},
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
