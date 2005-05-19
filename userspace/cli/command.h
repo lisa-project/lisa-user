@@ -25,7 +25,11 @@
 #define NA			0x0040
 /* Node is a pattern that needs completion */
 #define CMPL		0x0080
-#define FLAGS_MASK	0x00f0
+/* Do not use implicit pager when running this node; this only makes sense
+   if RUN flag is also present.
+ */
+#define NPG			0x0100
+#define FLAGS_MASK	0x0ff0
 
 #define INITIAL_BUF_SIZE 4096
 

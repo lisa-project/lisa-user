@@ -2,10 +2,12 @@
 #include <linux/sockios.h>
 #include <net/if.h>
 #include <sys/ioctl.h>
+#define __USE_XOPEN
 #include <unistd.h>
 #include <stdlib.h>
 #include <sys/types.h>
 #include <regex.h>
+#include <time.h>
 
 #include "command.h"
 #include "climain.h"
@@ -15,6 +17,8 @@
 #include <errno.h>
 extern int errno;
 char hostname_default[] = "Switch\0";
+
+static char salt_base[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789./";
 
 static void cmd_end(FILE *out, char **argv) {
 	cmd_root = &command_root_main;
@@ -101,7 +105,7 @@ static void cmd_macstatic(FILE *out, char **argv) {
 
 static void __setenpw(FILE *out, int lev, char **argv) {
 	int type = 0, status;
-	char secret[CLI_SECRET_LEN + 1];
+	char *secret;
 	regex_t regex;
 	regmatch_t result;
 	
@@ -122,9 +126,16 @@ static void __setenpw(FILE *out, int lev, char **argv) {
 					out);
 			return;
 		}
-		strcpy(secret, *argv);
+		secret = *argv;
 	} else {
 		/* unencrypted password; need to crypt() */
+		char salt[] = "$1$....$\0";
+		int i;
+
+		srandom(time(NULL) & 0xfffffffL);
+		for(i = 3; i < 7; i++)
+			salt[i] = salt_base[random() % 64];
+		secret = crypt(*argv, salt);
 	}
 	cfg_lock();
 	strcpy(cfg->enable_secret[lev], secret);
@@ -138,6 +149,19 @@ static void cmd_setenpw(FILE *out, char **argv) {
 static void cmd_setenpwlev(FILE *out, char **argv) {
 	int lev = atoi(*argv);
 	__setenpw(out, lev, argv + 1);
+}
+
+static void cmd_noensecret(FILE *out, char **argv) {
+	cfg_lock();
+	cfg->enable_secret[CLI_MAX_ENABLE][0] = '\0';
+	cfg_unlock();
+}
+
+static void cmd_noensecret_lev(FILE *out, char **argv) {
+	int lev = atoi(argv[1]);
+	cfg_lock();
+	cfg->enable_secret[lev][0] = '\0';
+	cfg_unlock();
 }
 
 int valid_host(char *arg, char lookahead) {
@@ -239,7 +263,23 @@ static sw_command_t sh_hostname[] = {
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
 
+static sw_command_t sh_noenlev[] = {
+	{priv_range,			1,	valid_priv,	cmd_noensecret_lev,	RUN|PTCNT,	"Level number",									NULL},
+	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+};
+
+static sw_command_t sh_noensecret[] = {
+	{"level",				15,	NULL,		NULL,				0,			"Set exec level password",						sh_noenlev},
+	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+};
+
+static sw_command_t sh_noenable[] = {
+	{"secret",				15,	NULL,		cmd_noensecret,		RUN,		"Assign the privileged level secret",			sh_noensecret},
+	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+};
+
 static sw_command_t sh_no[] = {
+	{"enable",				15,	NULL,		NULL,				0,			"Modify enable password parameters",			sh_noenable},
 	{"hostname",			2,	NULL,		cmd_nohostname,		RUN,		"Set system's network name",					NULL},
 	{"interface",			2,	NULL,		NULL,				0,			"Select an interface to configure",				sh_no_int},
 	{"mac-address-table",	2,	NULL,		NULL,				0,			"Configure the MAC address table",				sh_nomac},

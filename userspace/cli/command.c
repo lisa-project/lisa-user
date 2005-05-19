@@ -5,6 +5,8 @@
 #include <sys/param.h>
 #include <signal.h>
 #include <stdlib.h>
+#define __USE_XOPEN
+#include <unistd.h>
 
 #include "command.h"
 #include "climain.h"
@@ -33,6 +35,12 @@ static void cmd_disable(FILE *out, char **argv) {
 	priv = 1;
 }
 
+static int secret_validator(char *pass, void *arg) {
+	char *secret = arg;
+
+	return !strcmp(secret, crypt(pass, secret));
+}
+
 static void cmd_enable(FILE *out, char **argv) {
 	int req;
 	int fail = 0;
@@ -48,13 +56,13 @@ static void cmd_enable(FILE *out, char **argv) {
 			fprintf(out, "%% No password set\n");
 			return;
 		}
-		fail = 0;
+		fail = !cfg_checkpass(3, secret_validator, secret);
 	}
 	if(fail) {
 		fprintf(out, "%% Bad secrets\n\n");
 		return;
 	}
-	priv = 15;
+	priv = req;
 }
 
 static void cmd_conf_t(FILE *out, char **argv) {
@@ -672,7 +680,7 @@ static sw_command_t sw_trace[] = {
 char priv_range[] = "<1-15>\0";
 
 static sw_command_t sh_enable[] = {
-	{priv_range,			1,	valid_priv,		cmd_enable,		RUN|PTCNT,	"Enable level",										NULL},
+	{priv_range,			1,	valid_priv,		cmd_enable,		RUN|PTCNT|NPG,"Enable level",									NULL},
 	{NULL,					0,  NULL,			NULL,			0,			NULL,												NULL}
 };
 
@@ -723,7 +731,7 @@ static sw_command_t sh[] = {
 	{"clear",				2,	NULL, 			NULL,			0,			"Reset functions",									sh_clear},
 	{"configure",			15,	NULL,			NULL,			0,			"Enter configuration mode",							sh_conf},
 	{"disable",				2,	NULL,			cmd_disable,	RUN,		"Turn off privileged commands",						NULL},
-	{"enable",				1,	NULL,			cmd_enable,		RUN,		"Turn on privileged commands",						sh_enable},
+	{"enable",				1,	NULL,			cmd_enable,		RUN|NPG,	"Turn on privileged commands",						sh_enable},
 	{"exit",				1,	NULL,			cmd_exit,		RUN,		"Exit from the EXEC",								NULL},
 	{"help",				1,	NULL,			cmd_help,		RUN,		"Description of the interactive help system",		NULL},
 	{"logout",				1,	NULL,			cmd_exit,		RUN,		"Exit from the EXEC",								NULL},

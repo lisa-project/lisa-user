@@ -1,5 +1,5 @@
 CFLAGS = -g -Wall -I../../linux-2.6.10/include #-DDEBUG
-LDFLAGS = -lreadline -lcurses -lutil
+LDFLAGS = -lreadline -lcurses -lutil -lcrypt
 
 # FIXME
 __LOGIN_PATH := \"$(shell pwd)/swlogin\"

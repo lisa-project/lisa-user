@@ -485,6 +485,17 @@ sw_match_t *get_matches(int *matched, char *token) {
 	return matches;
 }
 
+void swcli_exec(FILE *out, sw_execution_state_t *exc) {
+	if (exc->num >= exc->size) {
+		exc->func_args = realloc(exc->func_args,
+				(exc->size + 1) *sizeof(char *));
+		assert(exc->func_args);
+		exc->size ++;
+	}
+	exc->func_args[exc->num++] = NULL;
+	exc->func(out, exc->func_args); //FIXME pointer la arg
+}
+
 void swcli_piped_exec(sw_execution_state_t *exc) {
 	int nc;
 	char cmd_buf[MAX_LINE_WIDTH];
@@ -505,14 +516,7 @@ void swcli_piped_exec(sw_execution_state_t *exc) {
 	}
 	assert(nc < sizeof(cmd_buf));
 	assert((pipe = popen(cmd_buf, "w")));
-	if (exc->num >= exc->size) {
-		exc->func_args = realloc(exc->func_args,
-				(exc->size + 1) *sizeof(char *));
-		assert(exc->func_args);
-		exc->size ++;
-	}
-	exc->func_args[exc->num++] = NULL;
-	exc->func(pipe, exc->func_args); //FIXME pointer la arg
+	swcli_exec(pipe, exc);
 	pclose(pipe);
 }
 
@@ -527,6 +531,7 @@ void swcli_exec_cmd(char *cmd) {
 		swcli_extra_input(abs(ret));
 		return;
 	}
+
 	if (ret > 1) {
 		swcli_ambiguous_cmd(cmd);
 		return;
@@ -536,14 +541,21 @@ void swcli_exec_cmd(char *cmd) {
 		swcli_ambiguous_cmd(cmd);
 		return;
 	}
-	if(exec_state.runnable & RUN) {
-		if (exec_state.func)
-			swcli_piped_exec(&exec_state);
-		else 
-			swcli_unimplemented_cmd(cmd);
+
+	if(!(exec_state.runnable & RUN)) {
+		swcli_incomplete_cmd(cmd);
 		return;
 	}
-	swcli_incomplete_cmd(cmd);
+
+	if (exec_state.func == NULL) {
+		swcli_unimplemented_cmd(cmd);
+		return;
+	}
+
+	if(exec_state.runnable & NPG)
+		swcli_exec(stdout, &exec_state);
+	else
+		swcli_piped_exec(&exec_state);
 }
 
 int climain(void) {
