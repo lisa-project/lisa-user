@@ -457,14 +457,6 @@ void build_list_ip_addr(FILE *out, char *dev, int fmt) {
 	char buf[128];
 	int num;
 	
-	if (dev) {
-		if (fmt == FMT_CMD) {
-			sscanf(dev, "vlan%d", &num);
-			fprintf(out, "!\ninterface vlan %d\n", num);
-		}
-		list_ip_addr(out, dev, 0, fmt);
-		return;
-	}
 	/* No interface specified, we print out all ip 
 	 information about lms virtual interfaces */
 	fh = fopen(PROCNETSWITCH_PATH, "r");
@@ -474,11 +466,15 @@ void build_list_ip_addr(FILE *out, char *dev, int fmt) {
 	}
 	while (fgets(buf, sizeof(buf), fh)) {
 		buf[strlen(buf)-1] = '\0';
+		if (dev && strcmp(dev, buf))
+			continue;
 		if (fmt == FMT_CMD) {
 			sscanf(buf, "vlan%d", &num);
 			fprintf(out, "!\ninterface vlan %d\n", num);
 		}
 		list_ip_addr(out, buf, 0, fmt);
+		if (dev)
+			break;	
 	}
 	fclose(fh);
 }
