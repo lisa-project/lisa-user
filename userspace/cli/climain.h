@@ -8,6 +8,7 @@
 #define PAGER_PATH "/bin/more"
 
 #include "command.h"
+#include "shared.h"
 
 typedef struct match {
 	char *text;			/* Matched text */
@@ -23,6 +24,16 @@ typedef struct execution {
 	int num;
 	char **func_args;
 } sw_execution_state_t;
+
+typedef struct completion {
+	sw_command_t *search_set;	/* Current command tree search set */
+	sw_validation_func valid;	/* Validation function associated */
+	char *cmd_full_name;
+	int runnable;				/* runnable state */
+	char *start;
+	int offset;
+	int cmpl;
+} sw_completion_state_t;
 
 extern sw_command_root_t *cmd_root;
 extern int climain(void);

@@ -15,6 +15,7 @@
 #include "filter.h"
 #include "if.h"
 #include "shared.h"
+#include "ip.h"
 
 static char if_name[IFNAMSIZ];
 
@@ -32,7 +33,16 @@ static void swcli_sig_term(int sig) {
 
 /* Command Handlers implementation */
 static void cmd_disable(FILE *out, char **argv) {
-	priv = 1;
+	int req;
+	
+	req = argv[0] == NULL ? 1 : atoi(argv[0]);
+	if (req > priv) {
+		fprintf(out, 
+				"New privilege level must be less than current"
+				"privilege level\n");
+		return;
+	}
+	priv = req;
 }
 
 static int secret_validator(char *pass, void *arg) {
@@ -85,6 +95,30 @@ void cmd_help(FILE *out, char **argv) {
 		"   and you want to know what arguments match the input\n"
 		"   (e.g. 'show pr?'.)\n\n"
 		);
+}
+
+void cmd_show_ver(FILE *out, char **argv) {
+	FILE *fp;
+	char buf[255];
+	
+	fprintf(out,
+		"LiSA Command Line Interface, ver. 1.0, compiled 2005.06.01 \n"
+		"For more info go to http://lisa.ines.ro\n\n"
+		"This tool is part of the Linux Switch Appliance Project and can\n"
+		"be used (succesfully) only with a kernel patched with the LMS\n"
+		"(i.e. Linux Multilayer Switch) kernel patch.\n\n"
+		"Operating system info:\n\n"
+			);
+	fp = fopen(VERSION_FILE_PATH, "r");
+	if (!fp) {
+		fprintf(out, "No available information.\n\n");
+		return;
+	}
+	while (fgets(buf, sizeof(buf), fp)) {
+		fprintf(out, "%s\n", buf);
+	}
+	fclose(fp);
+	fprintf(out, "\n");
 }
 
 static void cmd_history(FILE *out, char **argv) {
@@ -174,6 +208,10 @@ static void cmd_show_run(FILE *out, char **argv) {
 }
 
 static void cmd_run_vlan(FILE *out, char **argv) {
+	char *dev = NULL;
+	if (*argv)
+		dev = if_name_vlan(*argv);
+	build_list_ip_addr(out, dev, FMT_CMD);
 }
 
 static void init_mac_filter(struct net_switch_ioctl_arg *user_arg) {
@@ -414,6 +452,44 @@ static void cmd_clr_mac_adr(FILE *out, char **argv) {
 	}
 }
 
+void build_list_ip_addr(FILE *out, char *dev, int fmt) {
+	FILE *fh;
+	char buf[128];
+	int num;
+	
+	if (dev) {
+		if (fmt == FMT_CMD) {
+			sscanf(dev, "vlan%d", &num);
+			fprintf(out, "!\ninterface vlan %d\n", num);
+		}
+		list_ip_addr(out, dev, 0, fmt);
+		return;
+	}
+	/* No interface specified, we print out all ip 
+	 information about lms virtual interfaces */
+	fh = fopen(PROCNETSWITCH_PATH, "r");
+	if (!fh) {
+		perror("fopen");
+		exit(-1);
+	}
+	while (fgets(buf, sizeof(buf), fh)) {
+		buf[strlen(buf)-1] = '\0';
+		if (fmt == FMT_CMD) {
+			sscanf(buf, "vlan%d", &num);
+			fprintf(out, "!\ninterface vlan %d\n", num);
+		}
+		list_ip_addr(out, buf, 0, fmt);
+	}
+	fclose(fh);
+}
+
+static void cmd_sh_ip(FILE *out, char **argv) {
+	char *dev = NULL;
+	if (*argv)
+		dev = if_name_vlan(*argv);
+	build_list_ip_addr(out, dev, FMT_NOCMD);
+}
+
 /* FIXME: quick hack
    ar tb facut ca la show mac (selectori id si name) 
  */
@@ -433,6 +509,40 @@ static void cmd_show_vlan(FILE *out, char **argv) {
 	}
 
 	fclose(in);
+}
+
+static void cmd_sh_mac_age(FILE *out, char **argv) {
+	struct net_switch_ioctl_arg ioctl_arg;
+	int status;
+
+	ioctl_arg.cmd = SWCFG_GETAGETIME;
+	memset(&ioctl_arg.ext.ts, 0, sizeof(struct timespec));
+	status = ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
+	if (status) 
+		perror("Error getting age time");
+	else
+		fprintf(out, "%li\n", ioctl_arg.ext.ts.tv_sec);
+}
+
+static void cmd_wrme(FILE *out, char **argv) {
+	int status;
+	FILE *tmp = NULL;
+	char tmp_name[] = "/nvram";
+
+	fprintf(out, "Building configuration...\n");
+	fflush(out);
+	do {
+		tmp = fopen(tmp_name, "w+");
+		if(tmp == NULL)
+			break;
+		status = build_config(tmp);
+		if(status)
+			break;
+		fprintf(out, "Current configuration : %ld bytes\n", ftell(tmp));
+		fclose(tmp);
+		fprintf(out, "\n[OK]\n\n");
+		return;
+	} while(0);
 }
 
 /* Validation Handlers Implementation */
@@ -495,6 +605,11 @@ int parse_eth(char *arg) {
 
 char *if_name_eth(char *arg) {
 	sprintf(if_name, "eth%d", parse_eth(arg));
+	return if_name;
+}
+
+char *if_name_vlan(char *arg) {
+	sprintf(if_name, "vlan%d", parse_vlan(arg));
 	return if_name;
 }
 
@@ -618,7 +733,7 @@ static sw_command_t sh_sh_mac_sel[] = {
 
 static sw_command_t sh_mac_addr_table[] = {
 	{"address",				1,	NULL,			NULL,			0,			"address keyword",									sh_sh_mac_addr},
-	{"aging-time",			1,	NULL,			NULL,			RUN,		"aging-time keyword",								NULL},
+	{"aging-time",			1,	NULL,			cmd_sh_mac_age,			RUN,		"aging-time keyword",						sh_pipe},
 	{"dynamic",				1,	valid_dyn,		cmd_show_mac,	RUN|CMPL|PTCNT,	"dynamic entry type",								sh_sh_mac_sel},
 	{"interface",			1,	NULL,			NULL,			0,			"interface keyword",								sh_sh_mac_int},
 	{"static",				1,	valid_static,	cmd_show_mac,	RUN|CMPL|PTCNT,	"static entry type",								sh_sh_mac_sel},
@@ -649,7 +764,7 @@ static sw_command_t sh_show[] = {
 	{"clock",				1,	NULL,			NULL,			RUN,		"Display the system clock",							NULL},
 	{"history",				1,	NULL,			cmd_history,	RUN,		"Display the session command history",				sh_pipe},
 	{"interfaces",			1,	NULL,			cmd_sh_int,		RUN,		"Interface status and configuration",				sh_sh_int},
-	{"ip",					1,	NULL,			NULL,			RUN,		"IP information",									NULL},
+	{"ip",					1,	NULL,			cmd_sh_ip,		RUN,		"IP information",									NULL},
 	{"mac",					1,	NULL,			NULL,			0,		"MAC configuration",								sh_sh_mac},
 	{"mac-address-table",	1,	NULL,			cmd_show_mac,	RUN,		"MAC forwarding table",								sh_mac_addr_table},
 	{"privilege",			2,	NULL,			cmd_show_priv,	RUN,		"Show current privilege level",						NULL},
@@ -657,7 +772,7 @@ static sw_command_t sh_show[] = {
 	{"sessions",			1,	NULL,			NULL,			RUN,		"Information about Telnet connections",				NULL},
 	{"startup-config",		1,	NULL,			NULL,			RUN,		"Contents of startup configuration",				NULL},
 	{"users",				1,	NULL,			NULL,			RUN,		"Display information about terminal lines",			NULL},
-	{"version",				1,	NULL,			NULL,			RUN,		"System hardware and software status",				NULL},
+	{"version",				1,	NULL,			cmd_show_ver,			RUN,		"System hardware and software status",				NULL},
 	{"vlan",				1,	NULL,			cmd_show_vlan,	RUN,		"VTP VLAN status",									sh_show_vlan},
 	{NULL,					0,  NULL,			NULL,			0,			NULL,												NULL}
 };
@@ -667,12 +782,12 @@ static sw_command_t sh_conf[] = {
 	{NULL,					0,  NULL,			NULL,			0,			NULL,												NULL}
 };
 
-static sw_command_t sw_ping[] = {
+static sw_command_t sh_ping[] = {
 	{"WORD",				1,	valid_regex,	cmd_ping,		RUN|PTCNT,	"Ping destination address or hostname",				NULL},
 	{NULL,					0,  NULL,			NULL,			0,			NULL,												NULL}
 };
 
-static sw_command_t sw_trace[] = {
+static sw_command_t sh_trace[] = {
 	{"WORD",				1,	valid_regex,	cmd_trace,		RUN|PTCNT,	"Ping destination address or hostname",				NULL},
 	{NULL,					0,  NULL,			NULL,			0,			NULL,												NULL}
 };
@@ -681,6 +796,11 @@ char priv_range[] = "<1-15>\0";
 
 static sw_command_t sh_enable[] = {
 	{priv_range,			1,	valid_priv,		cmd_enable,		RUN|PTCNT|NPG,"Enable level",									NULL},
+	{NULL,					0,  NULL,			NULL,			0,			NULL,												NULL}
+};
+
+static sw_command_t sh_disable[] = {
+	{priv_range,			1,	valid_priv,		cmd_disable,	RUN|PTCNT|NPG,"Privilege level to go to",								NULL},
 	{NULL,					0,  NULL,			NULL,			0,			NULL,												NULL}
 };
 
@@ -727,21 +847,27 @@ static sw_command_t sh_clear[] = {
 	{NULL,					0,  NULL,			NULL,			0,			NULL,												NULL}
 };
 
+static sw_command_t sh_write[] = {
+	{"memory",				15,	NULL,			cmd_wrme,		RUN,		"Write to NV memory",								NULL},
+	{NULL,					0,  NULL,			NULL,			0,			NULL,												NULL}
+};
+
 static sw_command_t sh[] = {
 	{"clear",				2,	NULL, 			NULL,			0,			"Reset functions",									sh_clear},
 	{"configure",			15,	NULL,			NULL,			0,			"Enter configuration mode",							sh_conf},
-	{"disable",				2,	NULL,			cmd_disable,	RUN,		"Turn off privileged commands",						NULL},
+	{"disable",				2,	NULL,			cmd_disable,	RUN,		"Turn off privileged commands",						sh_disable},
 	{"enable",				1,	NULL,			cmd_enable,		RUN|NPG,	"Turn on privileged commands",						sh_enable},
 	{"exit",				1,	NULL,			cmd_exit,		RUN,		"Exit from the EXEC",								NULL},
 	{"help",				1,	NULL,			cmd_help,		RUN,		"Description of the interactive help system",		NULL},
 	{"logout",				1,	NULL,			cmd_exit,		RUN,		"Exit from the EXEC",								NULL},
-	{"ping",				1,	NULL,			NULL,			0,			"Send echo messages",								sw_ping},
+	{"ping",				1,	NULL,			NULL,			0,			"Send echo messages",								sh_ping},
 	{"quit",				1,	NULL,			cmd_exit,		RUN,		"Exit from the EXEC",								NULL},
 	{"show",				1,	NULL,			NULL,			0,			"Show running system information",					sh_show},
-	{"telnet",				1,	NULL,			NULL,			0,			"Open a telnet connection",							NULL},
-	{"terminal",			1,	NULL,			NULL,			0,			"Set terminal line parameters",						NULL},
-	{"traceroute",			1,	NULL,			NULL,			0,			"Trace route to destination",						sw_trace},
+//	{"telnet",				1,	NULL,			NULL,			0,			"Open a telnet connection",							NULL},
+//	{"terminal",			1,	NULL,			NULL,			0,			"Set terminal line parameters",						NULL},
+	{"traceroute",			1,	NULL,			NULL,			0,			"Trace route to destination",						sh_trace},
 	{"where",				1,	NULL,			NULL,			RUN,		"List active connections",							NULL},
+	{"write",				15,	NULL,			NULL,			0,			"Write running configuration to memory",			sh_write},
 	{NULL,					0,  NULL,			NULL,			0,			NULL,												NULL}
 };
 

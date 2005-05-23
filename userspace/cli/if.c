@@ -181,7 +181,7 @@ static void get_dev_xstats(char *pos, struct user_net_device *iface) {
 
 static int get_virtual_interfaces() {
 	FILE *fh;
-	char buf[512];
+	char buf[128];
 
 	fh = fopen(PROCNETSWITCH_PATH, "r");
 	if (!fh) {

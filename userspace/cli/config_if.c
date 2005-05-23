@@ -6,6 +6,7 @@
 #include "climain.h"
 #include "config.h"
 #include "config_if.h"
+#include "ip.h"
 
 char sel_eth[IFNAMSIZ];
 char sel_vlan[IFNAMSIZ];
@@ -94,6 +95,118 @@ static void cmd_nomode(FILE *out, char **argv) {
 	ioctl_arg.cmd = SWCFG_SETACCESS;
 	ioctl_arg.ext.access = 0;
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
+}
+
+static int parse_mask(char *, char);
+
+static void cmd_ip(FILE *out, char **argv) {
+	char ip[32];
+	int c, secondary = 0;
+	int cmd = RTM_NEWADDR;
+	
+	memset(ip, 0, sizeof(ip));
+	if (!strcmp(argv[0], "no")) {
+		cmd = RTM_DELADDR;
+		argv++;
+	}
+	c = sprintf(ip, "%s/", *argv++);
+	sprintf(ip+c, "%d", parse_mask(*argv, ' '));
+	argv++;
+	if (*argv && !strcmp(*argv, "secondary"))
+		secondary = 1;
+	change_ip_address(cmd, sel_vlan, ip, secondary);
+}
+
+static void cmd_no_ip(FILE *out, char **argv) {
+	list_ip_addr(out, sel_vlan, 1, FMT_NOCMD);
+}
+
+int get_ip_bytes(int *data, char *arg, char lookahead) {
+	char *p;
+	int valid, i;
+
+	if (arg[0] > '9' || arg[0] < '0')
+		return 0;
+	for (p=arg,valid=1,i=0; *p; p++) {
+		if (*p <= '9' && *p >= '0') {
+			data[i] = 10 * data[i] + (*p - '0');
+			continue;
+		}	
+		if (*p == '.' && ++i <= 3)
+			continue;
+		valid = 0;
+		break;
+	}
+	if ((i < 3 && whitespace(lookahead)) ||
+			(arg[strlen(arg)-1] == '.' && whitespace(lookahead)))
+		valid = 0;
+	return valid;
+}
+
+static int valid_ip(char *arg, char lookahead) {
+	int addr[4];
+	int i;
+	
+	memset(addr, 0, sizeof(addr));
+	if (!get_ip_bytes(addr, arg, lookahead))
+		return 0;
+	for (i=0; i<4; i++)
+		if (addr[i] > 255 || addr[i] < 0)
+			return 0;
+	return 1;
+}
+
+static int valid_mask(char *arg, char lookahead) {
+	int addr[4];
+	int b, b0 = 0, c=0;
+	int i, j;
+	
+	memset(addr, 0, sizeof(addr));
+	if (!get_ip_bytes(addr, arg, lookahead))
+		return 0;
+	for (i=3; i >=0 ; i--) {
+		if (addr[i] > 255 || (addr[i]!=0 && addr[i] <= 127))
+			return 0;
+		b = addr[i];
+		for (j=0; j<8; b>>=1, j++) {
+			if ((b&1)^b0) {
+				c++;	
+				b0=1;
+			}
+			if (c > 1)
+				return 0;
+		}
+	}
+	return 1;
+}
+
+static int parse_mask(char *arg, char lookahead) {
+	int addr[4];
+	int b, b0 = 0, c=0;
+	int i, j, nz = 0;
+	
+	memset(addr, 0, sizeof(addr));
+	if (!get_ip_bytes(addr, arg, lookahead))
+		return -1;
+	for (i=3; i >=0 ; i--) {
+		if (addr[i] > 255 || (addr[i]!=0 && addr[i] <= 127))
+			return -1;
+		b = addr[i];
+		for (j=0; j<8; b>>=1, j++) {
+			if ((b&1)^b0) {
+				c++;	
+				b0=1;
+			}
+			else if (!b0) nz++;
+			if (c > 1)
+				return -1;
+		}
+	}
+	return 32 - nz;
+}
+
+static int valid_sec(char *arg, char lookahead) {
+	return !strcmp(arg, "secondary");
 }
 
 static int valid_vlst(char *arg, char lookahead) {
@@ -242,6 +355,10 @@ static void cmd_remvlans(FILE *out, char **argv) {
 	ioctl_arg.if_name = sel_eth;
 	ioctl_arg.ext.bmp = bmp;
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
+}
+
+static int valid_no(char *argv, char lookahead) {
+	return !strcmp(argv, "no");
 }
 
 static int valid_desc(char *argv, char lookahead) {
@@ -438,17 +555,12 @@ static sw_command_t sh_no[] = {
 	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
 };
 
-static sw_command_t sh_no_vlan[] = {
-	{"shutdown",			2,	NULL,		cmd_noshutd_v,	RUN,		"Shutdown the selected interface",					NULL},
-	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
-};
-
 static sw_command_t sh_eth[] = {
 	{"description",			2,	NULL,		NULL,			0,			"Interface specific description",					sh_ethdesc},
 	{"duplex",				2,	NULL,		NULL,			0,			"Configure duplex operation.",						sh_duplex},
 	{"end"	,				2,	NULL,		cmd_exit,		RUN,		"End interface configuration mode",					NULL},
 	{"exit",				2,	NULL,		cmd_exit,		RUN,		"Exit from interface configuration mode",			NULL},
-	{"help",				2,	NULL,		cmd_help,		RUN,		"Description of the interactive help system",		NULL},
+	{"help",				2,	NULL,		cmd_help,		RUN,		"Descrption of the interactive help system",		NULL},
 	{"interface",			2,	NULL,		NULL,			0,			"Select an interface to configure",					sh_conf_int},
 	{"no",					2,	NULL,		NULL,			0,			"Negate a command or set its defaults",				sh_no},
 	{"shutdown",			2,	NULL,		cmd_shutd,		RUN,		"Shutdown the selected interface",					NULL},
@@ -457,11 +569,44 @@ static sw_command_t sh_eth[] = {
 	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
 };
 
+static sw_command_t sh_ip_second[] = {
+	{"secondary",			2,	valid_sec,	cmd_ip,			RUN|PTCNT|CMPL,		"Make this IP address a secondary address"},
+	{NULL,					0,	NULL,		NULL,			0,			NULL,											NULL}
+};
+
+static sw_command_t sh_ip_netmask[] = {
+	{"A.B.C.D",				2,	valid_mask,	cmd_ip,			RUN|PTCNT,		"IP subnet mask",									sh_ip_second},
+	{NULL,					0,	NULL,		NULL,			0,			NULL,											NULL}
+};
+
+static sw_command_t sh_ip_addr[] = {
+	{"A.B.C.D",				2,	valid_ip,	NULL,			PTCNT,			"IP address",										sh_ip_netmask},
+	{NULL,					0,	NULL,		NULL,			0,			NULL,											NULL}
+};
+
+static sw_command_t sh_ip[] = {
+	{"address",				2,	NULL,		NULL,			0,		"Set the IP address of an interface",				sh_ip_addr},
+	{NULL,					0,	NULL,		NULL,			0,			NULL,											NULL}
+};
+
+static sw_command_t sh_no_ip[] = {
+	{"address",				2,	NULL,		cmd_no_ip,		RUN,		"Set the IP address of an interface",				sh_ip_addr},
+	{NULL,					0,	NULL,		NULL,			0,			NULL,											NULL}
+};
+
+static sw_command_t sh_no_vlan[] = {
+	{"shutdown",			2,	NULL,		cmd_noshutd_v,	RUN,		"Shutdown the selected interface",					NULL},
+	{"ip",					2,	NULL,		NULL,			0,			"Interface Internet Protocol config commands",		sh_no_ip},
+	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
+};
+
 static sw_command_t sh_vlan[] = {
 	{"end",					2,	NULL,		cmd_exit,		RUN,		"Exit from interface configuration mode",			NULL},
 	{"exit",				2,	NULL,		cmd_exit,		RUN,		"End interface configuration mode",					NULL},
 	{"help",				2,	NULL,		cmd_help,		RUN,		"Description of the interactive help system",		NULL},
-	{"no",					2,	NULL,		NULL,			0,			"Negate a command or set its defaults",				sh_no_vlan},
+	{"ip",					2,	NULL,		NULL,			0,			"Interface Internet Protocol config commands",		sh_ip},
+	{"interface",			2,	NULL,		NULL,			0,			"Select an interface to configure",					sh_conf_int},
+	{"no",					2,	valid_no,	NULL,			PTCNT|CMPL,	"Negate a command or set its defaults",				sh_no_vlan},
 	{"shutdown",			2,	NULL,		cmd_shutd_v,	RUN,		"Shutdown the selected interface",					NULL},
 	{NULL,					0,	NULL,		NULL,			0,			NULL,											NULL}
 };

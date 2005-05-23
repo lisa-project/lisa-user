@@ -434,6 +434,7 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 	char if_name[IFNAMSIZ];
 	int err = -EINVAL;
 	int do_put = 0;
+	unsigned long age_time;
 
 	if(!capable(CAP_NET_ADMIN))
 		return -EPERM;
@@ -503,6 +504,15 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 		}	
 		atomic_set(&sw.fdb_age_time, timespec_to_jiffies(&arg.ext.ts));
 		err = 0;
+		break;
+	case SWCFG_GETAGETIME:
+		age_time = atomic_read(&sw.fdb_age_time);
+		jiffies_to_timespec(age_time, &arg.ext.ts);
+		err = 0;
+		if(copy_to_user(uarg, &arg, sizeof(struct net_switch_ioctl_arg))) {
+			err = -EFAULT;
+			break;
+		}
 		break;
 	case SWCFG_MACSTATIC:
 		PORT_GET;

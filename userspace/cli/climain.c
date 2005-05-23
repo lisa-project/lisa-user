@@ -14,13 +14,11 @@
 #include "debug.h"
 #include "climain.h"
 #include "command.h"
-#include "shared.h"
 
 sw_command_root_t *cmd_root = &command_root_main;
-static sw_command_t *search_set;
 char prompt[MAX_HOSTNAME + 32];
-static sw_command_handler handler = NULL;
 sw_execution_state_t exec_state;
+sw_completion_state_t cmpl_state;
 
 char eth_range[32]; /* FIXME size */
 int sock_fd;
@@ -82,6 +80,17 @@ void init_exec_state(sw_execution_state_t *ex) {
 	ex->num = 0;
 }
 
+void init_cmpl_state(sw_completion_state_t *cm) {
+	cm->search_set = cmd_root->cmd;
+	cm->valid = NULL;
+	cm->cmd_full_name = NULL;
+	cm->runnable = 0;
+	cm->offset = 0;
+	cm->start = NULL;
+	cm->cmpl = 1;
+}
+
+
 void dump_exec_state(sw_execution_state_t *ex) {
 	int i;
 	printf("\nExecution state dump: \n"
@@ -93,8 +102,20 @@ void dump_exec_state(sw_execution_state_t *ex) {
 		ex->pipe_type, ex->runnable);
 	printf("func_args: ");
 	for (i=0; i<ex->num; i++)
-		printf("%s ", ex->func_args[i]);
+		printf("'%s' ", ex->func_args[i]);
 	printf("\n\n");
+}
+
+void dump_completion_state(sw_completion_state_t *cm) {
+	printf("\nDumping completion state:\n"
+			"\tsearch_set: %p\n"
+			"\trunnable: %d\n"
+			"\tvalid: %p\n"
+			"\tcmd_full_name: %s\n",
+			cm->search_set,
+			cm->runnable,
+			cm->valid,
+			cm->cmd_full_name);
 }
 
 /* Help function called when the user
@@ -111,43 +132,55 @@ int list_current_options(int something, int key) {
 
 	printf("%c\n", key);
 	/* Establish a current search set based on the current line buffer */
-	if ((ret = parse_command(strdup(rl_line_buffer), change_search_scope)) > 1) {
+	ret = parse_command(strdup(rl_line_buffer), change_search_scope);
+
+//	dump_completion_state(&cmpl_state);
+
+	if (ret > 1) {
 		swcli_ambiguous_cmd(rl_line_buffer);
 		goto out;
 	}
-	if (!search_set && !handler) {
-		swcli_invalid_cmd();
+	
+	if (!cmpl_state.search_set) {
+		/* complete command with no search set */
+		if (cmpl_state.runnable & RUN)
+			swcli_go_ahead();
+		else 
+			swcli_invalid_cmd();
 		goto out;
 	}
-	else if (!search_set && handler) {
-		/* complete command with no search set */
-		if (ret <= 0)
+
+	/* We have a line with whitespace at the end */
+	if (strlen(rl_line_buffer) && whitespace(rl_line_buffer[strlen(rl_line_buffer)-1])) {
+		/* Must have exactly one match on last token */
+		if (ret != 1) { 
 			swcli_invalid_cmd();
-		else 
-			swcli_go_ahead();
-		goto out;
+			goto out;
+		}	
+		/* If pattern and !(runnable & PTCNT) show pattern_name followed by <cr> */
+		if (cmpl_state.search_set && cmpl_state.valid && !(cmpl_state.runnable & PTCNT)) {
+			printf("%-20s\t%s\n", cmpl_state.cmd_full_name, "<cr>");
+			printf("\n");
+			goto out;
+		}
 	}
 
 	if (!strlen(rl_line_buffer) || rl_line_buffer[strlen(rl_line_buffer)-1] == ' ') {
 		/* List all commands in current set with help message */
 		/* output is piped to the unix command more */
-		if (ret < 0){
-			swcli_invalid_cmd();
-			goto out;
-		}
 		rl_deprep_terminal();
 		if (!(pipe=popen(PAGER_PATH, "w"))) {
 			perror("popen");
 			exit(1);
 		}
-		for (i=0; (cmd = search_set[i].name); i++) {
-			if(search_set[i].priv > priv)
+		for (i=0; (cmd = cmpl_state.search_set[i].name); i++) {
+			if(cmpl_state.search_set[i].priv > priv)
 				continue;
-			fprintf(pipe, "  %-20s\t%s\n", cmd, search_set[i].doc);
+			fprintf(pipe, "  %-20s\t%s\n", cmd, cmpl_state.search_set[i].doc);
 		}
 		pclose(pipe);
 		/* complete command with search set */
-		if (handler) 
+		if (cmpl_state.runnable & RUN) 
 			swcli_go_ahead();
 		rl_prep_terminal(1);
 	}
@@ -223,41 +256,52 @@ int change_search_scope(char *match, char *rest, char lookahead)  {
 	int i=0, count = 0;
 	char *name, *arg;
 	struct cmd *set = NULL;
-	sw_command_handler func = NULL;
+	int offset = match - cmpl_state.start;
 
-	if (!search_set) return 0;
-    for (i=0; (name = search_set[i].name); i++) {
-        if(search_set[i].priv > priv)
+	if (!cmpl_state.search_set) {
+		cmpl_state.runnable = NA;
+		return 0;
+	}	
+    for (i=0; (name = cmpl_state.search_set[i].name); i++) {
+        if(cmpl_state.search_set[i].priv > priv)
             continue;
 		if (!strncmp(match,name,strlen(match)) && (whitespace(lookahead))) {
+			if (cmpl_state.valid && !(cmpl_state.runnable & PTCNT) && cmpl_state.offset != offset) {
+				cmpl_state.cmpl = 0;
+				continue;
+			}	
 			count++;
-			set = search_set[i].subcmd;
-			func = search_set[i].func;
+			set = cmpl_state.search_set[i].subcmd;
+			cmpl_state.runnable = cmpl_state.search_set[i].state;
+			cmpl_state.valid = cmpl_state.search_set[i].valid;
 			if (!strcmp(match, name)) {
 				count = 1;
 				break;
 			}
 		}
-		else if (search_set[i].valid) {
-			arg = (search_set[i].state & PTCNT)? match: rest;
-			if (search_set[i].valid(arg, lookahead)) {
+		else if (cmpl_state.search_set[i].valid) {
+			arg = (cmpl_state.search_set[i].state & PTCNT)? match: rest;
+			if (cmpl_state.search_set[i].valid(arg, lookahead)) {
 				count = 1;
-				if (search_set[i].state & PTCNT && whitespace(lookahead)) {
-					func = search_set[i].func;
-					set = search_set[i].subcmd;
+				if (cmpl_state.valid && !(cmpl_state.runnable & PTCNT) && cmpl_state.offset != offset) {
+					set = cmpl_state.search_set;
+					cmpl_state.cmpl = 0;
+					break;
 				}	
-				else  {
-					set = search_set;
-					func = handler;
-				}	
-				break;
+				cmpl_state.runnable = cmpl_state.search_set[i].state;
+				cmpl_state.valid = cmpl_state.search_set[i].valid;
+				cmpl_state.cmd_full_name = cmpl_state.search_set[i].name;
+				if (cmpl_state.search_set[i].state & PTCNT && whitespace(lookahead))
+					set = cmpl_state.search_set[i].subcmd;
+				else
+					set = cmpl_state.search_set;
+				cmpl_state.offset = offset;
 			}	
 		}
     }
 
 	if (count==1) {
-		search_set = set;
-		handler = func;
+		cmpl_state.search_set = set;
 		return count;
 	}
 
@@ -272,26 +316,32 @@ int change_search_scope(char *match, char *rest, char lookahead)  {
 int lookup_token(char *match, char *rest, char lookahead) {
 	char *name, *arg;
 	struct cmd *set = NULL;
-	int i=0, count = 0;
+	int i=0, count = 0, j;
+	int offset = match - cmpl_state.start;
 
-	if (!search_set) {
+	if (!cmpl_state.search_set) {
 		exec_state.runnable = NA;
 		return 0;
 	}
-    for (i=0; (name = search_set[i].name); i++) {
-		if (search_set[i].priv > priv)
+    for (i=0; (name = cmpl_state.search_set[i].name); i++) {
+		if (cmpl_state.search_set[i].priv > priv)
 			continue;
-		if (search_set[i].valid) {
-			arg = (search_set[i].state & PTCNT)? match: rest;
-			if (search_set[i].valid(arg, lookahead)) {
+		if (cmpl_state.search_set[i].valid) {
+			arg = (cmpl_state.search_set[i].state & PTCNT)? match: rest;
+			if (cmpl_state.search_set[i].valid(arg, lookahead)) {
 				count = 1;
-				if (search_set[i].state & PTCNT && whitespace(lookahead))
-					set = search_set[i].subcmd;
+				cmpl_state.valid = cmpl_state.search_set[i].valid;
+				cmpl_state.runnable = cmpl_state.search_set[i].state;
+				if (cmpl_state.search_set[i].state & PTCNT && whitespace(lookahead))
+					set = cmpl_state.search_set[i].subcmd;
 				else 
-					set = search_set;
-				exec_state.runnable = search_set[i].state;
+					set = cmpl_state.search_set;
+				exec_state.runnable = cmpl_state.search_set[i].state;
 				if (!exec_state.pipe_output)
-					exec_state.func = search_set[i].func;
+					exec_state.func = cmpl_state.search_set[i].func;
+				cmpl_state.offset = offset;
+				if (cmpl_state.valid && !(cmpl_state.runnable & PTCNT) && cmpl_state.offset != offset)
+					break;
 				if (exec_state.num >= exec_state.size) {
 					exec_state.func_args = realloc(exec_state.func_args,
 							(exec_state.size + INITIAL_ARGS_NUM)*sizeof(char *));
@@ -299,22 +349,34 @@ int lookup_token(char *match, char *rest, char lookahead) {
 					exec_state.size += INITIAL_ARGS_NUM;
 				}
 				exec_state.func_args[exec_state.num++] = strdup(arg);
-				break;
+				if (cmpl_state.runnable & PTCNT) break;
 			}
 		}
 		else if (!strncmp(match, name, strlen(match))) {
+			if (cmpl_state.valid && !(cmpl_state.runnable & PTCNT)) {
+				if (cmpl_state.offset != offset)
+					continue;
+				else {/* forget about it (we thought it was a pattern, but it is not) */
+					if (exec_state.func_args) {
+						for (j=0; j<exec_state.num; j++)
+							free(exec_state.func_args[j]);
+						exec_state.num = 0;	
+					}	
+					cmpl_state.valid = NULL;
+				}	
+			}	
 			count++;
-			exec_state.runnable = search_set[i].state;
+			exec_state.runnable = cmpl_state.search_set[i].state;
 			if (!strcmp(match, "|"))
 				exec_state.pipe_output = 1;
 			if (!exec_state.pipe_output)	
-				exec_state.func = search_set[i].func;
-			else if (!(search_set[i].state & RUN)) {
+				exec_state.func = cmpl_state.search_set[i].func;
+			else if (!(cmpl_state.search_set[i].state & RUN)) {
 				exec_state.runnable = 0;
-				exec_state.pipe_type = search_set[i].state & MODE_MASK;
+				exec_state.pipe_type = cmpl_state.search_set[i].state & MODE_MASK;
 			}
 			/* setup to advance */
-			set = search_set[i].subcmd;
+			set = cmpl_state.search_set[i].subcmd;
 			if (!strcmp(match, name)) {
 				count = 1;
 				break;
@@ -323,7 +385,7 @@ int lookup_token(char *match, char *rest, char lookahead) {
 	}
 
 	if (count == 1) {
-		search_set = set;
+		cmpl_state.search_set = set;
 		return count;
 	}
 	
@@ -344,8 +406,8 @@ int parse_command(char *line_buffer, int (* next_token)(char *, char *, char)) {
 	if (!line_buffer) return ret;
 	dbg("\n");
 	start = line_buffer;
-	search_set = cmd_root->cmd;
-	handler = NULL;
+	init_cmpl_state(&cmpl_state);
+	cmpl_state.start = start;
 	do {
 		tmp = start;
 		while (whitespace(*tmp)) tmp++;	
@@ -417,9 +479,9 @@ char *swcli_generator(const char *text, int state) {
 	static int list_index, len;
 	char *name;
 
-	dbg("generator: search_set at 0x%x\n", search_set);
+	dbg("generator: search_set at 0x%x\n", cmpl_state.search_set);
 	
-	if (! search_set) 
+	if (! cmpl_state.search_set || !strlen(text)) 
 		return ((char *)NULL);
 
 	/* on first call do some initialization */
@@ -428,14 +490,15 @@ char *swcli_generator(const char *text, int state) {
 		len = strlen(text);
 	}
 
-
 	/* Return the next name which partially matches from the
 	 * command list */
-	for (; (name = search_set[list_index].name); list_index++) {
-        if(search_set[list_index].priv > priv)
+	for (; (name = cmpl_state.search_set[list_index].name); list_index++) {
+        if(cmpl_state.search_set[list_index].priv > priv)
             continue;
 		if (strncmp(name, text, len) == 0 && 
-				(search_set[list_index].state & CMPL || !search_set[list_index].valid)) {
+				(cmpl_state.search_set[list_index].state & CMPL || !cmpl_state.search_set[list_index].valid)) {
+			if (cmpl_state.valid && !(cmpl_state.runnable & PTCNT) && !cmpl_state.cmpl)
+				continue;
 			list_index++;
 			return strdup(name);
 		}
@@ -452,11 +515,14 @@ sw_match_t *get_matches(int *matched, char *token) {
 
 	matches = (sw_match_t *) malloc(MATCHES_PER_ROW * sizeof(sw_match_t));
 	num = MATCHES_PER_ROW;
-	for (i=0; (cmd = search_set[i].name); i++) {
-		if(search_set[i].priv > priv)
+	for (i=0; (cmd = cmpl_state.search_set[i].name); i++) {
+		if(cmpl_state.search_set[i].priv > priv)
 			continue;
 		if (!strncmp(token, cmd, strlen(token)) || 
-				(search_set[i].valid && search_set[i].valid(token, token[strlen(token)-1]))) {
+				(cmpl_state.search_set[i].valid && cmpl_state.search_set[i].valid(token, token[strlen(token)-1]))) {
+			if (cmpl_state.valid && !(cmpl_state.runnable & PTCNT) &&
+					strcmp(cmpl_state.cmd_full_name, cmd) && !cmpl_state.cmpl)
+				continue;
 			count++;
 			if (count - 1 >= num) {
 				num += MATCHES_PER_ROW;
@@ -493,7 +559,9 @@ void swcli_exec(FILE *out, sw_execution_state_t *exc) {
 		exc->size ++;
 	}
 	exc->func_args[exc->num++] = NULL;
+	rl_unbind_key('?');
 	exc->func(out, exc->func_args); //FIXME pointer la arg
+	rl_bind_key('?', list_current_options);
 }
 
 void swcli_piped_exec(sw_execution_state_t *exc) {
@@ -584,7 +652,7 @@ int climain(void) {
 		gethostname(hostname, sizeof(hostname));
 		hostname[sizeof(hostname) - 1] = '\0';
 		sprintf(prompt, cmd_root->prompt, hostname, priv > 1 ? '#' : '>');
-		search_set = cmd_root->cmd;
+		init_cmpl_state(&cmpl_state);
 
 		cmd = readline(prompt);
 		if (!cmd) {

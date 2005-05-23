@@ -108,7 +108,7 @@ static void __setenpw(FILE *out, int lev, char **argv) {
 	char *secret;
 	regex_t regex;
 	regmatch_t result;
-	
+
 	if(argv[0] == NULL)
 		return;
 	if(argv[1] != NULL) {
@@ -164,6 +164,20 @@ static void cmd_noensecret_lev(FILE *out, char **argv) {
 	cfg_unlock();
 }
 
+static void cmd_set_aging(FILE *out, char **argv) {
+	int age;
+	struct net_switch_ioctl_arg ioctl_arg;
+	int status;
+	
+	sscanf(*argv, "%d", &age);
+	ioctl_arg.cmd = SWCFG_SETAGETIME;
+	ioctl_arg.ext.ts.tv_sec = age;
+	ioctl_arg.ext.ts.tv_nsec = 0;
+	status = ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
+	if (status)
+		perror("Error setting age time");
+}
+
 int valid_host(char *arg, char lookahead) {
 	return 1;
 }
@@ -182,6 +196,14 @@ int valid_5(char *arg, char lookahead) {
 
 int valid_lin(char *arg, char lookahead) {
 	return 1;
+}
+
+int valid_age(char *arg, char lookahead)  {
+	int age = 0;
+	
+	sscanf(arg, "%d", &age);
+
+	return (age >=10 && age <= 1000000);
 }
 
 static sw_command_t sh_no_int_eth[] = {
@@ -252,8 +274,12 @@ static sw_command_t sh_nomac[] = {
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
 
+static sw_command_t sh_macaging[] = {
+	{"<10-1000000>",		2,	valid_age,	cmd_set_aging,		RUN,		"Maximum age in seconds",		NULL},
+	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+};
 static sw_command_t sh_mac[] = {
-	{"aging-time",			2,	NULL,		NULL,				0,			"Set MAC address table entry maximum age",		NULL},
+	{"aging-time",			2,	NULL,		NULL,				0,			"Set MAC address table entry maximum age",		sh_macaging},
 	{"static",				2,	NULL,		NULL,				0,			"static keyword",								sh_macstatic},
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
@@ -307,8 +333,8 @@ static sw_command_t sh_secret_lineenclev[] = {
 };
 
 static sw_command_t sh_secret_lev_x[] = {
-	{"0",					15,	valid_0,	NULL,				PTCNT,		"Specifies an UNENCRYPTED password will follow",sh_secret_linelev},
-	{"5",					15,	valid_5,	NULL,				PTCNT,		"Specifies an ENCRYPTED secret will follow",	sh_secret_lineenclev},
+	{"0",					15,	valid_0,	NULL,				PTCNT|CMPL,	"Specifies an UNENCRYPTED password will follow",sh_secret_linelev},
+	{"5",					15,	valid_5,	NULL,				PTCNT|CMPL,	"Specifies an ENCRYPTED secret will follow",	sh_secret_lineenclev},
 	{"LINE",				15,	valid_lin,	cmd_setenpwlev,		RUN,		"The UNENCRYPTED (cleartext) 'enable' secret",	NULL},
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
@@ -319,9 +345,9 @@ static sw_command_t sh_secret_level[] = {
 };
 
 static sw_command_t sh_secret[] = {
-	{"0",					15,	valid_0,	NULL,				PTCNT,		"Specifies an UNENCRYPTED password will follow",sh_secret_line},
-	{"5",					15,	valid_5,	NULL,				PTCNT,		"Specifies an ENCRYPTED secret will follow",	sh_secret_lineenc},
-//	{"LINE",				15,	valid_lin,	cmd_setenpw,		RUN,		"The UNENCRYPTED (cleartext) 'enable' secret",	NULL},
+	{"0",					15,	valid_0,	NULL,				PTCNT|CMPL,	"Specifies an UNENCRYPTED password will follow",sh_secret_line},
+	{"5",					15,	valid_5,	NULL,				PTCNT|CMPL,	"Specifies an ENCRYPTED secret will follow",	sh_secret_lineenc},
+	{"LINE",				15,	valid_lin,	cmd_setenpw,		RUN,		"The UNENCRYPTED (cleartext) 'enable' secret",	NULL},
 	{"level",				15,	NULL,		NULL,				0,			"Set exec level password",						sh_secret_level},
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };

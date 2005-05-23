@@ -85,7 +85,7 @@ void dump_packet(const struct sk_buff *skb) {
 
    3. Our return value is propagated back to driver_poll(). We should
       return NET_RX_DROP if the packet was discarded for any reason or
-	  NET_RX_SUCCES if we handled the packet. We should'n however return
+	  NET_RX_SUCCES if we handled the packet. We shouldn't however return
 	  NET_RX_DROP if we touched the packet in any way.
  */
 __dbg_static int sw_handle_frame(struct net_switch_port *port, struct sk_buff **pskb) {
@@ -128,12 +128,12 @@ __dbg_static int sw_handle_frame(struct net_switch_port *port, struct sk_buff **
 	}
 
 	/* Perform some sanity checks on source mac */
-	if(is_null_mac(skb->mac.raw)) {
+	if(is_null_mac(skb->mac.raw + 6)) {
 		dbg("Received null-smac packet on %s\n", port->dev->name);
 		goto free_skb;
 	}
 
-	if(is_bcast_mac(skb->mac.raw)) {
+	if(is_bcast_mac(skb->mac.raw + 6)) {
 		dbg("Received bcast-smac packet on %s\n", port->dev->name);
 		goto free_skb;
 	}

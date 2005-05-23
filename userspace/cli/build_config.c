@@ -10,6 +10,7 @@ extern int errno;
 
 #include "climain.h"
 #include "shared.h"
+#include "ip.h"
 
 int list_vlans_token(unsigned char *bmp, int vlan, char *token) {
 	int i, min;
@@ -212,6 +213,11 @@ int build_config(FILE *out) {
 			continue;
 		build_int_eth_config(out, atoi(p1));
 	}
+	fclose(f);
+	
+	/* virtual interfaces */	
+	build_list_ip_addr(out, NULL, FMT_CMD);
+
 	/* static macs */
 	dump_static_macs(out);
 

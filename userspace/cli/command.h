@@ -12,6 +12,7 @@
 #define PING_PATH "/bin/ping"
 #define TRACEROUTE_PATH "/usr/sbin/traceroute"
 #define VLAN_FILE_PATH "/proc/net/switch/vlan"
+#define VERSION_FILE_PATH "/proc/version"
 
 #define PING_INTERVAL 0
 #define PING_COUNT 5
@@ -63,10 +64,12 @@ extern int valid_vlan(char *, char);
 extern int valid_priv(char *, char);
 extern int parse_eth(char *);
 extern char *if_name_eth(char *);
+extern char *if_name_vlan(char *);
 extern int parse_vlan(char *);
 extern int valid_mac(char *, char);
 extern int parse_mac(char *, unsigned char *);
 extern void cmd_showmac(FILE *, char *);
+extern void build_list_ip_addr(FILE *, char*, int);
 
 extern sw_command_root_t command_root_main;
 

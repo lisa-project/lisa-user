@@ -48,6 +48,7 @@
 #define SWCFG_DELMACDYN		0x21	/* clear dynamic mac addresses from the fdb */
 #define SWCFG_ENABLEVIF		0x22	/* administratively enable virtual interface */
 #define SWCFG_DISABLEVIF	0x23	/* administratively disable virtual interface */
+#define SWCFG_GETAGETIME	0x24	/* get fdb aging time interval */
 
 #define SW_PFL_DISABLED     0x01
 #define SW_PFL_ACCESS		0x02
