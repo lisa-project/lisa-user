@@ -57,8 +57,9 @@ ln -s /bin/ash $DST/bin/sh
 echo " done."
 
 echo -n "Installing various configuration files "
-for i in /etc/ld.so.conf /etc/inittab /etc/passwd /etc/termcap \
+for i in /etc/ld.so.conf /etc/inittab /etc/passwd /etc/termcap /etc/securetty \
 		/etc/rc.d/rc.sysinit \
+		/etc/pam.d/system-auth \
 		/boot/grub/menu.lst /boot/grub/device.map \
 		;do
 		install -m 0644 -D "dist$i" "$DST$i" && echo -n "#"
@@ -75,14 +76,15 @@ install -m 0755 -D userspace/cli/filter $DST/bin/filter && echo -n "#"
 install -m 0755 -D userspace/cli/swcli $DST/bin/swcli && echo -n "#"
 install -m 0755 -D userspace/cli/swclid $DST/sbin/swclid && echo -n "#"
 install -m 0755 -D userspace/cli/swlogin $DST/sbin/swlogin && echo -n "#"
-install -m 0755 -D userspace/cli/swlogin $DST/sbin/swcon && echo -n "#"
+install -m 0755 -D userspace/cli/swcon $DST/sbin/swcon && echo -n "#"
+install -m 0755 -D userspace/cli/swcfgload $DST/sbin/swcfgload && echo -n "#"
 install -m 0755 -D userspace/cli/libswcli.so $DST/lib/libswcli.so && echo -n "#"
 echo " done."
 
 echo -n "Installing optional binaries "
 for i in /bin/bash /bin/cat /bin/login /bin/ls /bin/ps /bin/vi \
 		/usr/bin/less \
-		/sbin/ifconfig /sbin/ip /sbin/mingetty /sbin/route \
+		/sbin/grub /sbin/ifconfig /sbin/ip /sbin/mingetty /sbin/route \
 		;do
 		install -m 0755 -D "$i" "$DST$i" && echo -n "#"
 done
@@ -102,6 +104,10 @@ while read FILE; do
 	cat $TMP2 | sed 's/^.*=> \(.*\) (.*$/\1/' | sed 's/^[ \t]*\(.*\) (.*$/\1/' | sed 's/tls\///' >> $TMP3
 	echo -n "#"
 done
+
+# Add some extra libraries
+echo /lib/security/pam_permit.so >> $TMP1
+
 cat $TMP3 | sort | uniq | grep -v libswcli > $TMP1
 echo " done."
 
