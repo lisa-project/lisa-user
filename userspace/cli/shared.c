@@ -61,7 +61,7 @@ int cfg_unlock(void) {
 	return 0;
 }
 
-static void sw_redisplay(void) {
+static void sw_redisplay_password(void) {
 	fprintf(rl_outstream, "\rPassword: ");
 	fflush(rl_outstream);
 }
@@ -71,7 +71,7 @@ int cfg_checkpass(int retries, int (*validator)(char *, void *), void *arg) {
 	char *pw;
 	int i;
 
-	rl_redisplay_function = sw_redisplay;
+	rl_redisplay_function = sw_redisplay_password;
 	for(i = 0; i < retries; i++) {
 		pw = readline(NULL);
 		if(validator(pw, arg))
@@ -79,4 +79,11 @@ int cfg_checkpass(int retries, int (*validator)(char *, void *), void *arg) {
 	}
 	rl_redisplay_function = old_redisplay;
 	return i < retries;
+}
+
+int cfg_waitcr(void) {
+	rl_voidfunc_t *old_redisplay = rl_redisplay_function;
+
+	rl_redisplay_function = sw_redisplay_password;
+	rl_redisplay_function = old_redisplay;
 }
