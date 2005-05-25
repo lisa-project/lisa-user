@@ -18,7 +18,7 @@ static void cmd_setpw(FILE *out, char **argv) {
 	assert(pw);
 	assert(strlen(pw) <= CLI_PASS_LEN);
 	strncpy(cfg->vty[0].passwd, pw, CLI_PASS_LEN);
-	cfg->vty[0].passwd[strlen(pw)] = '\0';
+	cfg->vty[0].passwd[CLI_PASS_LEN] = '\0';
 }
 
 static sw_command_t sh_line_pattern[] = {
