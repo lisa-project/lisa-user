@@ -15,7 +15,7 @@ int main(int argc, char **argv) {
 			"Press RETURN to get started."
 			"\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n",
 			hostname);
-	getchar();
+	cfg_waitcr();
 	climain();
 	return 0;
 }

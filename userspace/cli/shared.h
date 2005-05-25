@@ -21,5 +21,6 @@ extern int cfg_init(void);
 extern int cfg_lock(void);
 extern int cfg_unlock(void);
 extern int cfg_checkpass(int, int (*)(char *, void *), void *);
+extern int cfg_waitcr(void);
 
 #endif

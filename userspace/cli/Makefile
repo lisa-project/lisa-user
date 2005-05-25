@@ -30,4 +30,4 @@ swlogin: swlogin.o libswcli.so
 	$(CC) $(LDFLAGS) -lswcli -o $@ $^
 
 clean:
-	rm -f *.o *~ swcli swclid swlogin filter
+	rm -f *.o *~ libswcli.so swcli swclid swlogin filter swcon

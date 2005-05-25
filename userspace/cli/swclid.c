@@ -126,7 +126,7 @@ void sgh_child(int sig) {
 		/* No child exited, but we handle SIGCHLD... wtf ?!! */
 		return;
 	case -1:
-		perror("waitpid"); /* FIXME */
+		//perror("waitpid"); /* FIXME */
 		return;
 	}
 	list_for_each_entry_safe(c, tmp, &telnet_conns, lh) {
@@ -154,8 +154,8 @@ void main_loop() {
 		status = select(maxfd + 1, &readfds, &writefds, NULL, NULL);
 		/* FIXME status == 0 ?? */
 		if(status == -1) {
-			perror("select");
-			fflush(stderr);
+			//perror("select");
+			//fflush(stderr);
 		}
 
 		if(FD_ISSET(telnet_sockfd, &readfds)) {
