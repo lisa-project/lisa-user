@@ -7,7 +7,7 @@ CFLAGS += -DLOGIN_PATH=$(__LOGIN_PATH)
 
 .PHONY: all clean
 
-all: swcli swclid swlogin filter swcon
+all: swcli swclid swlogin filter swcon swcfgload
 
 libswcli.so: climain.o command.o config.o config_if.o build_config.o if.o shared.o netlink.o ip.o
 	cd ../lib && make
@@ -19,6 +19,9 @@ swcli: swcli.o libswcli.so
 swclid: swclid.o shared.o
 
 swcon: swcon.o libswcli.so
+	$(CC) $(LDFLAGS) -lswcli -o $@ $^
+
+swcfgload: swcfgload.o libswcli.so
 	$(CC) $(LDFLAGS) -lswcli -o $@ $^
 
 filter: filter.o

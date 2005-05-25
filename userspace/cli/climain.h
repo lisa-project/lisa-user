@@ -1,6 +1,18 @@
 #ifndef _CLIMAIN_H
 #define _CLIMAIN_H
 
+#include <assert.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <signal.h>
+#include <readline/readline.h>
+#include <readline/history.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+
 #define MAX_HOSTNAME 32
 #define MATCHES_PER_ROW 5
 #define INITIAL_ARGS_NUM 8
@@ -44,6 +56,8 @@ extern char **swcli_completion __P((const char *, int, int));
 extern int parse_command(char *, int (*)(char *, char *, char));
 extern int change_search_scope(char *, char *, char);
 extern sw_match_t *get_matches(int *, char *);
+extern void init_exec_state(sw_execution_state_t *ex);
+extern int lookup_token(char *match, char *rest, char lookahead); 
 
 extern int sock_fd;
 extern int priv;

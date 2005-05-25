@@ -217,6 +217,7 @@ int build_config(FILE *out) {
 	
 	/* virtual interfaces */	
 	build_list_ip_addr(out, NULL, FMT_CMD);
+	fprintf(out, "!\nend\n");
 
 	/* static macs */
 	dump_static_macs(out);

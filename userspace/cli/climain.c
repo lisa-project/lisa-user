@@ -1,16 +1,3 @@
-#include <assert.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <signal.h>
-#include <readline/readline.h>
-#include <readline/history.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-
-
 #include "debug.h"
 #include "climain.h"
 #include "command.h"
@@ -589,9 +576,10 @@ void swcli_piped_exec(sw_execution_state_t *exc) {
 }
 
 void swcli_exec_cmd(char *cmd) {
+	int ret;
 
 	init_exec_state(&exec_state);
-	int ret = parse_command(strdup(cmd), lookup_token);
+	ret = parse_command(strdup(cmd), lookup_token);
 
 //	dump_exec_state(&exec_state);
 //	printf("ret: %d\n", ret);

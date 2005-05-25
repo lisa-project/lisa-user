@@ -523,7 +523,7 @@ static void cmd_sh_mac_age(FILE *out, char **argv) {
 static void cmd_wrme(FILE *out, char **argv) {
 	int status;
 	FILE *tmp = NULL;
-	char tmp_name[] = "/nvram";
+	char tmp_name[] = "/flash/config.text";
 
 	fprintf(out, "Building configuration...\n");
 	fflush(out);
