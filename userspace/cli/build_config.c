@@ -217,10 +217,15 @@ int build_config(FILE *out) {
 	
 	/* virtual interfaces */	
 	build_list_ip_addr(out, NULL, FMT_CMD);
-	fprintf(out, "!\nend\n");
+	fprintf(out, "!\nexit\n");
 
 	/* static macs */
 	dump_static_macs(out);
+
+	/* line vty stuff */
+	fprintf(out, "!\nline vty 0 15\n");
+	fprintf(out, " password %s\n", cfg->vty[0].passwd);
+	fprintf(out, "!\nexit\n");
 
 	return 0;
 }

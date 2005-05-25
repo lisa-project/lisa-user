@@ -2,9 +2,10 @@
 #include <unistd.h>
 
 #include "climain.h"
+#include "shared.h"
 
 static int password_valid(char *pw, void *arg) {
-	return !strcmp(pw, "letmein");
+	return !strcmp(pw, cfg->vty[0].passwd);
 }
 
 int max_attempts = 3;
@@ -19,6 +20,7 @@ int main(int argc, char **argv) {
 	printf("\r\n\r\n");
 	fflush(stdout);
 
+	cfg_init();
 	if(cfg_checkpass(max_attempts, password_valid, NULL)) {
 		climain();
 		return 0;

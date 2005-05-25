@@ -16,7 +16,7 @@
 extern int errno;
 
 char *key_file_path = "/tmp/cli";
-struct cli_config *cfg;
+struct cli_config *cfg = NULL;
 int shmid;
 int semid;
 
@@ -29,6 +29,7 @@ int cfg_init(void) {
 	int fd;
 	int init_data = 0;
 
+	if (cfg) return 0;
 	fd = creat(key_file_path, 0600);
 	if(fd == -1)
 		return -1;

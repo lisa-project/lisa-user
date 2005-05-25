@@ -12,6 +12,7 @@
 #include "command.h"
 #include "climain.h"
 #include "config_if.h"
+#include "config_line.h"
 #include "shared.h"
 
 #include <errno.h>
@@ -178,6 +179,11 @@ static void cmd_set_aging(FILE *out, char **argv) {
 		perror("Error setting age time");
 }
 
+static void cmd_linevty(FILE *out, char **argv) {
+	sprintf(vty_range, "<%s-%s>", argv[0], argv[1]);
+	cmd_root = &command_root_config_line;
+}
+
 int valid_host(char *arg, char lookahead) {
 	return 1;
 }
@@ -206,91 +212,112 @@ int valid_age(char *arg, char lookahead)  {
 	return (age >=10 && age <= 1000000);
 }
 
+int valid_vtyno1(char *arg, char lookahead) {
+	int no;
+
+	sscanf(arg, "%d", &no);
+	if (no < 0 || no > 15)
+		return 0;
+	sprintf(vty_range, "<%d-%d>", no+1, 15);
+	return 1;
+}
+
+int valid_vtyno2(char *arg, char lookahead) {
+	int min, max, no;
+
+	sscanf(vty_range, "<%d-%d>", &min, &max);
+	sscanf(arg, "%d", &no);
+	if (no < min || no > max) 
+		return 0;
+	return 1;
+}
+
+
 static sw_command_t sh_no_int_eth[] = {
-	{eth_range,				2,	valid_eth,	cmd_no_int_eth,		RUN,		"Ethernet interface number",					NULL},
-	{NULL,					1,	NULL,		NULL,				0,			NULL,											NULL}
+	{eth_range,				15,	valid_eth,	cmd_no_int_eth,		RUN,		"Ethernet interface number",					NULL},
+	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
 
 static sw_command_t sh_int_eth[] = {
-	{eth_range,				2,	valid_eth,	cmd_int_eth,		RUN,		"Ethernet interface number",					NULL},
-	{NULL,					1,	NULL,		NULL,				0,			NULL,											NULL}
+	{eth_range,				15,	valid_eth,	cmd_int_eth,		RUN,		"Ethernet interface number",					NULL},
+	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
 
 static sw_command_t sh_no_int_vlan[] = {
-	{vlan_range,			2,	valid_vlan,	cmd_no_int_vlan,	RUN,		"Vlan interface number",						NULL},
+	{vlan_range,			15,	valid_vlan,	cmd_no_int_vlan,	RUN,		"Vlan interface number",						NULL},
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
 
 static sw_command_t sh_int_vlan[] = {
-	{vlan_range,			2,	valid_vlan,	cmd_int_vlan,		RUN,		"Vlan interface number",						NULL},
+	{vlan_range,			15,	valid_vlan,	cmd_int_vlan,		RUN,		"Vlan interface number",						NULL},
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
 
 static sw_command_t sh_no_int[] = {
-	{"ethernet",			2,	NULL,		NULL,				0,			"Ethernet IEEE 802.3",							sh_no_int_eth},
-	{"vlan",				2,	NULL,		NULL,				0,			"LMS Vlans",									sh_no_int_vlan},
+	{"ethernet",			15,	NULL,		NULL,				0,			"Ethernet IEEE 802.3",							sh_no_int_eth},
+	{"vlan",				15,	NULL,		NULL,				0,			"LMS Vlans",									sh_no_int_vlan},
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
 
 sw_command_t sh_conf_int[] = {
-	{"ethernet",			2,	NULL,		NULL,				0,			 "Ethernet IEEE 802.3",							sh_int_eth},
-	{"vlan",				2,	NULL,		NULL,				0,			 "LMS Vlans",									sh_int_vlan},
+	{"ethernet",			15,	NULL,		NULL,				0,			 "Ethernet IEEE 802.3",							sh_int_eth},
+	{"vlan",				15,	NULL,		NULL,				0,			 "LMS Vlans",									sh_int_vlan},
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
 
 static sw_command_t sh_macstatic_ifp[] = {
-	{eth_range,				2,	valid_eth,	cmd_macstatic,		RUN|PTCNT,	"Ethernet interface number",					NULL},
+	{eth_range,				15,	valid_eth,	cmd_macstatic,		RUN|PTCNT,	"Ethernet interface number",					NULL},
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
 
 static sw_command_t sh_macstatic_if[] = {
-	{"ethernet",			2,	NULL,		NULL,				0,			"Ethernet IEEE 802.3",							sh_macstatic_ifp},
+	{"ethernet",			15,	NULL,		NULL,				0,			"Ethernet IEEE 802.3",							sh_macstatic_ifp},
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
 
 static sw_command_t sh_macstatic_i[] = {
-	{"interface",			2,	NULL,		NULL,				0,			"interface",									sh_macstatic_if},
+	{"interface",			15,	NULL,		NULL,				0,			"interface",									sh_macstatic_if},
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
 
 static sw_command_t sh_macstatic_vp[] = {
-	{vlan_range,			2,	valid_vlan,	NULL,				PTCNT,		"VLAN id of mac address table",					sh_macstatic_i},
+	{vlan_range,			15,	valid_vlan,	NULL,				PTCNT,		"VLAN id of mac address table",					sh_macstatic_i},
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
 
 static sw_command_t sh_macstatic_v[] = {
-	{"vlan",				2,	NULL,		NULL,				0,			"VLAN keyword",									sh_macstatic_vp},
+	{"vlan",				15,	NULL,		NULL,				0,			"VLAN keyword",									sh_macstatic_vp},
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
 
 static sw_command_t sh_macstatic[] = {
-	{"H.H.H",				2,	valid_mac,	NULL,				PTCNT,		"48 bit mac address",							sh_macstatic_v},
+	{"H.H.H",				15,	valid_mac,	NULL,				PTCNT,		"48 bit mac address",							sh_macstatic_v},
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
 
 static sw_command_t sh_nomac[] = {
-	{"aging-time",			2,	NULL,		NULL,				0,			"Set MAC address table entry maximum age",		NULL},
-	{"static",				2,	NULL,		NULL,				0,			"static keyword",								sh_macstatic},
+	{"aging-time",			15,	NULL,		NULL,				0,			"Set MAC address table entry maximum age",		NULL},
+	{"static",				15,	NULL,		NULL,				0,			"static keyword",								sh_macstatic},
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
 
 static sw_command_t sh_macaging[] = {
-	{"<10-1000000>",		2,	valid_age,	cmd_set_aging,		RUN,		"Maximum age in seconds",		NULL},
+	{"<10-1000000>",		15,	valid_age,	cmd_set_aging,		RUN,		"Maximum age in seconds",		NULL},
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
 static sw_command_t sh_mac[] = {
-	{"aging-time",			2,	NULL,		NULL,				0,			"Set MAC address table entry maximum age",		sh_macaging},
-	{"static",				2,	NULL,		NULL,				0,			"static keyword",								sh_macstatic},
+	{"aging-time",			15,	NULL,		NULL,				0,			"Set MAC address table entry maximum age",		sh_macaging},
+	{"static",				15,	NULL,		NULL,				0,			"static keyword",								sh_macstatic},
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
 
 static sw_command_t sh_hostname[] = {
-	{"WORD",				2,	valid_host,	cmd_hostname,		RUN|PTCNT,	"This system's network name",					NULL},
+	{"WORD",				15,	valid_host,	cmd_hostname,		RUN|PTCNT,	"This system's network name",					NULL},
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
 
 static sw_command_t sh_noenlev[] = {
-	{priv_range,			1,	valid_priv,	cmd_noensecret_lev,	RUN|PTCNT,	"Level number",									NULL},
+	{priv_range,			15,	valid_priv,	cmd_noensecret_lev,	RUN|PTCNT,	"Level number",									NULL},
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
 
@@ -306,9 +333,9 @@ static sw_command_t sh_noenable[] = {
 
 static sw_command_t sh_no[] = {
 	{"enable",				15,	NULL,		NULL,				0,			"Modify enable password parameters",			sh_noenable},
-	{"hostname",			2,	NULL,		cmd_nohostname,		RUN,		"Set system's network name",					NULL},
-	{"interface",			2,	NULL,		NULL,				0,			"Select an interface to configure",				sh_no_int},
-	{"mac-address-table",	2,	NULL,		NULL,				0,			"Configure the MAC address table",				sh_nomac},
+	{"hostname",			15,	NULL,		cmd_nohostname,		RUN,		"Set system's network name",					NULL},
+	{"interface",			15,	NULL,		NULL,				0,			"Select an interface to configure",				sh_no_int},
+	{"mac-address-table",	15,	NULL,		NULL,				0,			"Configure the MAC address table",				sh_nomac},
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
 
@@ -340,7 +367,7 @@ static sw_command_t sh_secret_lev_x[] = {
 };
 
 static sw_command_t sh_secret_level[] = {
-	{priv_range,			1,	valid_priv,	NULL,				PTCNT,		"Level number",									sh_secret_lev_x},
+	{priv_range,			15,	valid_priv,	NULL,				PTCNT,		"Level number",									sh_secret_lev_x},
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
 
@@ -357,14 +384,31 @@ static sw_command_t sh_enable[] = {
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
 
+static sw_command_t sh_conf_line_vty2[] = {
+	{vty_range,			15,	valid_vtyno2,	cmd_linevty,		RUN|PTCNT,	"Last Line number",									NULL},
+	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+};
+
+static sw_command_t sh_conf_line_vty1[] = {
+	{"<0-15>",				15,	valid_vtyno1,NULL,				PTCNT,		"First Line number",							sh_conf_line_vty2},
+	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+
+};
+
+static sw_command_t sh_conf_line[] = {
+	{"vty",					15,	NULL,		NULL,				0,			"Virtual terminal",								sh_conf_line_vty1},
+	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+};
+
 static sw_command_t sh[] = {
-	{"enable",				2,	NULL,		NULL,				0,			"Modify enable password parameters",			sh_enable},
-	{"end",					2,	NULL,		cmd_end,			RUN,		"Exit from configure mode",						NULL},
-	{"exit",				2,	NULL,		cmd_end,			RUN,		"Exit from configure mode",						NULL},
-	{"hostname",			2,	NULL,		NULL,				0,			"Set system's network name",					sh_hostname},
-	{"interface",			2,	NULL,		NULL,				0,			"Select an interface to configure",				sh_conf_int},
-	{"mac-address-table",	2,	NULL,		NULL,				0,			"Configure the MAC address table",				sh_mac},
-	{"no",					2,	valid_no,	NULL,				PTCNT|CMPL, "Negate a command or set its defaults",			sh_no},
+	{"enable",				15,	NULL,		NULL,				0,			"Modify enable password parameters",			sh_enable},
+	{"end",					15,	NULL,		cmd_end,			RUN,		"Exit from configure mode",						NULL},
+	{"exit",				15,	NULL,		cmd_end,			RUN,		"Exit from configure mode",						NULL},
+	{"hostname",			15,	NULL,		NULL,				0,			"Set system's network name",					sh_hostname},
+	{"interface",			15,	NULL,		NULL,				0,			"Select an interface to configure",				sh_conf_int},
+	{"line",				15,	NULL,		NULL,				0,			"Configure a terminal line",					sh_conf_line},	
+	{"mac-address-table",	15,	NULL,		NULL,				0,			"Configure the MAC address table",				sh_mac},
+	{"no",					15,	valid_no,	NULL,				PTCNT|CMPL, "Negate a command or set its defaults",			sh_no},
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
 

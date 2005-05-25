@@ -16,6 +16,10 @@ static void cmd_exit(FILE *out, char **argv) {
 	cmd_root = &command_root_config;
 }
 
+static void cmd_end(FILE *out, char **argv) {
+	cmd_root = &command_root_main;
+}
+
 static void cmd_acc_vlan(FILE *out, char **argv) {
 	char *arg = *argv;
 	struct net_switch_ioctl_arg ioctl_arg;
@@ -558,7 +562,7 @@ static sw_command_t sh_no[] = {
 static sw_command_t sh_eth[] = {
 	{"description",			2,	NULL,		NULL,			0,			"Interface specific description",					sh_ethdesc},
 	{"duplex",				2,	NULL,		NULL,			0,			"Configure duplex operation.",						sh_duplex},
-	{"end"	,				2,	NULL,		cmd_exit,		RUN,		"End interface configuration mode",					NULL},
+	{"end"	,				2,	NULL,		cmd_end,		RUN,		"End interface configuration mode",					NULL},
 	{"exit",				2,	NULL,		cmd_exit,		RUN,		"Exit from interface configuration mode",			NULL},
 	{"help",				2,	NULL,		cmd_help,		RUN,		"Descrption of the interactive help system",		NULL},
 	{"interface",			2,	NULL,		NULL,			0,			"Select an interface to configure",					sh_conf_int},
@@ -601,7 +605,7 @@ static sw_command_t sh_no_vlan[] = {
 };
 
 static sw_command_t sh_vlan[] = {
-	{"end",					2,	NULL,		cmd_exit,		RUN,		"Exit from interface configuration mode",			NULL},
+	{"end",					2,	NULL,		cmd_end,		RUN,		"Exit from interface configuration mode",			NULL},
 	{"exit",				2,	NULL,		cmd_exit,		RUN,		"End interface configuration mode",					NULL},
 	{"help",				2,	NULL,		cmd_help,		RUN,		"Description of the interactive help system",		NULL},
 	{"ip",					2,	NULL,		NULL,			0,			"Interface Internet Protocol config commands",		sh_ip},

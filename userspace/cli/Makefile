@@ -9,7 +9,7 @@ CFLAGS += -DLOGIN_PATH=$(__LOGIN_PATH)
 
 all: swcli swclid swlogin filter swcon swcfgload
 
-libswcli.so: climain.o command.o config.o config_if.o build_config.o if.o shared.o netlink.o ip.o
+libswcli.so: climain.o command.o config.o config_if.o config_line.o build_config.o if.o shared.o netlink.o ip.o
 	cd ../lib && make
 	$(CC) -s -shared -Wl,-soname,libswcli.so -o $@ $^ ../lib/misc.o
 

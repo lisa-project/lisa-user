@@ -55,10 +55,14 @@ int main(int argc, char *argv[]) {
 	FILE *fp;
 	char config_name[] = "/flash/config.text";
 	char cmd[1024];	
+	int status;
 	
 	priv = 15;
 	cmd_root = &command_root_config;
 	
+	status = cfg_init();
+	assert(!status);
+
 	out = fopen("/dev/null", "w");
 	assert(out);
 	
@@ -69,7 +73,6 @@ int main(int argc, char *argv[]) {
 	}
 	
 	if ((fp = fopen(config_name, "r")) == NULL) {
-		perror("fopen");
 		return 1;
 	}	
 	while (fgets(cmd, sizeof(cmd), fp)) {

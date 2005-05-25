@@ -8,6 +8,7 @@ sw_execution_state_t exec_state;
 sw_completion_state_t cmpl_state;
 
 char eth_range[32]; /* FIXME size */
+char vty_range[32];
 int sock_fd;
 
 /* Current privilege level */
@@ -622,6 +623,7 @@ int climain(void) {
 
 	/* initialization */
 	sprintf(eth_range, "<0-7>"); /* FIXME luate dinamic */
+	sprintf(vty_range, "<0-15>"); /* FIXME do not hardcode, it is bad for health */
 	status = cfg_init();
 	assert(!status);
 	swcli_init_readline();

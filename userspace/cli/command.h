@@ -58,10 +58,12 @@ extern void cmd_help				__P((FILE *, char **));
 extern char eth_range[];
 extern char vlan_range[];
 extern char priv_range[];
+extern char vty_range[];
 
 extern int valid_eth(char *, char);
 extern int valid_vlan(char *, char);
 extern int valid_priv(char *, char);
+extern int valid_regex(char *, char);
 extern int parse_eth(char *);
 extern char *if_name_eth(char *);
 extern char *if_name_vlan(char *);

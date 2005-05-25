@@ -536,6 +536,7 @@ static void cmd_wrme(FILE *out, char **argv) {
 			break;
 		fprintf(out, "Current configuration : %ld bytes\n", ftell(tmp));
 		fclose(tmp);
+		sync();
 		fprintf(out, "\n[OK]\n\n");
 		return;
 	} while(0);
