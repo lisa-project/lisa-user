@@ -84,6 +84,7 @@ int cfg_checkpass(int retries, int (*validator)(char *, void *), void *arg) {
 int cfg_waitcr(void) {
 	rl_voidfunc_t *old_redisplay = rl_redisplay_function;
 
-	rl_redisplay_function = sw_redisplay_password;
+	rl_redisplay_function = sw_redisplay_void;
+	readline(NULL);
 	rl_redisplay_function = old_redisplay;
 }
