@@ -46,6 +46,7 @@ echo -n "Installing base system binaries "
 FIX="/bin/ping /bin/traceroute"
 for i in /bin/ash /bin/grep /bin/hostname /bin/more /bin/mount /bin/sed \
 		/sbin/agetty /sbin/e2fsck /sbin/init \
+		/sbin/halt /sbin/reboot /sbin/shutdown \
 		/usr/sbin/in.telnetd \
 		"/usr/bin/[" \
 		\
@@ -62,14 +63,23 @@ echo -n "Installing various configuration files "
 for i in /etc/ld.so.conf /etc/inittab /etc/passwd /etc/termcap \
 		/etc/rc.d/rc.sysinit /etc/fstab \
 		/boot/grub/grub.conf /boot/grub/device.map \
+		/etc/init.d/halt \
 		;do
 		install -m 0644 -D "dist$i" "$DST$i" && echo -n "#"
 done
 chmod 0755 "$DST/etc/rc.d/rc.sysinit"
-#FIXME
 if [ -n "$OPT" ]; then
 	cat dist/etc/inittab | sed 's/#__OPT__#//' > $DST/etc/inittab
 fi
+mkdir -p $DST/etc/rc.d/rc0.d &> /dev/null
+ln -s /etc/init.d/halt $DST/etc/rc.d/rc0.d/S01halt
+mkdir -p $DST/etc/rc.d/rc1.d &> /dev/null
+mkdir -p $DST/etc/rc.d/rc2.d &> /dev/null
+mkdir -p $DST/etc/rc.d/rc3.d &> /dev/null
+mkdir -p $DST/etc/rc.d/rc4.d &> /dev/null
+mkdir -p $DST/etc/rc.d/rc5.d &> /dev/null
+mkdir -p $DST/etc/rc.d/rc6.d &> /dev/null
+ln -s /sbin/init.d/halt $DST/etc/rc.d/rc0.d/S01reboot
 echo " done."
 
 echo -n "Installing LMS binaries "
@@ -85,8 +95,10 @@ echo " done."
 if [ -n "$OPT" ]; then
 	echo -n "Installing optional binaries "
 	for i in /bin/bash /bin/cat /bin/ls /bin/ps /bin/vi /bin/netstat \
-			/bin/cp /bin/mv /bin/rm \
-			/bin/df /usr/bin/du /bin/mknod /usr/bin/scp /bin/dmesg \
+			/bin/cp /bin/mv /bin/rm /bin/mkdir /bin/rmdir /bin/ln \
+			/bin/df /usr/bin/du /bin/mknod \
+			/usr/bin/ssh /usr/bin/scp \
+			/bin/sync /bin/dmesg \
 			/sbin/pidof /sbin/fuser /usr/bin/which \
 			/usr/bin/less /usr/bin/strace \
 			/usr/bin/ipcs /usr/bin/ipcrm \
@@ -110,7 +122,8 @@ echo -n "Calculating dependencies "
 exec < $TMP1
 while read FILE; do
 	ldd $FILE > $TMP2 2> /dev/null || continue
-	cat $TMP2 | sed 's/^.*=> \(.*\) (.*$/\1/' | sed 's/^[ \t]*\(.*\) (.*$/\1/' | sed 's/tls\///' >> $TMP3
+	cat $TMP2 | grep -vE '(statically linked|not a dynamic executable|not found|=> *\()' | \
+	sed 's/^.*=> \(.*\) (.*$/\1/' | sed 's/^[ \t]*\(.*\) (.*$/\1/' | sed 's/tls\///' >> $TMP3
 	echo -n "#"
 done
 
@@ -135,9 +148,10 @@ rm -f $TMP2
 rm -f $TMP3
 
 echo -n "Creating special device files "
-mknod -m 0666 $DST/dev/console			c	5	1
 mknod -m 0666 $DST/dev/null				c	1	3
 mknod -m 0666 $DST/dev/zero				c	1	5
+mknod -m 0666 $DST/dev/random			c	1	8
+mknod -m 0666 $DST/dev/urandom			c	1	9
 mknod -m 0660 $DST/dev/tty1				c	4	1
 mknod -m 0660 $DST/dev/tty2				c	4	2
 mknod -m 0660 $DST/dev/tty3				c	4	3
@@ -145,10 +159,12 @@ mknod -m 0660 $DST/dev/tty4				c	4	4
 mknod -m 0660 $DST/dev/tty5				c	4	5
 mknod -m 0660 $DST/dev/tty6				c	4	6
 mknod -m 0660 $DST/dev/ttyS0			c	4	64
+mknod -m 0666 $DST/dev/tty				c	5	0
+mknod -m 0666 $DST/dev/console			c	5	1
+mknod -m 0666 $DST/dev/ptmx				c	5	2
 mknod -m 0660 $DST/dev/hda				b	3	0
 mknod -m 0660 $DST/dev/hda1				b	3	1
 mkdir $DST/dev/pts
-mknod -m 0666 $DST/dev/ptmx				c	5	2
 echo -n "#"
 echo " done."
 

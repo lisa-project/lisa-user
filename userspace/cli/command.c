@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #define __USE_XOPEN
 #include <unistd.h>
+#include <curses.h>
 
 #include "command.h"
 #include "climain.h"
@@ -548,6 +549,19 @@ static void cmd_wrme(FILE *out, char **argv) {
 	} while(0);
 }
 
+static void cmd_reload(FILE *out, char **argv) {
+	int key;
+
+	fputs("Proceed with reload? [confirm]", out);
+	fflush(out);
+	key = read_key();
+	if(key != 'y' && key != 'Y' && key != '\n') {
+		fputc('\n', out);
+		return;
+	}
+	system("init 6 &> /dev/null");
+}
+
 /* Validation Handlers Implementation */
 int valid_regex(char *arg, char lookahead) {
 	return 1;
@@ -870,6 +884,7 @@ static sw_command_t sh[] = {
 	{"help",				1,	NULL,			cmd_help,		RUN,		"Description of the interactive help system",		NULL},
 	{"logout",				1,	NULL,			cmd_exit,		RUN,		"Exit from the EXEC",								NULL},
 	{"ping",				1,	NULL,			NULL,			0,			"Send echo messages",								sh_ping},
+	{"reload",				1,	NULL,			cmd_reload,		RUN|NPG,	"Halt and perform a cold restart",					NULL},
 	{"quit",				1,	NULL,			cmd_exit,		RUN,		"Exit from the EXEC",								NULL},
 	{"show",				1,	NULL,			NULL,			0,			"Show running system information",					sh_show},
 //	{"telnet",				1,	NULL,			NULL,			0,			"Open a telnet connection",							NULL},

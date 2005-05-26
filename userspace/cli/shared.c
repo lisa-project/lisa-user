@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
+#include <termios.h>
 
 #include "shared.h"
 
@@ -92,4 +93,19 @@ int cfg_waitcr(void) {
 	readline(NULL);
 	rl_redisplay_function = old_redisplay;
 	return 0;
+}
+
+int read_key() {
+	int ret;
+	struct termios t_old, t_new;
+
+	tcgetattr(0, &t_old);
+	t_new = t_old;
+	t_new.c_lflag = ~ICANON;
+	t_new.c_cc[VTIME] = 0;
+	t_new.c_cc[VMIN] = 1;
+	tcsetattr(0, TCSANOW, &t_new);
+	ret = getchar();
+	tcsetattr(0, TCSANOW, &t_old);
+	return ret;
 }

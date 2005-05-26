@@ -1,0 +1,26 @@
+#!/bin/sh
+
+# See how we were called.
+case "$0" in
+   *halt)
+	command="/sbin/halt"
+	;;
+   *reboot)
+	command="/sbin/reboot"
+	;;
+   *)
+	echo "$0: call me as 'halt' or 'reboot' please!"
+	exit 1
+	;;
+esac
+case "$1" in
+   *start)
+   	;;
+   *)
+	echo "Usage: $0 {start}"
+	exit 1
+	;;
+esac
+
+mount / -o remount,ro
+$command
