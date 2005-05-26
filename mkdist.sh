@@ -55,6 +55,7 @@ for i in /bin/ash /bin/grep /bin/hostname /bin/more /bin/mount /bin/sed \
 		install -m 0755 -D "$i" "$DST$i" && echo -n "#"
 done
 ln -s /bin/ash $DST/bin/sh
+ln -s /sbin/e2fsck $DST/sbin/fsck
 echo " done."
 
 echo -n "Installing various configuration files "
@@ -75,14 +76,14 @@ echo -n "Installing LMS binaries "
 install -m 0755 -D userspace/cli/filter $DST/bin/filter && echo -n "#"
 install -m 0755 -D userspace/cli/swcli $DST/bin/swcli && echo -n "#"
 install -m 0755 -D userspace/cli/swclid $DST/sbin/swclid && echo -n "#"
-install -m 0755 -D userspace/cli/swlogin $DST/sbin/swlogin && echo -n "#"
+install -m 0755 -D userspace/cli/swlogin $DST/usr/sbin/swlogin && echo -n "#"
 install -m 0755 -D userspace/cli/swcon $DST/sbin/swcon && echo -n "#"
 install -m 0755 -D userspace/cli/swcfgload $DST/sbin/swcfgload && echo -n "#"
 install -m 0755 -D userspace/cli/libswcli.so $DST/lib/libswcli.so && echo -n "#"
 echo " done."
 
 echo -n "Installing optional binaries "
-for i in /bin/bash /bin/cat /bin/ls /bin/ps /bin/vi \
+for i in /bin/bash /bin/cat /bin/ls /bin/ps /bin/vi /bin/netstat \
 		/bin/cp /bin/mv /bin/rm \
 		/bin/df /usr/bin/du /bin/mknod /usr/bin/scp /bin/dmesg \
 		/sbin/pidof /sbin/fuser /usr/bin/which \
@@ -143,15 +144,12 @@ mknod -m 0660 $DST/dev/tty6				c	4	6
 mknod -m 0660 $DST/dev/ttyS0			c	4	64
 mknod -m 0660 $DST/dev/hda				b	3	0
 mknod -m 0660 $DST/dev/hda1				b	3	1
-echo -n "#"
 mkdir $DST/dev/pts
-for ((i=0; $i<=32; i=$i+1)); do
-	mknod -m 0666 $DST/dev/pts/$i		c	136	$i
-done
 mknod -m 0666 $DST/dev/ptmx				c	5	2
 echo -n "#"
 echo " done."
 
 echo -n "Installing kernel "
 install -m 0600 -D $SW_KPATH/linux-2.6.10/arch/i386/boot/bzImage $DST/flash/vmlinuz
+echo -n "#"
 echo " done."

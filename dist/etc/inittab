@@ -34,8 +34,8 @@ si::sysinit:/etc/rc.d/rc.sysinit
 
 
 # Run gettys in standard runlevels
-#__OPT__#1:2345:respawn:/sbin/agetty -l /sbin/swcon -i -n 9600 tty1
-#__OPT__#2:2345:respawn:/sbin/mingetty tty2
+##__OPT__#1:2345:respawn:/sbin/agetty -l /sbin/swcon -i -n 9600 tty1
+#__OPT__#2:2345:respawn:/sbin/agetty -l /sbin/swcon -i -n 9600 tty2
 #__OPT__#3:2345:respawn:/sbin/mingetty tty3
 #__OPT__#4:2345:respawn:/sbin/mingetty tty4
 #__OPT__#5:2345:respawn:/sbin/mingetty tty5
