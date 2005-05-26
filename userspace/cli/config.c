@@ -18,6 +18,7 @@
 #include <errno.h>
 extern int errno;
 char hostname_default[] = "Switch\0";
+int vlan_no; /* selected vlan when entering (config-vlan) mode */
 
 static char salt_base[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789./";
 
@@ -182,6 +183,32 @@ static void cmd_set_aging(FILE *out, char **argv) {
 static void cmd_linevty(FILE *out, char **argv) {
 	sprintf(vty_range, "<%s-%s>", argv[0], argv[1]);
 	cmd_root = &command_root_config_line;
+}
+
+static void cmd_vlan(FILE *out, char **argv) {
+	struct net_switch_ioctl_arg ioctl_arg;
+	char vlan_name[16];
+
+	vlan_no = parse_vlan(*argv);
+	sprintf(vlan_name, "VLAN%04d", vlan_no);
+	vlan_name[15] = '\0';
+	ioctl_arg.cmd = SWCFG_ADDVLAN;
+	ioctl_arg.vlan = vlan_no; 
+	ioctl_arg.ext.vlan_desc = vlan_name;
+	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
+	cmd_root = &command_root_config_vlan;
+}
+
+static void cmd_namevlan(FILE *out, char **argv) {
+	struct net_switch_ioctl_arg ioctl_arg;
+
+	ioctl_arg.cmd = SWCFG_RENAMEVLAN;
+	ioctl_arg.vlan = vlan_no;
+	ioctl_arg.ext.vlan_desc = *argv; 
+	
+	if (ioctl(sock_fd, SIOCSWCFG, &ioctl_arg)) {
+		perror("Error setting vlan name");
+	}
 }
 
 int valid_host(char *arg, char lookahead) {
@@ -400,6 +427,12 @@ static sw_command_t sh_conf_line[] = {
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
 
+static sw_command_t sh_vlan[] = {
+	{"WORD",				15,	valid_vlan,	cmd_vlan,			RUN,		"ISL VLAN IDs 1-4094",							NULL},
+	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+};
+
+/* main (config) mode commands */
 static sw_command_t sh[] = {
 	{"enable",				15,	NULL,		NULL,				0,			"Modify enable password parameters",			sh_enable},
 	{"end",					15,	NULL,		cmd_end,			RUN,		"Exit from configure mode",						NULL},
@@ -409,7 +442,20 @@ static sw_command_t sh[] = {
 	{"line",				15,	NULL,		NULL,				0,			"Configure a terminal line",					sh_conf_line},	
 	{"mac-address-table",	15,	NULL,		NULL,				0,			"Configure the MAC address table",				sh_mac},
 	{"no",					15,	valid_no,	NULL,				PTCNT|CMPL, "Negate a command or set its defaults",			sh_no},
+	{"vlan",				15, NULL,		NULL,				0,			"Vlan commands",								sh_vlan},
+	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+};
+
+static sw_command_t sh_name_vlan[] = {
+	{"WORD",				15,	valid_regex,cmd_namevlan,		RUN|PTCNT,	"The ascii name for the VLAN",					NULL},
+	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+};
+
+/* (config-vlan) commands */
+static sw_command_t sh_cfg_vlan[] = {
+	{"name",				15,	NULL,		NULL,				0,			"Ascii name of the VLAN",						sh_name_vlan},
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
 
 sw_command_root_t command_root_config = 				{"%s(config)%c",			sh};
+sw_command_root_t command_root_config_vlan = 			{"%s(config-vlan)%c",	sh_cfg_vlan};

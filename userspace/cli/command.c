@@ -875,4 +875,3 @@ static sw_command_t sh[] = {
 };
 
 sw_command_root_t command_root_main =					{"%s%c",					sh};
-sw_command_root_t command_root_config_vlan =			{"%s(config-vlan)%c",		NULL};

@@ -435,6 +435,7 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 	int err = -EINVAL;
 	int do_put = 0;
 	unsigned long age_time;
+	char vlan_desc[SW_MAX_VLAN_NAME+1];
 
 	if(!capable(CAP_NET_ADMIN))
 		return -EPERM;
@@ -457,15 +458,23 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 		err = sw_delif(dev);
 		break;
 	case SWCFG_ADDVLAN:
-		/* FIXME copy arg.ext.vlan_desc from userspace */
-		err = sw_vdb_add_vlan(&sw, arg.vlan, arg.ext.vlan_desc);
+		if (!strncpy_from_user(vlan_desc, arg.ext.vlan_desc, SW_MAX_VLAN_NAME)) {
+			err = -EFAULT;
+			break;
+		}
+		vlan_desc[SW_MAX_VLAN_NAME] = '\0';
+		err = sw_vdb_add_vlan(&sw, arg.vlan, vlan_desc);
 		break;
 	case SWCFG_DELVLAN:
 		err = sw_vdb_del_vlan(&sw, arg.vlan);
 		break;
 	case SWCFG_RENAMEVLAN:
-		/* FIXME copy arg.ext.vlan_desc from userspace */
-		err = sw_vdb_set_vlan_name(&sw, arg.vlan, arg.ext.vlan_desc);
+		if (!strncpy_from_user(vlan_desc, arg.ext.vlan_desc, SW_MAX_VLAN_NAME)) {
+			err = -EFAULT;
+			break;
+		}
+		vlan_desc[SW_MAX_VLAN_NAME] = '\0';
+		err = sw_vdb_set_vlan_name(&sw, arg.vlan, vlan_desc);
 		break;
 	case SWCFG_ADDVLANPORT:
 		DEV_GET;
