@@ -625,6 +625,12 @@ int parse_vlan(char *arg) {
 	return no;
 }
 
+static char vlan_name[16];
+char *default_vlan_name(int vlan) {
+	snprintf(vlan_name, sizeof(vlan_name), "VLAN%04d", vlan);
+	return vlan_name;
+}
+
 int parse_mac(char *arg, unsigned char *mac) {
 	unsigned short a0, a1, a2;
 

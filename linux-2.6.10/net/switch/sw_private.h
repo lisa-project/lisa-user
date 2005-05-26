@@ -47,8 +47,6 @@ struct net_switch_bucket {
 	spinlock_t lock;
 };
 
-#define SW_MAX_VLAN_NAME	31
-
 struct net_switch_vdb_entry {
 	char *name;
 	struct list_head trunk_ports;

@@ -83,6 +83,8 @@ int sw_vdb_del_vlan(struct net_switch *sw, int vlan) {
 		return -EINVAL;
 	if(!(entry = sw->vdb[vlan]))
 		return -ENOENT;
+	if(sw_is_default_vlan(vlan))
+		return -EPERM;
 	list_for_each_entry(link, &entry->non_trunk_ports, lh) {
 		sw_disable_port(link->port);
 	}
@@ -113,6 +115,8 @@ int sw_vdb_set_vlan_name(struct net_switch *sw, int vlan, char *name) {
         return -EINVAL;
     if(!(entry = sw->vdb[vlan]))
         return -ENOENT;
+	if(sw_is_default_vlan(vlan))
+		return -EPERM;
     if(!(entry_name = kmalloc(SW_MAX_VLAN_NAME + 1, GFP_ATOMIC))) {
         dbg("Out of memory while trying to change vlan name%d\n", vlan);
         return -ENOMEM;

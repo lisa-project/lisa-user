@@ -401,6 +401,34 @@ static int sw_get_mac(struct net_switch_ioctl_arg *arg, struct net_switch_port *
 	return ret;
 }
 
+int sw_get_vdb(struct net_switch_ioctl_arg *arg) {
+	char *buf = arg->ext.varg.buf;
+	int entries = 0;
+	char *buf_range = buf + arg->ext.varg.buf_size;
+	struct net_switch_usr_vdb entry;
+	int vlan;
+
+	for(vlan = SW_MIN_VLAN; vlan <= SW_MAX_VLAN; vlan++) {
+		rcu_read_lock();
+		if(sw.vdb[vlan] == NULL) {
+			rcu_read_unlock();
+			continue;
+		}
+		entry.vlan = vlan;
+		strcpy(entry.name, sw.vdb[vlan]->name);
+		rcu_read_unlock();
+		if(buf + sizeof(struct net_switch_usr_vdb) > buf_range)
+			return -ENOMEM;
+		if(copy_to_user(buf, &entry, sizeof(struct net_switch_usr_vdb)))
+			return -EFAULT;
+		buf += sizeof(struct net_switch_usr_vdb);
+		entries++;
+	}
+
+	arg->ext.varg.vdb_entries = entries;
+	return 0;
+}
+
 #define DEV_GET if(1) {\
 	if(!strncpy_from_user(if_name, arg.if_name, IFNAMSIZ)) {\
 		err = -EFAULT;\
@@ -660,6 +688,10 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 	case SWCFG_DISABLEVIF:
 		err = sw_vif_disable(&sw, arg.vlan);
 		break;
+	case SWCFG_GETVDB:
+		err = sw_get_vdb(&arg);
+		if (copy_to_user(uarg, &arg, sizeof(struct net_switch_ioctl_arg)))
+			err = -EFAULT;
 	}
 
 	if (do_put)

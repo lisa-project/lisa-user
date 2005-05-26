@@ -72,6 +72,7 @@ extern int valid_mac(char *, char);
 extern int parse_mac(char *, unsigned char *);
 extern void cmd_showmac(FILE *, char *);
 extern void build_list_ip_addr(FILE *, char*, int);
+extern char *default_vlan_name(int);
 
 extern sw_command_root_t command_root_main;
 extern int console_session;

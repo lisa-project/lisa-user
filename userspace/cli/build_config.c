@@ -176,6 +176,52 @@ void dump_static_macs(FILE *out) {
 	free(buf);
 }
 
+void dump_vlans(FILE *out) {
+	char *buf;
+	int status, size;
+	struct net_switch_ioctl_arg ioctl_arg;
+
+	buf = (char *)malloc(INITIAL_BUF_SIZE);
+	size = INITIAL_BUF_SIZE;
+	assert(buf);
+	ioctl_arg.if_name = NULL;
+	ioctl_arg.cmd = SWCFG_GETVDB;
+
+	do {
+		ioctl_arg.ext.varg.buf_size = size;
+		ioctl_arg.ext.varg.buf = buf;
+		status = ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
+		if (status == -1) {
+			if (errno == ENOMEM) {
+				buf = realloc(buf, size+INITIAL_BUF_SIZE);
+				assert(buf);
+				size += INITIAL_BUF_SIZE;
+				continue;
+			}
+			free(buf);
+			return;
+		}
+	} while (status < 0);
+	
+	{
+		int i, cnt = 0;
+		struct net_switch_usr_vdb *entry = (struct net_switch_usr_vdb *)buf;
+		for(i = 0; i < ioctl_arg.ext.varg.vdb_entries; entry++, i++) {
+			if(sw_is_default_vlan(entry->vlan))
+				continue;
+			fprintf(out, "!\nvlan %d\n", entry->vlan);
+			if(strcmp(entry->name, default_vlan_name(entry->vlan))) {
+				fprintf(out, " name %s\n", entry->name);
+			}
+			cnt++;
+		}
+#ifdef USE_EXIT_IN_CONF
+		if(cnt)
+			fprintf(out, "exit\n");
+#endif
+	}
+}
+
 int build_config(FILE *out) {
 	char buf[4096], *p1, *p2;
 	FILE *f;
@@ -185,6 +231,7 @@ int build_config(FILE *out) {
 	gethostname(buf, sizeof(buf));
 	buf[sizeof(buf) - 1] = '\0'; /* paranoia :P */
 	fprintf(out, "!\nhostname %s\n", buf);
+
 	/* enable secrets */
 	fputs("!\n", out);
 	cfg_lock();
@@ -197,6 +244,10 @@ int build_config(FILE *out) {
 		fprintf(out, "enable secret 5 %s\n", cfg->enable_secret[i]);
 	}
 	cfg_unlock();
+
+	/* vlans (aka replacement for vlan database) */
+	dump_vlans(out);
+	
 	/* physical interfaces */
 	f = fopen("/proc/net/dev", "r");
 	assert(f != NULL);

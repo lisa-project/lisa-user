@@ -49,6 +49,7 @@
 #define SWCFG_ENABLEVIF		0x22	/* administratively enable virtual interface */
 #define SWCFG_DISABLEVIF	0x23	/* administratively disable virtual interface */
 #define SWCFG_GETAGETIME	0x24	/* get fdb aging time interval */
+#define SWCFG_GETVDB		0x30	/* copy the whole vlan database to userspace */
 
 #define SW_PFL_DISABLED     0x01
 #define SW_PFL_ACCESS		0x02
@@ -100,6 +101,19 @@ struct net_switch_mac_arg {
 	char *buf;
 };
 
+#define SW_MAX_VLAN_NAME	31
+
+struct net_switch_usr_vdb {
+	int vlan;
+	char name[SW_MAX_VLAN_NAME + 1];
+};
+
+struct net_switch_usr_vdb_arg {
+	int buf_size;
+	int vdb_entries;
+	char *buf;
+};
+
 struct net_switch_ioctl_arg {
 	unsigned char cmd;
 	char *if_name;
@@ -116,6 +130,7 @@ struct net_switch_ioctl_arg {
 		int duplex;
 		struct net_switch_ifcfg cfg;
 		struct net_switch_mac_arg marg;
+		struct net_switch_usr_vdb_arg varg;
 	} ext;
 };
 
@@ -143,6 +158,8 @@ struct net_switch_ioctl_arg {
 	((vlan) >= SW_MIN_VLAN && (vlan) <= SW_MAX_VLAN)
 #define sw_invalid_vlan(vlan) \
 	((vlan) < SW_MIN_VLAN || (vlan) > SW_MAX_VLAN)
+#define sw_is_default_vlan(vlan) \
+	((vlan) == 1 || ((vlan) >= 1002 && (vlan) <= 1005))
 
 #define sw_allow_vlan(bitmap, vlan) ((bitmap)[(vlan) / 8] &= ~(1 << ((vlan) % 8)))
 #define sw_forbid_vlan(bitmap, vlan) ((bitmap)[(vlan) / 8] |= (1 << ((vlan) % 8)))

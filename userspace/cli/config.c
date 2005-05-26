@@ -187,28 +187,52 @@ static void cmd_linevty(FILE *out, char **argv) {
 
 static void cmd_vlan(FILE *out, char **argv) {
 	struct net_switch_ioctl_arg ioctl_arg;
-	char vlan_name[16];
 
 	vlan_no = parse_vlan(*argv);
-	sprintf(vlan_name, "VLAN%04d", vlan_no);
-	vlan_name[15] = '\0';
 	ioctl_arg.cmd = SWCFG_ADDVLAN;
 	ioctl_arg.vlan = vlan_no; 
-	ioctl_arg.ext.vlan_desc = vlan_name;
+	ioctl_arg.ext.vlan_desc = default_vlan_name(vlan_no);
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 	cmd_root = &command_root_config_vlan;
 }
 
 static void cmd_namevlan(FILE *out, char **argv) {
 	struct net_switch_ioctl_arg ioctl_arg;
+	int status;
 
 	ioctl_arg.cmd = SWCFG_RENAMEVLAN;
 	ioctl_arg.vlan = vlan_no;
 	ioctl_arg.ext.vlan_desc = *argv; 
 	
-	if (ioctl(sock_fd, SIOCSWCFG, &ioctl_arg)) {
-		perror("Error setting vlan name");
-	}
+	status = ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
+	if(status == -1 && errno == EPERM)
+		fprintf(out, "Default VLAN %d may not have its name changed.\n",
+				vlan_no);
+}
+
+static void cmd_nonamevlan(FILE *out, char **argv) {
+	struct net_switch_ioctl_arg ioctl_arg;
+
+	ioctl_arg.cmd = SWCFG_RENAMEVLAN;
+	ioctl_arg.vlan = vlan_no;
+	ioctl_arg.ext.vlan_desc = default_vlan_name(vlan_no);
+	
+	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
+}
+
+static void cmd_novlan(FILE *out, char **argv) {
+	struct net_switch_ioctl_arg ioctl_arg;
+	int status;
+
+	ioctl_arg.cmd = SWCFG_DELVLAN;
+	ioctl_arg.vlan = parse_vlan(argv[1]);
+	status = ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
+	if(status == -1 && errno == EPERM)
+		fprintf(out, "Default VLAN %d may not be deleted.\n", ioctl_arg.vlan);
+}
+
+static void cmd_exit(FILE *out, char **argv) {
+	cmd_root = &command_root_config;
 }
 
 int valid_host(char *arg, char lookahead) {
@@ -358,11 +382,17 @@ static sw_command_t sh_noenable[] = {
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
 
+static sw_command_t sh_novlan[] = {
+	{"WORD",				15,	valid_vlan,	cmd_novlan,			RUN,		"ISL VLAN IDs 1-4094",							NULL},
+	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+};
+
 static sw_command_t sh_no[] = {
 	{"enable",				15,	NULL,		NULL,				0,			"Modify enable password parameters",			sh_noenable},
 	{"hostname",			15,	NULL,		cmd_nohostname,		RUN,		"Set system's network name",					NULL},
 	{"interface",			15,	NULL,		NULL,				0,			"Select an interface to configure",				sh_no_int},
 	{"mac-address-table",	15,	NULL,		NULL,				0,			"Configure the MAC address table",				sh_nomac},
+	{"vlan",				15,	NULL,		NULL,				0,			"Vlan commands",								sh_novlan},
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
 
@@ -451,9 +481,17 @@ static sw_command_t sh_name_vlan[] = {
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
 
+static sw_command_t sh_vlan_no[] = {
+	{"name",				15,	NULL,		cmd_nonamevlan,		RUN,		"Ascii name of the VLAN",						NULL},
+	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+};
+
 /* (config-vlan) commands */
 static sw_command_t sh_cfg_vlan[] = {
+	{"exit",				15,	NULL,		cmd_exit,			RUN,		"Apply changes, bump revision number, and exit mode",NULL},
 	{"name",				15,	NULL,		NULL,				0,			"Ascii name of the VLAN",						sh_name_vlan},
+	{"no",					15,	NULL,		NULL,				0,			"Negate a command or set its defaults",			sh_vlan_no},
+	{"vlan",				15, NULL,		NULL,				0,			"Vlan commands",								sh_vlan},
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
 
