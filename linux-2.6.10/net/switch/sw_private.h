@@ -47,7 +47,7 @@ struct net_switch_bucket {
 	spinlock_t lock;
 };
 
-#define SW_MAX_VLAN_NAME	32
+#define SW_MAX_VLAN_NAME	31
 
 struct net_switch_vdb_entry {
 	char name[SW_MAX_VLAN_NAME];
@@ -74,7 +74,7 @@ struct net_switch_port {
 	unsigned char *forbidden_vlans;
 
 	/* Port description */
-	char desc[SW_MAX_PORT_DESC];
+	char desc[SW_MAX_PORT_DESC + 1];
 
 	/* Physical configuration settings */
 	int speed;

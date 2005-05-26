@@ -35,7 +35,7 @@ int sw_vdb_add_vlan(struct net_switch *sw, int vlan, char *name) {
         return -ENOMEM;
     }
 	strncpy(entry->name, name, SW_MAX_VLAN_NAME);
-    entry->name[SW_MAX_VLAN_NAME - 1] = '\0';
+    entry->name[SW_MAX_VLAN_NAME] = '\0';
     INIT_LIST_HEAD(&entry->trunk_ports);
     INIT_LIST_HEAD(&entry->non_trunk_ports);
 	rcu_assign_pointer(sw->vdb[vlan], entry);
@@ -113,7 +113,7 @@ int sw_vdb_set_vlan_name(struct net_switch *sw, int vlan, char *name) {
         return -ENOMEM;
     }
 	strncpy(entry->name, name, SW_MAX_VLAN_NAME);
-    entry->name[SW_MAX_VLAN_NAME - 1] = '\0';
+    entry->name[SW_MAX_VLAN_NAME] = '\0';
 	entry->trunk_ports = old->trunk_ports;
 	entry->non_trunk_ports = old->non_trunk_ports;
 	rcu_assign_pointer(sw->vdb[vlan], entry);

@@ -150,7 +150,7 @@ struct net_switch_ioctl_arg {
 #define sw_allowed_vlan(bitmap, vlan) (!sw_forbidden_vlan(bitmap, vlan))
 
 /* Maximum length of port description */
-#define SW_MAX_PORT_DESC	32
+#define SW_MAX_PORT_DESC	31
 
 #define is_mcast_mac(ptr) \
 	((ptr)[0] == 0x01 && (ptr)[1] == 0x00 && (ptr)[2] == 0x5e)

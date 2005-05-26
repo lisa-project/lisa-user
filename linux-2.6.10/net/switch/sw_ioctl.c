@@ -580,7 +580,7 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 			err = -EFAULT;
 			break;
 		}
-		port->desc[SW_MAX_PORT_DESC - 1] = '\0';
+		port->desc[SW_MAX_PORT_DESC] = '\0';
 		err = 0;
 		break;
 	case SWCFG_SETSPEED:
