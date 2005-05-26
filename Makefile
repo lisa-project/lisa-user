@@ -3,6 +3,9 @@ KVER := 2.6.10
 
 .PHONY: all dist distopt package patch user
 
+USE_EXIT_IN_CONF=1
+export USE_EXIT_IN_CONF
+
 all:
 	@echo "This makefile accepts the following targets:"
 	@echo "dist		Make a binary distribution"
@@ -15,7 +18,7 @@ dist:
 ifndef DST
 	@echo "You must specify DST"
 else
-	cd userspace && make DIST=true
+	cd userspace && make DIST=1
 	./mkdist.sh $(DST)
 endif
 
@@ -23,7 +26,7 @@ distopt:
 ifndef DST
 	@echo "You must specify DST"
 else
-	cd userspace && make DIST=true
+	cd userspace && make DIST=1
 	OPT=true ./mkdist.sh $(DST)
 endif
 
