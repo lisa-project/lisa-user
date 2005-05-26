@@ -217,7 +217,9 @@ int build_config(FILE *out) {
 	
 	/* virtual interfaces */	
 	build_list_ip_addr(out, NULL, FMT_CMD);
+#ifdef USE_EXIT_IN_CONF
 	fprintf(out, "!\nexit\n");
+#endif
 
 	/* static macs */
 	dump_static_macs(out);
@@ -225,7 +227,9 @@ int build_config(FILE *out) {
 	/* line vty stuff */
 	fprintf(out, "!\nline vty 0 15\n");
 	fprintf(out, " password %s\n", cfg->vty[0].passwd);
+#ifdef USE_EXIT_IN_CONF
 	fprintf(out, "!\nexit\n");
+#endif
 
 	return 0;
 }

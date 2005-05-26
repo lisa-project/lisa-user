@@ -1,9 +1,31 @@
 NAME := lms
 KVER := 2.6.10
 
-.PHONY: all package path
+.PHONY: all dist distopt package patch user
 
-all: package
+all:
+	@echo "This makefile accepts the following targets:"
+	@echo "dist		Make a binary distribution"
+	@echo "distopt		Make a binary distribution with optional binaries"
+	@echo "package		Make a source distribution for the whole project"
+	@echo "patch		Make a patch against the original kernel source"
+	@echo "user		Build userspace programs"
+
+dist:
+ifndef DST
+	@echo "You must specify DST"
+else
+	cd userspace && make DIST=true
+	./mkdist.sh $(DST)
+endif
+
+distopt:
+ifndef DST
+	@echo "You must specify DST"
+else
+	cd userspace && make DIST=true
+	OPT=true ./mkdist.sh $(DST)
+endif
 
 package: patch
 	mkdir $(NAME)
@@ -16,3 +38,6 @@ package: patch
 
 patch:
 	diff -Pru --exclude .svn --exclude .config linux-$(KVER).orig linux-$(KVER) | grep -v ^Only > linux-$(KVER)-lms.patch
+
+user:
+	cd userspace && make

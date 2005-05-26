@@ -1,10 +1,16 @@
 CFLAGS = -g -Wall -I../../linux-2.6.10/include #-DDEBUG
 LDFLAGS = -L. -lreadline -lcurses -lutil -lcrypt
 
-# FIXME
 __LOGIN_PATH := \"$(shell pwd)/swlogin\"
 __FILTER_PATH := \"$(shell pwd)/filter\"
-#CFLAGS += -DLOGIN_PATH=$(__LOGIN_PATH) -DFILTER_PATH=$(__FILTER_PATH)
+
+ifndef DIST
+CFLAGS += -DLOGIN_PATH=$(__LOGIN_PATH) -DFILTER_PATH=$(__FILTER_PATH)
+endif
+
+ifdef USE_EXIT_IN_CONF
+CFLAGS += -DUSE_EXIT_IN_CONF
+endif
 
 .PHONY: all clean
 

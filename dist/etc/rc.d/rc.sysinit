@@ -4,8 +4,8 @@
 PATH=/bin:/sbin:/usr/bin:/usr/sbin
 
 # Mount proc and remount / read-write
-mount -n -t proc proc /proc
-rootdev=`cat /proc/cmdline | sed 's/^.*root=\([^ ]*\) .*$/\1/'`
+mount -n -t proc none /proc
+rootdev=`cat /proc/cmdline | sed 's/^.*root=\([^ ]*\).*$/\1/'`
 fsck -a $rootdev
 mount -n -o remount,rw /
 
@@ -18,10 +18,9 @@ hostname Switch
 # Remove stale backups
 rm -f /etc/mtab~ /etc/mtab~~
 
-#FIXME this requires /etc/fstab
-## Enter root, /proc and (potentially) /proc/bus/usb and devfs into mtab.
-#mount -f /
-#mount -f /proc
+# Enter root, /proc and (potentially) /proc/bus/usb and devfs into mtab.
+mount -f /
+mount -f /proc
 
 # Setup /tmp
 mount -t tmpfs -o size=1m tmpfs /tmp

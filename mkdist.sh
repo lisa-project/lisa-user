@@ -60,14 +60,14 @@ echo " done."
 
 echo -n "Installing various configuration files "
 for i in /etc/ld.so.conf /etc/inittab /etc/passwd /etc/termcap \
-		/etc/rc.d/rc.sysinit \
-		/boot/grub/menu.lst /boot/grub/device.map \
+		/etc/rc.d/rc.sysinit /etc/fstab \
+		/boot/grub/grub.conf /boot/grub/device.map \
 		;do
 		install -m 0644 -D "dist$i" "$DST$i" && echo -n "#"
 done
 chmod 0755 "$DST/etc/rc.d/rc.sysinit"
 #FIXME
-if true; then
+if [ -n "$OPT" ]; then
 	cat dist/etc/inittab | sed 's/#__OPT__#//' > $DST/etc/inittab
 fi
 echo " done."
@@ -82,19 +82,22 @@ install -m 0755 -D userspace/cli/swcfgload $DST/sbin/swcfgload && echo -n "#"
 install -m 0755 -D userspace/cli/libswcli.so $DST/lib/libswcli.so && echo -n "#"
 echo " done."
 
-echo -n "Installing optional binaries "
-for i in /bin/bash /bin/cat /bin/ls /bin/ps /bin/vi /bin/netstat \
-		/bin/cp /bin/mv /bin/rm \
-		/bin/df /usr/bin/du /bin/mknod /usr/bin/scp /bin/dmesg \
-		/sbin/pidof /sbin/fuser /usr/bin/which \
-		/usr/bin/less /usr/bin/strace \
-		/usr/bin/ipcs /usr/bin/ipcrm \
-		/sbin/grub /sbin/ifconfig /sbin/ip /sbin/mingetty /sbin/route \
-		;do
-		install -m 0755 -D "$i" "$DST$i" && echo -n "#"
-done
-install -m 0755 -D userspace/login/login $DST/bin/login
-echo " done."
+if [ -n "$OPT" ]; then
+	echo -n "Installing optional binaries "
+	for i in /bin/bash /bin/cat /bin/ls /bin/ps /bin/vi /bin/netstat \
+			/bin/cp /bin/mv /bin/rm \
+			/bin/df /usr/bin/du /bin/mknod /usr/bin/scp /bin/dmesg \
+			/sbin/pidof /sbin/fuser /usr/bin/which \
+			/usr/bin/less /usr/bin/strace \
+			/usr/bin/ipcs /usr/bin/ipcrm \
+			/sbin/grub /sbin/ifconfig /sbin/ip /sbin/mingetty /sbin/route \
+			;do
+			install -m 0755 -D "$i" "$DST$i" && echo -n "#"
+	done
+	install -m 0755 -D userspace/login/login $DST/bin/login && echo -n "#"
+	install -m 0755 -D dist/sbin/grub-install $DST/sbin/grub-install && echo -n "#"
+	echo " done."
+fi
 
 echo -n "Finding installed binaries "
 TMP1=`mktemp` || exit 1

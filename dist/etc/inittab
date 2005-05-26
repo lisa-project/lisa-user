@@ -41,5 +41,5 @@ si::sysinit:/etc/rc.d/rc.sysinit
 #__OPT__#5:2345:respawn:/sbin/mingetty tty5
 #__OPT__#6:2345:respawn:/sbin/mingetty tty6
 
-s0:2345:respawn:/sbin/agetty -l /sbin/swcon -i -n 9600 ttyS0
+s0:2345:respawn:/sbin/agetty -l /sbin/swcon -i -n -L 9600 ttyS0
 de:2345:respawn:/sbin/swclid

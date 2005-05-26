@@ -79,6 +79,10 @@ int main(int argc, char *argv[]) {
 		cmd[strlen(cmd)-1] = '\0';
 		if (cmd[0] == '!')
 			continue;
+#ifndef USE_EXIT_IN_CONF
+		if (cmd[0] != ' ')
+			cmd_root = &command_root_config;
+#endif
 		swcfgload_exec_cmd(cmd);
 	}
 	fclose(out);

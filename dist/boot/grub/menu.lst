@@ -1,5 +1,0 @@
-default=0
-timeout=2
-title LISA
-	root(hd0,0)
-	kernel /flash/vmlinuz ro root=/dev/hda1

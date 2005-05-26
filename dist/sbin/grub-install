@@ -1,0 +1,10 @@
+#! /bin/sh
+if [ ! -d /boot/grub ]; then
+	echo "/boot/grub is not a directory"
+	exit 1
+fi
+
+/sbin/grub --batch --device-map=/boot/grub/device.map << EOF
+root (hd0,0)
+setup --stage2=/boot/grub/stage2 --prefix=/boot/grub (hd0)
+EOF
