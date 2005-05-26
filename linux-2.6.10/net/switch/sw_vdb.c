@@ -34,6 +34,10 @@ int sw_vdb_add_vlan(struct net_switch *sw, int vlan, char *name) {
         dbg("Out of memory while trying to add vlan %d\n", vlan);
         return -ENOMEM;
     }
+	if(!(entry->name = kmalloc(SW_MAX_VLAN_NAME + 1, GFP_ATOMIC))) {
+		kfree(entry);
+		return -ENOMEM;
+	}
 	strncpy(entry->name, name, SW_MAX_VLAN_NAME);
     entry->name[SW_MAX_VLAN_NAME] = '\0';
     INIT_LIST_HEAD(&entry->trunk_ports);
@@ -94,6 +98,7 @@ int sw_vdb_del_vlan(struct net_switch *sw, int vlan) {
 	list_for_each_entry_safe(link, tmp, &entry->non_trunk_ports, lh) {
 		kmem_cache_free(sw->vdb_cache, link);
 	}
+	kfree(entry->name);
 	kfree(entry);
 
 	return 0;
@@ -101,24 +106,23 @@ int sw_vdb_del_vlan(struct net_switch *sw, int vlan) {
 
 /* Rename a vlan */
 int sw_vdb_set_vlan_name(struct net_switch *sw, int vlan, char *name) {
-	struct net_switch_vdb_entry *entry, *old;
+	struct net_switch_vdb_entry *entry;
+	char *entry_name, *old_name;
 
     if(sw_invalid_vlan(vlan))
         return -EINVAL;
-    if(!(old = sw->vdb[vlan]))
+    if(!(entry = sw->vdb[vlan]))
         return -ENOENT;
-    if(!(entry = kmalloc(sizeof(struct net_switch_vdb_entry),
-					GFP_ATOMIC))) {
+    if(!(entry_name = kmalloc(SW_MAX_VLAN_NAME + 1, GFP_ATOMIC))) {
         dbg("Out of memory while trying to change vlan name%d\n", vlan);
         return -ENOMEM;
     }
-	strncpy(entry->name, name, SW_MAX_VLAN_NAME);
-    entry->name[SW_MAX_VLAN_NAME] = '\0';
-	entry->trunk_ports = old->trunk_ports;
-	entry->non_trunk_ports = old->non_trunk_ports;
-	rcu_assign_pointer(sw->vdb[vlan], entry);
+	strncpy(entry_name, name, SW_MAX_VLAN_NAME);
+    entry_name[SW_MAX_VLAN_NAME] = '\0';
+	old_name = entry->name;
+	rcu_assign_pointer(entry->name, entry_name);
 	synchronize_kernel();
-	kfree(old);
+	kfree(old_name);
 
 	return 0;
 }

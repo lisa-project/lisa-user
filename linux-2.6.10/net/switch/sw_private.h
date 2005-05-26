@@ -50,7 +50,7 @@ struct net_switch_bucket {
 #define SW_MAX_VLAN_NAME	31
 
 struct net_switch_vdb_entry {
-	char name[SW_MAX_VLAN_NAME];
+	char *name;
 	struct list_head trunk_ports;
 	struct list_head non_trunk_ports;
 };
