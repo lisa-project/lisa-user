@@ -568,7 +568,7 @@ void swcli_piped_exec(sw_execution_state_t *exc) {
 			De altfel daca nu facem asta merge super beton
 			sa executi comenzi de shell intre `` !!!
 		 */
-		nc = sprintf(cmd_buf, "./filter %d %s", exc->pipe_type, exc->func_args[exc->num-1]);	
+		nc = sprintf(cmd_buf, FILTER_PATH " %d %s", exc->pipe_type, exc->func_args[exc->num-1]);	
 	}
 	assert(nc < sizeof(cmd_buf));
 	assert((pipe = popen(cmd_buf, "w")));

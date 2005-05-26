@@ -36,7 +36,7 @@
 #define SLEEP_EXIT_TIMEOUT 5
 #define TTY_MODE 0600
 
-static int timeout = 60;
+static int timeout = 6000;
 struct passwd *pwd;
 
 void
@@ -254,7 +254,7 @@ main(int argc, char **argv)
 	/* Kill processes left on this tty */
 	tcsetattr(0,TCSAFLUSH,&ttt);
 	signal(SIGHUP, SIG_IGN); /* so vhangup() wont kill us */
-	vhangup();
+	//vhangup();
 	signal(SIGHUP, SIG_DFL);
 
 	/* open stdin,stdout,stderr to the tty */

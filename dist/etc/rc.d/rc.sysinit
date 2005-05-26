@@ -1,4 +1,28 @@
 #!/bin/sh
 
+# Setup implicit paths
 PATH=/bin:/sbin:/usr/bin:/usr/sbin
-mount proc /proc -t proc
+
+# Mount proc and remount / read-write
+mount -n -t proc proc /proc
+mount -n -o remount,rw /
+
+# Set hostname
+hostname Switch
+
+# Clear mtab
+(> /etc/mtab) &> /dev/null
+
+# Remove stale backups
+rm -f /etc/mtab~ /etc/mtab~~
+
+# Enter root, /proc and (potentially) /proc/bus/usb and devfs into mtab.
+mount -f /
+mount -f /proc
+
+# Setup /tmp
+mount -t tmpfs -o size=1m tmpfs /tmp
+
+# Read switch initial configuration
+echo "Loading configuration"
+swcfgload

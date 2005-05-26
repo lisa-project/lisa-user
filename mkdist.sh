@@ -44,8 +44,9 @@ echo " done."
 
 echo -n "Installing base system binaries "
 FIX="/bin/ping /bin/traceroute"
-for i in /bin/ash /bin/grep /bin/more /bin/mount /bin/sed \
+for i in /bin/ash /bin/grep /bin/hostname /bin/more /bin/mount /bin/sed \
 		/sbin/agetty /sbin/e2fsck /sbin/init \
+		/usr/sbin/in.telnetd \
 		"/usr/bin/[" \
 		\
 		/boot/grub/stage1 /boot/grub/e2fs_stage1_5 /boot/grub/stage2 \
@@ -57,9 +58,8 @@ ln -s /bin/ash $DST/bin/sh
 echo " done."
 
 echo -n "Installing various configuration files "
-for i in /etc/ld.so.conf /etc/inittab /etc/passwd /etc/termcap /etc/securetty \
+for i in /etc/ld.so.conf /etc/inittab /etc/passwd /etc/termcap \
 		/etc/rc.d/rc.sysinit \
-		/etc/pam.d/system-auth \
 		/boot/grub/menu.lst /boot/grub/device.map \
 		;do
 		install -m 0644 -D "dist$i" "$DST$i" && echo -n "#"
@@ -82,12 +82,17 @@ install -m 0755 -D userspace/cli/libswcli.so $DST/lib/libswcli.so && echo -n "#"
 echo " done."
 
 echo -n "Installing optional binaries "
-for i in /bin/bash /bin/cat /bin/login /bin/ls /bin/ps /bin/vi \
-		/usr/bin/less \
+for i in /bin/bash /bin/cat /bin/ls /bin/ps /bin/vi \
+		/bin/cp /bin/mv /bin/rm \
+		/bin/df /usr/bin/du /bin/mknod /usr/bin/scp /bin/dmesg \
+		/sbin/pidof /sbin/fuser /usr/bin/which \
+		/usr/bin/less /usr/bin/strace \
+		/usr/bin/ipcs /usr/bin/ipcrm \
 		/sbin/grub /sbin/ifconfig /sbin/ip /sbin/mingetty /sbin/route \
 		;do
 		install -m 0755 -D "$i" "$DST$i" && echo -n "#"
 done
+install -m 0755 -D userspace/login/login $DST/bin/login
 echo " done."
 
 echo -n "Finding installed binaries "
@@ -105,8 +110,7 @@ while read FILE; do
 	echo -n "#"
 done
 
-# Add some extra libraries
-echo /lib/security/pam_permit.so >> $TMP1
+echo /lib/libnss_files.so.2 >> $TMP3
 
 cat $TMP3 | sort | uniq | grep -v libswcli > $TMP1
 echo " done."
@@ -141,11 +145,13 @@ mknod -m 0660 $DST/dev/hda				b	3	0
 mknod -m 0660 $DST/dev/hda1				b	3	1
 echo -n "#"
 mkdir $DST/dev/pts
-for ((i=1; $i<=32; i=$i+1)); do
+for ((i=0; $i<=32; i=$i+1)); do
 	mknod -m 0666 $DST/dev/pts/$i		c	136	$i
 done
+mknod -m 0666 $DST/dev/ptmx				c	5	2
 echo -n "#"
 echo " done."
 
-# sshd (opt)
-# kernel
+echo -n "Installing kernel "
+install -m 0600 -D $SW_KPATH/linux-2.6.10/arch/i386/boot/bzImage $DST/flash/vmlinuz
+echo " done."

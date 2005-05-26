@@ -17,6 +17,8 @@
 #include "shared.h"
 #include "ip.h"
 
+int console_session = 0;
+
 static char if_name[IFNAMSIZ];
 
 static void swcli_sig_term(int sig) {
@@ -63,6 +65,10 @@ static void cmd_enable(FILE *out, char **argv) {
 		strcpy(secret, cfg->enable_secret[req]);
 		cfg_unlock();
 		if(secret[0] == '\0') {
+			if(console_session) {
+				priv = req;
+				return;
+			}
 			fprintf(out, "%% No password set\n");
 			return;
 		}

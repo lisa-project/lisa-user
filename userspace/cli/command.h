@@ -74,5 +74,6 @@ extern void cmd_showmac(FILE *, char *);
 extern void build_list_ip_addr(FILE *, char*, int);
 
 extern sw_command_root_t command_root_main;
+extern int console_session;
 
 #endif

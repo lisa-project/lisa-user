@@ -2,6 +2,7 @@
 #include <unistd.h>
 
 #include "climain.h"
+#include "command.h"
 
 int main(int argc, char **argv) {
 	char hostname[MAX_HOSTNAME];
@@ -16,6 +17,7 @@ int main(int argc, char **argv) {
 			"\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n",
 			hostname);
 	cfg_waitcr();
+	console_session = 1;
 	climain();
 	return 0;
 }

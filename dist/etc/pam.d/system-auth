@@ -1,9 +1,0 @@
-#%PAM-1.0
-# Everybody is allowed to login :)
-auth        sufficient    /lib/security/pam_permit.so
-
-account     sufficient    /lib/security/pam_permit.so
-
-password    sufficient    /lib/security/pam_permit.so
-
-session     sufficient    /lib/security/pam_permit.so
