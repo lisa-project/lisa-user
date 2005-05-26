@@ -50,12 +50,9 @@ void telnet_listen() {
 	assert(status != -1);
 }
 
-struct telnet_conn *create_telnet_conn() {
+struct telnet_conn *create_telnet_conn(int fd, struct sockaddr_in *remote_addr) {
 	struct telnet_conn *c;
 	struct rlimit rlim;
-	struct sockaddr_in remote_addr;
-	socklen_t addrlen = sizeof(struct sockaddr_in);
-	int fd;
 	int i, status;
 
 	c = malloc(sizeof(struct telnet_conn));
@@ -83,26 +80,28 @@ struct telnet_conn *create_telnet_conn() {
 	}
 
 	for(i = 0; i < rlim.rlim_max; i++) {
-		if(i == telnet_sockfd)
+		if(i == fd)
 			continue;
 		close(i);
 	}
 
-	fd = accept(telnet_sockfd, (struct sockaddr *)&remote_addr, &addrlen);
-	close(telnet_sockfd);
+	/* create stdin */
+	fd = dup(fd);
 	if(fd) {
 		syslog(LOG_ERR, "child stage 3 failed");
 		exit(1);
 	}
-	dup(fd);
-	dup(fd);
+	/* create stdout */
+	dup(0);
+	/* create stderr */
+	dup(0);
 
 	do {
 		char * argv[] = {TELNETD_PATH, "-h", "-L", LOGIN_PATH, NULL};
 		char * envp[] = {NULL};
 
 		syslog(LOG_INFO, "New telnet session from %s",
-				inet_ntoa(remote_addr.sin_addr));
+				inet_ntoa(remote_addr->sin_addr));
 		status = execve(TELNETD_PATH, argv, envp);
 	} while(0);
 
@@ -137,35 +136,34 @@ void sgh_child(int sig) {
 	}
 }
 
-#define MAXFD(x) (maxfd = (x) > maxfd ? (x) : maxfd)
 void main_loop() {
 	int status;
-	int maxfd;
-	fd_set readfds, writefds;
+	fd_set readfds;
 	struct telnet_conn *c;
+	struct sockaddr_in remote_addr;
+	socklen_t addrlen = sizeof(struct sockaddr_in);
 
 	do {
 		FD_ZERO(&readfds);
-		FD_ZERO(&writefds);
-
 		FD_SET(telnet_sockfd, &readfds);
-		maxfd = telnet_sockfd;
 
-		status = select(maxfd + 1, &readfds, &writefds, NULL, NULL);
-		/* FIXME status == 0 ?? */
-		if(status == -1) {
-			//perror("select");
-			//fflush(stderr);
-		}
+		status = select(telnet_sockfd + 1, &readfds, NULL, NULL, NULL);
+		if(status < 1)
+			continue;
 
-		if(FD_ISSET(telnet_sockfd, &readfds)) {
-			c = create_telnet_conn();
-			if(c != NULL)
-				list_add_tail(&c->lh, &telnet_conns);
-		}
+		if(!FD_ISSET(telnet_sockfd, &readfds))
+			continue;
+
+		status = accept(telnet_sockfd, (struct sockaddr *)&remote_addr, &addrlen);
+		if(status < 0)
+			continue;
+		c = create_telnet_conn(status, &remote_addr);
+		close(status);
+		if(c == NULL)
+			continue;
+		list_add_tail(&c->lh, &telnet_conns);
 	} while(1);
 }
-#undef MAXFD
 
 int main(int argc, char **argv) {
 	openlog("swclid", LOG_PID, LOG_DAEMON);

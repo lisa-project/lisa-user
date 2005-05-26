@@ -4,7 +4,7 @@ LDFLAGS = -L. -lreadline -lcurses -lutil -lcrypt
 # FIXME
 __LOGIN_PATH := \"$(shell pwd)/swlogin\"
 __FILTER_PATH := \"$(shell pwd)/filter\"
-# CFLAGS += -DLOGIN_PATH=$(__LOGIN_PATH) -DFILTER_PATH=$(__FILTER_PATH)
+#CFLAGS += -DLOGIN_PATH=$(__LOGIN_PATH) -DFILTER_PATH=$(__FILTER_PATH)
 
 .PHONY: all clean
 
