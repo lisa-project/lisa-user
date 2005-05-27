@@ -14,7 +14,7 @@ endif
 
 .PHONY: all clean
 
-all: swcli swclid swlogin filter swcon swcfgload
+all: swcli swclid swlogin filter swcon swcfgload reboot
 
 libswcli.so: climain.o command.o config.o config_if.o config_line.o build_config.o if.o shared.o netlink.o ip.o
 	cd ../lib && make
@@ -33,8 +33,10 @@ swcfgload: swcfgload.o libswcli.so
 
 filter: filter.o
 
+reboot: reboot.o
+
 swlogin: swlogin.o libswcli.so
 	$(CC) $(LDFLAGS) -lswcli -o $@ $^
 
 clean:
-	rm -f *.o *~ libswcli.so swcli swclid swlogin filter swcon
+	rm -f *.o *~ libswcli.so swcli swclid swlogin filter swcon swcfgload reboot

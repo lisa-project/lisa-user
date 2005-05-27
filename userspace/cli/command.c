@@ -559,7 +559,7 @@ static void cmd_reload(FILE *out, char **argv) {
 		fputc('\n', out);
 		return;
 	}
-	system("init 6 &> /dev/null");
+	system("reboot &> /dev/null");
 }
 
 /* Validation Handlers Implementation */

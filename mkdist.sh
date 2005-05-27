@@ -46,7 +46,6 @@ echo -n "Installing base system binaries "
 FIX="/bin/ping /bin/traceroute"
 for i in /bin/ash /bin/grep /bin/hostname /bin/more /bin/mount /bin/sed \
 		/sbin/agetty /sbin/e2fsck /sbin/init \
-		/sbin/halt /sbin/reboot /sbin/shutdown \
 		/usr/sbin/in.telnetd \
 		"/usr/bin/[" \
 		\
@@ -63,7 +62,6 @@ echo -n "Installing various configuration files "
 for i in /etc/ld.so.conf /etc/inittab /etc/passwd /etc/termcap \
 		/etc/rc.d/rc.sysinit /etc/fstab \
 		/boot/grub/grub.conf /boot/grub/device.map \
-		/etc/init.d/halt \
 		;do
 		install -m 0644 -D "dist$i" "$DST$i" && echo -n "#"
 done
@@ -89,6 +87,7 @@ install -m 0755 -D userspace/cli/swclid $DST/sbin/swclid && echo -n "#"
 install -m 0755 -D userspace/cli/swlogin $DST/usr/sbin/swlogin && echo -n "#"
 install -m 0755 -D userspace/cli/swcon $DST/sbin/swcon && echo -n "#"
 install -m 0755 -D userspace/cli/swcfgload $DST/sbin/swcfgload && echo -n "#"
+install -m 0755 -D userspace/cli/reboot $DST/sbin/reboot && echo -n "#"
 install -m 0755 -D userspace/cli/libswcli.so $DST/lib/libswcli.so && echo -n "#"
 echo " done."
 
