@@ -185,6 +185,19 @@ static void cmd_show_priv(FILE *out, char **argv) {
 	fflush(out);
 }
 
+static void cmd_show_start(FILE *out, char **argv) {
+	char cfg_name[] = "/flash/config.text";
+	char buf[1024];
+	FILE *fp;
+
+	fp = fopen(cfg_name, "r");
+	while (fgets(buf, sizeof(buf), fp)) {
+		buf[sizeof(buf)-1] = '\0';
+		fprintf(out, buf);
+	}
+	fclose(fp);
+}
+
 static void cmd_show_run(FILE *out, char **argv) {
 	int status;
 	FILE *tmp = NULL;
@@ -483,12 +496,12 @@ static void show_ip(FILE *out, char *dev) {
 		exit(-1);
 	}
 	while (fgets(buf, sizeof(buf), fh)) {
-		buf[strlen(buf)-1] = '\0';
+		buf[sizeof(buf)-1] = '\0';
 		if (dev && strcmp(dev, buf))
 			continue;
 		ipl = list_ip_addr(buf, 0);
 		if (ipl && !list_empty(ipl)) {
-			printf("%s:\n", buf);
+			fprintf(out, "%s:\n", buf);
 			show_ip_list(out, ipl);
 		}
 		if (ipl)
@@ -806,7 +819,7 @@ static sw_command_t sh_show[] = {
 	{"privilege",			2,	NULL,			cmd_show_priv,	RUN,		"Show current privilege level",						NULL},
 	{"running-config",		2,	NULL,			cmd_show_run,	RUN,		"Current operating configuration",					sh_show_run},
 	{"sessions",			1,	NULL,			NULL,			RUN,		"Information about Telnet connections",				NULL},
-	{"startup-config",		1,	NULL,			NULL,			RUN,		"Contents of startup configuration",				NULL},
+	{"startup-config",		1,	NULL,			cmd_show_start,	RUN,		"Contents of startup configuration",				NULL},
 	{"users",				1,	NULL,			NULL,			RUN,		"Display information about terminal lines",			NULL},
 	{"version",				1,	NULL,			cmd_show_ver,			RUN,		"System hardware and software status",				NULL},
 	{"vlan",				1,	NULL,			cmd_show_vlan,	RUN,		"VTP VLAN status",									sh_show_vlan},
