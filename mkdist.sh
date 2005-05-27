@@ -101,6 +101,7 @@ if [ -n "$OPT" ]; then
 			/sbin/pidof /sbin/fuser /usr/bin/which \
 			/usr/bin/less /usr/bin/strace \
 			/usr/bin/ipcs /usr/bin/ipcrm \
+			/bin/tar /bin/gzip \
 			/sbin/grub /sbin/ifconfig /sbin/ip /sbin/mingetty /sbin/route \
 			;do
 			install -m 0755 -D "$i" "$DST$i" && echo -n "#"

@@ -31,7 +31,7 @@ static struct sembuf P = {
 
 static struct sembuf V = {
 	.sem_num = 0,
-	.sem_op = -1,
+	.sem_op = 1,
 	.sem_flg = 0,
 };
 
@@ -55,32 +55,39 @@ int cfg_init(void) {
 	if((shmid = shmget(key, sizeof(struct cli_config), 0600)) == -1) {
 		init_data = 1;
 		shmid = shmget(key, sizeof(struct cli_config), IPC_CREAT | 0600);
+		/* FIXME try to create exclusively, and if it fails then try
+		   again without creating; this is to avoid races if someone else
+		   creates it in the meantime */
 		if(shmid == -1)
 			return -3;
 	}
 	cfg = shmat(shmid, NULL, 0);
 	if((int)cfg == -1)
 		return -4;
-	if((semid = semget(key, 1, IPC_CREAT | 0600)) == -1)
-		return -5;
 	if(init_data)
 		cfg_init_data();
+	if((semid = semget(key, 1, 0600)) == -1) {
+		semid = semget(key, 1, IPC_CREAT | 0600);
+		/* FIXME try to create exclusively, and if it fails then try
+		   again without creating; this is to avoid races if someone else
+		   creates it in the meantime */
+		if(semid == -1)
+			return -5;
+		/* "Initialize" the semaphore to 1 */
+		semop(semid, &V, 1);
+	}
 	return 0;
 }
 
 int cfg_lock(void) {
-	if(cfg_locked)
-		return 1;
-	semop(semid, &P, 1);
-	cfg_locked = 1;
+	if(!(cfg_locked++))
+		semop(semid, &P, 1);
 	return 0;
 }
 
 int cfg_unlock(void) {
-	if(!cfg_locked)
-		return 1;
-	semop(semid, &V, 1);
-	cfg_locked = 0;
+	if(!(--cfg_locked))
+		semop(semid, &V, 1);
 	return 0;
 }
 

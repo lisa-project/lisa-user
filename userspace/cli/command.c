@@ -560,19 +560,22 @@ static void cmd_wrme(FILE *out, char **argv) {
 
 	fprintf(out, "Building configuration...\n");
 	fflush(out);
+	cfg_lock();
 	do {
 		tmp = fopen(tmp_name, "w+");
 		if(tmp == NULL)
 			break;
 		status = build_config(tmp);
-		if(status)
+		if(status) {
+			fclose(tmp);
 			break;
+		}
 		fprintf(out, "Current configuration : %ld bytes\n", ftell(tmp));
 		fclose(tmp);
 		sync();
 		fprintf(out, "\n[OK]\n\n");
-		return;
 	} while(0);
+	cfg_unlock();
 }
 
 static void cmd_reload(FILE *out, char **argv) {
@@ -586,6 +589,8 @@ static void cmd_reload(FILE *out, char **argv) {
 		return;
 	}
 	system("reboot &> /dev/null");
+	/* delay returning so that the prompt does'n get displayed again */
+	sleep(5);
 }
 
 /* Validation Handlers Implementation */
