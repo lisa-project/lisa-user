@@ -1,4 +1,3 @@
-#include <errno.h>
 #include <stdio.h>
 #include <readline/readline.h>
 #include <readline/history.h>
@@ -17,10 +16,13 @@
 #include "if.h"
 #include "shared.h"
 #include "ip.h"
+#include "list.h"
 
 int console_session = 0;
 
 static char if_name[IFNAMSIZ];
+
+static void show_ip(FILE *, char *);
 
 static void swcli_sig_term(int sig) {
 	char hostname[MAX_HOSTNAME];
@@ -218,7 +220,7 @@ static void cmd_run_vlan(FILE *out, char **argv) {
 	char *dev = NULL;
 	if (*argv)
 		dev = if_name_vlan(*argv);
-	build_list_ip_addr(out, dev, FMT_CMD);
+	show_ip(out, dev);
 }
 
 static void init_mac_filter(struct net_switch_ioctl_arg *user_arg) {
@@ -459,13 +461,22 @@ static void cmd_clr_mac_adr(FILE *out, char **argv) {
 	}
 }
 
-void build_list_ip_addr(FILE *out, char *dev, int fmt) {
+static void show_ip_list(FILE *out, struct list_head *ipl) {
+	struct ip_addr_entry *entry, *tmp;
+
+	list_for_each_entry_safe(entry, tmp, ipl, lh) {
+		fprintf(out, "  inet: %s / %s\n", 
+				entry->inet, entry->mask);
+		list_del(&entry->lh);
+		free(entry);
+	}
+}
+
+static void show_ip(FILE *out, char *dev) {
 	FILE *fh;
 	char buf[128];
-	int num;
-	
-	/* No interface specified, we print out all ip 
-	 information about lms virtual interfaces */
+	struct list_head *ipl;
+
 	fh = fopen(PROCNETSWITCH_PATH, "r");
 	if (!fh) {
 		perror("fopen");
@@ -475,11 +486,13 @@ void build_list_ip_addr(FILE *out, char *dev, int fmt) {
 		buf[strlen(buf)-1] = '\0';
 		if (dev && strcmp(dev, buf))
 			continue;
-		if (fmt == FMT_CMD) {
-			sscanf(buf, "vlan%d", &num);
-			fprintf(out, "!\ninterface vlan %d\n", num);
+		ipl = list_ip_addr(buf, 0);
+		if (ipl && !list_empty(ipl)) {
+			printf("%s:\n", buf);
+			show_ip_list(out, ipl);
 		}
-		list_ip_addr(out, buf, 0, fmt);
+		if (ipl)
+			free(ipl);
 		if (dev)
 			break;	
 	}
@@ -490,7 +503,7 @@ static void cmd_sh_ip(FILE *out, char **argv) {
 	char *dev = NULL;
 	if (*argv)
 		dev = if_name_vlan(*argv);
-	build_list_ip_addr(out, dev, FMT_NOCMD);
+	show_ip(out, dev);
 }
 
 /* FIXME: quick hack

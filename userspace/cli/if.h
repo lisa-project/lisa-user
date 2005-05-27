@@ -125,7 +125,6 @@ struct mii_data {
 
 
 #define PROCNETDEV_PATH "/proc/net/dev"
-#define PROCNETSWITCH_PATH "/proc/net/switch/vif"
 #define LMS_VIRT_PREFIX "vlan"
 
 #define print_sockaddr_ip(out, desc, _sockaddr) \

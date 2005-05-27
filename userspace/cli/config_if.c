@@ -103,26 +103,129 @@ static void cmd_nomode(FILE *out, char **argv) {
 
 static int parse_mask(char *, char);
 
+static int has_primary_ip(char *dev) {
+	int sockfd;
+	struct ifreq ifr; 
+	
+	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+	if (sockfd < 0) {
+		perror("socket");
+		return -1;
+	}
+	strncpy(ifr.ifr_name, dev, IFNAMSIZ);
+	ifr.ifr_name[IFNAMSIZ-1] = '\0';
+	if (ioctl(sockfd, SIOCGIFADDR, &ifr)) {
+		close(sockfd);
+		return 0;
+	}
+	close(sockfd);	
+	return 1;
+}
+
+static int check_ip_primary(struct list_head *ipl, char *addr, char *mask) {
+	int nr, match;
+	struct ip_addr_entry *entry, *tmp;
+
+	nr = match = 0;
+	list_for_each_entry_safe(entry, tmp, ipl, lh) {
+		if (nr == 0) {
+			if (!strcmp(entry->inet, addr) && !strcmp(entry->mask, mask))
+				match = 1;
+		}
+		list_del(&entry->lh);
+		free(entry);
+		nr++;
+	}
+	return (nr > 1 && match);
+}
+
+static void change_primary_ip(char *dev, char *addr, char *netmask) {
+	int sockfd;
+	struct ifreq ifr;
+	struct sockaddr s_addr, s_mask, s_brd;
+	int j;
+
+	printf("Changing primary ip with ioctl\n");
+	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+	if (sockfd < 0) {
+		perror("socket");
+		return;
+	}
+	strncpy(ifr.ifr_name, dev, IFNAMSIZ);
+	ifr.ifr_name[IFNAMSIZ-1] = '\0';
+	s_addr.sa_family = AF_INET;
+	inet_pton(AF_INET, addr, &s_addr.sa_data[2]);
+	ifr.ifr_addr = s_addr;
+
+	if (ioctl(sockfd, SIOCSIFADDR, &ifr)) {
+		perror("SIOCSIFADDR");
+		return;
+	}
+	
+	s_mask.sa_family = AF_INET;
+	inet_pton(AF_INET, netmask, &s_mask.sa_data[2]);
+	ifr.ifr_netmask = s_mask;
+
+	if (ioctl(sockfd, SIOCSIFNETMASK, &ifr) < 0) {
+		perror("SIOCSIFNETMASK");
+		return;
+	}
+
+	s_brd.sa_family = AF_INET;
+	for (j=0; j<4; j++) {
+		s_brd.sa_data[2+j] = s_addr.sa_data[2+j] | ~s_mask.sa_data[2+j];	
+	}
+	ifr.ifr_broadaddr = s_brd;
+
+	if (ioctl(sockfd, SIOCSIFBRDADDR, &ifr) < 0) {
+		perror("SIOCSIFBRDADDR");
+		return;
+	}
+
+	close(sockfd);
+}
+
 static void cmd_ip(FILE *out, char **argv) {
-	char ip[32];
+	char ip[32], *addr, *mask;
 	int c, secondary = 0;
 	int cmd = RTM_NEWADDR;
+	int has_primary = 0;
+	struct list_head *ipl;
 	
 	memset(ip, 0, sizeof(ip));
 	if (!strcmp(argv[0], "no")) {
 		cmd = RTM_DELADDR;
 		argv++;
 	}
-	c = sprintf(ip, "%s/", *argv++);
-	sprintf(ip+c, "%d", parse_mask(*argv, ' '));
-	argv++;
-	if (*argv && !strcmp(*argv, "secondary"))
+	addr = *argv++;
+	c = sprintf(ip, "%s/", addr);
+	mask = *argv++;
+	sprintf(ip+c, "%d", parse_mask(mask, ' '));
+	has_primary = has_primary_ip(sel_vlan);
+	if (*argv && !strcmp(*argv, "secondary")) {
 		secondary = 1;
+		if (cmd == RTM_NEWADDR && !has_primary)
+			return;
+	}
+	if (cmd == RTM_DELADDR && has_primary) {
+		ipl = list_ip_addr(sel_vlan, 0); 	
+		if (ipl && check_ip_primary(ipl, addr, mask)) { 
+			free(ipl);
+			fprintf(out, "Must delete secondary before deleting primary\n");
+			return;
+		}	
+	}
+	
+	if (cmd == RTM_NEWADDR && has_primary && !secondary) {
+		change_primary_ip(sel_vlan, addr, mask);
+		return;
+	}
+			
 	change_ip_address(cmd, sel_vlan, ip, secondary);
 }
 
 static void cmd_no_ip(FILE *out, char **argv) {
-	list_ip_addr(out, sel_vlan, 1, FMT_NOCMD);
+	list_ip_addr(sel_vlan, 1);
 }
 
 int get_ip_bytes(int *data, char *arg, char lookahead) {

@@ -76,6 +76,7 @@ void init_cmpl_state(sw_completion_state_t *cm) {
 	cm->offset = 0;
 	cm->start = NULL;
 	cm->cmpl = 1;
+	cm->no_match_token = 0;
 }
 
 
@@ -99,11 +100,15 @@ void dump_completion_state(sw_completion_state_t *cm) {
 			"\tsearch_set: %p\n"
 			"\trunnable: %d\n"
 			"\tvalid: %p\n"
-			"\tcmd_full_name: %s\n",
+			"\tcmd_full_name: %s\n"
+			"\toffset: %d\n"
+			"\tcmpl: %d\n",
 			cm->search_set,
 			cm->runnable,
 			cm->valid,
-			cm->cmd_full_name);
+			cm->cmd_full_name,
+			cm->offset,
+			cm->cmpl);
 }
 
 /* Help function called when the user
@@ -129,6 +134,11 @@ int list_current_options(int something, int key) {
 		goto out;
 	}
 	
+	if (cmpl_state.no_match_token) { 
+		swcli_invalid_cmd();
+		goto out;
+	}	
+
 	if (!cmpl_state.search_set) {
 		/* complete command with no search set */
 		if (cmpl_state.runnable & RUN)
@@ -245,6 +255,7 @@ int change_search_scope(char *match, char *rest, char lookahead)  {
 	char *name, *arg;
 	struct cmd *set = NULL;
 	int offset = match - cmpl_state.start;
+	int pcount = 0;
 
 	if (!cmpl_state.search_set) {
 		cmpl_state.runnable = NA;
@@ -267,6 +278,7 @@ int change_search_scope(char *match, char *rest, char lookahead)  {
 				break;
 			}
 		}
+		else if (!strncmp(match, name, strlen(match))) pcount++;
 		else if (cmpl_state.search_set[i].valid) {
 			arg = (cmpl_state.search_set[i].state & PTCNT)? match: rest;
 			if (cmpl_state.search_set[i].valid(arg, lookahead)) {
@@ -288,6 +300,10 @@ int change_search_scope(char *match, char *rest, char lookahead)  {
 		}
     }
 
+	if (!count && !pcount) {
+		cmpl_state.no_match_token = 1;
+	}
+	
 	if (count==1) {
 		cmpl_state.search_set = set;
 		return count;
@@ -469,7 +485,7 @@ char *swcli_generator(const char *text, int state) {
 
 	dbg("generator: search_set at 0x%x\n", cmpl_state.search_set);
 	
-	if (! cmpl_state.search_set || !strlen(text)) 
+	if (! cmpl_state.search_set || !strlen(text) || cmpl_state.no_match_token) 
 		return ((char *)NULL);
 
 	/* on first call do some initialization */

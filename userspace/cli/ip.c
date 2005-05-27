@@ -148,12 +148,12 @@ char *prefix_2_nmask(int bitcount) {
 	return buf;
 }
 
-int print_addrinfo(FILE *out, struct nlmsghdr *n, struct ifaddrmsg *ifa,
-		int flush, int fmt) {
+void print_addr_info(struct nlmsghdr *n, struct ifaddrmsg *ifa,
+		int flush, struct list_head *ipl) {
 	struct rtattr *rta_tb[IFA_MAX+1];
-	char abuf[256];
+	char abuf[MAX_NAME_LEN];
 	char buf[32];
-	int count = 0;
+	struct ip_addr_entry *entry;
 
 	assert(n->nlmsg_len - NLMSG_LENGTH(sizeof(*ifa)) > 0);
 	parse_rtattr(rta_tb, IFA_MAX, IFA_RTA(ifa), n->nlmsg_len - NLMSG_LENGTH(sizeof(*ifa)));
@@ -163,46 +163,35 @@ int print_addrinfo(FILE *out, struct nlmsghdr *n, struct ifaddrmsg *ifa,
 	if (!rta_tb[IFA_ADDRESS])
 		rta_tb[IFA_ADDRESS] = rta_tb[IFA_LOCAL];
 
-	if (ifa->ifa_family == AF_INET && !flush &&
-			fmt == FMT_NOCMD)
-		fprintf(out, "    inet ");
 	if (rta_tb[IFA_LOCAL]) {
 		if (!flush) {
-			switch (fmt) {
-			case FMT_NOCMD:
-				fprintf(out, "%s/%d", inet_ntop(ifa->ifa_family, 
-						RTA_DATA(rta_tb[IFA_LOCAL]), abuf, sizeof(abuf)),
-						ifa->ifa_prefixlen);
-				break;
-			case FMT_CMD:
-				fprintf(out, " ip address %s %s\n", 
-						inet_ntop(ifa->ifa_family,
-							RTA_DATA(rta_tb[IFA_LOCAL]), abuf, sizeof(abuf)),
-							prefix_2_nmask(ifa->ifa_prefixlen));
-			}	
+			entry = (struct ip_addr_entry *)malloc(sizeof(struct ip_addr_entry));
+			if (!entry) {
+				perror("Out of memory");
+				return;
+			}
+			inet_ntop(ifa->ifa_family, RTA_DATA(rta_tb[IFA_LOCAL]), entry->inet, 
+					MAX_NAME_LEN);
+			entry->inet[MAX_NAME_LEN-1] = '\0';
+			strncpy(entry->mask, prefix_2_nmask(ifa->ifa_prefixlen), MAX_NAME_LEN);
+			entry->mask[MAX_NAME_LEN-1] = '\0';
+			list_add_tail(&entry->lh, ipl);
+			return;
 		}
-		else {
-			memset(buf, 0, sizeof(buf));
-			sprintf(buf, "%s/%d", inet_ntop(ifa->ifa_family, 
-					RTA_DATA(rta_tb[IFA_LOCAL]), abuf, sizeof(abuf)),
-					ifa->ifa_prefixlen);
-			change_ip_address(RTM_DELADDR, 
-					if_name_by_index(ifa->ifa_index), buf, 0);
-		}
-		count++;
+		/* here we delete the address */
+		memset(buf, 0, sizeof(buf));
+		inet_ntop(ifa->ifa_family, RTA_DATA(rta_tb[IFA_LOCAL]), abuf, sizeof(abuf));
+		abuf[sizeof(abuf)-1] = '\0';
+		snprintf(buf, sizeof(buf), "%s/%d", abuf, ifa->ifa_prefixlen);
+		buf[sizeof(buf)-1] = '\0';
+		change_ip_address(RTM_DELADDR, 
+				if_name_by_index(ifa->ifa_index), buf, 0);
 	}
-
-	if (!flush && fmt == FMT_NOCMD)
-		fprintf(out, "\n");
-
-	return count;
 }
 
 
-int print_addr(FILE *out, int ifindex, struct nlmsg_list *ainfo, 
-		int flush, int fmt) {
-	int count = 0;
-	int old_ifindex = -1;
+void print_addr(int ifindex, struct nlmsg_list *ainfo, 
+		int flush, struct list_head *ipl) {
 	
 	for (; ainfo; ainfo = ainfo->next) {
 		struct nlmsghdr *n = &ainfo->h;
@@ -211,18 +200,11 @@ int print_addr(FILE *out, int ifindex, struct nlmsg_list *ainfo,
 		if (n->nlmsg_type != RTM_NEWADDR)
 			continue;
 		if (n->nlmsg_len < NLMSG_LENGTH(sizeof(ifa)))
-			return 0;
+			return;
 		if (ifindex && ifindex != ifa->ifa_index)
 			continue;
-		if (old_ifindex != ifa->ifa_index && !flush) {
-			if (fmt == FMT_NOCMD)
-				fprintf(out, "%s: \n", if_name_by_index(ifa->ifa_index));
-			old_ifindex = ifa->ifa_index;
-			count = 0;
-		}	
-		count += print_addrinfo(out, n, ifa, flush, fmt);
+		print_addr_info(n, ifa, flush, ipl);
 	}
-	return count;
 }
 
 int change_ip_address(int cmd, char *dev, char *address, int secondary) {
@@ -279,39 +261,40 @@ int change_ip_address(int cmd, char *dev, char *address, int secondary) {
 	return 0;
 }
 
-int list_ip_addr(FILE *out, char *dev, int flush, int fmt) {
+struct list_head *list_ip_addr(char *dev, int flush) {
 	struct nlmsg_list *ainfo = NULL;
 	struct rtnl_handle rth;
-	int ret, ifindex = 0;
+	int ifindex = 0;
+	struct list_head *ip_list = NULL;  
 	
-	if ((ret = rtnl_open(&rth)))
-		return ret;
+	if (rtnl_open(&rth))
+		return NULL;
 	
-	if ((ret = ll_init_map(&rth)))
-		return ret;
+	if (ll_init_map(&rth))
+		return NULL;
 	
 	if (dev) {
 		if ((ifindex = index_by_if_name(dev)) <= 0) {
 			fprintf(stderr, "Device \"%s\" does not exist.\n", dev);
-			return -1;
+			return NULL;
 		}
 	}
-	
-	if ((ret = rtnl_wilddump_request(&rth, AF_INET, RTM_GETADDR)) < 0) {
+
+	if (rtnl_wilddump_request(&rth, AF_INET, RTM_GETADDR) < 0) {
 		perror("Cannot send dump request");
-		return ret;
+		return NULL;
 	}
 
-	if ((ret = rtnl_dump_filter(&rth, store_nlmsg, &ainfo)) < 0) {
+	if (rtnl_dump_filter(&rth, store_nlmsg, &ainfo) < 0) {
 		fprintf(stderr, "Dump terminated\n");
-		return ret;
+		return NULL;
 	} 
 
-	if (!print_addr(out, ifindex, ainfo, flush, fmt) &&
-			fmt == FMT_CMD && dev) {
-		fprintf(out, " no ip address\n");
-	}
+	ip_list = (struct list_head *) malloc(sizeof(struct list_head));
+	INIT_LIST_HEAD(ip_list);
+	
+	print_addr(ifindex, ainfo, flush, ip_list);
 
 	rtnl_close(&rth);
-	return 0;
+	return ip_list;
 }

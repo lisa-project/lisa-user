@@ -12,6 +12,27 @@ extern int errno;
 #include "shared.h"
 #include "ip.h"
 
+void list_interface_status(FILE *out, char *dev) {
+	int sockfd;
+	struct ifreq ifr;
+
+	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+	if (sockfd < 0) {
+		perror("socket");
+		return;
+	}
+	strncpy(ifr.ifr_name, dev, IFNAMSIZ);
+	ifr.ifr_name[IFNAMSIZ-1] = '\0';
+	if (ioctl(sockfd, SIOCGIFFLAGS, &ifr) < 0) {
+		perror("SIOCGIFFLAGS");
+		close(sockfd);
+		return;
+	}
+	if (!(ifr.ifr_flags & IFF_UP)) 
+		fprintf(out, " shutdown\n");
+	close(sockfd);
+}
+
 int list_vlans_token(unsigned char *bmp, int vlan, char *token) {
 	int i, min;
 	while(vlan <= SW_MAX_VLAN && sw_forbidden_vlan(bmp, vlan))
@@ -176,6 +197,55 @@ void dump_static_macs(FILE *out) {
 	free(buf);
 }
 
+int pretty_print(FILE *out, struct list_head *ipl) {
+	int count = 0;
+	struct ip_addr_entry *entry, *tmp;
+
+	list_for_each_entry_safe(entry, tmp, ipl, lh) {
+		fprintf(out, " ip address %s %s", entry->inet, entry->mask);
+		count++;
+		if (count > 1)
+			fprintf(out, " secondary");
+		fprintf(out, "\n");
+		list_del(&entry->lh);
+		free(entry);
+	}
+
+	return count;
+}
+
+void build_list_ip_addr(FILE *out, char *dev) {
+	FILE *fh;
+	char buf[128];
+	struct list_head *ipl;
+	
+	/* No interface specified, we print out all ip 
+	 information about lms virtual interfaces */
+	fh = fopen(PROCNETSWITCH_PATH, "r");
+	if (!fh) {
+		perror("fopen");
+		exit(-1);
+	}
+	while (fgets(buf, sizeof(buf), fh)) {
+		buf[strlen(buf)-1] = '\0';
+		if (dev && strcmp(dev, buf))
+			continue;
+		fprintf(out, "interface %s\n", buf);		
+		ipl = list_ip_addr(buf, 0);
+		if (!ipl || list_empty(ipl))
+			fprintf(out, " no ip address\n");
+		else 
+			pretty_print(out, ipl);
+		if (ipl)
+			free(ipl);
+		list_interface_status(out, buf);
+		fprintf(out, "!\n");
+		if (dev)
+			break;	
+	}
+	fclose(fh);
+}
+
 void dump_vlans(FILE *out) {
 	char *buf;
 	int status, size;
@@ -267,7 +337,7 @@ int build_config(FILE *out) {
 	fclose(f);
 	
 	/* virtual interfaces */	
-	build_list_ip_addr(out, NULL, FMT_CMD);
+	build_list_ip_addr(out, NULL);
 #ifdef USE_EXIT_IN_CONF
 	fprintf(out, "exit\n");
 #endif

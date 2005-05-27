@@ -2,11 +2,17 @@
 #define __SW_IP_H
 
 #include "netlink.h"
+#include "list.h"
 
-#define FMT_NOCMD 0
-#define FMT_CMD 1
+#define MAX_NAME_LEN 16
 
 extern int change_ip_address(int, char *, char *, int);
-extern int list_ip_addr(FILE *, char *, int, int);
+extern struct list_head *list_ip_addr(char *, int);
+
+struct ip_addr_entry {
+	struct list_head lh;
+	char inet[MAX_NAME_LEN];
+	char mask[MAX_NAME_LEN];
+};
 
 #endif

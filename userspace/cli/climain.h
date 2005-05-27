@@ -48,6 +48,7 @@ typedef struct completion {
 	char *start;
 	int offset;
 	int cmpl;
+	int no_match_token;
 } sw_completion_state_t;
 
 extern sw_command_root_t *cmd_root;
