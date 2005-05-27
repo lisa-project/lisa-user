@@ -45,7 +45,7 @@ echo " done."
 echo -n "Installing base system binaries "
 FIX="/bin/ping /bin/traceroute"
 for i in /bin/ash /bin/grep /bin/hostname /bin/more /bin/mount /bin/sed \
-		/sbin/agetty /sbin/e2fsck /sbin/init \
+		/sbin/agetty /sbin/e2fsck /sbin/init /sbin/sysctl \
 		/usr/sbin/in.telnetd \
 		"/usr/bin/[" \
 		\
@@ -60,7 +60,7 @@ echo " done."
 
 echo -n "Installing various configuration files "
 for i in /etc/ld.so.conf /etc/inittab /etc/passwd /etc/termcap \
-		/etc/rc.d/rc.sysinit /etc/fstab \
+		/etc/rc.d/rc.sysinit /etc/fstab /etc/sysctl.conf \
 		/boot/grub/grub.conf /boot/grub/device.map \
 		;do
 		install -m 0644 -D "dist$i" "$DST$i" && echo -n "#"

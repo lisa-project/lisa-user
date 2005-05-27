@@ -28,6 +28,9 @@ mount -t tmpfs -o size=1m tmpfs /tmp
 # Setup devpts
 mount -t devpts devpts /dev/pts
 
+# Configure kernel parameters
+sysctl -p > /dev/null
+
 # Read switch initial configuration
 echo "Loading configuration"
 swcfgload
