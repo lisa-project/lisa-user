@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/shm.h>
+#include <sys/sem.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
@@ -20,6 +21,19 @@ char *key_file_path = "/tmp/cli";
 struct cli_config *cfg = NULL;
 int shmid;
 int semid;
+static int cfg_locked = 0;
+
+static struct sembuf P = {
+	.sem_num = 0,
+	.sem_op = -1,
+	.sem_flg = 0,
+};
+
+static struct sembuf V = {
+	.sem_num = 0,
+	.sem_op = -1,
+	.sem_flg = 0,
+};
 
 void cfg_init_data(void) {
 	memset(cfg, 0, sizeof(struct cli_config));
@@ -47,19 +61,26 @@ int cfg_init(void) {
 	cfg = shmat(shmid, NULL, 0);
 	if((int)cfg == -1)
 		return -4;
-	//FIXME create sema
+	if((semid = semget(key, 1, IPC_CREAT | 0600)) == -1)
+		return -5;
 	if(init_data)
 		cfg_init_data();
 	return 0;
 }
 
 int cfg_lock(void) {
-	//FIXME lock sema
+	if(cfg_locked)
+		return 1;
+	semop(semid, &P, 1);
+	cfg_locked = 1;
 	return 0;
 }
 
 int cfg_unlock(void) {
-	//FIXME unlock sema
+	if(!cfg_locked)
+		return 1;
+	semop(semid, &V, 1);
+	cfg_locked = 0;
 	return 0;
 }
 
