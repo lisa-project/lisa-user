@@ -218,6 +218,7 @@ void build_list_ip_addr(FILE *out, char *dev) {
 	FILE *fh;
 	char buf[128];
 	struct list_head *ipl;
+	int vlan;
 	
 	/* No interface specified, we print out all ip 
 	 information about lms virtual interfaces */
@@ -230,7 +231,8 @@ void build_list_ip_addr(FILE *out, char *dev) {
 		buf[strlen(buf)-1] = '\0';
 		if (dev && strcmp(dev, buf))
 			continue;
-		fprintf(out, "interface %s\n", buf);		
+		sscanf(buf, "vlan%d", &vlan);
+		fprintf(out, "interface vlan %d\n", vlan);		
 		ipl = list_ip_addr(buf, 0);
 		if (!ipl || list_empty(ipl))
 			fprintf(out, " no ip address\n");
@@ -333,6 +335,7 @@ int build_config(FILE *out) {
 		if(*p2 != '\0')
 			continue;
 		build_int_eth_config(out, atoi(p1));
+		fprintf(out, "!\n");
 	}
 	fclose(f);
 	

@@ -145,7 +145,6 @@ static void change_primary_ip(char *dev, char *addr, char *netmask) {
 	struct sockaddr s_addr, s_mask, s_brd;
 	int j;
 
-	printf("Changing primary ip with ioctl\n");
 	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (sockfd < 0) {
 		perror("socket");
