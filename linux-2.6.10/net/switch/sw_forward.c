@@ -302,7 +302,10 @@ __dbg_static int __sw_multicast(struct net_switch *sw, struct net_switch_port *i
 	}
 	else {
 		dbg("multicast: no ports, freeing skb.\n");
-		dev_kfree_skb(skb);
+		/* Don't free the skb this time like we do in sw_flood, because
+		   the packet won't be dropped. Instead it will be flooded to all
+		   ports later in sw_forward().
+		 */
 	}
 	dbg("__sw_multicast: cloned=%d copied=%d unshared=%d\n", cloned, copied,
 			unshared);
