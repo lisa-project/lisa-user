@@ -51,6 +51,8 @@ int sw_vif_hard_start_xmit(struct sk_buff *skb, struct net_device *dev) {
 	skb->mac_len = ETH_HLEN;
 	skb->dev = dev;
 	skb_pull(skb, ETH_HLEN);
+	dbg("sw_vif_hard_xmit: skb=0x%p skb headroom: %d (head=0x%p data=0x%p)\n",
+			skb, skb->data - skb->head, skb->head, skb->data);
 	if(sw_forward(&priv->bogo_port, skb, &skb_e)) {
 		priv->stats.tx_packets++;
 		priv->stats.tx_bytes += pkt_len;
@@ -69,6 +71,8 @@ void sw_vif_rx(struct sk_buff *skb) {
 	priv = netdev_priv(skb->dev);
 	priv->stats.rx_packets++;
 	priv->stats.rx_bytes += skb->data_len;
+	dbg("sw_vif_rx: skb=0x%p skb headroom: %d (head=0x%p data=0x%p)\n", 
+			skb, skb->data - skb->head, skb->head, skb->data);
 	netif_receive_skb(skb);
 }
 
