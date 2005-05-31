@@ -20,10 +20,11 @@
 #include "sw_debug.h"
 
 __dbg_static inline void add_vlan_tag(struct sk_buff *skb, int vlan) {
-
+	int nhead = (ETH_HLEN + VLAN_TAG_BYTES) - (skb->data - skb->head);
+	
 	/* If we don't have enough headroom, we make some */
-	if (skb->data - skb->head < ETH_HLEN + VLAN_TAG_BYTES) {
-		pskb_expand_head(skb, VLAN_TAG_BYTES, 0, GFP_ATOMIC); 
+	if (nhead > 0) {
+		pskb_expand_head(skb, nhead, 0, GFP_ATOMIC); 
 		dbg("add_vlan_tag: pskb_expand_head necessary\n");
 		dbg("add_vlan_tag(after expand): skb=0x%p skb headroom: %d (head=0x%p data=0x%p)\n",
 			skb, skb->data - skb->head, skb->head, skb->data);
@@ -79,7 +80,7 @@ __dbg_static void sw_skb_unshare(struct sk_buff **skb) {
 	struct sk_buff *skb2;
 
 	if (atomic_read(&skb_shinfo(*skb)->dataref)) {
-		skb2 = skb_copy_expand(*skb, VLAN_TAG_BYTES, 0, GFP_ATOMIC);
+		skb2 = skb_copy_expand(*skb, ETH_HLEN+VLAN_TAG_BYTES, 0, GFP_ATOMIC);
 		dev_kfree_skb(*skb);
 		*skb = skb2;
 	}
@@ -146,7 +147,7 @@ __dbg_static int __sw_flood(struct net_switch *sw, struct net_switch_port *in,
 			   lh1
 			 */
 			__sw_flood_inc_copied;
-			skb2 = skb_copy_expand(skb, VLAN_TAG_BYTES, 0, GFP_ATOMIC);
+			skb2 = skb_copy_expand(skb, ETH_HLEN+VLAN_TAG_BYTES, 0, GFP_ATOMIC);
 			f(skb2, vlan);
 			needs_tag_change = 0;
 			sw_skb_xmit(skb, prev->port->dev, PACKET_BROADCAST);
@@ -267,7 +268,7 @@ __dbg_static int __sw_multicast(struct net_switch *sw, struct net_switch_port *i
 			   lh1
 			 */
 			__sw_flood_inc_copied;
-			skb2 = skb_copy_expand(skb, VLAN_TAG_BYTES, 0, GFP_ATOMIC);
+			skb2 = skb_copy_expand(skb, ETH_HLEN+VLAN_TAG_BYTES, 0, GFP_ATOMIC);
 			f(skb2, vlan);
 			needs_tag_change = 0;
 			sw_skb_xmit(skb, prev->port->dev, PACKET_BROADCAST);
