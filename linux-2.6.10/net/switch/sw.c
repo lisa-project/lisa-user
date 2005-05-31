@@ -196,7 +196,7 @@ static void init_switch(struct net_switch *sw) {
 	}
 	memcpy(sw->vif_mac, "\0lms\0\0", 6);
 	/* TODO module parameter to initialize vif_mac */
-	atomic_set(&sw->fdb_age_time, SW_DEFAULT_AGE_TIME); 
+	atomic_set(&sw->fdb_age_time, SW_DEFAULT_AGE_TIME * HZ); 
 	sw_fdb_init(sw);
 	init_switch_proc();
 	sw_vdb_init(sw);

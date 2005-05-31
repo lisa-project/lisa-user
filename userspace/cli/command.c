@@ -540,17 +540,26 @@ static void cmd_show_vlan(FILE *out, char **argv) {
 	fclose(in);
 }
 
-static void cmd_sh_mac_age(FILE *out, char **argv) {
+time_t get_mac_age() {
 	struct net_switch_ioctl_arg ioctl_arg;
 	int status;
 
 	ioctl_arg.cmd = SWCFG_GETAGETIME;
 	memset(&ioctl_arg.ext.ts, 0, sizeof(struct timespec));
 	status = ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
-	if (status) 
+	if (status) { 
 		perror("Error getting age time");
-	else
-		fprintf(out, "%li\n", ioctl_arg.ext.ts.tv_sec);
+		return -1;
+	}	
+	return ioctl_arg.ext.ts.tv_sec;
+}
+
+static void cmd_sh_mac_age(FILE *out, char **argv) {
+	long age;
+
+	if ((age = get_mac_age()) >= 0) {
+		fprintf(out, "%li\n", age);
+	}
 }
 
 static void cmd_wrme(FILE *out, char **argv) {

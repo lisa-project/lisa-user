@@ -294,6 +294,14 @@ void dump_vlans(FILE *out) {
 	}
 }
 
+void dump_mac_aging_time(FILE *out) {
+	long age;
+
+	age = get_mac_age();
+	if (age >= 0 && age != SW_DEFAULT_AGE_TIME)
+		fprintf(out, "mac-address-table aging-time %li\n!\n", age);
+}
+
 int build_config(FILE *out) {
 	char buf[4096], *p1, *p2;
 	FILE *f;
@@ -347,6 +355,9 @@ int build_config(FILE *out) {
 
 	/* static macs */
 	dump_static_macs(out);
+
+	/* fdb mac aging time */
+	dump_mac_aging_time(out);
 
 	/* line vty stuff */
 	fprintf(out, "!\nline vty 0 15\n");

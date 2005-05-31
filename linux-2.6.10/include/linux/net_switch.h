@@ -101,6 +101,8 @@ struct net_switch_mac_arg {
 	char *buf;
 };
 
+#define SW_DEFAULT_AGE_TIME 300
+
 #define SW_MAX_VLAN_NAME	31
 
 struct net_switch_usr_vdb {

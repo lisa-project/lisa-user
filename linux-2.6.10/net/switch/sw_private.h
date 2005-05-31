@@ -30,9 +30,6 @@
 #define SW_HASH_SIZE_BITS 12
 #define SW_HASH_SIZE (1 << SW_HASH_SIZE_BITS)
 
-#define SW_DEFAULT_AGE_TIME HZ*15
-
-
 /* Hash bucket */
 struct net_switch_bucket {
 	/*
