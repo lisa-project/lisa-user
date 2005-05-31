@@ -19,23 +19,20 @@
 #include "sw_private.h"
 #include "sw_debug.h"
 
-__dbg_static inline void add_vlan_tag(struct sk_buff **skb, int vlan) {
-	struct sk_buff *skb2 = *skb;
+__dbg_static inline void add_vlan_tag(struct sk_buff *skb, int vlan) {
 
 	/* If we don't have enough headroom, we make some */
-	if (skb2->data - skb2->head < ETH_HLEN + VLAN_TAG_BYTES) {
-		skb2 = skb_copy_expand(*skb, VLAN_TAG_BYTES, 0, GFP_ATOMIC); 
-		dbg("add_vlan_tag: skb_copy_expand necessary\n");
+	if (skb->data - skb->head < ETH_HLEN + VLAN_TAG_BYTES) {
+		pskb_expand_head(skb, VLAN_TAG_BYTES, 0, GFP_ATOMIC); 
+		dbg("add_vlan_tag: pskb_expand_head necessary\n");
 		dbg("add_vlan_tag(after expand): skb=0x%p skb headroom: %d (head=0x%p data=0x%p)\n",
-			skb2, skb2->data - skb2->head, skb2->head, skb2->data);
-		dev_kfree_skb(*skb);
-		*skb = skb2;
+			skb, skb->data - skb->head, skb->head, skb->data);
 	}
-	memmove(skb2->mac.raw-VLAN_TAG_BYTES, skb2->mac.raw, 2 * ETH_ALEN);	
-	skb2->mac.raw -= VLAN_TAG_BYTES;
-	skb_push(skb2, VLAN_TAG_BYTES);
-	*(short *)skb2->data = htons((short)vlan);
-	*(short *)(skb2->mac.raw + ETH_HLEN - 2) = htons(ETH_P_8021Q);
+	memmove(skb->mac.raw-VLAN_TAG_BYTES, skb->mac.raw, 2 * ETH_ALEN);	
+	skb->mac.raw -= VLAN_TAG_BYTES;
+	skb_push(skb, VLAN_TAG_BYTES);
+	*(short *)skb->data = htons((short)vlan);
+	*(short *)(skb->mac.raw + ETH_HLEN - 2) = htons(ETH_P_8021Q);
 }
 
 __dbg_static inline void strip_vlan_tag(struct sk_buff *skb) {
@@ -45,8 +42,8 @@ __dbg_static inline void strip_vlan_tag(struct sk_buff *skb) {
 	skb->protocol = *(short *)(skb->mac.raw + ETH_HLEN - 2);
 }
 
-__dbg_static inline void __strip_vlan_tag(struct sk_buff **skb, int i) {
-	strip_vlan_tag(*skb);
+__dbg_static inline void __strip_vlan_tag(struct sk_buff *skb, int vlan) {
+	strip_vlan_tag(skb);
 }
 
 /* FIXME: pkt_type may be PACKET_MULTICAST */
@@ -97,7 +94,7 @@ __dbg_static void __sw_forward(struct net_switch_port *in, struct net_switch_por
 	if (out->flags & SW_PFL_TRUNK && !(in->flags & SW_PFL_TRUNK)) {
 		/* must add vlan tag (vlan = in->vlan) */
 		sw_skb_unshare(&skb);
-		add_vlan_tag(&skb, in->vlan);
+		add_vlan_tag(skb, in->vlan);
 	}
 	else if (!(out->flags & SW_PFL_TRUNK) && in->flags & SW_PFL_TRUNK) {
 		/* must remove vlan tag */
@@ -118,7 +115,7 @@ __dbg_static void __sw_forward(struct net_switch_port *in, struct net_switch_por
 #define __sw_flood_inc_unshared
 #endif
 __dbg_static int __sw_flood(struct net_switch *sw, struct net_switch_port *in,
-	struct sk_buff *skb, int vlan, void (*f)(struct sk_buff **, int),
+	struct sk_buff *skb, int vlan, void (*f)(struct sk_buff *, int),
 	struct list_head *lh1, struct list_head *lh2) {
 #ifdef DEBUG
 	int cloned = 0, copied = 0, unshared = 0;
@@ -150,7 +147,7 @@ __dbg_static int __sw_flood(struct net_switch *sw, struct net_switch_port *in,
 			 */
 			__sw_flood_inc_copied;
 			skb2 = skb_copy_expand(skb, VLAN_TAG_BYTES, 0, GFP_ATOMIC);
-			f(&skb2, vlan);
+			f(skb2, vlan);
 			needs_tag_change = 0;
 			sw_skb_xmit(skb, prev->port->dev, PACKET_BROADCAST);
 			ret++;
@@ -166,7 +163,7 @@ __dbg_static int __sw_flood(struct net_switch *sw, struct net_switch_port *in,
 				 */
 				__sw_flood_inc_unshared;
 				sw_skb_unshare(&skb);
-				f(&skb, vlan);
+				f(skb, vlan);
 				needs_tag_change = 0;
 			}
 			__sw_flood_inc_cloned;
@@ -185,7 +182,7 @@ __dbg_static int __sw_flood(struct net_switch *sw, struct net_switch_port *in,
 			 */
 			__sw_flood_inc_unshared;
 			sw_skb_unshare(&skb);
-			f(&skb, vlan);
+			f(skb, vlan);
 		}	
 		sw_skb_xmit(skb, prev->port->dev, PACKET_BROADCAST);
 		ret++;
@@ -213,7 +210,7 @@ __dbg_static int __sw_flood(struct net_switch *sw, struct net_switch_port *in,
    one of them is buggy, then most probably the other one is too :P
  */
 __dbg_static int __sw_multicast(struct net_switch *sw, struct net_switch_port *in,
-	struct sk_buff *skb, int vlan, void (*f)(struct sk_buff **, int),
+	struct sk_buff *skb, int vlan, void (*f)(struct sk_buff *, int),
 	struct list_head *fdb_entry_lh, int first_trunkness) {
 #ifdef DEBUG
 	int cloned = 0, copied = 0, unshared = 0;
@@ -271,7 +268,7 @@ __dbg_static int __sw_multicast(struct net_switch *sw, struct net_switch_port *i
 			 */
 			__sw_flood_inc_copied;
 			skb2 = skb_copy_expand(skb, VLAN_TAG_BYTES, 0, GFP_ATOMIC);
-			f(&skb2, vlan);
+			f(skb2, vlan);
 			needs_tag_change = 0;
 			sw_skb_xmit(skb, prev->port->dev, PACKET_BROADCAST);
 			ret++;
@@ -287,7 +284,7 @@ __dbg_static int __sw_multicast(struct net_switch *sw, struct net_switch_port *i
 				 */
 				__sw_flood_inc_unshared;
 				sw_skb_unshare(&skb);
-				f(&skb, vlan);
+				f(skb, vlan);
 				needs_tag_change = 0;
 			}
 			__sw_flood_inc_cloned;
@@ -306,7 +303,7 @@ __dbg_static int __sw_multicast(struct net_switch *sw, struct net_switch_port *i
 			 */
 			__sw_flood_inc_unshared;
 			sw_skb_unshare(&skb);
-			f(&skb, vlan);
+			f(skb, vlan);
 		}	
 		sw_skb_xmit(skb, prev->port->dev, PACKET_BROADCAST);
 		ret++;
