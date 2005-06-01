@@ -221,6 +221,13 @@ int swcli_ignore_keyseq(int i, int j) {
 	return 0;
 }
 
+/* Executed on SIGINT (clears rl_line_buffer
+   and forces redisplay) */
+void cancel_command(int sig) {
+	printf("\n");
+	rl_replace_line("", 1);
+	rl_forced_update_display();
+}
 
 /* Override some readline defaults */
 int swcli_init_readline() {
@@ -230,7 +237,7 @@ int swcli_init_readline() {
 	rl_readline_name = "SwCli";
 
 	/* Setup to ignore SIGINT and SIGTSTP */
-	signal(SIGINT, SIG_IGN);
+	signal(SIGINT, cancel_command);
 	signal(SIGTSTP, SIG_IGN);
 
 	/* Tell the completer we want a crack first */
