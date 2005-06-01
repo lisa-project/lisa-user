@@ -72,7 +72,7 @@ extern int parse_vlan(char *);
 extern int valid_mac(char *, char);
 extern int parse_mac(char *, unsigned char *);
 extern void cmd_showmac(FILE *, char *);
-extern long get_mac_age();
+extern int get_mac_age();
 extern char *default_vlan_name(int);
 
 extern sw_command_root_t command_root_main;

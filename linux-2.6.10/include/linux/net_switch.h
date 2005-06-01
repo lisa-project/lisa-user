@@ -67,10 +67,8 @@
 #define SW_DUPLEX_FULL		0x03
 
 #ifdef __KERNEL__
-#include <linux/time.h>
 #include <linux/if.h>
 #else
-#include <sys/time.h>
 #ifndef _LINUX_IF_H
 #include <net/if.h>
 #include <net/ethernet.h>
@@ -123,7 +121,7 @@ struct net_switch_ioctl_arg {
 	union {
 		int access;
 		int trunk;
-		struct timespec ts;
+		int nsec;
 		unsigned char *mac;
 		unsigned char *bmp;
 		char *vlan_desc;

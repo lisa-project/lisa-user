@@ -535,16 +535,17 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 		err = 0;
 		break;
 	case SWCFG_SETAGETIME:
-		if (arg.ext.ts.tv_sec <= 0) { 
+		/* FIXME use constants for arg.ext.nsec range */
+		if (arg.ext.nsec < 10 || arg.ext.nsec > 1000000) { 
 			err = -EINVAL;
 			break;
-		}	
-		atomic_set(&sw.fdb_age_time, timespec_to_jiffies(&arg.ext.ts));
+		}
+		atomic_set(&sw.fdb_age_time, arg.ext.nsec * HZ);
 		err = 0;
 		break;
 	case SWCFG_GETAGETIME:
 		age_time = atomic_read(&sw.fdb_age_time);
-		jiffies_to_timespec(age_time, &arg.ext.ts);
+		arg.ext.nsec = age_time / HZ;
 		err = 0;
 		if(copy_to_user(uarg, &arg, sizeof(struct net_switch_ioctl_arg))) {
 			err = -EFAULT;

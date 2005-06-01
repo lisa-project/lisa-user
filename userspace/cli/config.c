@@ -167,17 +167,23 @@ static void cmd_noensecret_lev(FILE *out, char **argv) {
 }
 
 static void cmd_set_aging(FILE *out, char **argv) {
-	int age;
 	struct net_switch_ioctl_arg ioctl_arg;
 	int status;
 	
-	sscanf(*argv, "%d", &age);
+	sscanf(*argv, "%d", &ioctl_arg.ext.nsec);
 	ioctl_arg.cmd = SWCFG_SETAGETIME;
-	ioctl_arg.ext.ts.tv_sec = age;
-	ioctl_arg.ext.ts.tv_nsec = 0;
 	status = ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 	if (status)
 		perror("Error setting age time");
+}
+
+static void cmd_set_noaging(FILE *out, char **argv) {
+	struct net_switch_ioctl_arg ioctl_arg;
+	int status;
+
+	ioctl_arg.cmd = SWCFG_SETAGETIME;
+	ioctl_arg.ext.nsec = SW_DEFAULT_AGE_TIME;
+	status = ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
 static void cmd_linevty(FILE *out, char **argv) {
@@ -347,7 +353,7 @@ static sw_command_t sh_macstatic[] = {
 };
 
 static sw_command_t sh_nomac[] = {
-	{"aging-time",			15,	NULL,		NULL,				0,			"Set MAC address table entry maximum age",		NULL},
+	{"aging-time",			15,	NULL,		cmd_set_noaging,	RUN,		"Set MAC address table entry maximum age",		NULL},
 	{"static",				15,	NULL,		NULL,				0,			"static keyword",								sh_macstatic},
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
