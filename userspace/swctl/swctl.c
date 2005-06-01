@@ -80,7 +80,7 @@ void usage() {
 		"  setportvlan iface_name vlan_no\tAdd interface in vlan vlan_no\n"
 		"  \t\t\t\t\t(non-trunk mode)\n"
 		"  clearportmac iface_name\t\tClears fdb entries for interface\n"
-		"  setagetime ns\t\t\t\tSets aging interval (in seconds) for fdb entries\n"
+		"  setagetime seconds\t\t\tSets aging interval (in seconds) for fdb entries\n"
 		"  macstatic iface_name vlan_no hw_addr\tAdds a static mac to interface in vlan vlan_no\n"
 		"  addvif vlan_no\t\t\tCreates a virtual interface for\n"
 		"  \t\t\t\t\tgiven vlan\n"
@@ -251,8 +251,7 @@ int main(int argc, char **argv) {
 			return 0;
 		}
 		user_arg.cmd = SWCFG_SETAGETIME;
-		user_arg.ext.ts.tv_sec = atoi(argv[2]);
-		user_arg.ext.ts.tv_nsec = 0;
+		user_arg.ext.nsec = atoi(argv[2]);
 		status = ioctl(sock, SIOCSWCFG, &user_arg);
 		if (status)
 			perror("setagetime failed");

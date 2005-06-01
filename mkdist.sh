@@ -171,6 +171,6 @@ echo -n "#"
 echo " done."
 
 echo -n "Installing kernel "
-install -m 0600 -D $SW_KPATH/linux-2.6.10/arch/i386/boot/bzImage $DST/flash/vmlinuz
+install -m 0600 -D $SW_KPATH/bzImage $DST/flash/vmlinuz
 echo -n "#"
 echo " done."
