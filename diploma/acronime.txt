@@ -1,1 +1,8 @@
 OSI - Open System Interconnection
+IEEE - Institute of Electrical and Electronics Engineers
+FCS - Frame Check Sequence
+CFI - Canonical Format Indicator is always set to zero for Ethernet switches.
+      CFI is used for compatibility reason between Ethernet type network and
+	  Token Ring type network. If a frame received at an Ethernet port has a
+	  CFI set to 1, then that frame should not be forwarded as it is to an
+	  untagged port.
