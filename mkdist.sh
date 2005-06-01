@@ -108,6 +108,8 @@ if [ -n "$OPT" ]; then
 	done
 	install -m 0755 -D userspace/login/login $DST/bin/login && echo -n "#"
 	install -m 0755 -D dist/sbin/grub-install $DST/sbin/grub-install && echo -n "#"
+	install -m 0755 -D binupdate/binupdate $DST/binupdate && echo -n "#"
+	install -m 0755 -D binupdate/tar $DST/tar && echo -n "#"
 	echo " done."
 fi
 
