@@ -22,7 +22,10 @@
 __dbg_static inline void add_vlan_tag(struct sk_buff *skb, int vlan) {
 	int nhead = (ETH_HLEN + VLAN_TAG_BYTES) - (skb->data - skb->head);
 	
-	/* If we don't have enough headroom, we make some */
+	/* If we don't have enough headroom, we make some :D */
+	/* FIXME daca nu avem destul headroom, poate avem destul tailroom
+	   si atunci e mai eficient sa mutam datele decat sa copiem tot
+	   pachetul si sa mutam headerul */
 	if (nhead > 0) {
 		pskb_expand_head(skb, nhead, 0, GFP_ATOMIC); 
 		dbg("add_vlan_tag: pskb_expand_head necessary\n");
