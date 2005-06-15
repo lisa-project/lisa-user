@@ -1,13 +1,12 @@
 You need to patch and recompile your kernel to use this. We'll assume you
 have a vanilla 2.6.10 kernel source in /usr/src/linux-2.6.10.
 
-Untar the Linux Multilayer Switch archive in /usr/src, then do the
-following:
+Untar the LiSA archive in /usr/src, then do the following:
 
 1. Patch the kernel source:
 
 cd /usr/src/linux-2.6.10
-patch -p1 < ../lms/linux-2.6.10-lms.patch
+patch -p1 < ../lisa/linux-2.6.10-lms.patch
 
 2. Configure the kernel using your favorite method (make menuconfig for
 instance) and enable the switch module under:
@@ -16,17 +15,17 @@ instance) and enable the switch module under:
       -> Networking Options
          -> Ethernet switch
 
-3. Edit /usr/src/lms/userspace/Makefile and change
+3. Edit /usr/src/lisa/userspace/Makefile and change
 the CFLAGS variable to point to the right kernel location, for example:
 CFLAGS = -I/usr/src/linux-2.6.10/include -Wall
 
-4. Compile the userspace tool:
+4. Compile the userspace tools:
 
-cd /usr/src/lms/userspace
+cd /usr/src/lisa/userspace
 make
 
 5. Reboot with the new kernel.
 
-6. Optionaly copy "swctl" from /usr/src/lms/userspace
+6. Optionaly copy "swctl" from /usr/src/lisa/userspace/swctl
 to /usr/sbin, or change your environment configuration so that you can
 run swctl without specifying the full path.

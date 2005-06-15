@@ -1,7 +1,7 @@
-NAME := lms
+NAME := lisa
 KVER := 2.6.10
 
-.PHONY: all dist distopt package patch user
+.PHONY: all dist distopt package patch user site
 
 USE_EXIT_IN_CONF=1
 export USE_EXIT_IN_CONF
@@ -32,9 +32,9 @@ endif
 
 package: patch
 	mkdir $(NAME)
-	cp -r userspace README INSTALL LICENSE $(NAME)
+	cp -r userspace dist README INSTALL LICENSE Makefile $(NAME)
 	cd $(NAME)/userspace && make clean
-	rm -rf $(NAME)/userspace/.svn
+	rm -rf `find $(NAME) -name .svn`
 	mv linux-$(KVER)-lms.patch $(NAME)
 	tar czvf $(NAME).tar.gz $(NAME)
 	rm -rf $(NAME)
@@ -44,3 +44,6 @@ patch:
 
 user:
 	cd userspace && make
+
+site:
+	tar zcvf site.tgz site --exclude site/.svn
