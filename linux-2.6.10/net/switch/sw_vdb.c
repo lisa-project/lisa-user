@@ -94,6 +94,10 @@ int sw_vdb_del_vlan(struct net_switch *sw, int vlan) {
 	   all entrues from the fdb
 	 */
 	fdb_cleanup_vlan(sw, vlan, SW_FDB_ANY);
+	/* Subsequent invocations of the forwarding code will "see" this
+	   VLAN as deleted and will not run on this VLAN. So we can safely
+	   free the link structures without further synchronization.
+	 */
 	list_for_each_entry_safe(link, tmp, &entry->trunk_ports, lh) {
 		kmem_cache_free(sw->vdb_cache, link);
 	}
