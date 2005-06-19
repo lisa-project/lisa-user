@@ -1,0 +1,1 @@
+"Identifier";"Type";"Address";"Annote";"Author";"Booktitle";"Chapter";"Edition";"Editor";"Howpublish";"Institutn";"Journal";"Month";"Note";"Number";"Organizat";"Pages";"Publisher";"School";"Series";"Title";"RepType";"Volume";"Year";"URL";"Custom1";"Custom2";"Custom3";"Custom4";"Custom5";"ISBN"
