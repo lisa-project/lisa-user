@@ -6,6 +6,8 @@ KVER := 2.6.10
 USE_EXIT_IN_CONF=1
 export USE_EXIT_IN_CONF
 
+prune_patch_paths := $(shell for i in linux-2.6.10/config/*; do echo `basename $$i` | sed 's/^/--exclude /' ; done | xargs)
+
 all:
 	@echo "This makefile accepts the following targets:"
 	@echo "dist		Make a binary distribution"
@@ -40,7 +42,7 @@ package: patch
 	rm -rf $(NAME)
 
 patch:
-	diff -Pru --exclude .svn --exclude .config linux-$(KVER).orig linux-$(KVER) | grep -v ^Only > linux-$(KVER)-lms.patch
+	diff -Pru --exclude .svn --exclude .config $(prune_patch_paths) linux-$(KVER).orig linux-$(KVER) | grep -v ^Only > linux-$(KVER)-lms.patch
 
 user:
 	cd userspace && make
