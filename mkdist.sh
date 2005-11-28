@@ -96,7 +96,7 @@ if [ -n "$OPT" ]; then
 	for i in /bin/bash /bin/cat /bin/ls /bin/ps /bin/vi /bin/netstat \
 			/bin/cp /bin/mv /bin/rm /bin/mkdir /bin/rmdir /bin/ln \
 			/bin/df /usr/bin/du /bin/mknod \
-			/usr/bin/ssh /usr/bin/scp \
+			/usr/bin/ssh /usr/bin/scp /usr/bin/ncftpget \
 			/bin/sync /bin/dmesg \
 			/sbin/pidof /sbin/fuser /usr/bin/which \
 			/usr/bin/less /usr/bin/strace \

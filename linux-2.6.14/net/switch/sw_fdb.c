@@ -110,7 +110,7 @@ int fdb_cleanup_port(struct net_switch_port *port, int addr_type) {
 		}
         spin_unlock_bh(&sw->fdb[i].lock);
 	}
-	synchronize_kernel();
+	synchronize_sched();
 	list_for_each_entry_safe(entry, tmp, &del_list, lh) {
 		dbg("About to free fdb entry at 0x%p for port %s\n",
 				entry, entry->port->dev->name);
@@ -140,7 +140,7 @@ int fdb_cleanup_by_type(struct net_switch *sw, int addr_type) {
 		}
         spin_unlock_bh(&sw->fdb[i].lock);
 	}
-	synchronize_kernel();
+	synchronize_sched();
 	list_for_each_entry_safe(entry, tmp, &del_list, lh) {
 		dbg("About to free fdb entry at 0x%p for port %s\n",
 				entry, entry->port->dev->name);
@@ -186,7 +186,7 @@ int fdb_cleanup_vlan(struct net_switch *sw, int vlan, int addr_type) {
 		}
         spin_unlock_bh(&sw->fdb[i].lock);
 	}
-	synchronize_kernel();
+	synchronize_sched();
 	list_for_each_entry_safe(entry, tmp, &del_list, lh) {
 		dbg("About to free fdb entry at 0x%p for port %s\n",
 				entry, entry->port->dev->name);
@@ -237,7 +237,7 @@ int fdb_del(struct net_switch *sw, unsigned char *mac,
 		}
 	}
 	spin_unlock_bh(&sw->fdb[i].lock);
-	synchronize_kernel();
+	synchronize_sched();
 	list_for_each_entry_safe(entry, tmp, &del_list, lh) {
 		dbg("About to free fdb entry at 0x%p for port %s\n",
 				entry, entry->port->dev->name);

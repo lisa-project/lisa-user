@@ -149,7 +149,7 @@ static void __vif_delif(struct net_device *dev) {
 	priv = netdev_priv(dev);
 	list_del_rcu(&priv->lh);
 	sw_vdb_del_port(priv->bogo_port.vlan, &priv->bogo_port);
-	synchronize_kernel();
+	synchronize_sched();
 	unregister_netdev(dev);
 	free_netdev(dev);
 }

@@ -136,7 +136,7 @@ int sw_delif(struct net_device *dev) {
 	   that reference this port, so we have to wait for all running
 	   instances to finish.
 	 */
-	synchronize_kernel();
+	synchronize_sched();
 	/* Now nobody can add references to this port, so we can safely clean
 	   up all existing references from the fdb
 	 */

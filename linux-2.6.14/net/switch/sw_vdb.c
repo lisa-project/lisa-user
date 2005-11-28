@@ -89,7 +89,7 @@ int sw_vdb_del_vlan(struct net_switch *sw, int vlan) {
 		sw_disable_port(link->port);
 	}
 	rcu_assign_pointer(sw->vdb[vlan], NULL);
-	synchronize_kernel();
+	synchronize_sched();
 	/* Now nobody learns macs on this vlan, so we can safely remove
 	   all entrues from the fdb
 	 */
@@ -129,7 +129,7 @@ int sw_vdb_set_vlan_name(struct net_switch *sw, int vlan, char *name) {
     entry_name[SW_MAX_VLAN_NAME] = '\0';
 	old_name = entry->name;
 	rcu_assign_pointer(entry->name, entry_name);
-	synchronize_kernel();
+	synchronize_sched();
 	kfree(old_name);
 
 	return 0;
@@ -215,7 +215,7 @@ int sw_vdb_del_port(int vlan, struct net_switch_port *port) {
 	list_for_each_entry(link, lh, lh) {
 		if(link->port == port) {
 			list_del_rcu(&link->lh);
-			synchronize_kernel();
+			synchronize_sched();
 			kmem_cache_free(port->sw->vdb_cache, link);
 			dbg("vdb: Removed port %s from vlan %d\n", port->dev->name, vlan);
 			return 0;

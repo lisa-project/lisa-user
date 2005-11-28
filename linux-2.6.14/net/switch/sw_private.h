@@ -120,12 +120,12 @@ struct net_switch_vdb_link {
 
 #define sw_disable_port_rcu(port) do {\
 	sw_disable_port(port);\
-	synchronize_kernel();\
+	synchronize_sched();\
 } while(0)
 
 #define sw_enable_port_rcu(port) do {\
 	sw_enable_port(port);\
-	synchronize_kernel();\
+	synchronize_sched();\
 } while(0)
 
 #define sw_set_port_flag(port,flag) ((port)->flags |= (flag))
@@ -133,12 +133,12 @@ struct net_switch_vdb_link {
 
 #define sw_set_port_flag_rcu(port, flag) do {\
 	sw_set_port_flag(port, flag);\
-	synchronize_kernel();\
+	synchronize_sched();\
 } while(0)
 
 #define sw_res_port_flag_rcu(port, flag) do {\
 	sw_res_port_flag(port, flag);\
-	synchronize_kernel();\
+	synchronize_sched();\
 } while(0)
 
 /* Hash Entry */
