@@ -1530,7 +1530,8 @@ static __inline__ int handle_bridge(struct sk_buff **pskb,
 int (*sw_handle_frame_hook)(struct net_switch_port *p, struct sk_buff **pskb);
 
 static __inline__ int handle_switch(struct sk_buff **pskb,
-				    struct packet_type **pt_prev, int *ret)
+				    struct packet_type **pt_prev, int *ret,
+					struct net_device *orig_dev)
 {
 	struct net_switch_port *port;
 
@@ -1548,7 +1549,7 @@ static __inline__ int handle_switch(struct sk_buff **pskb,
 	   handle_switch().
 	 */
 	if (*pt_prev) {
-		*ret = deliver_skb(*pskb, *pt_prev);
+		*ret = deliver_skb(*pskb, *pt_prev, orig_dev);
 		*pt_prev = NULL;
 	}
 	
@@ -1556,7 +1557,7 @@ static __inline__ int handle_switch(struct sk_buff **pskb,
 	return 1;
 }
 #else
-#define handle_switch(skb, pt_prev, ret)	(0)
+#define handle_switch(skb, pt_prev, ret, orig_dev)	(0)
 #endif
 
 #ifdef CONFIG_NET_CLS_ACT
@@ -1673,7 +1674,7 @@ ncls:
 	if (handle_bridge(&skb, &pt_prev, &ret, orig_dev))
 		goto out;
 
-	if (handle_switch(&skb, &pt_prev, &ret))
+	if (handle_switch(&skb, &pt_prev, &ret, orig_dev))
 		goto out;
 
 	/* Protocol-specific handlers are called here. This list is also
