@@ -58,6 +58,9 @@ ln -s /bin/ash $DST/bin/sh
 ln -s /sbin/e2fsck $DST/sbin/fsck
 echo " done."
 
+#FIXME /usr/share/terminfo/l/linux
+#FIXME cat si rm in dist. standard, pt ca sunt folosite de rc.sysinit
+
 echo -n "Installing various configuration files "
 for i in /etc/ld.so.conf /etc/inittab /etc/passwd /etc/termcap \
 		/etc/rc.d/rc.sysinit /etc/fstab /etc/sysctl.conf \
