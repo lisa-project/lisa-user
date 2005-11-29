@@ -1,4 +1,4 @@
-CFLAGS = -g -Wall -I../../linux-2.6.10/include #-DDEBUG
+CFLAGS = -g -Wall -I$(KDIR)/include #-DDEBUG
 LDFLAGS = -L. -lreadline -lcurses -lutil -lcrypt
 
 __LOGIN_PATH := \"$(shell pwd)/swlogin\"

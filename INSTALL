@@ -1,5 +1,5 @@
 You need to patch and recompile your kernel to use this. We'll assume you
-have a vanilla 2.6.10 kernel source in /usr/src/linux-2.6.10.
+have a vanilla 2.6.14 kernel source in /usr/src/linux-2.6.14.
 
 Untar the LiSA archive in /usr/src, then do the following:
 
@@ -16,8 +16,8 @@ instance) and enable the switch module under:
          -> Ethernet switch
 
 3. Edit /usr/src/lisa/userspace/Makefile and change
-the CFLAGS variable to point to the right kernel location, for example:
-CFLAGS = -I/usr/src/linux-2.6.10/include -Wall
+the KDIR variable to point to the right kernel location, for example:
+KDIR := /usr/src/linux-2.6.14 -Wall
 
 4. Compile the userspace tools:
 

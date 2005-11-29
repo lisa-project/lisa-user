@@ -1,3 +1,6 @@
+KDIR := $(shell readlink -f ../linux-2.6.14)
+export KDIR
+
 all:
 	cd cli && make
 	cd login && make

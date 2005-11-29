@@ -1,4 +1,4 @@
-CFLAGS = -I../../linux-2.6.10/include -Wall
+CFLAGS = -I$(KDIR)/include -Wall
 LDFLAGS =
 
 .PHONY: all clean
