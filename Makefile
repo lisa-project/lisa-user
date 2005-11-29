@@ -1,12 +1,12 @@
 NAME := lisa
-KVER := 2.6.10
+KVER := 2.6.14
 
 .PHONY: all dist distopt package patch user site
 
 USE_EXIT_IN_CONF=1
 export USE_EXIT_IN_CONF
 
-prune_patch_paths := $(shell for i in linux-2.6.10/config/*; do echo `basename $$i` | sed 's/^/--exclude /' ; done | xargs)
+prune_patch_paths := $(shell for i in linux-$(KVER)/config/*; do echo `basename $$i` | sed 's/^/--exclude /' ; done | xargs)
 
 all:
 	@echo "This makefile accepts the following targets:"
