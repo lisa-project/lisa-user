@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<Outline title="" edit_count="6" num_nodes="13" creator="woody 0.1.6">
+  <Options only_first_line="0" show_notes="0" show_due_dates="0" show_priorities="0" show_todo="1" show_numbering="0" show_done_items="1" new_items="normal" autocollapse="0" BF_tree_type="normal"/>
+  <Node title="lisa features overview" expanded="1"/>
+  <Node title="lisa vs. bridge + 8021q" expanded="1">
+    <Node title="port trunk with bridge + 8021q example" expanded="1"/>
+  </Node>
+  <Node title="user space architecture" expanded="1">
+    <Node title="intended use for each program" expanded="1"/>
+  </Node>
+  <Node title="kernel space architecture" expanded="1">
+    <Node title="minimum data copy optimization" expanded="1"/>
+    <Node title="packet &quot;post-processing&quot;" expanded="1"/>
+  </Node>
+  <Node title="a few words about the kernel rx stack" expanded="1">
+    <Node title="generic handlers" expanded="1"/>
+    <Node title="protocol-specific handlers" expanded="1"/>
+    <Node title="packet &quot;post-processing&quot;" expanded="1"/>
+  </Node>
+  <Node title="performance" expanded="1"/>
+</Outline>
