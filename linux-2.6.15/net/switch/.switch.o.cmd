@@ -1,0 +1,1 @@
+cmd_net/switch/switch.o := ld -m elf_i386 -m elf_i386  -r -o net/switch/switch.o net/switch/sw.o net/switch/sw_fdb.o net/switch/sw_proc.o net/switch/sw_vdb.o net/switch/sw_forward.o net/switch/sw_ioctl.o net/switch/sw_vif.o
