@@ -1,0 +1,124 @@
+Development instructions for LiSA:
+
+1. Setup the working directory of the project and compile a development kernel with
+lms (Linux Multilayer Switch):
+
+  First you have to download the latest version of lisa source tarball (let's assume
+the tarball name is lisa-latest.tar.gz). Untar this file into your favourite development
+directory (e.g. $HOME/work/projects):
+	
+	$cd $HOME/work/projects
+	$wget http://lisa.nes.ro/files/lisa-latest.tar.gz
+	$tar zxvf lisa-latest.tar.gz
+
+  After that you'll have to download a vanilla kernel source tarball and extract it into
+the lisa directory. Let's assume our latest kernel patch is for linux-2.6.15 (the patch file
+is called linux-2.6.15-lms.patch).
+
+   $cd lisa
+   $wget http://ftp.lug.ro/kernel/linux/kernel/v2.6/linux-2.6.15.tar.bz2	
+   $tar jxvf linux-2.6.15.tar.bz2
+   
+   Apply the kernel patch:
+
+   $cd linux-2.6.15
+   ; check first if the patch applies cleanly:
+   $patch -p1 --dry-run < ../linux-2.6.15-lms.patch
+   ; if everything looks fine, patch the kernel source:
+   $patch -p1 < ../linux-2.6.15-lms.patch
+
+   For easier debugging during development we recommend to patch the kernel with the
+kdb patch. You have to download two files. For example, if you have to patch the 2.6.15
+kernel on an i386 architecture, you have to download: kdb-v4.4-2.6.15-common-x.bz2 and
+kdb-v4.4-2.6.15-i386-y.bz2 (where x and y are the latest releases of the patches):
+
+	$cd $HOME/work/projects/lisa
+	$wget ftp://oss.sgi.com/projects/kdb/download/latest/kdb-v4.4-2.6.15-common-3.bz2
+	$wget ftp://oss.sgi.com/projects/kdb/download/latest/kdb-v4.4-2.6.15-i386-2.bz2
+	
+    ; Then apply these two patches as well, after testing they apply cleanly:
+	$cd linux-2.6.15
+	$bzcat ../kdb-v4.4-2.6.15-common-3.bz2 | patch -p1
+	$bzcat ../kdb-v4.4-2.6.15-i386-2.bz2 | patch -p1
+
+	If all went fine, then you can remove or move somewhere else the tarballs you downloaded.
+
+	The next step is configuring the kernel source:
+
+	$make menuconfig 
+	
+	At this step it's up to you to choose what is going to be compiled into the kernel or as a module. 
+However, our advice is to compile the switch source code as a module. The "Linux Multilayer Switch"
+option can be found in the menu config under:
+
+	-> Networking
+		-> Networking Options
+			-> Linux Multilayer Switch
+	
+	We also recommend for debugging purposes that you enable most of the options under the 
+"Kernel Hacking" menu (especially CONFIG_MAGIC_SYSRQ, CONFIG_DEBUG_INFO and  CONFIG_KDB).
+	After you've configured your kernel, you have to compile and install it.
+
+	$make
+	; become root
+	$su
+	#make install
+	; optionally change the default option in /boot/grub/grub.conf to point to
+	; the new kernel
+
+	Now, use your editor of choice to edit the /etc/sysctl.conf and enable the kernel.kdb option.
+
+	# reboot
+
+2. LiSA Source Code Layout.
+
+   We assume here that you've followed the steps in the last section, and now you have a working lms-patched
+kernel.
+   The main components of the LiSA source code are:
+
+   * the linux kernel module (Linux Multilayer Switch); the source code is located under
+   lisa/linux-2.6.15/net/switch/
+   
+   * the userspace tools, located under lisa/userspace/:
+   		- swctl: simple command line tool for configuring the switch module.
+		- cli: the cisco-like command line interface
+		
+	 The cli contains several binaries:
+	 	* swcli - the command line interface (the cli can be accessed directly from
+		  the command line)
+		* swclid - the command line interface daemon (listens for incomming connections
+		  on the telnet port, forks and executes an in.telnetd process with the swlogin
+		  program).
+		* swcon - this utility is for configuring the switch from the console (see 
+		  dist/etc/inittab for more details on how to run it on ttyS0).
+		* swcfgload - loads the switch configuration previously saved into a file (unfortunately 
+		  now the filename is hardcoded; this program was intended to be run from the init scripts
+		  of the lisa mini-distro)
+
+   If you use a version control system (such as cvs or subversion) it's better not to keep the whole kernel
+ source tree under version control. However, you must keep under version control the following files from the
+ linux kernel source tree:
+ 
+		* net/socket.c
+		* net/Kconfig
+		* net/Makefile
+		* net/core/dev.c
+		* all files from net/switch
+		* include/linux/net_switch.h
+		* include/linux/netdevice.h
+		* include/linux/sockios.h
+		* include/linux/switch.h
+	
+3. Userspace Tools Issues
+
+   * all the userspace tools must be run as root.  
+   * the command line interface tools (swcli, swclid, swcon, swcfgload) are linked with the libswcli.so shared library,
+   which must be in the LD_LIBRARY_PATH environment variable. As a result, before running any one of those tools you
+   must set the apropriate LD_LIBRARY_PATH. Example:
+   
+	  $cd userspace
+	  $make
+	  $cd cli
+	  $su
+	  #. fix-ld-library-path.sh
+	  #./swcli
