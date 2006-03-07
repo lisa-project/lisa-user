@@ -1,4 +1,4 @@
-KDIR := $(shell readlink -f ../linux-2.6.14)
+KDIR := $(shell readlink -f ../linux-2.6.15)
 export KDIR
 
 all:
