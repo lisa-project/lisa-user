@@ -1,12 +1,12 @@
 You need to patch and recompile your kernel to use this. We'll assume you
-have a vanilla 2.6.15 kernel source in /usr/src/linux-2.6.15.
+have a vanilla 2.6.16 kernel source in /usr/src/linux-2.6.16.
 
 Untar the LiSA archive in /usr/src, then do the following:
 
 1. Patch the kernel source:
 
-cd /usr/src/linux-2.6.15
-patch -p1 < ../lisa/linux-2.6.15-lms.patch
+cd /usr/src/linux-2.6.16
+patch -p1 < ../lisa/linux-2.6.16-lms.patch
 
 2. Configure the kernel using your favorite method (make menuconfig for
 instance) and enable the switch module under:
@@ -17,7 +17,7 @@ instance) and enable the switch module under:
 
 3. Edit /usr/src/lisa/userspace/Makefile and change
 the KDIR variable to point to the right kernel location, for example:
-KDIR := /usr/src/linux-2.6.15 -Wall
+KDIR := /usr/src/linux-2.6.16 -Wall
 
 4. Compile the userspace tools:
 

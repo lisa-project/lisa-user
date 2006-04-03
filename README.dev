@@ -8,38 +8,38 @@ the tarball name is lisa-latest.tar.gz). Untar this file into your favourite dev
 directory (e.g. $HOME/work/projects):
 	
 	$cd $HOME/work/projects
-	$wget http://lisa.nes.ro/files/lisa-latest.tar.gz
+	$wget http://lisa.ines.ro/files/lisa-latest.tar.gz
 	$tar zxvf lisa-latest.tar.gz
 
   After that you'll have to download a vanilla kernel source tarball and extract it into
-the lisa directory. Let's assume our latest kernel patch is for linux-2.6.15 (the patch file
-is called linux-2.6.15-lms.patch).
+the lisa directory. Let's assume our latest kernel patch is for linux-2.6.16 (the patch file
+is called linux-2.6.16-lms.patch).
 
    $cd lisa
-   $wget http://ftp.lug.ro/kernel/linux/kernel/v2.6/linux-2.6.15.tar.bz2	
-   $tar jxvf linux-2.6.15.tar.bz2
+   $wget http://ftp.lug.ro/kernel/linux/kernel/v2.6/linux-2.6.16.tar.bz2	
+   $tar jxvf linux-2.6.16.tar.bz2
    
    Apply the kernel patch:
 
-   $cd linux-2.6.15
+   $cd linux-2.6.16
    ; check first if the patch applies cleanly:
-   $patch -p1 --dry-run < ../linux-2.6.15-lms.patch
+   $patch -p1 --dry-run < ../linux-2.6.16-lms.patch
    ; if everything looks fine, patch the kernel source:
-   $patch -p1 < ../linux-2.6.15-lms.patch
+   $patch -p1 < ../linux-2.6.16-lms.patch
 
    For easier debugging during development we recommend to patch the kernel with the
-kdb patch. You have to download two files. For example, if you have to patch the 2.6.15
-kernel on an i386 architecture, you have to download: kdb-v4.4-2.6.15-common-x.bz2 and
-kdb-v4.4-2.6.15-i386-y.bz2 (where x and y are the latest releases of the patches):
+kdb patch. You have to download two files. For example, if you have to patch the 2.6.16
+kernel on an i386 architecture, you have to download: kdb-v4.4-2.6.16-common-x.bz2 and
+kdb-v4.4-2.6.16-i386-y.bz2 (where x and y are the latest releases of the patches):
 
 	$cd $HOME/work/projects/lisa
-	$wget ftp://oss.sgi.com/projects/kdb/download/latest/kdb-v4.4-2.6.15-common-3.bz2
-	$wget ftp://oss.sgi.com/projects/kdb/download/latest/kdb-v4.4-2.6.15-i386-2.bz2
+	$wget ftp://oss.sgi.com/projects/kdb/download/latest/kdb-v4.4-2.6.16-common-4.bz2
+	$wget ftp://oss.sgi.com/projects/kdb/download/latest/kdb-v4.4-2.6.16-i386-3.bz2
 	
     ; Then apply these two patches as well, after testing they apply cleanly:
-	$cd linux-2.6.15
-	$bzcat ../kdb-v4.4-2.6.15-common-3.bz2 | patch -p1
-	$bzcat ../kdb-v4.4-2.6.15-i386-2.bz2 | patch -p1
+	$cd linux-2.6.16
+	$bzcat ../kdb-v4.4-2.6.16-common-4.bz2 | patch -p1
+	$bzcat ../kdb-v4.4-2.6.16-i386-3.bz2 | patch -p1
 
 	If all went fine, then you can remove or move somewhere else the tarballs you downloaded.
 
@@ -77,7 +77,7 @@ kernel.
    The main components of the LiSA source code are:
 
    * the linux kernel module (Linux Multilayer Switch); the source code is located under
-   lisa/linux-2.6.15/net/switch/
+   lisa/linux-2.6.16/net/switch/
    
    * the userspace tools, located under lisa/userspace/:
    		- swctl: simple command line tool for configuring the switch module.

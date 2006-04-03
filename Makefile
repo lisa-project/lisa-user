@@ -1,5 +1,5 @@
 NAME := lisa
-KVER := 2.6.15
+KVER := 2.6.16
 
 .PHONY: all dist distopt package patch user site
 
@@ -34,7 +34,7 @@ endif
 
 package: patch
 	mkdir $(NAME)
-	cp -r userspace dist README INSTALL LICENSE Makefile $(NAME)
+	cp -r userspace dist README.dev README INSTALL LICENSE Makefile $(NAME)
 	cd $(NAME)/userspace && make clean
 	rm -rf `find $(NAME) -name .svn`
 	mv linux-$(KVER)-lms.patch $(NAME)
