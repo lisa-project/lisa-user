@@ -1,4 +1,4 @@
-CFLAGS = -I$(KDIR)/include -Wall
+CFLAGS = -I$(KDIR)/include -fPIC -Wall
 
 all: misc.o
 

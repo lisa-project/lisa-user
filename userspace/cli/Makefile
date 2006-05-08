@@ -1,4 +1,4 @@
-CFLAGS = -g -Wall -I$(KDIR)/include #-DDEBUG
+CFLAGS = -g -Wall -I$(KDIR)/include -I ../include -fPIC #-DDEBUG
 LDFLAGS = -L. -lreadline -lcurses -lutil -lcrypt
 
 __LOGIN_PATH := \"$(shell pwd)/swlogin\"

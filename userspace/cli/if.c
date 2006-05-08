@@ -160,6 +160,10 @@ out:
 	return ret;
 }
 
+/**
+ * FIXME: verificare pentru a nu se face buffer overflow pe
+ * name
+ */
 static char *get_dev_name(char *name, char *buf) {
 	while (isspace(*buf))
 		buf++;
