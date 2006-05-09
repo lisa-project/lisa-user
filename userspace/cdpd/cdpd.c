@@ -142,8 +142,45 @@ static void do_initial_register() {
 	close(sockfd);
 }
 
+/**
+ * alpha-numeric field.
+ */
 void decode_alpha_field(u_char *field) {
 	dbg("\t\tfield value: '%s'\n", field);
+}
+
+/**
+ * ipv4 addrs advertised by the device.
+ * Address Field Structure:
+ * 
+ * number_of_addresses
+ * Address_1
+ * Address_2
+ * ...
+ * Address_k
+ *
+ * where Address fields have the structure:
+ *
+ * Protocol Type (1 byte) [1 - NLPID format, 2 - 802.2 format]
+ * Length (1 byte)	[ 1 for protocol type 1, 3 or 8 for protocol type 2, depending
+ * 		on whether SNAP is used]
+ * Protocol Value (variable) [ for possible values see constants in cdpd.h ]
+ * Addr Len (2 bytes) [ length of the address field in bytes ]
+ * Address (variable) [ address of the interface, or address of the system if addresses
+ * 		are not assigned to the interface ]
+ */
+void decode_address_field(u_char *field, u_int32_t len) {
+	u_int32_t i, number, addr, consumed;
+
+	number = ntohl(*((u_int32_t *)field));
+	field += sizeof(number);
+	dbg("\t\tnumber of addresses: %d\n", number);
+	for (i = 0; i<number; i++) {
+		u_char protocol_type = field[0];
+		u_char length = field[1]; 
+		dbg("\t\t\t%d ptype: %d, length: %d\n", i, protocol_type, length);
+		return;
+	}
 }
 
 void decode_field(int type, int len, u_char *field) {
@@ -155,6 +192,9 @@ void decode_field(int type, int len, u_char *field) {
 	case TYPE_PLATFORM:
 	case TYPE_VTP_MGMT_DOMAIN:
 		decode_alpha_field(field);
+		break;
+	case TYPE_ADDRESS:
+		decode_address_field(field, len);
 		break;
 	}
 }

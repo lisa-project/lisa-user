@@ -36,6 +36,21 @@
 #define TYPE_NATIVE_VLAN		0x000a
 #define TYPE_DUPLEX				0x000b
 
+/* possible values for the protocol type in address fields */
+#define PROTO_TYPE_NLPID		0x01
+#define PROTO_TYPE_802_2		0x02
+
+/* possible values for the protocol value in address fields */
+#define PROTO_ISO_CLNS 			0x81  /* protocol type 3D 1 */
+#define PROTO_IP				0xCC  /* protocol type 3D 1 */
+#define PROTO_IPV6				0xAAAA030000000800 /* protocol type 3D 2 */
+#define PROTO_DECNET_PHASE_IV 	0xAAAA030000006003 /* protocol type 3D 2 */
+#define PROTO_APPLETALK			0xAAAA03000000809B /* protocol type 3D 2 */
+#define PROTO_NOVELL_IPX 		0xAAAA030000008137 /* protocol type 3D 2 */
+#define PROTO_BANYAN_VINES		0xAAAA0300000080C4 /* protocol type 3D 2 */
+#define PROTO_XNS				0xAAAA030000000600 /* protocol type 3D 2 */
+#define PROTO_APOLLO_DOMAIN		0xAAAA030000008019 /* protocol type 3D 2 */
+
 /* constants for device capabilities (capability masks) */
 #define CAP_L3R				0x01	/* device is a layer 3 router */
 #define CAP_L2TB			0x02	/* device is a layer 2 transparent bridge */
