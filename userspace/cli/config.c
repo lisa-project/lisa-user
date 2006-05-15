@@ -21,7 +21,6 @@
 #include <linux/sockios.h>
 #include <net/if.h>
 #include <sys/ioctl.h>
-#define __USE_XOPEN
 #include <unistd.h>
 #include <stdlib.h>
 #include <sys/types.h>

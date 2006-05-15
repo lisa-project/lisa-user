@@ -18,13 +18,26 @@
 LIST_HEAD(registered_interfaces);
 LIST_HEAD(deregistered_interfaces);
 
+/* get the description string from a description table */
+static const u_char *get_description(u_int16_t val, const description_table *table) {
+	u_int16_t i = 0;
+
+	while (table[i].description) {
+		if (table[i].value == val)
+			break;
+		i++;
+	}
+
+	return table[i].description;
+}
+
 /**
  * add an interface to the list of cdp-enabled
  * interfaces.
  */
 void register_cdp_interface(char *ifname) {
 	int fd;
-	struct cdp_registered_if *entry, *tmp;
+	struct cdp_interface *entry, *tmp;
 	struct bpf_program filter;
 	char pcap_err[PCAP_ERRBUF_SIZE];
 
@@ -41,7 +54,7 @@ void register_cdp_interface(char *ifname) {
 
 	/* if not found, we must allocate the structure and do the 
 	 proper intialization */
-	entry = (struct cdp_registered_if *) malloc(sizeof(struct cdp_registered_if));
+	entry = (struct cdp_interface *) malloc(sizeof(struct cdp_interface));
 	assert(entry);
 	strncpy(entry->name, ifname, IFNAMSIZ);
 
@@ -67,7 +80,7 @@ void register_cdp_interface(char *ifname) {
  * interfaces.
  */
 static void unregister_cdp_interface(char *ifname) {
-	struct cdp_registered_if *entry, *tmp;
+	struct cdp_interface *entry, *tmp;
 
 	/* move the entry to the deregistrated_interfaces list */
 	dbg("Disabling cdp on '%s'\n", ifname);
@@ -150,7 +163,6 @@ void decode_alpha_field(u_char *field) {
 }
 
 /**
- * ipv4 addrs advertised by the device.
  * Address Field Structure:
  * 
  * number_of_addresses
@@ -184,7 +196,7 @@ void decode_address_field(u_char *field, u_int32_t len) {
 }
 
 void decode_field(int type, int len, u_char *field) {
-	dbg("\tfield type: %d, length: %d\n", type, len);
+	dbg("\t[%s], length: %d\n", get_description(type, field_types), len);
 	switch (type) {
 	case TYPE_DEVICE_ID:
 	case TYPE_PORT_ID:
@@ -200,7 +212,7 @@ void decode_field(int type, int len, u_char *field) {
 }
 
 /* packet introspection function */
-void dissect_packet(struct cdp_registered_if *entry, struct pcap_pkthdr *header, 
+void dissect_packet(struct cdp_interface *entry, struct pcap_pkthdr *header, 
 		u_char *packet) {
 	struct cdp_frame_hdr *cdp_hdr;
 	struct cdp_frame_data *cdp_field;
@@ -225,7 +237,7 @@ void dissect_packet(struct cdp_registered_if *entry, struct pcap_pkthdr *header,
 }
 
 int main(int argc, char *argv[]) {
-	struct cdp_registered_if *entry, *tmp;
+	struct cdp_interface *entry, *tmp;
 	int fd, maxfd;
 	fd_set rdfs;
 	struct pcap_pkthdr header;

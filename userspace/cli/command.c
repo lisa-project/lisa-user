@@ -23,7 +23,6 @@
 #include <sys/param.h>
 #include <signal.h>
 #include <stdlib.h>
-#define __USE_XOPEN
 #include <unistd.h>
 #include <curses.h>
 
