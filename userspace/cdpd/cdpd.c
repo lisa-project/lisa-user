@@ -162,6 +162,10 @@ void decode_alpha_field(u_char *field) {
 	dbg("\t\tfield value: '%s'\n", field);
 }
 
+void decode_ipv4_addr(u_int32_t addr) {
+	dbg("\t\t\tIP addr: %d.%d.%d.%d\n", addr >> 24, (addr >> 16) & 0xFF, (addr >> 8) & 0xFF, addr & 0xFF);
+}
+
 /**
  * Address Field Structure:
  * 
@@ -182,7 +186,7 @@ void decode_alpha_field(u_char *field) {
  * 		are not assigned to the interface ]
  */
 void decode_address_field(u_char *field, u_int32_t len) {
-	u_int32_t i, number, addr, consumed;
+	u_int32_t i, number, addr;
 
 	number = ntohl(*((u_int32_t *)field));
 	field += sizeof(number);
@@ -191,7 +195,21 @@ void decode_address_field(u_char *field, u_int32_t len) {
 		u_char protocol_type = field[0];
 		u_char length = field[1]; 
 		dbg("\t\t\t%d ptype: %d, length: %d\n", i, protocol_type, length);
-		return;
+		if (protocol_type != 1 || length != 1) {
+			dbg("\t\t\tUnsupported protocol type.");
+			field += length;
+			continue;
+		}
+		u_char pvalue = field[2]; 
+		dbg("\t\t\tProtocol is 0x%hx, %s.\n", pvalue, get_description(pvalue, proto_values));
+		if (pvalue != PROTO_IP) {
+			dbg("\t\t\tOnly IPv4 supported. got pvalue: 0x%x.\n", pvalue);
+			field += length;
+			continue;
+		}
+		addr = ntohl(*((u_int32_t *) (field + 5)));
+		decode_ipv4_addr(addr);
+		field += length;
 	}
 }
 
