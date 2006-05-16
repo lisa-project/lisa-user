@@ -158,7 +158,7 @@ static void do_initial_register() {
 /**
  * alpha-numeric field.
  */
-void decode_alpha_field(u_char *field) {
+void decode_alpha(u_char *field) {
 	dbg("\t\tfield value: '%s'\n", field);
 }
 
@@ -185,7 +185,7 @@ void decode_ipv4_addr(u_int32_t addr) {
  * Address (variable) [ address of the interface, or address of the system if addresses
  * 		are not assigned to the interface ]
  */
-void decode_address_field(u_char *field, u_int32_t len) {
+void decode_address(u_char *field, u_int32_t len) {
 	u_int32_t i, number, addr;
 
 	number = ntohl(*((u_int32_t *)field));
@@ -194,7 +194,7 @@ void decode_address_field(u_char *field, u_int32_t len) {
 	for (i = 0; i<number; i++) {
 		u_char protocol_type = field[0];
 		u_char length = field[1]; 
-		dbg("\t\t\t%d ptype: %d, length: %d\n", i, protocol_type, length);
+		dbg("\t\t\t%d) ptype: %d, length: %d\n", i+1, protocol_type, length);
 		if (protocol_type != 1 || length != 1) {
 			dbg("\t\t\tUnsupported protocol type.");
 			field += length;
@@ -213,6 +213,61 @@ void decode_address_field(u_char *field, u_int32_t len) {
 	}
 }
 
+void decode_capabilities(u_char *field, u_int32_t len) {
+	u_int16_t i = 0;
+	u_int32_t cap = ntohl(*((u_int32_t *)field));
+
+	dbg("\t\t\tcapa: 0x%x\n", cap);
+
+	while (device_capabilities[i].description) {
+		if (cap & device_capabilities[i].value) 
+			dbg("\t\t\t[%s]\n", device_capabilities[i].description);
+		i++;
+	}
+}
+
+void decode_duplex(u_char *field, u_int32_t len) {
+	dbg("\t\t\tvalue: 0x%x\n", field[0]);
+}
+
+void decode_native_vlan(u_char *field, u_int32_t len) {
+	u_int16_t nv = ntohs(*((u_int16_t *) field));
+	dbg("\t\t\tvalue: %d\n", nv);
+}
+
+/**
+ * Structura campului "Protocol Hello" e urmatoarea 
+ * (dedusa dintr-un snapshot de ethereal de pe wiki-ul lor, 
+ * plus some debugging):
+ * 
+ * - OUI [3 bytes] (0x00000c - Cisco) 
+ * - Protocol ID [2 bytes] (0x0112 - Cluster Management)
+ *
+ *   TODO: la show cdp neighbors detail pe Cisco, urmatoarele
+ * campuri sunt trantite intr-un string (cu valorile hex) de genul:
+ *  value=00000000FFFFFFFF010121FF00000000000000097CCEEB00FF029A
+ *
+ * - Cluster Master IP [ 4 bytes ] (0.0.0.0)
+ * - UNKNOWN IP? or mask? [ 4 bytes ] (255.255.255.255)
+ * - Version? [ 1 byte ] (0x01)
+ * - Sub Version? [ 1 byte ] (0x01)
+ * - Status? [ 1 byte ] (0x21)
+ * - UNKNOWN [ 1 byte ] (0xff)
+ * - Cluster Commander MAC [ 6 bytes ] ( 00:00:00:00:00:00 )
+ * - Switch's MAC [ 6 bytes ] ( 00:D0:BA:7A:FF:C0 )
+ * - UNKNOWN [ 1 byte ] (0xff)
+ * - Management VLAN [ 2 bytes ] ( 0x029a, adica 666)
+ */
+void decode_protocol_hello(u_char *field, u_int32_t len) {
+	u_int32_t i;
+
+	dbg("\t\t\t");
+	for (i=0; i<len; i++) {
+		dbg("0x%02x ", field[i]);
+	}
+	dbg("\n");
+}
+
 void decode_field(int type, int len, u_char *field) {
 	dbg("\t[%s], length: %d\n", get_description(type, field_types), len);
 	switch (type) {
@@ -221,10 +276,22 @@ void decode_field(int type, int len, u_char *field) {
 	case TYPE_IOS_VERSION:
 	case TYPE_PLATFORM:
 	case TYPE_VTP_MGMT_DOMAIN:
-		decode_alpha_field(field);
+		decode_alpha(field);
 		break;
 	case TYPE_ADDRESS:
-		decode_address_field(field, len);
+		decode_address(field, len);
+		break;
+	case TYPE_CAPABILITIES:
+		decode_capabilities(field, len);
+		break;
+	case TYPE_PROTOCOL_HELLO:
+		decode_protocol_hello(field, len);
+		break;
+	case TYPE_DUPLEX:
+		decode_duplex(field, len);
+		break;
+	case TYPE_NATIVE_VLAN:
+		decode_native_vlan(field, len);
 		break;
 	}
 }
@@ -247,7 +314,8 @@ void dissect_packet(struct cdp_interface *entry, struct pcap_pkthdr *header,
 	while (consumed < packet_length) {
 		field_type = ntohs(cdp_field->type);
 		field_len = ntohs(cdp_field->length);
-		decode_field(field_type, field_len, ((u_char *)cdp_field)+sizeof(struct cdp_frame_data));
+		decode_field(field_type, field_len-sizeof(struct cdp_frame_data), 
+				((u_char *)cdp_field)+sizeof(struct cdp_frame_data));
 		consumed += field_len;	
 		cdp_field = (struct cdp_frame_data *) (((u_char *)cdp_field) + field_len);
 	}
