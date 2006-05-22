@@ -155,24 +155,55 @@ struct cdp_frame_data {
 	u_int16_t	length;
 };
 
+/**
+ * Structura campului "Protocol Hello" e urmatoarea 
+ * (dedusa dintr-un snapshot de ethereal de pe wiki-ul lor, 
+ * plus some debugging):
+ * 
+ * - OUI [3 bytes] (0x00000c - Cisco) 
+ * - Protocol ID [2 bytes] (0x0112 - Cluster Management)
+ *
+ *   TODO: la show cdp neighbors detail pe Cisco, urmatoarele
+ * campuri sunt trantite intr-un string (cu valorile hex) de genul:
+ *  value=00000000FFFFFFFF010121FF00000000000000097CCEEB00FF029A
+ *
+ * - Cluster Master IP [ 4 bytes ] (0.0.0.0)
+ * - UNKNOWN IP? or mask? [ 4 bytes ] (255.255.255.255)
+ * - Version? [ 1 byte ] (0x01)
+ * - Sub Version? [ 1 byte ] (0x01)
+ * - Status? [ 1 byte ] (0x21)
+ * - UNKNOWN [ 1 byte ] (0xff)
+ * - Cluster Commander MAC [ 6 bytes ] ( 00:00:00:00:00:00 )
+ * - Switch's MAC [ 6 bytes ] ( 00:D0:BA:7A:FF:C0 )
+ * - UNKNOWN [ 1 byte ] (0xff)
+ * - Management VLAN [ 2 bytes ] ( 0x029a, adica 666)
+ */
+struct protocol_hello {
+	u_int32_t oui; 							/* OUI (0x00000c for Cisco) */
+	u_int16_t protocol_id;					/* Protocol Id (0x0112 for Cluster Management) */
+	u_char value[27];						/* the other fields */ 
+};
+
 /* CDP neighbor */
 struct cdp_neighbor {
-	char *device_id;			/* Device ID */
-	/* XXX - Addresses */
-	char *port_id;				/* Port ID */			
-	u_char capabilities;		/* Capabilities */
-	char *ios_version;			/* Cisco IOS Version */
-	char *platform;				/* Hardware platform of the device */
-	/* XXX - ip prefix */
-	/* XXX - the other fields ... */
+	u_char device_id[64];					/* Device ID */
+	u_char addr[32];						/* Device addresses */
+	u_char port_id[32];						/* Port ID */			
+	u_char cap;								/* Capabilities */
+	u_char software_version[255];			/* Software (Cisco IOS version) */
+	u_char platform[32];					/* Hardware platform of the device */
+	u_char vtp_mgmt_domain[32];				/* VTP Management Domain */
+	struct protocol_hello p_hello;			/* Protocol Hello */
+	u_char duplex;							/* Duplex */
+	u_int16_t native_vlan;					/* Native VLAN */
 };
 
 /* CDP interface */
 struct cdp_interface {
-	char name[IFNAMSIZ];		/* Name of the interface */
-	bpf_u_int32 addr, netmask;	/* IP/netmask */
-	pcap_t *pcap;				/* pcap structure */
-	struct list_head neighbors;	/* list of cdp neighbors (on this interface) */
+	char name[IFNAMSIZ];					/* Name of the interface */
+	bpf_u_int32 addr, netmask;				/* IP/netmask */
+	pcap_t *pcap;							/* pcap structure */
+	struct list_head neighbors;				/* list of cdp neighbors (on this interface) */
 	struct list_head lh;
 };
 

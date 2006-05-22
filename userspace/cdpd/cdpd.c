@@ -27,7 +27,6 @@ static const u_char *get_description(u_int16_t val, const description_table *tab
 			break;
 		i++;
 	}
-
 	return table[i].description;
 }
 
@@ -70,6 +69,8 @@ void register_cdp_interface(char *ifname) {
 
 	fd = pcap_fileno(entry->pcap);
 	fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0) | O_NONBLOCK);
+
+	INIT_LIST_HEAD(&entry->neighbors);
 
 	/* add the entry to the registered_interfaces list */
 	list_add_tail(&entry->lh, &registered_interfaces);
@@ -235,29 +236,6 @@ void decode_native_vlan(u_char *field, u_int32_t len) {
 	dbg("\t\t\tvalue: %d\n", nv);
 }
 
-/**
- * Structura campului "Protocol Hello" e urmatoarea 
- * (dedusa dintr-un snapshot de ethereal de pe wiki-ul lor, 
- * plus some debugging):
- * 
- * - OUI [3 bytes] (0x00000c - Cisco) 
- * - Protocol ID [2 bytes] (0x0112 - Cluster Management)
- *
- *   TODO: la show cdp neighbors detail pe Cisco, urmatoarele
- * campuri sunt trantite intr-un string (cu valorile hex) de genul:
- *  value=00000000FFFFFFFF010121FF00000000000000097CCEEB00FF029A
- *
- * - Cluster Master IP [ 4 bytes ] (0.0.0.0)
- * - UNKNOWN IP? or mask? [ 4 bytes ] (255.255.255.255)
- * - Version? [ 1 byte ] (0x01)
- * - Sub Version? [ 1 byte ] (0x01)
- * - Status? [ 1 byte ] (0x21)
- * - UNKNOWN [ 1 byte ] (0xff)
- * - Cluster Commander MAC [ 6 bytes ] ( 00:00:00:00:00:00 )
- * - Switch's MAC [ 6 bytes ] ( 00:D0:BA:7A:FF:C0 )
- * - UNKNOWN [ 1 byte ] (0xff)
- * - Management VLAN [ 2 bytes ] ( 0x029a, adica 666)
- */
 void decode_protocol_hello(u_char *field, u_int32_t len) {
 	u_int32_t i;
 
@@ -293,10 +271,20 @@ void decode_field(int type, int len, u_char *field) {
 	case TYPE_NATIVE_VLAN:
 		decode_native_vlan(field, len);
 		break;
+	default:
+		dbg("\t\twe don't decode [%s].\n", get_description(type, field_types));
 	}
 }
 
 /* packet introspection function */
+/**
+ * TODO: alocare structura cdp_neighbor pe care o pasez functiilor
+ * de decodare campuri (acestea o completeaza). Lookup in lista
+ * de neighbori dupa device id (daca gasesc, replace, daca nu
+ * adaug la sfarsit).
+ * Trebuie sa existe un hold time pentru o inregistrare de neighbor.
+ * Daca holdtime expira -> zboara inregistrarea.
+ */
 void dissect_packet(struct cdp_interface *entry, struct pcap_pkthdr *header, 
 		u_char *packet) {
 	struct cdp_frame_hdr *cdp_hdr;
