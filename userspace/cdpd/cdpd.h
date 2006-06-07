@@ -181,13 +181,15 @@ struct cdp_frame_data {
 struct protocol_hello {
 	u_int32_t oui; 							/* OUI (0x00000c for Cisco) */
 	u_int16_t protocol_id;					/* Protocol Id (0x0112 for Cluster Management) */
-	u_char value[27];						/* the other fields */ 
+	u_char payload[27];						/* the other fields */ 
 };
 
 /* CDP neighbor */
 struct cdp_neighbor {
+	struct cdp_interface *interface;		/* Interface */
 	u_char device_id[64];					/* Device ID */
-	u_char addr[32];						/* Device addresses */
+	u_char num_addr;						/* Number of decoded addresses */
+	u_int32_t addr[8];						/* Device addresses */
 	u_char port_id[32];						/* Port ID */			
 	u_char cap;								/* Capabilities */
 	u_char software_version[255];			/* Software (Cisco IOS version) */
@@ -196,6 +198,7 @@ struct cdp_neighbor {
 	struct protocol_hello p_hello;			/* Protocol Hello */
 	u_char duplex;							/* Duplex */
 	u_int16_t native_vlan;					/* Native VLAN */
+	struct list_head lh;
 };
 
 /* CDP interface */
