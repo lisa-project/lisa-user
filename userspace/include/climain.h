@@ -32,15 +32,10 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
-#define MAX_HOSTNAME 32
 #define MATCHES_PER_ROW 5
 #define INITIAL_ARGS_NUM 8
 
-#define PAGER_PATH "/bin/more"
-#ifndef FILTER_PATH
-#define FILTER_PATH "/bin/filter"
-#endif
-
+#include "common.h"
 #include "command.h"
 #include "shared.h"
 

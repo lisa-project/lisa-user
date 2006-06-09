@@ -1,11 +1,8 @@
 #ifndef _CDPD_H
 #define _CDPD_H
 
+#include "common.h"
 #include "list.h"
-
-/* file from which we fetch the system interfaces */
-/* FIXME: constant already defined in cli/if.h ... */
-#define PROCNETDEV_PATH "/proc/net/dev"
 
 /* pcap filter expression for cdp */
 #define PCAP_CDP_FILTER "ether multicast and ether[20:2] = 0x2000"
@@ -143,14 +140,29 @@ static const description_table device_capabilities[] = {
 };
 
 /* CDP Frame Header */
-struct cdp_frame_hdr {
-	u_int8_t	version;
-	u_int8_t	time_to_live;
-	u_int16_t	checksum;
+struct cdp_frame_header {
+/* Ethernet 802.3 header */
+	u_char dst_addr[ETH_ALEN];
+	u_char src_addr[ETH_ALEN];
+	u_int16_t length;
+/* LLC */
+	u_int8_t dsap;
+	u_int8_t ssap;
+/* LLC control */
+	u_int8_t control;
+	u_int8_t oui[3];
+	u_int16_t protocol_id;
+} __attribute__ ((packed));
+
+/* CDP Packet Header */
+struct cdp_hdr {
+	u_int8_t	version;			/* cdp version */
+	u_int8_t	time_to_live;		/* cdp ttl (holdtime) */
+	u_int16_t	checksum;			/* checksum */
 };
 
 /* CDP Frame Data */
-struct cdp_frame_data {
+struct cdp_field {
 	u_int16_t	type;
 	u_int16_t	length;
 };
@@ -203,11 +215,24 @@ struct cdp_neighbor {
 
 /* CDP interface */
 struct cdp_interface {
-	char name[IFNAMSIZ];					/* Name of the interface */
+	u_char name[IFNAMSIZ];					/* Name of the interface */
 	bpf_u_int32 addr, netmask;				/* IP/netmask */
 	pcap_t *pcap;							/* pcap structure */
+	struct libnet_ether_addr *hwaddr;	/* hardware address */
+	libnet_t *llink;						/* libnet link */
 	struct list_head neighbors;				/* list of cdp neighbors (on this interface) */
 	struct list_head lh;
+};
+
+/* CDP configuration parameters */
+struct cdp_configuration {
+	u_int8_t 	version;				/* cdp version */
+	u_int8_t 	holdtime;				/* cdp ttl (holdtime) in seconds */
+	u_int8_t	timer;					/* rate at which packets are sent (in seconds) */
+	u_int32_t	capabilities;			/* device capabilities */
+	u_char		software_version[255];	/* software version information */
+	u_char		platform[16];			/* platform information */
+	u_int8_t	duplex;					/* duplex */
 };
 
 #endif

@@ -1,11 +1,14 @@
 #include <sys/types.h>
 #include <sys/ioctl.h>
+#include <sys/utsname.h>
+#include <sys/wait.h>
 
 #include <linux/net_switch.h>
 #include <assert.h>
 #include <ctype.h>
 #include <fcntl.h>
 #include <pcap.h>
+#include <libnet.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -17,6 +20,11 @@
 
 LIST_HEAD(registered_interfaces);
 LIST_HEAD(deregistered_interfaces);
+
+/* data buffer for cdp frame building */
+static unsigned char data[65535];
+/* cdp configuration parameters (version, ttl, timer) */
+static struct cdp_configuration cfg;
 
 /* get the description string from a description table */
 static const u_char *get_description(u_int16_t val, const description_table *table) {
@@ -38,7 +46,7 @@ void register_cdp_interface(char *ifname) {
 	int fd;
 	struct cdp_interface *entry, *tmp;
 	struct bpf_program filter;
-	char pcap_err[PCAP_ERRBUF_SIZE];
+	char err[PCAP_ERRBUF_SIZE];
 
 
 	dbg("Enabling cdp on '%s'\n", ifname);
@@ -57,10 +65,11 @@ void register_cdp_interface(char *ifname) {
 	assert(entry);
 	strncpy(entry->name, ifname, IFNAMSIZ);
 
-	pcap_lookupnet(entry->name, &entry->addr, &entry->netmask, pcap_err);
-	entry->pcap = pcap_open_live(entry->name, 65535, 1, 0, pcap_err);
+	/* pcap initialization */
+	pcap_lookupnet(entry->name, &entry->addr, &entry->netmask, err);
+	entry->pcap = pcap_open_live(entry->name, 65535, 1, 0, err);
 	if (!entry->pcap) {
-		fprintf(stderr, "Could not open %s: %s\n", entry->name, pcap_err);
+		fprintf(stderr, "Pcap failed opening %s: %s\n", entry->name, err);
 		exit(1);
 	}
 	pcap_compile(entry->pcap, &filter, PCAP_CDP_FILTER, 0, entry->addr);
@@ -69,6 +78,18 @@ void register_cdp_interface(char *ifname) {
 
 	fd = pcap_fileno(entry->pcap);
 	fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0) | O_NONBLOCK);
+
+	/* libnet initialization */
+	entry->llink = libnet_init(LIBNET_LINK, entry->name, err);
+	if (!entry->llink) {
+		fprintf(stderr, "Libnet failed opening %s: %s\n", entry->name, err);
+		exit(1);
+	}
+	entry->hwaddr = libnet_get_hwaddr(entry->llink);
+	if (!entry->hwaddr) {
+		fprintf(stderr, "Libnet failed getting hw addr of %s: %s\n", entry->name, err);
+		exit(1);
+	}
 
 	INIT_LIST_HEAD(&entry->neighbors);
 
@@ -92,6 +113,10 @@ static void unregister_cdp_interface(char *ifname) {
 		}
 }
 
+/**
+ * Identify a cdp neighbor in the neighbor list by its
+ * device_id.
+ */
 static struct cdp_neighbor *find_by_device_id(struct cdp_interface *entry, u_char *device_id) {
 	struct cdp_neighbor *n, *tmp;
 
@@ -163,6 +188,26 @@ static void do_initial_register() {
 	}
 	fclose(f);
 	close(sockfd);
+}
+
+/* Default CDP configuration */
+static void do_initial_cfg() {
+	struct utsname u_name;
+
+	cfg.version = 0x02;				/* CDPv2*/
+	cfg.holdtime = 0xb4;			/* 180 seconds */
+	cfg.timer = 0x3c;				/* 60 seconds */
+	cfg.capabilities = CAP_L2SW;	/* advertise as a layer 2 (non-STP) switch */
+	cfg.duplex = 0x01;
+	/* get uname information and set software version and platform */
+	uname(&u_name);
+	memset(cfg.software_version, 0, sizeof(cfg.software_version));
+	snprintf(cfg.software_version, sizeof(cfg.software_version), 
+			"Linux %s, %s.", u_name.release, u_name.version);
+	cfg.software_version[sizeof(cfg.software_version)-1] = '\0';
+	memset(cfg.platform, 0, sizeof(cfg.platform));
+	snprintf(cfg.platform, sizeof(cfg.platform), "%s", u_name.machine);
+	cfg.platform[sizeof(cfg.platform)-1] = '\0';
 }
 
 static void print_ipv4_addr(u_int32_t addr) {
@@ -295,25 +340,25 @@ static void decode_field(struct cdp_neighbor **ne, int type, int len, u_char *fi
  * Daca holdtime expira -> zboara inregistrarea.
  */
 static void dissect_packet(struct pcap_pkthdr *header, u_char *packet, struct cdp_neighbor **neighbor) {
-	struct cdp_frame_hdr *cdp_hdr;
-	struct cdp_frame_data *cdp_field;
+	struct cdp_hdr *hdr;
+	struct cdp_field *field;
 	u_int32_t packet_length, consumed, field_type, field_len;
 
 	dbg("Received CDP packet on %s", (*neighbor)->interface->name);
 
-	cdp_hdr = (struct cdp_frame_hdr *) (((u_char *)packet) + 22);
-	packet_length = (header->len - 22) - sizeof(struct cdp_frame_hdr);
+	hdr = (struct cdp_hdr *) (((u_char *)packet) + 22);
+	packet_length = (header->len - 22) - sizeof(struct cdp_hdr);
 	dbg("\tpacket length: %d\n", packet_length);
-	cdp_field = (struct cdp_frame_data *) ((((u_char *)packet) + 22) + sizeof(struct cdp_frame_hdr));
+	field = (struct cdp_field *) ((((u_char *)packet) + 22) + sizeof(struct cdp_hdr));
 
 	consumed = 0;
 	while (consumed < packet_length) {
-		field_type = ntohs(cdp_field->type);
-		field_len = ntohs(cdp_field->length);
-		decode_field(neighbor, field_type, field_len-sizeof(struct cdp_frame_data), 
-				((u_char *)cdp_field)+sizeof(struct cdp_frame_data));
+		field_type = ntohs(field->type);
+		field_len = ntohs(field->length);
+		decode_field(neighbor, field_type, field_len-sizeof(struct cdp_field), 
+				((u_char *)field)+sizeof(struct cdp_field));
 		consumed += field_len;	
-		cdp_field = (struct cdp_frame_data *) (((u_char *)cdp_field) + field_len);
+		field = (struct cdp_field *) (((u_char *)field) + field_len);
 	}
 	dbg("\n\n");
 }
@@ -354,37 +399,260 @@ static void print_cdp_neighbor(struct cdp_neighbor *n) {
 	dbg("\n");
 }
 
+/**
+ *  Functions for building and sending cdp frames
+ */
+ 
+/**
+ * Fill in the cdp frame header fields.
+ */
+static int cdp_frame_init(u_char *buffer, int len, struct libnet_ether_addr *hw_addr) {
+	memset(buffer, 0, len);
+	struct cdp_frame_header *fhdr;
+	struct cdp_hdr *phdr;
+
+	fhdr = (struct cdp_frame_header *)buffer;
+	/* dst mac is multicast (01:00:0c:cc:cc:cc) */
+	fhdr->dst_addr[0] = 0x01;
+	fhdr->dst_addr[1] = 0x00;
+	fhdr->dst_addr[2] = 0x0c;
+	fhdr->dst_addr[3] = fhdr->dst_addr[4] = fhdr->dst_addr[5] = 0xcc;
+	/* src mac is our mac address */
+	memcpy(fhdr->src_addr, hw_addr->ether_addr_octet, ETH_ALEN);
+
+	/* DSAP & SSAP addresses are 0xaa (SNAP) */
+	fhdr->dsap = fhdr->ssap = 0xaa;
+	fhdr->control = 0x03;
+	/* OUI for Cisco */
+	fhdr->oui[2] = 0x0c;
+	/* CDP protocol id: 0x2000 */
+	fhdr->protocol_id = htons(0x2000);
+
+	/* Now the CDP packet header */
+	phdr = (struct cdp_hdr *) (buffer + sizeof(struct cdp_frame_header));
+	/* CDP version */
+	phdr->version = cfg.version;
+	/* CDP holdtime */
+	phdr->time_to_live = cfg.holdtime;
+	/* Checksum will be calculated later */
+	phdr->checksum = 0x00;
+
+	return sizeof(struct cdp_frame_header) + sizeof(struct cdp_hdr);
+}
+
+/**
+ * Add the device id field.
+ */
+static int cdp_add_device_id(u_char *buffer) {
+	u_char hostname[MAX_HOSTNAME];
+	struct cdp_field *field;
+
+	gethostname(hostname, sizeof(hostname));
+	hostname[sizeof(hostname)-1] = '\0';
+
+	field = (struct cdp_field *) buffer;
+	field->type = htons(TYPE_DEVICE_ID);
+	field->length = htons(strlen(hostname) + sizeof(struct cdp_field));
+
+	memcpy(buffer+sizeof(struct cdp_field), hostname, strlen(hostname));
+
+	return sizeof(struct cdp_field) + strlen(hostname);
+}
+
+/**
+ * Add the address field.
+ */
+static int cdp_add_addr(u_char *buffer, u_int32_t addr) {
+	struct cdp_field *field;
+
+	if (!addr)
+		return 0;
+
+	field = (struct cdp_field *)buffer;
+	field->type = htons(TYPE_ADDRESS);
+	field->length = htons(17);
+
+	/* Number of addresses */
+	buffer += sizeof(struct cdp_field);
+	*((u_int32_t *)buffer) = htonl(1);
+	buffer += sizeof(u_int32_t);
+	buffer[0] = 0x01;	   /* Protocol Type = NLPID */
+	buffer[1] =	0x01; 	   /* Protocol Length */
+	buffer[2] = PROTO_IP;  /* Protocol = IP */
+	buffer += 3;
+	/* Address Length */
+	*((u_int16_t *)buffer) = htons(sizeof(addr));
+	/* Address */
+	*((u_int32_t *)(buffer+2)) = addr;
+
+	return 17;
+}
+
+/**
+ * Add the port id field.
+ */
+static int cdp_add_port_id(u_char *buffer, u_char *port) {
+	struct cdp_field *field;
+
+	assert(port);
+	field = (struct cdp_field *)buffer;
+	field->type = htons(TYPE_PORT_ID);
+	field->length = htons(strlen(port) + 4);
+	buffer += sizeof(struct cdp_field);
+	memcpy(buffer, port, strlen(port));
+
+	return strlen(port)+4;
+}
+
+/**
+ * Add the capabilities field.
+ */
+static int cdp_add_capabilities(u_char *buffer) {
+	struct cdp_field *field;
+
+	field = (struct cdp_field *)buffer;
+	field->type = htons(TYPE_CAPABILITIES);
+	field->length = htons(sizeof(struct cdp_field) + sizeof(u_int32_t));
+	buffer += sizeof(struct cdp_field);
+	*((u_int32_t *) buffer) = htonl(cfg.capabilities);
+	
+	return sizeof(struct cdp_field) + sizeof(u_int32_t);
+}
+
+/**
+ * Add the software version field.
+ */
+static int cdp_add_software_version(u_char *buffer) {
+	struct cdp_field *field;
+
+	field = (struct cdp_field *)buffer;
+	field->type = htons(TYPE_IOS_VERSION);
+	field->length = htons(sizeof(struct cdp_field) + strlen(cfg.software_version));
+	buffer += sizeof(struct cdp_field);
+	memcpy(buffer, cfg.software_version, strlen(cfg.software_version));
+
+	return sizeof(struct cdp_field) + strlen(cfg.software_version);
+}
+
+/**
+ * Add the platform field. 
+ */
+static int cdp_add_platform(u_char *buffer) {
+	struct cdp_field *field;
+
+	field = (struct cdp_field *) buffer;
+	field->type = htons(TYPE_PLATFORM);
+	field->length = htons(sizeof(struct cdp_field) + strlen(cfg.platform));
+	buffer += sizeof(struct cdp_field);
+	memcpy(buffer, cfg.platform, strlen(cfg.platform));
+
+	return sizeof(struct cdp_field) + strlen(cfg.platform);
+}
+
+/**
+ * Add the duplex field.
+ */
+static int cdp_add_duplex(u_char *buffer) {
+	struct cdp_field *field;
+	
+	field = (struct cdp_field *)buffer;
+	field->type = htons(TYPE_DUPLEX);
+	field->length = htons(sizeof(struct cdp_field) + 1);
+	buffer += sizeof(struct cdp_field);
+	buffer[0] = cfg.duplex;
+
+	return sizeof(struct cdp_field) + 1;
+}
+
+static u_int16_t cdp_checksum(u_char *buffer, size_t len) {
+	if (len % 2 == 0) {
+		return libnet_ip_check((u_int16_t *)buffer, len);
+	}
+	else {
+		int c = buffer[len-1];
+		u_int16_t *sp = (u_int16_t *)(&buffer[len-1]);
+		u_int16_t r;
+
+		*sp = htons(c);
+		r = libnet_ip_check((u_int16_t *)buffer, len+1);
+		buffer[len-1] = c;
+		return r;
+	}
+}
+
+
+static void cdp_send_loop() {
+	struct cdp_interface *entry, *tmp;
+	int offset, r;
+
+	while (1) {
+		dbg("cdp_send_loop()\n");
+		list_for_each_entry_safe(entry, tmp, &registered_interfaces, lh) {
+			offset = cdp_frame_init(data, sizeof(data), entry->hwaddr); 
+			offset += cdp_add_device_id(data+offset);
+			offset += cdp_add_addr(data+offset, entry->addr);
+			offset += cdp_add_port_id(data+offset, entry->name);
+			offset += cdp_add_capabilities(data+offset);
+			offset += cdp_add_software_version(data+offset);
+			offset += cdp_add_platform(data+offset);
+			/* frame length */
+			((struct cdp_frame_header *)data)->length = htons(offset-14);
+			/* checksum */
+			((struct cdp_hdr *)(data + sizeof(struct cdp_frame_header)))->checksum =
+				cdp_checksum(data+sizeof(struct cdp_frame_header),
+						offset-sizeof(struct cdp_frame_header));
+			if ((r=libnet_write_link(entry->llink, data, offset))!=offset)
+				dbg("Wrote only %d bytes (error was: %s).\n", r, strerror(errno));
+			dbg("Sent CDP packet of %d bytes on %s.\n", r, entry->name);
+		}
+		sleep(cfg.timer);
+	}
+}
+
 int main(int argc, char *argv[]) {
 	struct cdp_interface *entry, *tmp;
 	struct cdp_neighbor *neighbor;
-	int fd, maxfd;
+	int fd, maxfd, status;
 	fd_set rdfs;
 	struct pcap_pkthdr header;
 	u_char *packet;
+	pid_t pid;
 
+	do_initial_cfg();
 	do_initial_register();
 	/* hey, no interface in the switch?? */
 	assert(!list_empty(&registered_interfaces));
 
-	/* the main loop in which we capture the cdp frames */
-	for (;;) {
-		FD_ZERO(&rdfs);
-		maxfd = -1;
-		list_for_each_entry_safe(entry, tmp, &registered_interfaces, lh) {
-			FD_SET((fd = pcap_fileno(entry->pcap)), &rdfs);
-			if (fd > maxfd)
-				maxfd = fd;
-		}
-		select(maxfd+1, &rdfs, 0, 0, 0);
-		list_for_each_entry_safe(entry, tmp, &registered_interfaces, lh) {
-			packet = (u_char *) pcap_next(entry->pcap, &header);
-			if (packet) {
-				neighbor = (struct cdp_neighbor *) malloc(sizeof(struct cdp_neighbor));
-				neighbor->interface = entry;
-				dissect_packet(&header, packet, &neighbor);
-				print_cdp_neighbor(neighbor);
+
+	if (!(pid = fork()))
+		cdp_send_loop();
+	else {
+		dbg("child pid=%d\n", pid);
+		/* the main loop in which we capture the cdp frames */
+		for (;;) {
+			FD_ZERO(&rdfs);
+			maxfd = -1;
+			list_for_each_entry_safe(entry, tmp, &registered_interfaces, lh) {
+				FD_SET((fd = pcap_fileno(entry->pcap)), &rdfs);
+				if (fd > maxfd)
+					maxfd = fd;
+			}
+			select(maxfd+1, &rdfs, 0, 0, 0);
+			list_for_each_entry_safe(entry, tmp, &registered_interfaces, lh) {
+				packet = (u_char *) pcap_next(entry->pcap, &header);
+				if (packet) {
+					neighbor = (struct cdp_neighbor *) malloc(sizeof(struct cdp_neighbor));
+					neighbor->interface = entry;
+					dissect_packet(&header, packet, &neighbor);
+					print_cdp_neighbor(neighbor);
+				}
 			}
 		}
+
+		do {
+			dbg("waiting for child, pid=%d to exit.\n", pid);
+			waitpid(pid, &status, 0);
+		} while (!WIFEXITED(status));
 	}
 
 	return 0;

@@ -36,6 +36,7 @@
 #include <unistd.h>
 
 
+#include "common.h"
 #include "climain.h"
 #include "command.h"
 #include "list.h"
@@ -142,9 +143,6 @@ struct mii_data {
 	unsigned short val_out;
 };
 
-
-#define PROCNETDEV_PATH "/proc/net/dev"
-#define LMS_VIRT_PREFIX "vlan"
 
 #define print_sockaddr_ip(out, desc, _sockaddr) \
 	fprintf(out, "%s: %d.%d.%d.%d  ", \

@@ -1,7 +1,7 @@
 .PHONY: all clean
 
 CFLAGS += -g -Wall -I$(KDIR)/include -I../include -fPIC -DDEBUG $(shell libnet-config --cflags --defines)
-LDFLAGS=-lpcap #$(shell libnet-config --libs)
+LDFLAGS=-lpcap $(shell libnet-config --libs)
 
 
 all: cdpd
