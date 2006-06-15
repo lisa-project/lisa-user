@@ -5,7 +5,7 @@
 #include "list.h"
 
 /* pcap filter expression for cdp */
-#define PCAP_CDP_FILTER "ether multicast and ether[20:2] = 0x2000"
+#define PCAP_CDP_FILTER "ether multicast and ether[20:2] = 0x2000 and ether src not %02hx:%02hx:%02hx:%02hx:%02hx:%02hx"
 
 
 /* integer to alphanumeric mapping */
@@ -218,7 +218,7 @@ struct cdp_interface {
 	u_char name[IFNAMSIZ];					/* Name of the interface */
 	bpf_u_int32 addr, netmask;				/* IP/netmask */
 	pcap_t *pcap;							/* pcap structure */
-	struct libnet_ether_addr *hwaddr;	/* hardware address */
+	struct libnet_ether_addr *hwaddr;		/* hardware address */
 	libnet_t *llink;						/* libnet link */
 	struct list_head neighbors;				/* list of cdp neighbors (on this interface) */
 	struct list_head lh;

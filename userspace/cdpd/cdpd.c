@@ -43,10 +43,11 @@ static const u_char *get_description(u_int16_t val, const description_table *tab
  * interfaces.
  */
 void register_cdp_interface(char *ifname) {
-	int fd;
+	int fd, addr;
 	struct cdp_interface *entry, *tmp;
 	struct bpf_program filter;
 	char err[PCAP_ERRBUF_SIZE];
+	char buf[128]; 
 
 
 	dbg("Enabling cdp on '%s'\n", ifname);
@@ -65,19 +66,6 @@ void register_cdp_interface(char *ifname) {
 	assert(entry);
 	strncpy(entry->name, ifname, IFNAMSIZ);
 
-	/* pcap initialization */
-	pcap_lookupnet(entry->name, &entry->addr, &entry->netmask, err);
-	entry->pcap = pcap_open_live(entry->name, 65535, 1, 0, err);
-	if (!entry->pcap) {
-		fprintf(stderr, "Pcap failed opening %s: %s\n", entry->name, err);
-		exit(1);
-	}
-	pcap_compile(entry->pcap, &filter, PCAP_CDP_FILTER, 0, entry->addr);
-	pcap_setfilter(entry->pcap, &filter);
-	pcap_freecode(&filter);
-
-	fd = pcap_fileno(entry->pcap);
-	fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0) | O_NONBLOCK);
 
 	/* libnet initialization */
 	entry->llink = libnet_init(LIBNET_LINK, entry->name, err);
@@ -90,6 +78,27 @@ void register_cdp_interface(char *ifname) {
 		fprintf(stderr, "Libnet failed getting hw addr of %s: %s\n", entry->name, err);
 		exit(1);
 	}
+	entry->addr = libnet_get_ipaddr4(entry->llink);
+
+	/* pcap initialization */
+	pcap_lookupnet(entry->name, &addr, &entry->netmask, err);
+	entry->pcap = pcap_open_live(entry->name, 65535, 1, 0, err);
+	if (!entry->pcap) {
+		fprintf(stderr, "Pcap failed opening %s: %s\n", entry->name, err);
+		exit(1);
+	}
+	memset(buf, 0, sizeof(buf));
+	snprintf(buf, sizeof(buf), PCAP_CDP_FILTER, entry->hwaddr->ether_addr_octet[0], entry->hwaddr->ether_addr_octet[1], 
+			entry->hwaddr->ether_addr_octet[2], entry->hwaddr->ether_addr_octet[3], entry->hwaddr->ether_addr_octet[4],
+			entry->hwaddr->ether_addr_octet[5]);
+	buf[sizeof(buf)-1] = '\0';
+	dbg("Pcap expresion[%s]: %s, %p, %p, %p\n", entry->name, buf, entry, entry->hwaddr, entry->hwaddr->ether_addr_octet);
+	pcap_compile(entry->pcap, &filter, buf, 0, entry->addr);
+	pcap_setfilter(entry->pcap, &filter);
+	pcap_freecode(&filter);
+
+	fd = pcap_fileno(entry->pcap);
+	fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0) | O_NONBLOCK);
 
 	INIT_LIST_HEAD(&entry->neighbors);
 
@@ -183,6 +192,10 @@ static void do_initial_register() {
 			exit(1);
 		}
 		if (!(ifr.ifr_flags & IFF_UP))
+			continue;
+		// quick hack, please remove
+		// only interfaces registered in the switch...
+		if (!strncmp(name, "lo", strlen("lo")))
 			continue;
 		register_cdp_interface(name);
 	}
@@ -588,6 +601,12 @@ static void cdp_send_loop() {
 	while (1) {
 		dbg("cdp_send_loop()\n");
 		list_for_each_entry_safe(entry, tmp, &registered_interfaces, lh) {
+			dbg("%s, hw_addr: %02hx:%02hx:%02hx:%02hx:%02hx:%02hx, %p, %p, %p\n",
+					entry->name, entry->hwaddr->ether_addr_octet[0],
+					entry->hwaddr->ether_addr_octet[1], entry->hwaddr->ether_addr_octet[2],
+					entry->hwaddr->ether_addr_octet[3], entry->hwaddr->ether_addr_octet[4],
+					entry->hwaddr->ether_addr_octet[5],
+					entry, entry->hwaddr, entry->hwaddr->ether_addr_octet);
 			offset = cdp_frame_init(data, sizeof(data), entry->hwaddr); 
 			offset += cdp_add_device_id(data+offset);
 			offset += cdp_add_addr(data+offset, entry->addr);
@@ -595,6 +614,7 @@ static void cdp_send_loop() {
 			offset += cdp_add_capabilities(data+offset);
 			offset += cdp_add_software_version(data+offset);
 			offset += cdp_add_platform(data+offset);
+			offset += cdp_add_duplex(data+offset);
 			/* frame length */
 			((struct cdp_frame_header *)data)->length = htons(offset-14);
 			/* checksum */
