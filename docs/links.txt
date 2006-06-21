@@ -1,3 +1,0 @@
-http://edge.mcs.drexel.edu/GICL/people/sevy/network/Linux_network_stack_walkthrough.html
-http://limnos.csrd.uiuc.edu/notes/linux-networking/core.html
-http://www.cisco.com/univercd/cc/td/doc/product/lan/trsrb/frames.htm
