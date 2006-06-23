@@ -4,6 +4,7 @@
 #include <sys/wait.h>
 
 #include <linux/net_switch.h>
+#include <linux/sockios.h>
 #include <assert.h>
 #include <ctype.h>
 #include <fcntl.h>
@@ -46,6 +47,7 @@ void register_cdp_interface(char *ifname) {
 	int fd, addr;
 	struct cdp_interface *entry, *tmp;
 	struct bpf_program filter;
+	struct libnet_ether_addr *hw;
 	char err[PCAP_ERRBUF_SIZE];
 	char buf[128]; 
 
@@ -73,11 +75,13 @@ void register_cdp_interface(char *ifname) {
 		fprintf(stderr, "Libnet failed opening %s: %s\n", entry->name, err);
 		exit(1);
 	}
-	entry->hwaddr = libnet_get_hwaddr(entry->llink);
-	if (!entry->hwaddr) {
+	entry->hwaddr = (struct libnet_ether_addr *) malloc(sizeof(struct libnet_ether_addr)); 
+	hw = libnet_get_hwaddr(entry->llink);
+	if (!hw) {
 		fprintf(stderr, "Libnet failed getting hw addr of %s: %s\n", entry->name, err);
 		exit(1);
 	}
+	memcpy(entry->hwaddr, hw, sizeof(struct libnet_ether_addr));
 	entry->addr = libnet_get_ipaddr4(entry->llink);
 
 	/* pcap initialization */
@@ -158,8 +162,9 @@ static void fetch_if_name(char *name, char *buf) {
  * and enable cdp on those who are in the switch. 
  */
 static void do_initial_register() {
-	int sockfd;
+	int sockfd, swsockfd;
 	FILE *f;
+	struct net_switch_ioctl_arg ioctl_arg;
 	char buf[512], name[IFNAMSIZ];
 	struct ifreq ifr;
 
@@ -174,6 +179,12 @@ static void do_initial_register() {
 		fclose(f);
 		exit(1);
 	}
+	swsockfd = socket(PF_PACKET, SOCK_RAW, 0);
+	if (swsockfd < 0) {
+		perror("socket");
+		fclose(f);
+		exit(1);
+	}
 
 	/* skip 2 lines */
 	fgets(buf, sizeof(buf), f);
@@ -181,8 +192,11 @@ static void do_initial_register() {
 
 	while (fgets(buf, sizeof(buf), f)) {
 		fetch_if_name(name, buf);
-		/* TODO: register interface only if the interface is added 
-		 * to the switch (check with ioctl), and interface is up */
+		/* interface is virtual */
+		if (!strncmp(name, LMS_VIRT_PREFIX, strlen(LMS_VIRT_PREFIX))) {
+			dbg("interface %s is virtual.\n", name);
+			continue;
+		}
 		strncpy(ifr.ifr_name, name, IFNAMSIZ);
 		/* get interface flags */
 		if (ioctl(sockfd, SIOCGIFFLAGS, &ifr) < 0) {
@@ -191,12 +205,23 @@ static void do_initial_register() {
 			fclose(f);
 			exit(1);
 		}
-		if (!(ifr.ifr_flags & IFF_UP))
+		/* interface is down */
+		if (!(ifr.ifr_flags & IFF_UP)) {
+			dbg("interface %s is down.\n", name);
 			continue;
+		}
+		ioctl_arg.cmd = SWCFG_GETIFCFG;
+		ioctl_arg.if_name = name;
+		/* the interface is not in the switch */
+		if (ioctl(swsockfd, SIOCSWCFG, &ioctl_arg)) {
+			dbg("interface %s is not in the switch.\n", name);
+			continue;
+		}
+		
 		// quick hack, please remove
 		// only interfaces registered in the switch...
-		if (!strncmp(name, "lo", strlen("lo")))
-			continue;
+		//if (!strncmp(name, "lo", strlen("lo")))
+		//	continue;
 		register_cdp_interface(name);
 	}
 	fclose(f);
