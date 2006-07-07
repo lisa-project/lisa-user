@@ -16,7 +16,7 @@ endif
 
 all: swcli swclid swlogin filter swcon swcfgload reboot
 
-libswcli.so: climain.o command.o config.o config_if.o config_line.o build_config.o if.o shared.o netlink.o ip.o
+libswcli.so: climain.o command.o config.o config_if.o config_line.o build_config.o if.o shared.o netlink.o ip.o cdp.o
 	cd ../lib && make
 	$(CC) $(CFLAGS) -shared -Wl,-soname,libswcli.so -o $@ $^ ../lib/misc.o
 

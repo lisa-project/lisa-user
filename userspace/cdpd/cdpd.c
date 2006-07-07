@@ -1,31 +1,28 @@
-#include <sys/types.h>
-#include <sys/ioctl.h>
-#include <sys/utsname.h>
-#include <sys/wait.h>
-
-#include <linux/net_switch.h>
-#include <linux/sockios.h>
-#include <assert.h>
-#include <ctype.h>
-#include <fcntl.h>
-#include <pcap.h>
-#include <libnet.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <arpa/inet.h>
-
 #include "cdpd.h"
 #include "debug.h"
 
+/* Two linked lists with the cdp registered and de-registered interfaces */
 LIST_HEAD(registered_interfaces);
 LIST_HEAD(deregistered_interfaces);
 
-/* data buffer for cdp frame building */
-static unsigned char data[65535];
 /* cdp configuration parameters (version, ttl, timer) */
-static struct cdp_configuration cfg;
+struct cdp_configuration cfg;
+/* sender, listener and cleaner threads */
+pthread_t sender_thread, listener_thread, cleaner_thread;
+/* cdp traffic statistics */
+struct cdp_traffic_stats cdp_stats;
+
+extern neighbor_heap_t *nheap; 					/* cdp neighbor heap (mac aging mechanism) */
+extern int hend, heap_size;						/* heap end, heap allocated size */ 
+extern sem_t nheap_sem;							/* neighbor heap semaphore */
+
+extern void *cdp_send_loop(void *);				/* Entry point for the sender thread (cdp_send.c) */
+extern void *cdp_ipc_listen(void *);			/* Entry point for the ipc listener thread (cdp_configuration.c) */
+/* function exported from cdp_aging.c */
+extern void sift_up(neighbor_heap_t *, int);
+extern void sift_down(neighbor_heap_t *, int, int);
+extern void *cdp_clean_loop(void *);			/* Entry point for the cdp neighbor cleaner thread */
+
 
 /* get the description string from a description table */
 static const u_char *get_description(u_int16_t val, const description_table *table) {
@@ -45,14 +42,61 @@ static const u_char *get_description(u_int16_t val, const description_table *tab
  */
 void register_cdp_interface(char *ifname) {
 	int fd, addr;
+	int sockfd, swsockfd;
+	struct ifreq ifr;
+	struct net_switch_ioctl_arg ioctl_arg;
 	struct cdp_interface *entry, *tmp;
 	struct bpf_program filter;
 	struct libnet_ether_addr *hw;
 	char err[PCAP_ERRBUF_SIZE];
 	char buf[128]; 
 
-
 	dbg("Enabling cdp on '%s'\n", ifname);
+
+	/* check if the interface is virtual */
+	if (!strncmp(ifname, LMS_VIRT_PREFIX, strlen(LMS_VIRT_PREFIX))) {
+		dbg("interface %s is virtual.\n", ifname);
+		return;
+	}
+
+	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+	assert(sockfd>=0);
+
+	swsockfd = socket(PF_PACKET, SOCK_RAW, 0);
+	assert(swsockfd>=0);
+
+	/* get interface flags */
+	strncpy(ifr.ifr_name, ifname, IFNAMSIZ);
+	assert(ioctl(sockfd, SIOCGIFFLAGS, &ifr)>=0);
+
+	/* interface is down */
+	if (!(ifr.ifr_flags & IFF_UP)) {
+		dbg("interface %s is down.\n", ifname);
+		close(sockfd);
+		close(swsockfd);
+		return;
+	}
+	close(sockfd);
+
+	/* check if the interface is in the switch */
+	ioctl_arg.cmd = SWCFG_GETIFCFG;
+	ioctl_arg.if_name = strdup(ifname);
+	ioctl_arg.ext.cfg.forbidden_vlans = NULL;
+	ioctl_arg.ext.cfg.description = NULL;
+	if (ioctl(swsockfd, SIOCSWCFG, &ioctl_arg)) {
+		dbg("interface %s is not in the switch.\n", ifname);
+		perror("ioctl");
+		close(swsockfd);
+		return;
+	}
+	close(swsockfd);
+
+	/* check if cdp is already enabled on that interface */
+	list_for_each_entry_safe(entry, tmp, &registered_interfaces, lh)
+		if (!strncmp(ifname, entry->name, IFNAMSIZ)) {
+			dbg("CDP already enabled on interface %s.\n", ifname);
+			return;
+		}
 
 	/* search for the interface in the deregistered_interfaces list */
 	list_for_each_entry_safe(entry, tmp, &deregistered_interfaces, lh)
@@ -63,11 +107,10 @@ void register_cdp_interface(char *ifname) {
 		}
 
 	/* if not found, we must allocate the structure and do the 
-	 proper intialization */
+	   proper intialization */
 	entry = (struct cdp_interface *) malloc(sizeof(struct cdp_interface));
 	assert(entry);
 	strncpy(entry->name, ifname, IFNAMSIZ);
-
 
 	/* libnet initialization */
 	entry->llink = libnet_init(LIBNET_LINK, entry->name, err);
@@ -104,6 +147,7 @@ void register_cdp_interface(char *ifname) {
 	fd = pcap_fileno(entry->pcap);
 	fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0) | O_NONBLOCK);
 
+	assert(!sem_init(&entry->n_sem, 0, 1));
 	INIT_LIST_HEAD(&entry->neighbors);
 
 	/* add the entry to the registered_interfaces list */
@@ -114,7 +158,7 @@ void register_cdp_interface(char *ifname) {
  * remove an interface from the list of cdp-enabled
  * interfaces.
  */
-static void unregister_cdp_interface(char *ifname) {
+void unregister_cdp_interface(char *ifname) {
 	struct cdp_interface *entry, *tmp;
 
 	/* move the entry to the deregistrated_interfaces list */
@@ -162,27 +206,11 @@ static void fetch_if_name(char *name, char *buf) {
  * and enable cdp on those who are in the switch. 
  */
 static void do_initial_register() {
-	int sockfd, swsockfd;
 	FILE *f;
-	struct net_switch_ioctl_arg ioctl_arg;
 	char buf[512], name[IFNAMSIZ];
-	struct ifreq ifr;
 
 	if (!(f = fopen(PROCNETDEV_PATH, "r"))) {
 		perror("fopen");
-		exit(1);
-	}
-
-	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-	if (sockfd < 0) {
-		perror("socket");
-		fclose(f);
-		exit(1);
-	}
-	swsockfd = socket(PF_PACKET, SOCK_RAW, 0);
-	if (swsockfd < 0) {
-		perror("socket");
-		fclose(f);
 		exit(1);
 	}
 
@@ -192,46 +220,16 @@ static void do_initial_register() {
 
 	while (fgets(buf, sizeof(buf), f)) {
 		fetch_if_name(name, buf);
-		/* interface is virtual */
-		if (!strncmp(name, LMS_VIRT_PREFIX, strlen(LMS_VIRT_PREFIX))) {
-			dbg("interface %s is virtual.\n", name);
-			continue;
-		}
-		strncpy(ifr.ifr_name, name, IFNAMSIZ);
-		/* get interface flags */
-		if (ioctl(sockfd, SIOCGIFFLAGS, &ifr) < 0) {
-			perror("ioctl");
-			close(sockfd);
-			fclose(f);
-			exit(1);
-		}
-		/* interface is down */
-		if (!(ifr.ifr_flags & IFF_UP)) {
-			dbg("interface %s is down.\n", name);
-			continue;
-		}
-		ioctl_arg.cmd = SWCFG_GETIFCFG;
-		ioctl_arg.if_name = name;
-		/* the interface is not in the switch */
-		if (ioctl(swsockfd, SIOCSWCFG, &ioctl_arg)) {
-			dbg("interface %s is not in the switch.\n", name);
-			continue;
-		}
-		
-		// quick hack, please remove
-		// only interfaces registered in the switch...
-		//if (!strncmp(name, "lo", strlen("lo")))
-		//	continue;
 		register_cdp_interface(name);
 	}
 	fclose(f);
-	close(sockfd);
 }
 
 /* Default CDP configuration */
 static void do_initial_cfg() {
 	struct utsname u_name;
 
+	cfg.enabled = 1;				/* CDP is enabled by default */
 	cfg.version = 0x02;				/* CDPv2*/
 	cfg.holdtime = 0xb4;			/* 180 seconds */
 	cfg.timer = 0x3c;				/* 60 seconds */
@@ -246,6 +244,9 @@ static void do_initial_cfg() {
 	memset(cfg.platform, 0, sizeof(cfg.platform));
 	snprintf(cfg.platform, sizeof(cfg.platform), "%s", u_name.machine);
 	cfg.platform[sizeof(cfg.platform)-1] = '\0';
+
+	/* initialize statistics */
+	cdp_stats.v1_in = cdp_stats.v2_in = cdp_stats.v1_out = cdp_stats.v2_out = 0;
 }
 
 static void print_ipv4_addr(u_int32_t addr) {
@@ -328,15 +329,36 @@ static void decode_field(struct cdp_neighbor **ne, int type, int len, u_char *fi
 	case TYPE_DEVICE_ID:
 		n = find_by_device_id(neighbor->interface, field);
 		if (n) {
+			/* version may have changed */
+			n->cdp_version = neighbor->cdp_version;
 			free(neighbor);
 			dbg("\t\tneighbor %s already registered.\n", field);
 			neighbor = n;
+			sem_wait(&nheap_sem);
+			/* update neighbor heap node timestamp */
+			neighbor->hnode->tstamp = neighbor->ttl + time(NULL);
+			/* sift down the updated node to keep the heap ordered (min-heap) */
+			sift_down(nheap, (neighbor->hnode - nheap)/sizeof(neighbor_heap_t), hend);
+			sem_post(&nheap_sem);
 			*ne = neighbor;
 		}
 		else {
 			/* a new neighbor was found */
 			dbg("\t\tnew neighbor: %s.\n", field);
 			copy_alpha_field(neighbor->device_id, field, sizeof(neighbor->device_id));
+			sem_wait(&nheap_sem);
+			nheap[++hend].tstamp = neighbor->ttl + time(NULL);	
+			dbg("\t\ttimestamp: %ld\n", nheap[hend].tstamp);
+			nheap[hend].n = neighbor;
+			neighbor->hnode = &nheap[hend];
+			/* sift up the added node */
+			sift_up(nheap, hend);
+			if (hend > heap_size) {
+				/* grow the heap for more storage */
+				heap_size = heap_size + INITIAL_HEAP_SIZE;
+				nheap = (neighbor_heap_t *) realloc(nheap, heap_size);
+			}
+			sem_post(&nheap_sem);
 			list_add_tail(&neighbor->lh, &neighbor->interface->neighbors);
 		}
 		break;
@@ -385,9 +407,18 @@ static void dissect_packet(struct pcap_pkthdr *header, u_char *packet, struct cd
 	dbg("Received CDP packet on %s", (*neighbor)->interface->name);
 
 	hdr = (struct cdp_hdr *) (((u_char *)packet) + 22);
+	dbg("\tCDP version: %d, ttl: %d, checksum: %d\n", hdr->version,
+			hdr->time_to_live, hdr->checksum);
+	/* update in stats */
+	if (hdr->version == 1)
+		cdp_stats.v1_in++;
+	else
+		cdp_stats.v2_in++;
 	packet_length = (header->len - 22) - sizeof(struct cdp_hdr);
 	dbg("\tpacket length: %d\n", packet_length);
 	field = (struct cdp_field *) ((((u_char *)packet) + 22) + sizeof(struct cdp_hdr));
+	(*neighbor)->cdp_version = hdr->version;
+	(*neighbor)->ttl = hdr->time_to_live;
 
 	consumed = 0;
 	while (consumed < packet_length) {
@@ -437,268 +468,75 @@ static void print_cdp_neighbor(struct cdp_neighbor *n) {
 	dbg("\n");
 }
 
-/**
- *  Functions for building and sending cdp frames
- */
- 
-/**
- * Fill in the cdp frame header fields.
- */
-static int cdp_frame_init(u_char *buffer, int len, struct libnet_ether_addr *hw_addr) {
-	memset(buffer, 0, len);
-	struct cdp_frame_header *fhdr;
-	struct cdp_hdr *phdr;
-
-	fhdr = (struct cdp_frame_header *)buffer;
-	/* dst mac is multicast (01:00:0c:cc:cc:cc) */
-	fhdr->dst_addr[0] = 0x01;
-	fhdr->dst_addr[1] = 0x00;
-	fhdr->dst_addr[2] = 0x0c;
-	fhdr->dst_addr[3] = fhdr->dst_addr[4] = fhdr->dst_addr[5] = 0xcc;
-	/* src mac is our mac address */
-	memcpy(fhdr->src_addr, hw_addr->ether_addr_octet, ETH_ALEN);
-
-	/* DSAP & SSAP addresses are 0xaa (SNAP) */
-	fhdr->dsap = fhdr->ssap = 0xaa;
-	fhdr->control = 0x03;
-	/* OUI for Cisco */
-	fhdr->oui[2] = 0x0c;
-	/* CDP protocol id: 0x2000 */
-	fhdr->protocol_id = htons(0x2000);
-
-	/* Now the CDP packet header */
-	phdr = (struct cdp_hdr *) (buffer + sizeof(struct cdp_frame_header));
-	/* CDP version */
-	phdr->version = cfg.version;
-	/* CDP holdtime */
-	phdr->time_to_live = cfg.holdtime;
-	/* Checksum will be calculated later */
-	phdr->checksum = 0x00;
-
-	return sizeof(struct cdp_frame_header) + sizeof(struct cdp_hdr);
-}
-
-/**
- * Add the device id field.
- */
-static int cdp_add_device_id(u_char *buffer) {
-	u_char hostname[MAX_HOSTNAME];
-	struct cdp_field *field;
-
-	gethostname(hostname, sizeof(hostname));
-	hostname[sizeof(hostname)-1] = '\0';
-
-	field = (struct cdp_field *) buffer;
-	field->type = htons(TYPE_DEVICE_ID);
-	field->length = htons(strlen(hostname) + sizeof(struct cdp_field));
-
-	memcpy(buffer+sizeof(struct cdp_field), hostname, strlen(hostname));
-
-	return sizeof(struct cdp_field) + strlen(hostname);
-}
-
-/**
- * Add the address field.
- */
-static int cdp_add_addr(u_char *buffer, u_int32_t addr) {
-	struct cdp_field *field;
-
-	if (!addr)
-		return 0;
-
-	field = (struct cdp_field *)buffer;
-	field->type = htons(TYPE_ADDRESS);
-	field->length = htons(17);
-
-	/* Number of addresses */
-	buffer += sizeof(struct cdp_field);
-	*((u_int32_t *)buffer) = htonl(1);
-	buffer += sizeof(u_int32_t);
-	buffer[0] = 0x01;	   /* Protocol Type = NLPID */
-	buffer[1] =	0x01; 	   /* Protocol Length */
-	buffer[2] = PROTO_IP;  /* Protocol = IP */
-	buffer += 3;
-	/* Address Length */
-	*((u_int16_t *)buffer) = htons(sizeof(addr));
-	/* Address */
-	*((u_int32_t *)(buffer+2)) = addr;
-
-	return 17;
-}
-
-/**
- * Add the port id field.
- */
-static int cdp_add_port_id(u_char *buffer, u_char *port) {
-	struct cdp_field *field;
-
-	assert(port);
-	field = (struct cdp_field *)buffer;
-	field->type = htons(TYPE_PORT_ID);
-	field->length = htons(strlen(port) + 4);
-	buffer += sizeof(struct cdp_field);
-	memcpy(buffer, port, strlen(port));
-
-	return strlen(port)+4;
-}
-
-/**
- * Add the capabilities field.
- */
-static int cdp_add_capabilities(u_char *buffer) {
-	struct cdp_field *field;
-
-	field = (struct cdp_field *)buffer;
-	field->type = htons(TYPE_CAPABILITIES);
-	field->length = htons(sizeof(struct cdp_field) + sizeof(u_int32_t));
-	buffer += sizeof(struct cdp_field);
-	*((u_int32_t *) buffer) = htonl(cfg.capabilities);
-	
-	return sizeof(struct cdp_field) + sizeof(u_int32_t);
-}
-
-/**
- * Add the software version field.
- */
-static int cdp_add_software_version(u_char *buffer) {
-	struct cdp_field *field;
-
-	field = (struct cdp_field *)buffer;
-	field->type = htons(TYPE_IOS_VERSION);
-	field->length = htons(sizeof(struct cdp_field) + strlen(cfg.software_version));
-	buffer += sizeof(struct cdp_field);
-	memcpy(buffer, cfg.software_version, strlen(cfg.software_version));
-
-	return sizeof(struct cdp_field) + strlen(cfg.software_version);
-}
-
-/**
- * Add the platform field. 
- */
-static int cdp_add_platform(u_char *buffer) {
-	struct cdp_field *field;
-
-	field = (struct cdp_field *) buffer;
-	field->type = htons(TYPE_PLATFORM);
-	field->length = htons(sizeof(struct cdp_field) + strlen(cfg.platform));
-	buffer += sizeof(struct cdp_field);
-	memcpy(buffer, cfg.platform, strlen(cfg.platform));
-
-	return sizeof(struct cdp_field) + strlen(cfg.platform);
-}
-
-/**
- * Add the duplex field.
- */
-static int cdp_add_duplex(u_char *buffer) {
-	struct cdp_field *field;
-	
-	field = (struct cdp_field *)buffer;
-	field->type = htons(TYPE_DUPLEX);
-	field->length = htons(sizeof(struct cdp_field) + 1);
-	buffer += sizeof(struct cdp_field);
-	buffer[0] = cfg.duplex;
-
-	return sizeof(struct cdp_field) + 1;
-}
-
-static u_int16_t cdp_checksum(u_char *buffer, size_t len) {
-	if (len % 2 == 0) {
-		return libnet_ip_check((u_int16_t *)buffer, len);
-	}
-	else {
-		int c = buffer[len-1];
-		u_int16_t *sp = (u_int16_t *)(&buffer[len-1]);
-		u_int16_t r;
-
-		*sp = htons(c);
-		r = libnet_ip_check((u_int16_t *)buffer, len+1);
-		buffer[len-1] = c;
-		return r;
-	}
-}
-
-
-static void cdp_send_loop() {
+static void cdp_recv_loop() {
 	struct cdp_interface *entry, *tmp;
-	int offset, r;
+	struct cdp_neighbor *neighbor;
+	int fd, maxfd;
+	fd_set rdfs;
+	struct pcap_pkthdr header;
+	u_char *packet;
 
-	while (1) {
-		dbg("cdp_send_loop()\n");
+	/* the loop in which we capture the cdp frames */
+	for (;;) {
+		dbg("[cdp recv loop]\n");
+		FD_ZERO(&rdfs);
+		maxfd = -1;
 		list_for_each_entry_safe(entry, tmp, &registered_interfaces, lh) {
-			dbg("%s, hw_addr: %02hx:%02hx:%02hx:%02hx:%02hx:%02hx, %p, %p, %p\n",
-					entry->name, entry->hwaddr->ether_addr_octet[0],
-					entry->hwaddr->ether_addr_octet[1], entry->hwaddr->ether_addr_octet[2],
-					entry->hwaddr->ether_addr_octet[3], entry->hwaddr->ether_addr_octet[4],
-					entry->hwaddr->ether_addr_octet[5],
-					entry, entry->hwaddr, entry->hwaddr->ether_addr_octet);
-			offset = cdp_frame_init(data, sizeof(data), entry->hwaddr); 
-			offset += cdp_add_device_id(data+offset);
-			offset += cdp_add_addr(data+offset, entry->addr);
-			offset += cdp_add_port_id(data+offset, entry->name);
-			offset += cdp_add_capabilities(data+offset);
-			offset += cdp_add_software_version(data+offset);
-			offset += cdp_add_platform(data+offset);
-			offset += cdp_add_duplex(data+offset);
-			/* frame length */
-			((struct cdp_frame_header *)data)->length = htons(offset-14);
-			/* checksum */
-			((struct cdp_hdr *)(data + sizeof(struct cdp_frame_header)))->checksum =
-				cdp_checksum(data+sizeof(struct cdp_frame_header),
-						offset-sizeof(struct cdp_frame_header));
-			if ((r=libnet_write_link(entry->llink, data, offset))!=offset)
-				dbg("Wrote only %d bytes (error was: %s).\n", r, strerror(errno));
-			dbg("Sent CDP packet of %d bytes on %s.\n", r, entry->name);
+			FD_SET((fd = pcap_fileno(entry->pcap)), &rdfs);
+			if (fd > maxfd)
+				maxfd = fd;
 		}
-		sleep(cfg.timer);
+		if (maxfd < 0) { /* no filedescriptor (no registered interface) */
+			sleep(1);
+			continue;
+		}
+		select(maxfd+1, &rdfs, 0, 0, 0);
+		list_for_each_entry_safe(entry, tmp, &registered_interfaces, lh) {
+			packet = (u_char *) pcap_next(entry->pcap, &header);
+			if (!cfg.enabled) {
+				dbg("[cdp receiver]: cdp is disabled\n");
+			}
+			if (packet && cfg.enabled) {
+				neighbor = (struct cdp_neighbor *) malloc(sizeof(struct cdp_neighbor));
+				neighbor->interface = entry;
+				sem_wait(&entry->n_sem);
+				dissect_packet(&header, packet, &neighbor);
+				sem_post(&entry->n_sem);
+#ifdef DEBUG 
+				print_cdp_neighbor(neighbor);
+#endif
+			}
+		}
 	}
 }
 
 int main(int argc, char *argv[]) {
-	struct cdp_interface *entry, *tmp;
-	struct cdp_neighbor *neighbor;
-	int fd, maxfd, status;
-	fd_set rdfs;
-	struct pcap_pkthdr header;
-	u_char *packet;
-	pid_t pid;
+	int status;
 
 	do_initial_cfg();
 	do_initial_register();
-	/* hey, no interface in the switch?? */
-	assert(!list_empty(&registered_interfaces));
 
+	/* we fail if the list of registered interfaces is empty  */
+	//assert(!list_empty(&registered_interfaces));
 
-	if (!(pid = fork()))
-		cdp_send_loop();
-	else {
-		dbg("child pid=%d\n", pid);
-		/* the main loop in which we capture the cdp frames */
-		for (;;) {
-			FD_ZERO(&rdfs);
-			maxfd = -1;
-			list_for_each_entry_safe(entry, tmp, &registered_interfaces, lh) {
-				FD_SET((fd = pcap_fileno(entry->pcap)), &rdfs);
-				if (fd > maxfd)
-					maxfd = fd;
-			}
-			select(maxfd+1, &rdfs, 0, 0, 0);
-			list_for_each_entry_safe(entry, tmp, &registered_interfaces, lh) {
-				packet = (u_char *) pcap_next(entry->pcap, &header);
-				if (packet) {
-					neighbor = (struct cdp_neighbor *) malloc(sizeof(struct cdp_neighbor));
-					neighbor->interface = entry;
-					dissect_packet(&header, packet, &neighbor);
-					print_cdp_neighbor(neighbor);
-				}
-			}
-		}
+	/* alloc space for the neighbor heap*/
+	heap_size = INITIAL_HEAP_SIZE;
+	hend = -1;
+	nheap = (neighbor_heap_t *) malloc(INITIAL_HEAP_SIZE * sizeof(neighbor_heap_t));
+	/* initialize the neighbor heap semaphore */
+	assert(!sem_init(&nheap_sem, 0, 1));
 
-		do {
-			dbg("waiting for child, pid=%d to exit.\n", pid);
-			waitpid(pid, &status, 0);
-		} while (!WIFEXITED(status));
-	}
+	/* start the threads (sender, ipc listener and cleaner) */
+	status = pthread_create(&sender_thread, NULL, cdp_send_loop, (void *)NULL);
+	assert(!status);
+	status = pthread_create(&listener_thread, NULL, cdp_ipc_listen, (void *)NULL);
+	assert(!status);
+	status = pthread_create(&cleaner_thread, NULL, cdp_clean_loop, (void *)NULL);
+	assert(!status);
 
+	/* cdp receiver loop */
+	cdp_recv_loop();
+
+	/* FIXME: clean shutdown mechanism */
 	return 0;
 }

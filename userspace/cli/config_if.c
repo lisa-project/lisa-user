@@ -26,6 +26,7 @@
 #include "config.h"
 #include "config_if.h"
 #include "ip.h"
+#include "cdp.h"
 
 char sel_eth[IFNAMSIZ];
 char sel_vlan[IFNAMSIZ];
@@ -671,7 +672,13 @@ static sw_command_t sh_duplex[] = {
 	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
 };
 
+static sw_command_t sh_no_eth_cdp[] = {
+	{"enable",				2,	NULL, cmd_cdp_if_disable, RUN,			"Enable CDP on interface",							NULL},
+	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
+};
+
 static sw_command_t sh_no[] = {
+	{"cdp",					2,	NULL,		NULL,			0,			"CDP interface subcommands",						sh_no_eth_cdp},
 	{"description",			2,	NULL,		cmd_noethdesc,	RUN,		"Interface specific description",					NULL},
 	{"duplex",				2,	NULL,		cmd_du_auto,	RUN,		"Configure duplex operation.",						NULL},
 	{"shutdown",			2,	NULL,		cmd_noshutd,	RUN,		"Shutdown the selected interface",					NULL},
@@ -680,7 +687,14 @@ static sw_command_t sh_no[] = {
 	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
 };
 
+
+static sw_command_t sh_eth_cdp[] = {
+	{"enable",				2,	NULL,	cmd_cdp_if_enable, RUN,			"Enable CDP on interface",							NULL},
+	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
+};
+
 static sw_command_t sh_eth[] = {
+	{"cdp",					2,	NULL,		NULL,			0,			"CDP interface subcommands",						sh_eth_cdp},
 	{"description",			2,	NULL,		NULL,			0,			"Interface specific description",					sh_ethdesc},
 	{"duplex",				2,	NULL,		NULL,			0,			"Configure duplex operation.",						sh_duplex},
 	{"end"	,				2,	NULL,		cmd_end,		RUN,		"End interface configuration mode",					NULL},

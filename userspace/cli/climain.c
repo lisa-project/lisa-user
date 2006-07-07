@@ -20,6 +20,8 @@
 #include "debug.h"
 #include "climain.h"
 #include "command.h"
+#include "cdpd.h"
+#include "cdp_ipc.h"
 
 sw_command_root_t *cmd_root = &command_root_main;
 char prompt[MAX_HOSTNAME + 32];
@@ -29,6 +31,9 @@ sw_completion_state_t cmpl_state;
 char eth_range[32]; /* FIXME size */
 char vty_range[32];
 int sock_fd;
+int cdp_ipc_qid;
+int cdp_enabled;
+pid_t my_pid;
 
 /* Current privilege level */
 int priv = 1;
@@ -509,7 +514,7 @@ char *swcli_generator(const char *text, int state) {
 	static int list_index, len;
 	char *name;
 
-	dbg("generator: search_set at 0x%x\n", cmpl_state.search_set);
+	dbg("generator: search_set at 0x%p\n", cmpl_state.search_set);
 	
 	if (! cmpl_state.search_set || !strlen(text) || cmpl_state.no_match_token) 
 		return ((char *)NULL);
@@ -611,6 +616,9 @@ void swcli_piped_exec(sw_execution_state_t *exc) {
 			sa executi comenzi de shell intre `` !!!
 		 */
 		nc = sprintf(cmd_buf, FILTER_PATH " %d %s", exc->pipe_type, exc->func_args[exc->num-1]);	
+		free(exc->func_args[exc->num-1]);
+		exc->func_args[exc->num-1] = NULL;
+		exc->num --;
 	}
 	assert(nc < sizeof(cmd_buf));
 	assert((pipe = popen(cmd_buf, "w")));
@@ -669,11 +677,21 @@ int climain(void) {
 	status = cfg_init();
 	assert(!status);
 	swcli_init_readline();
+
 	sock_fd = socket(PF_PACKET, SOCK_RAW, 0);
 	if(sock_fd == -1) {
 		perror("socket");
 		return 1;
 	}
+
+	my_pid = getpid();
+	dbg("my pid: %d\n", my_pid);
+	if ((cdp_ipc_qid = msgget(CDP_IPC_QUEUE_KEY, 0666)) == -1) {
+		perror("CDP ipc queue doesn't exist. Is cdpd running?");
+		return 1;
+	}
+	dbg("cdp_ipc_qid: %d\n", cdp_ipc_qid);
+	cdp_enabled = 1;
 	
 	do {
 		if (cmd) {

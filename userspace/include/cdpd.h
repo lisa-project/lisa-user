@@ -1,6 +1,29 @@
 #ifndef _CDPD_H
 #define _CDPD_H
 
+#include <pthread.h>
+#include <semaphore.h>
+
+#include <sys/types.h>
+#include <sys/ioctl.h>
+#include <sys/utsname.h>
+#include <sys/wait.h>
+
+#include <linux/net_switch.h>
+#include <linux/sockios.h>
+#include <assert.h>
+#include <ctype.h>
+#include <fcntl.h>
+#include <pcap.h>
+#include <libnet.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+#include <math.h>
+#include <time.h>
+
 #include "common.h"
 #include "list.h"
 
@@ -128,14 +151,25 @@ static const description_table proto_values[] = {
 #define CAP_L1				0x40	/* device is a layer 1 repeater */
 
 /* description table for device capabilities */
+static const description_table device_capabilities_brief[] = {
+	{ CAP_L3R,				"R" },
+	{ CAP_L2TB,				"T" },
+	{ CAP_L2SRB,			"B" },
+	{ CAP_L2SW,				"S" },
+	{ CAP_L3HOST,			"H" },
+	{ CAP_IGMP,				"I" },
+	{ CAP_L1,				"r" },
+	{ 0,					NULL },
+};
+
 static const description_table device_capabilities[] = {
-	{ CAP_L3R,				"Layer 3 Router" },
-	{ CAP_L2TB,				"Layer 2 Transparent Bridge" },
-	{ CAP_L2SRB,			"Layer 2 Source-Route Bridge" },
-	{ CAP_L2SW,				"Layer 2 Switch (non-stp)" },
+	{ CAP_L3R,				"Router" },
+	{ CAP_L2TB,				"Trans-Bridge" },
+	{ CAP_L2SRB,			"Source-Route-Bridge" },
+	{ CAP_L2SW,				"Switch" },
 	{ CAP_L3HOST,			"Host" },
-	{ CAP_IGMP,				"Device is IGMP capable" },
-	{ CAP_L1,				"Layer 1 Repeater" },
+	{ CAP_IGMP,				"IGMP" },
+	{ CAP_L1,				"Repeater" },
 	{ 0,					NULL },
 };
 
@@ -199,6 +233,8 @@ struct protocol_hello {
 /* CDP neighbor */
 struct cdp_neighbor {
 	struct cdp_interface *interface;		/* Interface */
+	u_int8_t ttl;							/* Holdtime (time to live) */
+	u_int8_t cdp_version;
 	u_char device_id[64];					/* Device ID */
 	u_char num_addr;						/* Number of decoded addresses */
 	u_int32_t addr[8];						/* Device addresses */
@@ -210,7 +246,8 @@ struct cdp_neighbor {
 	struct protocol_hello p_hello;			/* Protocol Hello */
 	u_char duplex;							/* Duplex */
 	u_int16_t native_vlan;					/* Native VLAN */
-	struct list_head lh;
+	struct  cdp_neighbor_heap_node *hnode;	/* Pointer to the associated heap node structure */
+	struct list_head lh;					/* list head */
 };
 
 /* CDP interface */
@@ -220,12 +257,14 @@ struct cdp_interface {
 	pcap_t *pcap;							/* pcap structure */
 	struct libnet_ether_addr *hwaddr;		/* hardware address */
 	libnet_t *llink;						/* libnet link */
+	sem_t n_sem;							/* semaphore used for locking on the neighbor list */
 	struct list_head neighbors;				/* list of cdp neighbors (on this interface) */
 	struct list_head lh;
 };
 
 /* CDP configuration parameters */
 struct cdp_configuration {
+	u_int8_t	enabled;				/* enabled flag */
 	u_int8_t 	version;				/* cdp version */
 	u_int8_t 	holdtime;				/* cdp ttl (holdtime) in seconds */
 	u_int8_t	timer;					/* rate at which packets are sent (in seconds) */
@@ -234,5 +273,26 @@ struct cdp_configuration {
 	u_char		platform[16];			/* platform information */
 	u_int8_t	duplex;					/* duplex */
 };
+
+struct cdp_traffic_stats {
+	u_int32_t	v1_in;
+	u_int32_t	v2_in;
+	u_int32_t	v1_out;
+	u_int32_t	v2_out;
+};
+
+/* CDP neighbor heap (used for neighbor aging mechanism) */
+#define INITIAL_HEAP_SIZE 64			/* initial neighbor heap size */
+
+#define LEFT(k)		(2*k+1)
+#define RIGHT(k)	(2*k+2)
+#define PARENT(k)	((int)floor((k-1)/2))
+#define ROOT(heap)	(heap[0])
+
+/* CDP neighbor heap node */
+typedef struct cdp_neighbor_heap_node {
+	time_t tstamp;						/* Expire timestamp */
+	struct cdp_neighbor *n;				/* Pointer to the neighbor struct */
+} neighbor_heap_t;
 
 #endif

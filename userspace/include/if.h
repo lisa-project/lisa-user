@@ -44,6 +44,8 @@
 extern void cmd_sh_int(FILE *, char **);
 extern void cmd_int_eth(FILE *, char **);
 extern void cmd_int_vlan(FILE *, char **);
+extern int cmd_int_eth_status(FILE *, char **);
+extern void cmd_int_cdp(FILE *, unsigned char, unsigned char);
 
 /* network interface ioctl's for MII commands */
 #ifndef SIOCGMIIPHY

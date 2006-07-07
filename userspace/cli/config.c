@@ -32,6 +32,7 @@
 #include "config_if.h"
 #include "config_line.h"
 #include "shared.h"
+#include "cdp.h"
 
 #include <errno.h>
 extern int errno;
@@ -307,6 +308,18 @@ int valid_vtyno2(char *arg, char lookahead) {
 	return 1;
 }
 
+int valid_holdtime(char *arg, char lookahead) {
+	int ht = atoi(arg);
+
+	return (ht >= 10 && ht <= 255);
+}
+
+int valid_timer(char *arg, char lookahead) {
+	int t = atoi(arg);
+
+	return (t >= 5 && t <= 254);
+}
+
 
 static sw_command_t sh_no_int_eth[] = {
 	{eth_range,				15,	valid_eth,	cmd_no_int_eth,		RUN,		"Ethernet interface number",					NULL},
@@ -411,7 +424,14 @@ static sw_command_t sh_novlan[] = {
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
 
+static sw_command_t sh_no_cdp[] = {
+	{"advertise-v2",		15,	NULL,		cmd_no_cdp_v2,		RUN,		"CDP sends version-2 advertisements",			NULL},
+	{"run",					15,	NULL,		cmd_no_cdp_run,		RUN,		"",												NULL},
+	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+};
+
 static sw_command_t sh_no[] = {
+	{"cdp",					15, NULL,		NULL,				0, 			"Global CDP configuration subcommands",			sh_no_cdp},
 	{"enable",				15,	NULL,		NULL,				0,			"Modify enable password parameters",			sh_noenable},
 	{"hostname",			15,	NULL,		cmd_nohostname,		RUN,		"Set system's network name",					NULL},
 	{"interface",			15,	NULL,		NULL,				0,			"Select an interface to configure",				sh_no_int},
@@ -486,8 +506,27 @@ static sw_command_t sh_vlan[] = {
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
 
+static sw_command_t sh_cdp_holdtime[] = {
+	{"<10-255>",			15,	valid_holdtime,		cmd_cdp_holdtime,	RUN,	"Length  of time  (in sec) that receiver must keep this packet",	NULL},
+	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+};
+
+static sw_command_t sh_cdp_timer[] = {
+	{"<5-254>",				15,	valid_timer,		cmd_cdp_timer,		RUN,	"Rate at which CDP packets are sent (in  sec)",	NULL},
+	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+};
+
+static sw_command_t sh_cdp[] = {
+	{"advertise-v2",		15,	NULL,		cmd_cdp_version,	RUN,		"CDP sends version-2 advertisements",			NULL},
+	{"holdtime",			15,	NULL,		NULL,				0,			"Specify the holdtime (in sec) to be sent in packets", sh_cdp_holdtime},
+	{"timer",				15,	NULL,		NULL,				0,			"Specify the rate at which CDP packets are sent (in sec)", sh_cdp_timer},
+	{"run",					15,	NULL,		cmd_cdp_run,		RUN,		"",												NULL},
+	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+};
+
 /* main (config) mode commands */
 static sw_command_t sh[] = {
+	{"cdp",					15,	NULL,		NULL,				0,			"Global CDP configuration subcommands",			sh_cdp},
 	{"enable",				15,	NULL,		NULL,				0,			"Modify enable password parameters",			sh_enable},
 	{"end",					15,	NULL,		cmd_end,			RUN,		"Exit from configure mode",						NULL},
 	{"exit",				15,	NULL,		cmd_end,			RUN,		"Exit from configure mode",						NULL},

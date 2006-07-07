@@ -35,6 +35,7 @@
 #include "shared.h"
 #include "ip.h"
 #include "list.h"
+#include "cdp.h"
 
 int console_session = 0;
 
@@ -619,6 +620,7 @@ static void cmd_reload(FILE *out, char **argv) {
 	sleep(5);
 }
 
+
 /* Validation Handlers Implementation */
 int valid_regex(char *arg, char lookahead) {
 	return 1;
@@ -664,6 +666,18 @@ int valid_dyn(char *arg, char lookahead) {
 
 int valid_static(char *arg, char lookahead) {
 	return (strcmp(arg, "static") == 0);
+}
+
+int valid_star(char *arg, char lookahead) {
+	return (strcmp(arg, "*") == 0);
+}
+
+int valid_protocol(char *arg, char lookahead) {
+	return (arg && strlen(arg) && strncmp(arg, "protocol", strlen(arg)) == 0);
+}
+
+int valid_version(char *arg, char lookahead) {
+	return (arg && strlen(arg) && strncmp(arg, "version", strlen(arg)) == 0);
 }
 
 char vlan_range[] = "<1-1094>\0";
@@ -787,6 +801,65 @@ static sw_command_t sh_sh_int[] = {
 	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
 };
 
+static sw_command_t sh_cdp_int_eth[] = {
+	{eth_range,				1,	valid_eth,  cmd_sh_cdp_int,   RUN,			"Ethernet interface number",						NULL},
+	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
+};
+
+static sw_command_t sh_cdp_ne_det[] = {
+	{ "detail",				1,  NULL,	cmd_sh_cdp_ne_detail,	  RUN,			"Show detailed information",					sh_pipe},
+	{NULL,					0,	NULL,					NULL,		0,			NULL,											NULL}
+};
+
+static sw_command_t sh_cdp_ne_eth[] = {
+	{eth_range,				1,	valid_eth,  cmd_sh_cdp_ne_int, RUN|PTCNT,	"Ethernet interface number",						sh_cdp_ne_det},
+	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
+};
+
+static sw_command_t sh_cdp_int[] = {
+	{"ethernet",			1,	NULL,			NULL,			0,			"Ethernet IEEE 802.3",								sh_cdp_int_eth},
+	{ "|",					1, 	NULL,			NULL,	 	    0,			"Output modifiers",									sh_pipe_mod},
+	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
+};
+
+static sw_command_t sh_cdp_entry_ve[] = {
+	{"protocol",			1, 	valid_protocol,		cmd_sh_cdp_entry,	RUN|PTCNT|CMPL,		"Protocol information",				sh_pipe},
+	{ "|",					1, 	NULL,							NULL,	  			 0,		"Output modifiers",					sh_pipe_mod},
+	{NULL,					0,	NULL,							NULL,	  			 0,		NULL,								NULL}
+};
+
+static sw_command_t sh_sh_cdp_entry[] = {
+	{"protocol",			1, 	valid_protocol,		cmd_sh_cdp_entry,	RUN|PTCNT|CMPL,		"Protocol information",				sh_pipe},
+	{"version",				1,	valid_version,		cmd_sh_cdp_entry,	RUN|PTCNT|CMPL,		"Version information",				sh_cdp_entry_ve},
+	{ "|",					1,			 NULL,					NULL,	 			 0,		"Output modifiers",					sh_pipe_mod},
+	{NULL,					0,			 NULL,					NULL,	 			 0,		NULL,										NULL}
+};
+
+static sw_command_t sh_cdp_entry[] = {
+	{"*",					1,	valid_star,			cmd_sh_cdp_entry,		RUN|PTCNT|CMPL,		"all CDP neighbor entries",			sh_sh_cdp_entry},
+	{"WORD",				1, valid_regex,			cmd_sh_cdp_entry,			 RUN|PTCNT,		"Name of CDP neighbor entry",		sh_sh_cdp_entry},
+	{NULL,					0,	 NULL,							NULL,					 0,		NULL,								NULL}
+};
+
+static sw_command_t sh_cdp_ne[] = {
+	{"ethernet",			1,	NULL,			NULL,				0,			"Ethernet IEEE 802.3",							sh_cdp_ne_eth},
+	{ "detail",				1,  NULL,	cmd_sh_cdp_ne_detail,	  RUN,			"Show detailed information",					sh_pipe},
+	{"|",					1,	NULL,			NULL,			  	0,			"Output modifiers",								sh_pipe_mod},
+	{NULL,					0,	NULL,			NULL,				0,			NULL,											NULL}
+};
+
+static sw_command_t sh_cdp[] = {
+	{"entry",				1,  NULL,				   NULL,			0,			"Information for specific neighbor entry",	sh_cdp_entry},
+	{"holdtime",			1,	NULL,	cmd_sh_cdp_holdtime,		  RUN,			"Time CDP info kept by neighbors",			sh_pipe},
+	{"interface",			1,	NULL,	cmd_sh_cdp_interface,	 	  RUN,			"CDP interface status and configuration",	sh_cdp_int},
+	{"neighbors",			1, 	NULL,	cmd_sh_cdp_ne,				  RUN,			"CDP neighbor entries",						sh_cdp_ne},
+	{"run",					1,	NULL,	cmd_sh_cdp_run,				  RUN,			"CDP process running",						sh_pipe},
+	{"timer",				1,	NULL,	cmd_sh_cdp_timer,			  RUN,			"Time CDP info is resent to neighbors",		sh_pipe},
+	{"traffic",				1,	NULL,	cmd_sh_cdp_traffic,			  RUN,			"CDP statistics",							sh_pipe},
+	{"|",					1, 	NULL,			NULL,					0,			"Output modifiers",							sh_pipe_mod},
+	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
+};
+
 static sw_command_t sh_sh_run_int[] = {
 	{"ethernet",			2,	NULL,			NULL,			0,			"Ethernet IEEE 802.3",								sh_run_eth},
 	{"vlan",				2,	NULL,			NULL,			0,			"LMS Vlans",										sh_run_vlan},
@@ -842,10 +915,11 @@ static sw_command_t sh_show_vlan[] = {
 static sw_command_t sh_show[] = {
 	{"arp",					1,	NULL,			NULL,			RUN,		"ARP table",										NULL},
 	{"clock",				1,	NULL,			NULL,			RUN,		"Display the system clock",							NULL},
+	{"cdp",					1,	NULL,			cmd_sh_cdp,		RUN,		"CDP Information",									sh_cdp},
 	{"history",				1,	NULL,			cmd_history,	RUN,		"Display the session command history",				sh_pipe},
 	{"interfaces",			1,	NULL,			cmd_sh_int,		RUN,		"Interface status and configuration",				sh_sh_int},
 	{"ip",					1,	NULL,			cmd_sh_ip,		RUN,		"IP information",									NULL},
-	{"mac",					1,	NULL,			NULL,			0,		"MAC configuration",								sh_sh_mac},
+	{"mac",					1,	NULL,			NULL,			0,			"MAC configuration",								sh_sh_mac},
 	{"mac-address-table",	1,	NULL,			cmd_show_mac,	RUN,		"MAC forwarding table",								sh_mac_addr_table},
 	{"privilege",			2,	NULL,			cmd_show_priv,	RUN,		"Show current privilege level",						NULL},
 	{"running-config",		2,	NULL,			cmd_show_run,	RUN,		"Current operating configuration",					sh_show_run},

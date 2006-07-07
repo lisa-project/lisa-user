@@ -79,6 +79,9 @@ extern int lookup_token(char *match, char *rest, char lookahead);
 
 extern int sock_fd;
 extern int priv;
+extern int cdp_ipc_qid;		/* cdp ipc queue id */
+extern int cdp_enabled;		/* cdp enabled flag */
+extern pid_t my_pid;		/* pid of the running climain process */
 extern char prompt[];
 extern FILE *mk_tmp_stream(char *, char *);
 extern void copy_data(FILE *, FILE *);

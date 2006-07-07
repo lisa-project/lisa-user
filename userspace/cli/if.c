@@ -381,12 +381,13 @@ static char *media_list(int mask, int best) {
 	strcat(buf, " flow-control");
     return buf;
 }
-void sh_iface_print(FILE *out, struct user_net_device *entry) {
-	int bmcr, bmsr, advert, lkpar;
-	int virtual, line_proto_down, i;
 
-	virtual = 0;
-	line_proto_down = 1;
+void sh_iface_print_status(FILE *out, struct user_net_device *entry, int *virtual, int *line_proto_down) {
+	int bmcr, bmsr, advert, lkpar;
+
+	*virtual = 0;
+	*line_proto_down = 1;
+
 	fprintf(out, "%s ", entry->name);
 	fprintf(out, "is %s, ", (entry->flags & IFF_UP)?"up":"down");
 	if (entry->mii_cap) {
@@ -399,18 +400,31 @@ void sh_iface_print(FILE *out, struct user_net_device *entry) {
 	if (!strncmp(entry->name, LMS_VIRT_PREFIX, 
 				strlen(LMS_VIRT_PREFIX))) {
 		fprintf(out, "%s\n", (entry->flags & IFF_UP)?"up":"down");
-		virtual = 1;
-		line_proto_down = 0;
+		*virtual = 1;
+		*line_proto_down = 0;
 	}	
 	else if (entry->mii_cap) {
 		fprintf(out, "%s\n", (bmsr & MII_BMSR_LINK_VALID)?"up":"down");
-		line_proto_down = !(bmsr & MII_BMSR_LINK_VALID);
+		*line_proto_down = !(bmsr & MII_BMSR_LINK_VALID);
 	}	
 	else { /* FIXME: are we optimistic or what? ;-) */
 		fprintf(out, "down\n");
-		line_proto_down = 1;
+		*line_proto_down = 1;
 	}	
+}
 
+void sh_iface_print(FILE *out, struct user_net_device *entry) {
+	int bmcr, bmsr, advert, lkpar;
+	int virtual, line_proto_down, i;
+
+	virtual = 0;
+	sh_iface_print_status(out, entry, &virtual, &line_proto_down);
+	if (entry->mii_cap) {
+		bmcr = entry->mii_regs[MII_BMCR];
+		bmsr = entry->mii_regs[MII_BMSR];
+		advert = entry->mii_regs[MII_ANAR];
+		lkpar = entry->mii_regs[MII_ANLPAR];
+	}
 	fprintf(out, "  Hardware is %s, ", 
 			(virtual)? "CPU Interface":"Fast Ethernet");
 	fprintf(out,"address is %02hhx%02hhx.%02hhx%02hhx.%02hhx%02hhx "
@@ -566,6 +580,48 @@ void cmd_int_eth(FILE *out, char **argv) {
 		if (!strcmp(entry->name, buf)) {
 			sh_iface_print(out, entry);
 			break;
+		}
+	}
+}
+
+int cmd_int_eth_status(FILE *out, char **argv) {
+	char *arg = *argv;
+	struct user_net_device *entry, *tmp;
+	int eth_no = parse_eth(arg), n;
+	int i;
+	char buf[IFNAMSIZ];
+
+	n = sprintf(buf, "eth%d", eth_no);
+	assert(n < IFNAMSIZ);
+	do_get_ifaces();
+	
+	list_for_each_entry_safe(entry, tmp, &interfaces, lh) {
+		if (!strcmp(entry->name, buf)) {
+			sh_iface_print_status(out, entry, &i, &i);
+			return 0;
+		}
+	}
+	/* interface not found */
+	return 1;
+}
+
+void cmd_int_cdp(FILE *out, unsigned char timer, unsigned char holdtime) {
+	struct user_net_device *entry, *tmp;
+	int n, i;
+	char buf[IFNAMSIZ];
+
+	n = sprintf(buf, "eth");
+	buf[strlen("eth")-1] = '\0';
+	assert(n < IFNAMSIZ);
+	do_get_ifaces();
+	
+	list_for_each_entry_safe(entry, tmp, &interfaces, lh) {
+		if (!strncmp(entry->name, buf, strlen(buf))) {
+			sh_iface_print_status(out, entry, &i, &i);
+			fprintf(out, "\tEncapsulation ARPA\n"
+					"\tSending CDP packets every %d seconds\n"
+					"\tHoldtime is %d seconds\n",
+					timer, holdtime);
 		}
 	}
 }
