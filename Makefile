@@ -1,5 +1,5 @@
 NAME := lisa
-KVER := 2.6.16
+KVER := 2.6.17
 
 .PHONY: all dist distopt package patch user site
 
