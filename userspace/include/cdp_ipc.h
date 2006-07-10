@@ -20,6 +20,7 @@
 #define CDP_IPC_SHOW_CFG 0x01			/* get global configuration parameters */
 #define CDP_IPC_SHOW_NEIGHBORS 0x02		/* show cdp neighbors (with filtering options) */
 #define CDP_IPC_SHOW_STATS 0x03			/* show cdp traffic */
+#define CDP_IPC_SHOW_INTF 0x04			/* show cdp registered interfaces */
 
 /* cdp global configuration field identifiers */
 #define CDP_IPC_CFG_VERSION 0x01

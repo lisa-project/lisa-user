@@ -851,7 +851,7 @@ static sw_command_t sh_cdp_ne[] = {
 static sw_command_t sh_cdp[] = {
 	{"entry",				1,  NULL,				   NULL,			0,			"Information for specific neighbor entry",	sh_cdp_entry},
 	{"holdtime",			1,	NULL,	cmd_sh_cdp_holdtime,		  RUN,			"Time CDP info kept by neighbors",			sh_pipe},
-	{"interface",			1,	NULL,	cmd_sh_cdp_interface,	 	  RUN,			"CDP interface status and configuration",	sh_cdp_int},
+	{"interface",			1,	NULL,	cmd_sh_cdp_int,			 	  RUN,			"CDP interface status and configuration",	sh_cdp_int},
 	{"neighbors",			1, 	NULL,	cmd_sh_cdp_ne,				  RUN,			"CDP neighbor entries",						sh_cdp_ne},
 	{"run",					1,	NULL,	cmd_sh_cdp_run,				  RUN,			"CDP process running",						sh_pipe},
 	{"timer",				1,	NULL,	cmd_sh_cdp_timer,			  RUN,			"Time CDP info is resent to neighbors",		sh_pipe},

@@ -16,7 +16,6 @@ extern void cmd_sh_cdp_holdtime(FILE *, char **);
 extern void cmd_sh_cdp_run(FILE *, char **);
 extern void cmd_sh_cdp_timer(FILE *, char **);
 extern void cmd_sh_cdp_traffic(FILE *, char **);
-extern void cmd_sh_cdp_interface(FILE *, char **);
 extern void cmd_cdp_version(FILE *, char **);
 extern void cmd_cdp_run(FILE *, char **);		/* enable cdp globally */
 extern void cmd_cdp_holdtime(FILE *, char **);

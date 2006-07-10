@@ -7,7 +7,6 @@
 extern char sel_eth[IFNAMSIZ];
 /* defined in if.c */
 extern int cmd_int_eth_status(FILE *, char **);
-extern void cmd_int_cdp(FILE *, unsigned char, unsigned char);
 
 static int cdp_is_disabled(FILE *out) {
 	if (!cdp_enabled) {
@@ -63,6 +62,35 @@ static int get_cdp_neighbors(struct cdp_ipc_message *r, char *interface, char *d
 	if (device_id) {
 		strncpy(q->device_id, device_id, strlen(device_id));
 		q->device_id[strlen(device_id)] = '\0';
+	}
+	m.buf[sizeof(m.buf)-1] = '\0';
+
+	if ((s = msgsnd(cdp_ipc_qid, &m, sizeof(struct cdp_ipc_message), 0)) < 0) {
+		perror("msgsnd");
+		return 1;
+	}
+
+	if ((s = msgrcv(cdp_ipc_qid, r, sizeof(struct cdp_ipc_message), my_pid, 0)) < 0) {
+		perror("msgrcv");
+		return 1;
+	}
+	return 0;
+}
+
+static int get_cdp_interfaces(struct cdp_ipc_message *r, char *interface) {
+	int s;
+	struct cdp_ipc_message m;
+	struct cdp_show_query *q;
+
+	m.type = CDP_IPC_SHOW_QUERY;
+	memset(m.buf, 0, sizeof(m.buf));
+	*((pid_t *)m.buf) = my_pid;
+
+	q = (struct cdp_show_query *) (m.buf + sizeof(pid_t));
+	q->show_type = CDP_IPC_SHOW_INTF;
+	if (interface) {
+		strncpy(q->interface, interface, strlen(interface));
+		q->interface[strlen(interface)] = '\0';
 	}
 	m.buf[sizeof(m.buf)-1] = '\0';
 
@@ -205,17 +233,33 @@ void cmd_sh_cdp(FILE *out, char **argv) {
 
 void cmd_sh_cdp_int(FILE *out, char **argv) {
 	struct cdp_configuration conf;
+	struct cdp_ipc_message r;
+	char *interface = NULL, *ptr;
+	int i, count;
 
 	if (cdp_is_disabled(out))
 		return;
 
 	if (get_cdp_configuration(&conf))
 		return;
-	if (!cmd_int_eth_status(out, argv))
-		fprintf(out, "\tEncapsulation ARPA\n"
-				"\tSending CDP packets every %d seconds\n"
-				"\tHoldtime is %d seconds\n",
-				conf.timer, conf.holdtime);
+
+	if (argv[0])
+		interface = if_name_eth(argv[0]);
+
+	if (get_cdp_interfaces(&r, interface))
+		return;
+
+	count = *((int *) r.buf);
+
+	ptr = r.buf + sizeof(int);
+	for (i = 0; i<count; i++) {
+		if (!cmd_int_eth_status(out, ptr))
+			fprintf(out, "\tEncapsulation ARPA\n"
+					"\tSending CDP packets every %d seconds\n"
+					"\tHoldtime is %d seconds\n",
+					conf.timer, conf.holdtime);
+		ptr += strlen(ptr)+1;
+	}
 }
 
 void cmd_sh_cdp_ne(FILE *out, char **argv) {
@@ -348,17 +392,6 @@ void cmd_sh_cdp_traffic(FILE *out, char **argv) {
 			stats->v1_out + stats->v2_out, stats->v1_in + stats->v2_in,
 			stats->v1_out, stats->v1_in, stats->v2_out, stats->v2_in);
 }
-
-void cmd_sh_cdp_interface(FILE *out, char **argv) {
-	struct cdp_configuration conf;
-
-	if (cdp_is_disabled(out))
-		return;
-	if (get_cdp_configuration(&conf))
-		return;
-	cmd_int_cdp(out, conf.timer, conf.holdtime);
-}
-
 
 static int do_configuration_query(int field_id, int value) {
 	struct cdp_ipc_message m, r;

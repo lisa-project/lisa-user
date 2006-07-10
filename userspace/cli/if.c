@@ -584,46 +584,20 @@ void cmd_int_eth(FILE *out, char **argv) {
 	}
 }
 
-int cmd_int_eth_status(FILE *out, char **argv) {
-	char *arg = *argv;
+int cmd_int_eth_status(FILE *out, char *interface) {
 	struct user_net_device *entry, *tmp;
-	int eth_no = parse_eth(arg), n;
 	int i;
-	char buf[IFNAMSIZ];
 
-	n = sprintf(buf, "eth%d", eth_no);
-	assert(n < IFNAMSIZ);
 	do_get_ifaces();
 	
 	list_for_each_entry_safe(entry, tmp, &interfaces, lh) {
-		if (!strcmp(entry->name, buf)) {
+		if (!strcmp(entry->name, interface)) {
 			sh_iface_print_status(out, entry, &i, &i);
 			return 0;
 		}
 	}
 	/* interface not found */
 	return 1;
-}
-
-void cmd_int_cdp(FILE *out, unsigned char timer, unsigned char holdtime) {
-	struct user_net_device *entry, *tmp;
-	int n, i;
-	char buf[IFNAMSIZ];
-
-	n = sprintf(buf, "eth");
-	buf[strlen("eth")-1] = '\0';
-	assert(n < IFNAMSIZ);
-	do_get_ifaces();
-	
-	list_for_each_entry_safe(entry, tmp, &interfaces, lh) {
-		if (!strncmp(entry->name, buf, strlen(buf))) {
-			sh_iface_print_status(out, entry, &i, &i);
-			fprintf(out, "\tEncapsulation ARPA\n"
-					"\tSending CDP packets every %d seconds\n"
-					"\tHoldtime is %d seconds\n",
-					timer, holdtime);
-		}
-	}
 }
 
 void cmd_int_vlan(FILE *out, char **argv) {

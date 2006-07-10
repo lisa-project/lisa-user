@@ -23,6 +23,31 @@ static void cdp_ipc_add_neighbor(struct cdp_neighbor *n, struct cdp_interface *e
 }
 
 /**
+ * Fetch cdp registered interfaces into the cdp response
+ */
+static int cdp_ipc_get_interfaces(struct cdp_response *cdpr, char *ifname) {
+	struct cdp_interface *entry, *tmp;
+	int count = 0;
+	char *ptr = (char *) cdpr + sizeof(int);
+
+	dbg("requested interface: %s\n", ifname);
+	list_for_each_entry_safe(entry, tmp, &registered_interfaces, lh) {
+		sem_wait(&entry->n_sem);
+		if (ifname && strncmp(entry->name, ifname, strlen(ifname))) {
+			sem_post(&entry->n_sem);
+			continue;
+		}
+		count++;
+		strncpy(ptr, entry->name, strlen(entry->name));
+		ptr[strlen(entry->name)] = '\0';
+		ptr += strlen(entry->name)+1;
+		sem_post(&entry->n_sem);
+	}
+
+	return count;
+}
+
+/**
  * Fetch all known neighbors into the cdp response.
  */
 static int cdp_ipc_get_neighbors(struct cdp_response *cdpr) {
@@ -134,6 +159,9 @@ static void cdp_ipc_show(struct cdp_ipc_message *m, struct cdp_ipc_message *r) {
 		break;
 	case CDP_IPC_SHOW_STATS:
 		memcpy(cdpr->data, &cdp_stats, sizeof(cdp_stats));
+		break;
+	case CDP_IPC_SHOW_INTF:
+		*((int *) cdpr) = cdp_ipc_get_interfaces(cdpr, sq->interface);
 		break;
 	case CDP_IPC_SHOW_NEIGHBORS:
 		dbg("[ipc listener]: interface: %s, %d\n", sq->interface, strlen(sq->interface));
