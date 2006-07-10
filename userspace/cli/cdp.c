@@ -6,7 +6,7 @@
 /* selected interface in interface configuration mode */
 extern char sel_eth[IFNAMSIZ];
 /* defined in if.c */
-extern int cmd_int_eth_status(FILE *, char **);
+extern int cmd_int_eth_status(FILE *, char *);
 
 static int cdp_is_disabled(FILE *out) {
 	if (!cdp_enabled) {
