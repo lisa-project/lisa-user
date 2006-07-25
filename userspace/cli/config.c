@@ -73,6 +73,8 @@ static void cmd_int_eth(FILE *out, char **argv) {
 
 	cmd_root = &command_root_config_if_eth;
 	strcpy(sel_eth, ioctl_arg.if_name);
+	/* Enable CDP on this interface */
+	cmd_cdp_if_enable(out, argv);
 }
 
 static void cmd_no_int_eth(FILE *out, char **argv) {
@@ -82,6 +84,8 @@ static void cmd_no_int_eth(FILE *out, char **argv) {
 	ioctl_arg.cmd = SWCFG_DELIF;
 	ioctl_arg.if_name = if_name_eth(arg);
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
+	/* Disable CDP on this interface */
+	cmd_cdp_if_disable(out, argv);
 }
 
 static void cmd_int_vlan(FILE *out, char **argv) {

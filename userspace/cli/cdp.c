@@ -16,7 +16,7 @@ static int cdp_is_disabled(FILE *out) {
 	return 0;
 }
 
-static int get_cdp_configuration(struct cdp_configuration *conf) {
+int get_cdp_configuration(struct cdp_configuration *conf) {
 	int s;
 	struct cdp_ipc_message m, r;
 	struct cdp_show_query *q;
@@ -419,8 +419,8 @@ static int do_configuration_query(int field_id, int value) {
 	return 0;
 }
 
-static int do_adm_query(int query_type, char *interface) {
-	struct cdp_ipc_message m, r;
+static int do_adm_query(int query_type, char *interface, struct cdp_ipc_message *r) {
+	struct cdp_ipc_message m;
 	struct cdp_adm_query *adm;
 	int s;
 
@@ -439,7 +439,7 @@ static int do_adm_query(int query_type, char *interface) {
 		return 1;
 	}
 
-	if ((s = msgrcv(cdp_ipc_qid, &r, sizeof(struct cdp_ipc_message), my_pid, 0)) < 0) {
+	if ((s = msgrcv(cdp_ipc_qid, r, sizeof(struct cdp_ipc_message), my_pid, 0)) < 0) {
 		perror("msgrcv");
 		return 1;
 	}
@@ -473,9 +473,20 @@ void cmd_no_cdp_run(FILE *out, char **argv) {
 }
 
 void cmd_cdp_if_enable(FILE *out, char **argv) {
-	do_adm_query(CDP_IPC_IF_ENABLE, sel_eth);
+	struct cdp_ipc_message r;
+	do_adm_query(CDP_IPC_IF_ENABLE, sel_eth, &r);
 }
 
 void cmd_cdp_if_disable(FILE *out, char **argv) {
-	do_adm_query(CDP_IPC_IF_DISABLE, sel_eth);
+	struct cdp_ipc_message r;
+	do_adm_query(CDP_IPC_IF_DISABLE, sel_eth, &r);
+}
+
+int cdp_if_is_enabled(char *ifname) {
+	struct cdp_ipc_message r;
+	struct cdp_response *cdpr;
+
+	do_adm_query(CDP_IPC_IF_STATUS, sel_eth, &r);
+	cdpr = (struct cdp_response *) &r.buf;
+	return *((int*) cdpr);
 }

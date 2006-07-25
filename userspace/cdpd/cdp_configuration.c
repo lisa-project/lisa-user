@@ -11,6 +11,7 @@ extern struct cdp_traffic_stats cdp_stats;
 
 extern void register_cdp_interface(char *);
 extern void unregister_cdp_interface(char *);
+extern int get_cdp_status(char *);
 
 static void cdp_ipc_add_neighbor(struct cdp_neighbor *n, struct cdp_interface *entry, char *ptr) {
 	struct cdp_ipc_neighbor neighbor;
@@ -226,6 +227,10 @@ static void cdp_ipc_adm(struct cdp_ipc_message *m, struct cdp_ipc_message *r) {
 	case CDP_IPC_IF_DISABLE:
 		dbg("[ipc listener]: Disable cdp on interface %s\n", aq->interface);
 		unregister_cdp_interface(aq->interface);
+		break;
+	case CDP_IPC_IF_STATUS:
+		dbg("[ipc listener]: Get cdp status on interface %s\n", aq->interface);
+		*((int *) cdpr) = get_cdp_status(aq->interface);
 		break;
 	default:
 		dbg("[ipc listener]: Unknown administrative command type %d.\n", aq->type);

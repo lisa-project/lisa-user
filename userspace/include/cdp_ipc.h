@@ -31,6 +31,7 @@
 /* cdp administrative query types */
 #define CDP_IPC_IF_ENABLE	0x01		/* Enable cdp on an interface */
 #define CDP_IPC_IF_DISABLE	0x02		/* Disable cdp on an interface */
+#define CDP_IPC_IF_STATUS	0x03		/* Get cdp status on an interface */
 
 /* ipc message structure */
 struct cdp_ipc_message {

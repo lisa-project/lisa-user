@@ -30,6 +30,12 @@ extern int errno;
 #include "climain.h"
 #include "shared.h"
 #include "ip.h"
+#include "cdpd.h"
+#include "cdp.h"
+
+/* extern functions from cdp.c */
+extern int get_cdp_configuration(struct cdp_configuration *);
+extern int cdp_if_is_enabled(char *);
 
 void list_interface_status(FILE *out, char *dev) {
 	int sockfd;
@@ -165,6 +171,10 @@ int build_int_eth_config(FILE *out, int num) {
 		}
 		fprintf(out, " duplex %s\n", duplex);
 	}
+	/* cdp status (enabled/disabled). by default cdp is enabled */
+	if (!cdp_if_is_enabled(if_name))
+		fprintf(out, " no cdp enable\n");
+
 	return 0;
 }
 
@@ -214,6 +224,23 @@ void dump_static_macs(FILE *out) {
 				mac->vlan, eth_no);
 	}
 	free(buf);
+}
+
+void dump_cdp_global_settings(FILE *out) {
+	struct cdp_configuration conf;
+
+	if (!cdp_enabled) {
+		fprintf(out, "no cdp run\n");
+		return;
+	}
+	if (get_cdp_configuration(&conf))
+		return;
+	if (conf.version != CFG_DFL_VERSION)
+		fprintf(out, "no cdp advertise-v2\n");
+	if (conf.timer != CFG_DFL_TIMER)
+		fprintf(out, "cdp timer %d\n", conf.timer);
+	if (conf.holdtime != CFG_DFL_HOLDTIME)
+		fprintf(out, "cdp holdtime %d\n", conf.holdtime);
 }
 
 int pretty_print(FILE *out, struct list_head *ipl) {
@@ -377,6 +404,9 @@ int build_config(FILE *out) {
 
 	/* fdb mac aging time */
 	dump_mac_aging_time(out);
+
+	/* cdp global settings */
+	dump_cdp_global_settings(out);
 
 	/* line vty stuff */
 	fprintf(out, "!\nline vty 0 15\n");

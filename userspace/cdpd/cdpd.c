@@ -170,6 +170,15 @@ void unregister_cdp_interface(char *ifname) {
 		}
 }
 
+int get_cdp_status(char *ifname) {
+	struct cdp_interface *entry, *tmp;
+
+	list_for_each_entry_safe(entry, tmp, &registered_interfaces, lh)
+		if (!strncmp(ifname, entry->name, IFNAMSIZ))
+			return 1;
+	return 0;
+}
+
 /**
  * Identify a cdp neighbor in the neighbor list by its
  * device_id.
@@ -183,56 +192,14 @@ static struct cdp_neighbor *find_by_device_id(struct cdp_interface *entry, u_cha
 	return NULL;
 }
 
-/* fetch the interface name from a /proc/net/dev line */
-static void fetch_if_name(char *name, char *buf) {
-	int i = 0;
-
-	while (isspace(*buf))
-		buf++;
-	while (*buf) {
-		if (isspace(*buf))
-			break;
-		if (*buf == ':')
-			break;
-		name[i++] = *buf++;
-		if (i >= IFNAMSIZ-1)
-			break;
-	}
-	name[i] = '\0';
-}
-
-/**
- * parse the system interfaces from /proc/net/dev
- * and enable cdp on those who are in the switch. 
- */
-static void do_initial_register() {
-	FILE *f;
-	char buf[512], name[IFNAMSIZ];
-
-	if (!(f = fopen(PROCNETDEV_PATH, "r"))) {
-		perror("fopen");
-		exit(1);
-	}
-
-	/* skip 2 lines */
-	fgets(buf, sizeof(buf), f);
-	fgets(buf, sizeof(buf), f);
-
-	while (fgets(buf, sizeof(buf), f)) {
-		fetch_if_name(name, buf);
-		register_cdp_interface(name);
-	}
-	fclose(f);
-}
-
 /* Default CDP configuration */
 static void do_initial_cfg() {
 	struct utsname u_name;
 
-	cfg.enabled = 1;				/* CDP is enabled by default */
-	cfg.version = 0x02;				/* CDPv2*/
-	cfg.holdtime = 0xb4;			/* 180 seconds */
-	cfg.timer = 0x3c;				/* 60 seconds */
+	cfg.enabled = 1;						/* CDP is enabled by default */
+	cfg.version = CFG_DFL_VERSION;			/* CDPv2*/
+	cfg.holdtime = CFG_DFL_HOLDTIME;		/* 180 seconds */
+	cfg.timer = CFG_DFL_TIMER;				/* 60 seconds */
 	cfg.capabilities = CAP_L2SW;	/* advertise as a layer 2 (non-STP) switch */
 	cfg.duplex = 0x01;
 	/* get uname information and set software version and platform */
@@ -513,11 +480,8 @@ static void cdp_recv_loop() {
 int main(int argc, char *argv[]) {
 	int status;
 
+	/* initial cdp configuration */
 	do_initial_cfg();
-	do_initial_register();
-
-	/* we fail if the list of registered interfaces is empty  */
-	//assert(!list_empty(&registered_interfaces));
 
 	/* alloc space for the neighbor heap*/
 	heap_size = INITIAL_HEAP_SIZE;

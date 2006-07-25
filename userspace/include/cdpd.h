@@ -262,6 +262,13 @@ struct cdp_interface {
 	struct list_head lh;
 };
 
+/**
+ * CDP global configuration settings (default values)
+ */
+#define CFG_DFL_VERSION 0x02
+#define CFG_DFL_HOLDTIME 0xb4
+#define CFG_DFL_TIMER 0x3c
+
 /* CDP configuration parameters */
 struct cdp_configuration {
 	u_int8_t	enabled;				/* enabled flag */
