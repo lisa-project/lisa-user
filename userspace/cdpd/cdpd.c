@@ -170,6 +170,9 @@ void unregister_cdp_interface(char *ifname) {
 		}
 }
 
+/**
+ * Returns 1 if the interface is cdp-enabled, 0 otherwise.
+ */
 int get_cdp_status(char *ifname) {
 	struct cdp_interface *entry, *tmp;
 
