@@ -83,8 +83,6 @@ int sw_vdb_del_vlan(struct net_switch *sw, int vlan) {
 		return -EINVAL;
 	if(!(entry = sw->vdb[vlan]))
 		return -ENOENT;
-	if(sw_is_default_vlan(vlan))
-		return -EPERM;
 	list_for_each_entry(link, &entry->non_trunk_ports, lh) {
 		sw_disable_port(link->port);
 	}
@@ -136,7 +134,7 @@ int sw_vdb_set_vlan_name(struct net_switch *sw, int vlan, char *name) {
 }
 
 /* Initialize the vlan database */
-void __init sw_vdb_init(struct net_switch *sw) {
+void sw_vdb_init(struct net_switch *sw) {
 	memset(&sw->vdb, 0, sizeof(sw->vdb));
 	sw->vdb_cache = kmem_cache_create("sw_vdb_cache",
 			sizeof(struct net_switch_vdb_link),
@@ -151,7 +149,7 @@ void __init sw_vdb_init(struct net_switch *sw) {
 }
 
 /* Destroy the vlan database */
-void __exit sw_vdb_exit(struct net_switch *sw) {
+void sw_vdb_exit(struct net_switch *sw) {
 	int vlan;
 
 	for(vlan = SW_MIN_VLAN; vlan <= SW_MAX_VLAN; vlan++)

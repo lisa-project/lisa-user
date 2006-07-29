@@ -19,7 +19,7 @@
 #include "sw_private.h"
 #include "sw_debug.h"
 
-void __init sw_fdb_init(struct net_switch *sw) {
+void sw_fdb_init(struct net_switch *sw) {
 	int i;
 
 	for (i=0; i<SW_HASH_SIZE; i++) {
@@ -352,7 +352,7 @@ EXPORT_SYMBOL(fdb_lookup);
 EXPORT_SYMBOL(fdb_learn);
 #endif
 
-void __exit sw_fdb_exit(struct net_switch *sw) {
+void sw_fdb_exit(struct net_switch *sw) {
 	/* Entries are freed by __sw_delif(), which is called for
        all interfaces before this
      */

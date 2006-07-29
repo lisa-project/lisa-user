@@ -494,6 +494,10 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 		err = sw_vdb_add_vlan(&sw, arg.vlan, vlan_desc);
 		break;
 	case SWCFG_DELVLAN:
+		if (sw_is_default_vlan(arg.vlan)) {
+			err = -EPERM;
+			break;
+		}
 		err = sw_vdb_del_vlan(&sw, arg.vlan);
 		break;
 	case SWCFG_RENAMEVLAN:

@@ -22,7 +22,8 @@ int get_cdp_configuration(struct cdp_configuration *conf) {
 	struct cdp_show_query *q;
 	struct cdp_response *cdpr;
 
-	m.type = CDP_IPC_SHOW_QUERY;
+	m.type = 1;
+	m.query_type = CDP_IPC_SHOW_QUERY;
 	memset(m.buf, 0, sizeof(m.buf));
 	*((pid_t *)m.buf) = my_pid;
 
@@ -49,7 +50,8 @@ static int get_cdp_neighbors(struct cdp_ipc_message *r, char *interface, char *d
 	struct cdp_ipc_message m;
 	struct cdp_show_query *q;
 
-	m.type = CDP_IPC_SHOW_QUERY;
+	m.type = 1;
+	m.query_type = CDP_IPC_SHOW_QUERY;
 	memset(m.buf, 0, sizeof(m.buf));
 	*((pid_t *)m.buf) = my_pid;
 
@@ -82,7 +84,8 @@ static int get_cdp_interfaces(struct cdp_ipc_message *r, char *interface) {
 	struct cdp_ipc_message m;
 	struct cdp_show_query *q;
 
-	m.type = CDP_IPC_SHOW_QUERY;
+	m.type = 1;
+	m.query_type = CDP_IPC_SHOW_QUERY;
 	memset(m.buf, 0, sizeof(m.buf));
 	*((pid_t *)m.buf) = my_pid;
 
@@ -366,7 +369,8 @@ void cmd_sh_cdp_traffic(FILE *out, char **argv) {
 	if (cdp_is_disabled(out))
 		return;
 
-	m.type = CDP_IPC_SHOW_QUERY;
+	m.type = 1;
+	m.query_type = CDP_IPC_SHOW_QUERY;
 	memset(m.buf, 0, sizeof(m.buf));
 	*((pid_t *)m.buf) = my_pid;
 
@@ -398,7 +402,8 @@ static int do_configuration_query(int field_id, int value) {
 	struct cdp_conf_query *cf;
 	int s;
 
-	m.type = CDP_IPC_CONF_QUERY;
+	m.type = 1;
+	m.query_type = CDP_IPC_CONF_QUERY;
 	memset(m.buf, 0, sizeof(m.buf));
 	*((pid_t *)m.buf) = my_pid;
 
@@ -424,7 +429,8 @@ static int do_adm_query(int query_type, char *interface, struct cdp_ipc_message 
 	struct cdp_adm_query *adm;
 	int s;
 
-	m.type = CDP_IPC_ADM_QUERY;
+	m.type = 1;
+	m.query_type = CDP_IPC_ADM_QUERY;
 	memset(m.buf, 0, sizeof(m.buf));
 	*((pid_t *)m.buf) = my_pid;
 
@@ -486,7 +492,7 @@ int cdp_if_is_enabled(char *ifname) {
 	struct cdp_ipc_message r;
 	struct cdp_response *cdpr;
 
-	do_adm_query(CDP_IPC_IF_STATUS, sel_eth, &r);
+	do_adm_query(CDP_IPC_IF_STATUS, ifname, &r);
 	cdpr = (struct cdp_response *) &r.buf;
 	return *((int*) cdpr);
 }

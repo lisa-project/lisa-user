@@ -472,9 +472,7 @@ static void cdp_recv_loop() {
 				sem_wait(&entry->n_sem);
 				dissect_packet(&header, packet, &neighbor);
 				sem_post(&entry->n_sem);
-#ifdef DEBUG 
 				print_cdp_neighbor(neighbor);
-#endif
 			}
 		}
 	}

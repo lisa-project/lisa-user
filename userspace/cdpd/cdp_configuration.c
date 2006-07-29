@@ -249,7 +249,7 @@ void *cdp_ipc_listen(void *arg) {
 	dbg("cdp ipc listen\n");
 	for (;;) {
 		/* receive a message from the message queue */
-		if ((s = msgrcv(qid, &m, sizeof(struct cdp_ipc_message), 0, 0)) < 0) {
+		if ((s = msgrcv(qid, &m, sizeof(struct cdp_ipc_message), 1, 0)) < 0) {
 			perror("msgrcv");
 			continue;
 		}
@@ -258,7 +258,7 @@ void *cdp_ipc_listen(void *arg) {
 		dbg("[ipc listener]: sender pid is: %d\n", *((pid_t *)m.buf));
 		/* response type is the sender's pid */
 		r.type = *((pid_t *)m.buf);
-		switch (m.type) {
+		switch (m.query_type) {
 		case CDP_IPC_SHOW_QUERY:
 			cdp_ipc_show(&m, &r);
 			break;
@@ -270,7 +270,7 @@ void *cdp_ipc_listen(void *arg) {
 			break;
 		}
 		/* send the response */
-		s = msgsnd(qid, &r, sizeof(struct cdp_ipc_message), IPC_NOWAIT);
+		s = msgsnd(qid, &r, sizeof(struct cdp_ipc_message), 0);
 		dbg("sent response, result: %d\n", s);
 	}
 	pthread_exit(NULL);

@@ -186,7 +186,7 @@ static int proc_read_vif(char *page, char **start,
 	return len;
 }	
 
-int __init init_switch_proc(void) {
+int init_switch_proc(void) {
 
 	/* Create our own directory under /proc/net */
 	switch_dir = proc_mkdir(SW_PROCFS_DIR, proc_net);

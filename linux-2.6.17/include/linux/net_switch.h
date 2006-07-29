@@ -177,5 +177,9 @@ struct net_switch_ioctl_arg {
 	(((ptr)[0] | (ptr)[1] | (ptr)[2] | (ptr)[3] | (ptr)[4] | (ptr)[5]) == 0)
 #define is_bcast_mac(ptr) \
 	(((ptr)[0] & (ptr)[1] & (ptr)[2] & (ptr)[3] & (ptr)[4] & (ptr)[5]) == 0xff)
+/* Multicast address for CDP and VTP */
+#define is_cdp_vtp_dst(ptr) \
+	((ptr)[0] == 0x01 && (ptr)[1] == 0x00 && (ptr)[2] == 0x0c && \
+	  (ptr)[3] == 0xcc && (ptr)[4] == 0xcc && (ptr)[5] == 0xcc)
 
 #endif

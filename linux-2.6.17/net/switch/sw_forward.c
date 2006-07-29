@@ -404,19 +404,19 @@ int sw_forward(struct net_switch_port *in,
 		if (in == out->port) {
 			/* in_port == out_port */
 			dbg("forward: Dropping frame, dport %s == sport %s\n",
-				out->port->dev->name, in->dev->name);
+					out->port->dev->name, in->dev->name);
 			goto free_skb; 
 		}
 		if (!(out->port->flags & SW_PFL_TRUNK) && 
 				skb_e->vlan != out->port->vlan) {
 			dbg("forward: Dropping frame, dport %s vlan_id %d != skb_e.vlan_id %d\n",
-				out->port->dev->name, out->port->vlan, skb_e->vlan);
+					out->port->dev->name, out->port->vlan, skb_e->vlan);
 			goto free_skb;
 		}
 		if ((out->port->flags & SW_PFL_TRUNK) &&
-			(out->port->forbidden_vlans[skb_e->vlan / 8] & (1 << (skb_e->vlan % 8)))) {
+				(out->port->forbidden_vlans[skb_e->vlan / 8] & (1 << (skb_e->vlan % 8)))) {
 			dbg("forward: Dropping frame, skb_e.vlan_id %d not in allowed vlans of dport %s\n",
-				skb_e->vlan, out->port->dev->name);
+					skb_e->vlan, out->port->dev->name);
 			goto free_skb;
 		}
 		dbg("forward: Forwarding frame from %s to %s\n", in->dev->name,
@@ -433,7 +433,7 @@ int sw_forward(struct net_switch_port *in,
 		ret = sw_flood(sw, in, skb, skb_e->vlan);
 	}	
 	return ret; 
-	
+
 free_skb:	
 	dev_kfree_skb(skb);
 	return 0;

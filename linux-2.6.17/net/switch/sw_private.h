@@ -182,6 +182,11 @@ static __inline__ int sw_vlan_hash(const int vlan) {
 	return vlan % SW_VIF_HASH_SIZE; 
 }
 
+/* things related to cdp header checking */
+#define CDP_HDR_LEN 8
+/* check if ptr is a cdp frame */
+#define is_cdp_frame(ptr,hdr) (!memcmp(ptr, hdr, CDP_HDR_LEN)) 
+
 /* sw.c */
 extern void dump_packet(const struct sk_buff *);
 extern void sw_enable_port(struct net_switch_port *);
@@ -206,8 +211,8 @@ extern int sw_vdb_add_vlan(struct net_switch *, int, char *);
 extern int sw_vdb_add_vlan_default(struct net_switch *, int);
 extern int sw_vdb_del_vlan(struct net_switch *, int);
 extern int sw_vdb_set_vlan_name(struct net_switch *, int, char *);
-extern void __init sw_vdb_init(struct net_switch *);
-extern void __exit sw_vdb_exit(struct net_switch *);
+extern void sw_vdb_init(struct net_switch *);
+extern void sw_vdb_exit(struct net_switch *);
 extern int sw_vdb_add_port(int, struct net_switch_port *);
 extern int sw_vdb_del_port(int, struct net_switch_port *);
 

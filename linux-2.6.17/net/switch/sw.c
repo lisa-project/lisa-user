@@ -37,8 +37,9 @@ MODULE_VERSION("0.1");
 extern int (*sw_handle_frame_hook)(struct net_switch_port *p, struct sk_buff **pskb);
 
 struct net_switch sw;
-/* Safely add an interface to the switch
- */
+
+/* first 8 bytes in a cdp frame after mac header and length */
+static unsigned char cdp_hdr_bytes[] = { 0xaa, 0xaa, 0x03, 0x00, 0x00, 0x0c, 0x20, 0x00 };
 
 void dump_packet(const struct sk_buff *skb) {
 	int i;
@@ -104,6 +105,13 @@ __dbg_static int sw_handle_frame(struct net_switch_port *port, struct sk_buff **
 		skb_e.vlan = port->vlan;
 		skb_e.has_vlan_tag = 0;
 	}
+	
+	/* Drop cdp frames (check dst mac, frame header and do some sanity checks) */
+	if(is_cdp_vtp_dst(skb->mac.raw) && skb->len >= CDP_HDR_LEN && skb->len < port->dev->mtu 
+			&& is_cdp_frame(skb->data, cdp_hdr_bytes)) {
+		dbg("Dropping cdp frame on %s\n", port->dev->name);
+		goto free_skb;
+	}
 
 	/* Perform some sanity checks */
 	if (!sw.vdb[skb_e.vlan]) {
@@ -137,6 +145,7 @@ __dbg_static int sw_handle_frame(struct net_switch_port *port, struct sk_buff **
 		dbg("Received bcast-smac packet on %s\n", port->dev->name);
 		goto free_skb;
 	}
+
 
 	/* Update the fdb */
 	fdb_learn(skb->mac.raw + 6, port, skb_e.vlan, SW_FDB_DYN, 0);
@@ -186,7 +195,7 @@ void sw_disable_port(struct net_switch_port *port) {
 }
 
 /* Initialize everything associated with a switch */
-static void __init init_switch(struct net_switch *sw) {
+static void init_switch(struct net_switch *sw) {
 	int i;
 	
 	memset(sw, 0, sizeof(struct net_switch));
@@ -203,7 +212,7 @@ static void __init init_switch(struct net_switch *sw) {
 }
 
 /* Free everything associated with a switch */
-static void __exit exit_switch(struct net_switch *sw) {
+static void exit_switch(struct net_switch *sw) {
 	struct list_head *pos, *n;
 	struct net_switch_port *port;
 
@@ -220,7 +229,7 @@ static void __exit exit_switch(struct net_switch *sw) {
 
 
 /* Module initialization */
-static int __init switch_init(void) {
+static int switch_init(void) {
 	init_switch(&sw);
 	swioctl_set(sw_deviceless_ioctl);
 	sw_handle_frame_hook = sw_handle_frame;
@@ -230,7 +239,7 @@ static int __init switch_init(void) {
 }
 
 /* Module cleanup */
-static void __exit switch_exit(void) {
+static void switch_exit(void) {
 	exit_switch(&sw);
 	swioctl_set(NULL);
 	sw_handle_frame_hook = NULL;

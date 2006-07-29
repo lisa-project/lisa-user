@@ -35,8 +35,9 @@
 
 /* ipc message structure */
 struct cdp_ipc_message {
-	int type;
-	char buf[CDP_IPC_MSGSIZE];
+	int type;					/* message type (pid of the cli process, or 1 for the cdpd thread) */
+	int query_type;				/* query type (show, conf or adm) */
+	char buf[CDP_IPC_MSGSIZE];	/* message data */
 };
 
 /**
