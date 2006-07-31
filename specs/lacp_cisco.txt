@@ -1,0 +1,35 @@
+interface Port-channel1
+ description LAFARGE
+ switchport access vlan 210
+ switchport mode access
+ flowcontrol send off
+!
+interface FastEthernet0/2
+ description NET CONSULTING PORTCHANNEL 1
+ switchport access vlan 210
+ switchport mode access
+ speed 100
+ duplex full
+ channel-group 1 mode active
+ spanning-tree portfast
+!
+interface FastEthernet0/3
+ description NET CONSULTING PORTCHANNEL 2
+ switchport access vlan 210
+ switchport mode access
+ speed 100
+ duplex full
+ channel-group 1 mode active
+ spanning-tree portfast
+!
+
+
+
+NXDATA-SW(config-if)#channel-group 1 mode ?
+  active     Enable LACP unconditionally
+  auto       Enable PAgP only if a PAgP device is detected
+  desirable  Enable PAgP unconditionally
+  on         Enable Etherchannel only
+  passive    Enable LACP only if a LACP device is detected
+
+
