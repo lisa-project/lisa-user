@@ -1,0 +1,44 @@
+B-CORE-N(config-if)#switchport ?
+  access         Set access mode characteristics of the interface
+  autostate      Include or exclude this port from vlan link up calculation
+  backup         Set backup for the interface
+  block          Disable forwarding of unknown uni/multi cast addresses
+  capture        Set capture mode characteristics of this interface
+  dot1q          Set interface dot1q properties
+  host           Set port host
+  mode           Set trunking mode of the interface
+  nonegotiate    Device will not engage in negotiation protocol on this
+                 interface
+  port-security  Security related command
+  private-vlan   Set the private VLAN configuration
+  trunk          Set trunking characteristics of the interface
+  voice          Voice appliance attributes
+  <cr>
+
+B-CORE-N(config-if)#no switchport
+
+B-CORE-N(config-if)#switchport access vlan 11
+Command rejected: Gi1/12 not a switching port.
+
+
+B-CORE-N#sh run int gi1/12
+Building configuration...
+
+Current configuration : 64 bytes
+!
+interface GigabitEthernet1/12
+ switchport
+ no ip address
+end
+
+
+B-CORE-N(config-if)#no switchport
+B-CORE-N(config-if)#^Z
+B-CORE-N#sh run int gi1/12
+Building configuration...
+
+Current configuration : 52 bytes
+!
+interface GigabitEthernet1/12
+ no ip address
+end
