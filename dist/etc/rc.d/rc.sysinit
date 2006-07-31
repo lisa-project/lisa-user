@@ -31,6 +31,10 @@ mount -t devpts devpts /dev/pts
 # Configure kernel parameters
 sysctl -p > /dev/null
 
+# Start cdpd
+echo "Starting cdpd"
+cdpd &>/dev/null &
+
 # Read switch initial configuration
 echo "Loading configuration"
 swcfgload

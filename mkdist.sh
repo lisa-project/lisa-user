@@ -84,6 +84,7 @@ ln -s /sbin/init.d/halt $DST/etc/rc.d/rc0.d/S01reboot
 echo " done."
 
 echo -n "Installing LMS binaries "
+install -m 0755 -D userspace/cdpd/cdpd $DST/bin/cdpd && echo -n "#"
 install -m 0755 -D userspace/cli/filter $DST/bin/filter && echo -n "#"
 install -m 0755 -D userspace/cli/swcli $DST/bin/swcli && echo -n "#"
 install -m 0755 -D userspace/cli/swclid $DST/sbin/swclid && echo -n "#"
