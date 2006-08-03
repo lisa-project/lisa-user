@@ -41,7 +41,7 @@ static const u_char *get_description(u_int16_t val, const description_table *tab
  * interfaces.
  */
 void register_cdp_interface(char *ifname) {
-	int fd, addr;
+	int fd, addr, status;
 	int sockfd, swsockfd;
 	struct ifreq ifr;
 	struct net_switch_ioctl_arg ioctl_arg;
@@ -67,7 +67,8 @@ void register_cdp_interface(char *ifname) {
 
 	/* get interface flags */
 	strncpy(ifr.ifr_name, ifname, IFNAMSIZ);
-	assert(ioctl(sockfd, SIOCGIFFLAGS, &ifr)>=0);
+	status = ioctl(sockfd, SIOCGIFFLAGS, &ifr);
+	assert(status>=0);
 
 	/* interface is down */
 	if (!(ifr.ifr_flags & IFF_UP)) {
@@ -147,7 +148,8 @@ void register_cdp_interface(char *ifname) {
 	fd = pcap_fileno(entry->pcap);
 	fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0) | O_NONBLOCK);
 
-	assert(!sem_init(&entry->n_sem, 0, 1));
+	status = sem_init(&entry->n_sem, 0, 1);
+	assert(!status);
 	INIT_LIST_HEAD(&entry->neighbors);
 
 	/* add the entry to the registered_interfaces list */
@@ -489,7 +491,8 @@ int main(int argc, char *argv[]) {
 	hend = -1;
 	nheap = (neighbor_heap_t *) malloc(INITIAL_HEAP_SIZE * sizeof(neighbor_heap_t));
 	/* initialize the neighbor heap semaphore */
-	assert(!sem_init(&nheap_sem, 0, 1));
+	status = sem_init(&nheap_sem, 0, 1);
+	assert(!status);
 
 	/* start the threads (sender, ipc listener and cleaner) */
 	status = pthread_create(&sender_thread, NULL, cdp_send_loop, (void *)NULL);
