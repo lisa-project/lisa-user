@@ -34,7 +34,7 @@
 /* integer to alphanumeric mapping */
 typedef struct {
 	const u_int16_t value;
-	const u_char *description;
+	const char *description;
 } description_table;
 
 /**
@@ -235,14 +235,14 @@ struct cdp_neighbor {
 	struct cdp_interface *interface;		/* Interface */
 	u_int8_t ttl;							/* Holdtime (time to live) */
 	u_int8_t cdp_version;
-	u_char device_id[64];					/* Device ID */
+	char device_id[64];						/* Device ID */
 	u_char num_addr;						/* Number of decoded addresses */
 	u_int32_t addr[8];						/* Device addresses */
-	u_char port_id[32];						/* Port ID */			
+	char port_id[32];						/* Port ID */			
 	u_char cap;								/* Capabilities */
-	u_char software_version[255];			/* Software (Cisco IOS version) */
-	u_char platform[32];					/* Hardware platform of the device */
-	u_char vtp_mgmt_domain[32];				/* VTP Management Domain */
+	char software_version[255];				/* Software (Cisco IOS version) */
+	char platform[32];						/* Hardware platform of the device */
+	char vtp_mgmt_domain[32];				/* VTP Management Domain */
 	struct protocol_hello p_hello;			/* Protocol Hello */
 	u_char duplex;							/* Duplex */
 	u_int16_t native_vlan;					/* Native VLAN */
@@ -252,7 +252,7 @@ struct cdp_neighbor {
 
 /* CDP interface */
 struct cdp_interface {
-	u_char name[IFNAMSIZ];					/* Name of the interface */
+	char name[IFNAMSIZ];					/* Name of the interface */
 	bpf_u_int32 addr, netmask;				/* IP/netmask */
 	pcap_t *pcap;							/* pcap structure */
 	struct libnet_ether_addr *hwaddr;		/* hardware address */
@@ -276,8 +276,8 @@ struct cdp_configuration {
 	u_int8_t 	holdtime;				/* cdp ttl (holdtime) in seconds */
 	u_int8_t	timer;					/* rate at which packets are sent (in seconds) */
 	u_int32_t	capabilities;			/* device capabilities */
-	u_char		software_version[255];	/* software version information */
-	u_char		platform[16];			/* platform information */
+	char		software_version[255];	/* software version information */
+	char		platform[16];			/* platform information */
 	u_int8_t	duplex;					/* duplex */
 };
 
@@ -289,7 +289,7 @@ struct cdp_traffic_stats {
 };
 
 /* CDP neighbor heap (used for neighbor aging mechanism) */
-#define INITIAL_HEAP_SIZE 64			/* initial neighbor heap size */
+#define INITIAL_HEAP_SIZE 32			/* initial neighbor heap size */
 
 #define LEFT(k)		(2*k+1)
 #define RIGHT(k)	(2*k+2)

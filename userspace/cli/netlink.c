@@ -75,7 +75,7 @@ static int get_addr_1(inet_prefix *addr, const char *name, int family) {
  */
 static int get_prefix_1(inet_prefix *dst, const char *arg, int family) {
 	int err = 0;
-	unsigned plen;
+	int plen;
 	char *slash;
 
 	memset(dst, 0, sizeof(*dst));
@@ -140,7 +140,7 @@ int addattr_l(struct nlmsghdr *n, int maxlen, int type, const void *data,
 
 /* Open netlink socket */
 int rtnl_open(struct rtnl_handle *rth) {
-	int addr_len;
+	unsigned int addr_len;
 	int sndbuf = 32768;
 	int rcvbuf = 32768;
 

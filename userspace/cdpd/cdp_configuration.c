@@ -13,6 +13,9 @@ extern void register_cdp_interface(char *);
 extern void unregister_cdp_interface(char *);
 extern int get_cdp_status(char *);
 
+/* IPC queue id */
+int qid;
+
 static void cdp_ipc_add_neighbor(struct cdp_neighbor *n, struct cdp_interface *entry, char *ptr) {
 	struct cdp_ipc_neighbor neighbor;
 
@@ -238,7 +241,7 @@ static void cdp_ipc_adm(struct cdp_ipc_message *m, struct cdp_ipc_message *r) {
 }
 
 void *cdp_ipc_listen(void *arg) {
-	int qid, s;
+	int s;
 	struct cdp_ipc_message m, r;
 
 	if ((qid = msgget(CDP_IPC_QUEUE_KEY, IPC_CREAT|0666)) == -1) {

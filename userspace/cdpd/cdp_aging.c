@@ -6,19 +6,25 @@ neighbor_heap_t *nheap;
 int hend, heap_size;
 sem_t nheap_sem;
 
+/* Exchange 2 elements in the heap */
+#define _XCHG(h, i1, i2) do { \
+		neighbor_heap_t temp; \
+		temp = h[i1]; \
+		h[i1] = h[i2]; \
+		h[i1].n->hnode = &h[i1]; \
+		h[i2] = temp; \
+		h[i2].n->hnode = &h[i2]; \
+	} while(0);
+
 /**
  * Sift up an element in the neighbor heap.
  */
 void sift_up(neighbor_heap_t *heap, int pos) {
-	neighbor_heap_t temp;
-
 	while (pos > 0) {
 		if (heap[pos].tstamp >= heap[PARENT(pos)].tstamp)
 			return;
 		/* swap node with parent */
-		temp = heap[pos];
-		heap[pos] = heap[PARENT(pos)];
-		heap[PARENT(pos)] = temp;
+		_XCHG(heap, pos, PARENT(pos));
 		/* continue with parent */
 		pos = PARENT(pos);
 	}
@@ -28,7 +34,6 @@ void sift_up(neighbor_heap_t *heap, int pos) {
  * Sift down an element in the neighbor heap.
  */
 void sift_down(neighbor_heap_t *heap, int pos, int heap_end) {
-	neighbor_heap_t temp;
 	int min;
 
 	while (pos < heap_end) {
@@ -46,9 +51,7 @@ void sift_down(neighbor_heap_t *heap, int pos, int heap_end) {
 			return;
 
 		/* swap pos with min */
-		temp = heap[min];
-		heap[min] = heap[pos];
-		heap[pos] = temp;
+		_XCHG(heap, min, pos);
 
 		/* continue with index min */
 		pos = min;
@@ -69,9 +72,12 @@ void *cdp_clean_loop(void *arg) {
 		/* clean expired neighbor entries */
 		while (ROOT(nheap).tstamp <= time(NULL)) {
 			sem_wait(&nheap_sem);
-			/* the condition is true even if we waited at the semaphore and other elements were
-			 inserted into the heap (the heap is a min-heap and this is the only place we're 
-			 extracting from it) */
+			/* if an update to the root node was received while we were waiting
+			at the semaphore, we must avoid the race condition */
+			if (ROOT(nheap).tstamp > time(NULL)) {
+				sem_post(&nheap_sem);
+				break;
+			}
 			n = ROOT(nheap).n;
 			i = n->interface;
 			dbg("[cdp cleaner]: cleaning cdp neighbor %s\n", n->device_id);

@@ -52,7 +52,7 @@ static int cdp_frame_init(u_char *buffer, int len, struct libnet_ether_addr *hw_
  * Add the device id field.
  */
 static int cdp_add_device_id(u_char *buffer) {
-	u_char hostname[MAX_HOSTNAME];
+	char hostname[MAX_HOSTNAME];
 	struct cdp_field *field;
 
 	gethostname(hostname, sizeof(hostname));
@@ -99,7 +99,7 @@ static int cdp_add_addr(u_char *buffer, u_int32_t addr) {
 /**
  * Add the port id field.
  */
-static int cdp_add_port_id(u_char *buffer, u_char *port) {
+static int cdp_add_port_id(u_char *buffer, char *port) {
 	struct cdp_field *field;
 
 	assert(port);

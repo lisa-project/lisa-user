@@ -515,7 +515,12 @@ static void show_ip(FILE *out, char *dev) {
 		exit(-1);
 	}
 	while (fgets(buf, sizeof(buf), fh)) {
+		/* make sure buf is null-terminated */
 		buf[sizeof(buf)-1] = '\0';
+		/* strip the newline at the end of buf */
+		if (buf && strlen(buf))
+			buf[strlen(buf)-1] = '\0'; 
+		/* compare to the interface name we're searching for */
 		if (dev && strcmp(dev, buf))
 			continue;
 		ipl = list_ip_addr(buf, 0);

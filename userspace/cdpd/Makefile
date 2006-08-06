@@ -1,6 +1,7 @@
 .PHONY: all clean
 
-CFLAGS +=-Wall -I$(KDIR)/include -I../include -fPIC -D_XOPEN_SOURCE $(shell libnet-config --cflags --defines)
+CFLAGS +=-Wall -I$(KDIR)/include -I../include -fPIC -D_XOPEN_SOURCE=500 $(shell libnet-config --cflags --defines)
+CFLAGS += -DDEBUG
 LDFLAGS=-lpcap -lpthread -lm $(shell libnet-config --libs)
 
 all: cdpd

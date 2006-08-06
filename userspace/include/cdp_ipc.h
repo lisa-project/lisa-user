@@ -46,8 +46,8 @@ struct cdp_ipc_message {
 struct cdp_show_query {
 	unsigned char show_type;
 	/* filter by interface or device id for "show cdp neighbors" queries */
-	unsigned char interface[IFNAMSIZ];	/* show cdp neighbors eth x */
-	unsigned char device_id[64];		/* show cdp entry */
+	char interface[IFNAMSIZ];	/* show cdp neighbors eth x */
+	char device_id[64];			/* show cdp entry */
 };
 
 struct cdp_conf_query {

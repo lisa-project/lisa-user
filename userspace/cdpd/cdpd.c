@@ -1,5 +1,7 @@
 #include "cdpd.h"
+#include "cdp_ipc.h"
 #include "debug.h"
+#include <signal.h>
 
 /* Two linked lists with the cdp registered and de-registered interfaces */
 LIST_HEAD(registered_interfaces);
@@ -8,24 +10,26 @@ LIST_HEAD(deregistered_interfaces);
 /* cdp configuration parameters (version, ttl, timer) */
 struct cdp_configuration cfg;
 /* sender, listener and cleaner threads */
-pthread_t sender_thread, listener_thread, cleaner_thread;
+pthread_t sender_thread, listener_thread, cleaner_thread, shutdown_thread;
 /* cdp traffic statistics */
 struct cdp_traffic_stats cdp_stats;
 
-extern neighbor_heap_t *nheap; 					/* cdp neighbor heap (mac aging mechanism) */
+extern neighbor_heap_t *nheap; 					/* cdp neighbor heap (cdp neighbor aging mechanism) */
 extern int hend, heap_size;						/* heap end, heap allocated size */ 
 extern sem_t nheap_sem;							/* neighbor heap semaphore */
+extern int qid;									/* the IPC queue id */
 
 extern void *cdp_send_loop(void *);				/* Entry point for the sender thread (cdp_send.c) */
 extern void *cdp_ipc_listen(void *);			/* Entry point for the ipc listener thread (cdp_configuration.c) */
-/* function exported from cdp_aging.c */
+/* functions exported from cdp_aging.c */
 extern void sift_up(neighbor_heap_t *, int);
 extern void sift_down(neighbor_heap_t *, int, int);
 extern void *cdp_clean_loop(void *);			/* Entry point for the cdp neighbor cleaner thread */
 
 
 /* get the description string from a description table */
-static const u_char *get_description(u_int16_t val, const description_table *table) {
+#ifdef DEBUG
+static const char *get_description(u_int16_t val, const description_table *table) {
 	u_int16_t i = 0;
 
 	while (table[i].description) {
@@ -35,14 +39,15 @@ static const u_char *get_description(u_int16_t val, const description_table *tab
 	}
 	return table[i].description;
 }
+#endif
 
 /**
  * add an interface to the list of cdp-enabled
  * interfaces.
  */
 void register_cdp_interface(char *ifname) {
-	int fd, addr, status;
-	int sockfd, swsockfd;
+	int fd, sockfd, swsockfd, status;
+	bpf_u_int32 addr;
 	struct ifreq ifr;
 	struct net_switch_ioctl_arg ioctl_arg;
 	struct cdp_interface *entry, *tmp;
@@ -188,7 +193,7 @@ int get_cdp_status(char *ifname) {
  * Identify a cdp neighbor in the neighbor list by its
  * device_id.
  */
-static struct cdp_neighbor *find_by_device_id(struct cdp_interface *entry, u_char *device_id) {
+static struct cdp_neighbor *find_by_device_id(struct cdp_interface *entry, char *device_id) {
 	struct cdp_neighbor *n, *tmp;
 
 	list_for_each_entry_safe(n, tmp, &(entry->neighbors), lh)
@@ -244,7 +249,7 @@ static void print_ipv4_addr(u_int32_t addr) {
  * Address (variable) [ address of the interface, or address of the system if addresses
  * 		are not assigned to the interface ]
  */
-static void decode_address(u_char *field, u_int32_t len, struct cdp_neighbor *n) {
+static void decode_address(char *field, u_int32_t len, struct cdp_neighbor *n) {
 	u_int32_t i, number, offset;
 
 	number = ntohl(*((u_int32_t *)field));
@@ -283,18 +288,18 @@ static void print_capabilities(u_char cap) {
 	}
 }
 
-static void decode_protocol_hello(u_char *field, u_int32_t len, struct protocol_hello *h) {
+static void decode_protocol_hello(char *field, u_int32_t len, struct protocol_hello *h) {
 	h->oui = ntohl(*((u_int32_t *)field)) >> 8;
 	h->protocol_id = ntohs(*((u_int16_t *) (field + 3)));
 	memcpy(h->payload, (field + 5), sizeof(h->payload));
 }
 
-static void copy_alpha_field(u_char *dest, u_char *src, size_t size) {
+static void copy_alpha_field(char *dest, char *src, size_t size) {
 	strncpy(dest, src, size);
 	dest[size-1] = '\0';
 }
 
-static void decode_field(struct cdp_neighbor **ne, int type, int len, u_char *field) {
+static void decode_field(struct cdp_neighbor **ne, int type, int len, char *field) {
 	struct cdp_neighbor* neighbor = *ne;
 	struct cdp_neighbor* n = NULL;
 	switch (type) {
@@ -397,7 +402,7 @@ static void dissect_packet(struct pcap_pkthdr *header, u_char *packet, struct cd
 		field_type = ntohs(field->type);
 		field_len = ntohs(field->length);
 		decode_field(neighbor, field_type, field_len-sizeof(struct cdp_field), 
-				((u_char *)field)+sizeof(struct cdp_field));
+				((char *)field)+sizeof(struct cdp_field));
 		consumed += field_len;	
 		field = (struct cdp_field *) (((u_char *)field) + field_len);
 	}
@@ -480,8 +485,28 @@ static void cdp_recv_loop() {
 	}
 }
 
+void *signal_handler(void *ptr) {
+	sigset_t signal_set;
+	int sig;
+
+	sigemptyset(&signal_set);
+	sigaddset(&signal_set, SIGINT);
+	dbg("[signal handler]: Waiting for SIGINT ...\n");
+	sigwait(&signal_set, &sig);
+	dbg("[signal handler]: Caught SIGINT ... \n");
+	dbg("[signal handler]: Removing the IPC queue ... \n");
+	msgctl(qid, IPC_RMID, NULL);
+	dbg("[signal handler]: Exiting\n");
+	exit(0);
+}
+
 int main(int argc, char *argv[]) {
 	int status;
+	sigset_t signal_set;
+
+	/* mask all signals */
+	sigfillset(&signal_set);
+	pthread_sigmask(SIG_BLOCK, &signal_set, NULL);
 
 	/* initial cdp configuration */
 	do_initial_cfg();
@@ -501,10 +526,10 @@ int main(int argc, char *argv[]) {
 	assert(!status);
 	status = pthread_create(&cleaner_thread, NULL, cdp_clean_loop, (void *)NULL);
 	assert(!status);
+	status = pthread_create(&shutdown_thread, NULL, signal_handler, (void *)NULL);
 
 	/* cdp receiver loop */
 	cdp_recv_loop();
 
-	/* FIXME: clean shutdown mechanism */
 	return 0;
 }
