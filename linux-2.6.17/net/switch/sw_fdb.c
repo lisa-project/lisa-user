@@ -211,7 +211,6 @@ int fdb_del(struct net_switch *sw, unsigned char *mac,
 	struct net_switch_fdb_entry *entry, *tmp;
 	struct list_head *entry_lh, *tmp_lh;
 	LIST_HEAD(del_list);
-	int i;
 	struct net_switch_bucket *bucket = &sw->fdb[sw_mac_hash(mac)];
 	int ret = 0;
 
@@ -236,7 +235,7 @@ int fdb_del(struct net_switch *sw, unsigned char *mac,
 			list_add(&entry->lh, &del_list);
 		}
 	}
-	spin_unlock_bh(&sw->fdb[i].lock);
+	spin_unlock_bh(&bucket->lock);
 	synchronize_sched();
 	list_for_each_entry_safe(entry, tmp, &del_list, lh) {
 		dbg("About to free fdb entry at 0x%p for port %s\n",

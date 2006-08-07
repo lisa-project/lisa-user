@@ -594,9 +594,9 @@ void swcli_exec(FILE *out, sw_execution_state_t *exc) {
 		exc->size ++;
 	}
 	exc->func_args[exc->num++] = NULL;
-	rl_unbind_key('?');
+	//rl_unbind_key('?');
 	exc->func(out, exc->func_args); //FIXME pointer la arg
-	rl_bind_key('?', list_current_options);
+	//rl_bind_key('?', list_current_options);
 }
 
 void swcli_piped_exec(sw_execution_state_t *exc) {
