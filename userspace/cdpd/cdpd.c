@@ -510,6 +510,7 @@ void *signal_handler(void *ptr) {
 
 	sigemptyset(&signal_set);
 	sigaddset(&signal_set, SIGINT);
+	sigaddset(&signal_set, SIGTERM);
 	dbg("[signal handler]: Waiting for SIGINT ...\n");
 	sigwait(&signal_set, &sig);
 	dbg("[signal handler]: Caught SIGINT ... \n");
