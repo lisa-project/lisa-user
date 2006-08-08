@@ -196,6 +196,44 @@ int fdb_cleanup_vlan(struct net_switch *sw, int vlan, int addr_type) {
 	return ret;
 }
 
+void free_fdb_entry(struct rcu_head* head)
+{
+	struct net_switch_fdb_entry* entry = container_of(head, struct net_switch_fdb_entry, rcu);
+
+	kmem_cache_free(entry->port->sw->fdb_cache, entry);
+}
+
+int fdb_cleanup_vlan_irq(struct net_switch *sw, int vlan, int addr_type) {
+	struct net_switch_fdb_entry *entry;
+	struct list_head *entry_lh, *tmp_lh;
+	int i, ret = 0;
+	
+	for (i = 0; i < SW_HASH_SIZE; i++) {
+		list_for_each_entry_rcu(entry, &sw->fdb[i].entries, lh) {
+			if(entry->vlan == vlan && (addr_type == SW_FDB_ANY || entry->is_static == addr_type))
+				break;
+		}
+		if(&entry->lh == &sw->fdb[i].entries)
+			continue;
+		/* We found entries; lock for write and delete them */
+		spin_lock(&sw->fdb[i].lock);
+		list_for_each_safe_rcu(entry_lh, tmp_lh, &sw->fdb[i].entries) {
+			entry = list_entry(entry_lh, struct net_switch_fdb_entry, lh);
+			if(entry->vlan == vlan && (addr_type == SW_FDB_ANY || entry->is_static == addr_type)) {
+				if (!entry->is_static)
+					del_timer(&entry->age_timer);
+				list_del_rcu(&entry->lh);
+				call_rcu(&entry->rcu, free_fdb_entry);
+				
+				ret++;
+			}
+		}
+		spin_unlock(&sw->fdb[i].lock);
+	}
+	
+	return ret;
+}
+
 /* Delete all entries having a specific address.
    
    This is (should be) always called from user space, so locking is

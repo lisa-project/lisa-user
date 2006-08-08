@@ -1,4 +1,4 @@
-CFLAGS = -g -Wall -I$(KDIR)/include -I ../include -fPIC -D_GNU_SOURCE
+CFLAGS = -g -Wall -I$(KDIR)/include #-DDEBUG
 LDFLAGS = -L. -lreadline -lcurses -lutil -lcrypt
 
 __LOGIN_PATH := \"$(shell pwd)/swlogin\"
@@ -16,7 +16,7 @@ endif
 
 all: swcli swclid swlogin filter swcon swcfgload reboot
 
-libswcli.so: climain.o command.o config.o config_if.o config_line.o build_config.o if.o shared.o netlink.o ip.o cdp.o
+libswcli.so: climain.o command.o config.o config_if.o config_line.o build_config.o if.o shared.o netlink.o ip.o md5.o
 	cd ../lib && make
 	$(CC) $(CFLAGS) -shared -Wl,-soname,libswcli.so -o $@ $^ ../lib/misc.o
 

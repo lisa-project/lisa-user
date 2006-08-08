@@ -50,6 +50,29 @@
 #define SWCFG_DISABLEVIF	0x23	/* administratively disable virtual interface */
 #define SWCFG_GETAGETIME	0x24	/* get fdb aging time interval */
 #define SWCFG_GETVDB		0x30	/* copy the whole vlan database to userspace */
+#define SWCFG_STP_PORT_PRIO     0X40    /* Set port priority for stp */
+#define SWCFG_STP_PORT_COST     0x41    /* Set port cost for stp */ 
+#define SWCFG_STP_SW_PRIO       0x42    /* Set switch priority */
+#define SWCFG_STP_HELLO_TIME    0x43    /* Set hello time */
+#define SWCFG_STP_FORWARD_DELAY 0x44    /* Set forward delay time */
+#define SWCFG_STP_MAX_AGE       0x45    /* Set max age time  */
+#define SWCFG_STP_SW_SHOW       0x46    /* Show stp configuration for switch */
+#define SWCFG_STP_PORT_SHOW     0x47    /* Show stp configuration for port */
+#define SWCFG_STP_ENABLE        0x48    /* Enable stp */
+#define SWCFG_STP_DISABLE       0x49    /* Disable stp */
+#define SWCFG_STP_SHOW_ST       0x49    /* Show spanning tree. */
+#define SWCFG_VTP_SET_DOMAIN	0x50	/* Set VTP administrative domain */
+#define SWCFG_VTP_SET_FILE	0x51	/* Configure IFS filesystem file where VTP configuration is stored. */
+#define SWCFG_VTP_SET_INTERFACE	0x52	/* Configure interface as the preferred source for the VTP IP updater address */
+#define SWCFG_VTP_SET_MODE	0x53	/* Configure VTP device mode */
+#define SWCFG_VTP_SET_PASSWORD	0x54	/* Set the password for the VTP administrative domain */
+#define SWCFG_VTP_ENABLE_PRUNING 0x55	/* Set the administrative domain to permit pruning */
+#define SWCFG_VTP_SET_VERSION	0x56	/* Set the administrative domain to VTP version */
+
+#define VTP_MODE_TRANSPARENT	0X01
+#define VTP_MODE_CLIENT		0X02
+#define VTP_MODE_SERVER		0X03
+#define VTP_TIMESTAMP_SIZE	12
 
 #define SW_PFL_DISABLED     0x01
 #define SW_PFL_ACCESS		0x02
@@ -58,7 +81,7 @@
 #define SW_PFL_ADMDISABLED	0x10
 
 #define SW_SPEED_AUTO		0x01
-#define SW_SPEED_10			0x02
+#define SW_SPEED_10		0x02
 #define SW_SPEED_100		0x03
 #define SW_SPEED_1000		0x04
 
@@ -82,6 +105,8 @@ struct net_switch_ifcfg {
 	char *description;
 	int speed;
 	int duplex;
+        char prio;
+        unsigned int cost;
 };
 
 struct net_switch_mac {
@@ -114,10 +139,27 @@ struct net_switch_usr_vdb_arg {
 	char *buf;
 };
 
+struct net_switch_vtp_domain
+{
+	char length;
+	char* domain;
+};
+
+struct net_switch_vtp_pass
+{
+	char* password;
+	unsigned char* md5;
+};
+
+
+
 struct net_switch_ioctl_arg {
 	unsigned char cmd;
 	char *if_name;
 	int vlan;
+
+	char timestamp[VTP_TIMESTAMP_SIZE + 1];
+
 	union {
 		int access;
 		int trunk;
@@ -128,6 +170,19 @@ struct net_switch_ioctl_arg {
 		char *iface_desc;
 		int speed;
 		int duplex;
+		
+		/* Stp values. */
+	        unsigned  prio;
+	        char max_age;
+	        char forward_delay;
+	        char hello_time;
+		
+		/* VTP values. */
+		char* vtp_domain;
+		char vtp_mode;
+		struct net_switch_vtp_pass vtp_password;
+		char vtp_version;
+		
 		struct net_switch_ifcfg cfg;
 		struct net_switch_mac_arg marg;
 		struct net_switch_usr_vdb_arg varg;

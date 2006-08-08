@@ -85,11 +85,12 @@ static int sw_addif(struct net_device *dev) {
 	}
 	port->dev = dev;
 	port->sw = &sw;
-    port->vlan = 1; /* By default all ports are in vlan 1 */
+	port->vlan = 1; /* By default all ports are in vlan 1 */
 	port->desc[0] = '\0';
 	port->speed = SW_SPEED_AUTO;
 	port->duplex = SW_DUPLEX_AUTO;
 	port->flags = SW_PFL_DISABLED;
+	memset(port->vtp_vars.active_vlans, 0, VTP_VLAN_MASK_LG);
 	/* FIXME configure physical characteristics of device (i.e. speed) */
 #ifdef NET_SWITCH_TRUNKDEFAULTVLANS
 	memset(port->forbidden_vlans, 0xff, 512);
@@ -99,13 +100,26 @@ static int sw_addif(struct net_device *dev) {
 	sw_forbid_vlan(port->forbidden_vlans, 0);
 	sw_forbid_vlan(port->forbidden_vlans, 4095);
 #endif
-    sw_vdb_add_port(1, port);
+	sw_vdb_add_port(1, port);
+
+	
 	list_add_tail_rcu(&port->lh, &sw.ports);
 	rcu_assign_pointer(dev->sw_port, port);
 	dev_hold(dev);
 	dev_set_promiscuity(dev, 1);
 	sw_enable_port(port);
+	
+	//enable stp for this interface
+	sw_detect_port_speed(port);	
+
+	spin_lock_bh(&sw.stp_vars.lock);
+	sw_stp_enable_port(port);
+	spin_unlock_bh(&sw.stp_vars.lock);
+	
+	printk(KERN_INFO "Added device %s to switch\n", dev->name);
+	
 	dbg("Added device %s to switch\n", dev->name);
+	
 	return 0;
 }
 
@@ -150,6 +164,10 @@ int sw_delif(struct net_device *dev) {
 	} else {
 		sw_vdb_del_port(port->vlan, port);
 	}
+	
+	/* Disable STP for this interface(port) */
+	sw_stp_disable_port(port);
+	
 	list_del_rcu(&port->lh);
 	/* free port memory and release interface */
 	kfree(port->forbidden_vlans);
@@ -190,6 +208,7 @@ static int sw_set_port_trunk(struct net_switch_port *port, int trunk) {
 		sw_res_port_flag(port, SW_PFL_TRUNK);
 		fdb_cleanup_port(port, SW_FDB_DYN);
 		status = sw_vdb_add_port(port->vlan, port);
+	
 #if NET_SWITCH_NOVLANFORIF == 2
 		if(status)
 			sw_disable_port(port);
@@ -200,6 +219,7 @@ static int sw_set_port_trunk(struct net_switch_port *port, int trunk) {
 			return -EINVAL;
 		sw_set_port_flag_rcu(port, SW_PFL_DROPALL);
 		sw_vdb_del_port(port->vlan, port);
+		
 		sw_set_port_flag(port, SW_PFL_TRUNK);
 		sw_res_port_flag(port, SW_PFL_ACCESS);
 		fdb_cleanup_port(port, SW_FDB_DYN);
@@ -246,10 +266,12 @@ static int sw_set_port_forbidden_vlans(struct net_switch_port *port,
 			for(mask = 1; mask; mask <<= 1, vlan++) {
 				if(!((*old ^ *new) & mask))
 					continue;
-				if(*new & mask)
+				if(*new & mask) {
 					sw_vdb_del_port(vlan, port);
-				else
+				}
+				else {
 					sw_vdb_add_port(vlan, port);
+				}
 			}
 		}
 	}
@@ -320,7 +342,9 @@ static int sw_set_port_vlan(struct net_switch_port *port, int vlan) {
 	} else {
 		sw_set_port_flag_rcu(port, SW_PFL_DROPALL);
 		sw_vdb_del_port(port->vlan, port);
+	
 		status = sw_vdb_add_port(vlan, port);
+
 		if(status) {
 #if NET_SWITCH_NOVLANFORIF == 1
 			status = __add_vlan_default(port->sw, vlan);
@@ -331,6 +355,7 @@ static int sw_set_port_vlan(struct net_switch_port *port, int vlan) {
 				return status;
 			}
 			status = sw_vdb_add_port(vlan, port);
+		
 #elif NET_SWITCH_NOVLANFORIF == 2
 			sw_disable_port(port);
 #endif
@@ -492,9 +517,30 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 		}
 		vlan_desc[SW_MAX_VLAN_NAME] = '\0';
 		err = sw_vdb_add_vlan(&sw, arg.vlan, vlan_desc);
+		if(!err)
+		{
+			spin_lock_bh(&sw.vtp_vars.lock);
+			sw.vtp_vars.revision++;
+			destroy_subset_list(&sw);
+			sw.vtp_vars.subset_list_size = 0;
+			vtp_send_summary(&sw, PROCESS_CONTEXT, 0);
+			vtp_send_subsets(&sw, 0);
+			spin_unlock_bh(&sw.vtp_vars.lock);
+		}
+		
 		break;
 	case SWCFG_DELVLAN:
 		err = sw_vdb_del_vlan(&sw, arg.vlan);
+		if(!err)
+		{
+			spin_lock_bh(&sw.vtp_vars.lock);
+			sw.vtp_vars.revision++;
+			destroy_subset_list(&sw);
+			sw.vtp_vars.subset_list_size = 0;
+			vtp_send_summary(&sw, PROCESS_CONTEXT, 0);
+			vtp_send_subsets(&sw, 0);
+			spin_unlock_bh(&sw.vtp_vars.lock);
+		}
 		break;
 	case SWCFG_RENAMEVLAN:
 		if (!strncpy_from_user(vlan_desc, arg.ext.vlan_desc, SW_MAX_VLAN_NAME)) {
@@ -503,11 +549,25 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 		}
 		vlan_desc[SW_MAX_VLAN_NAME] = '\0';
 		err = sw_vdb_set_vlan_name(&sw, arg.vlan, vlan_desc);
+		if(!err)
+		{
+			spin_lock_bh(&sw.vtp_vars.lock);
+			sw.vtp_vars.revision++;
+			destroy_subset_list(&sw);
+			sw.vtp_vars.subset_list_size = 0;
+			vtp_send_summary(&sw, PROCESS_CONTEXT, 0);
+			vtp_send_subsets(&sw, 0);
+			spin_unlock_bh(&sw.vtp_vars.lock);
+		}
 		break;
 	case SWCFG_ADDVLANPORT:
 		DEV_GET;
 		sw_allow_vlan(bitmap, arg.vlan);
 		err = sw_add_port_forbidden_vlans(rcu_dereference(dev->sw_port), bitmap);
+
+		if (!err) {
+		  vtp_send_join(&sw);
+		}
 		break;
 	case SWCFG_DELVLANPORT:
 		DEV_GET;
@@ -516,18 +576,34 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 		 */
 		sw_allow_vlan(bitmap, arg.vlan);	
 		err = sw_del_port_forbidden_vlans(rcu_dereference(dev->sw_port), bitmap);
+
+		if (!err) {
+		  vtp_send_join(&sw);
+		}
 		break;
 	case SWCFG_SETACCESS:
 		DEV_GET;
 		err = sw_set_port_access(rcu_dereference(dev->sw_port), arg.ext.access);
+
+		if (!err) {
+		  vtp_send_join(&sw);
+		}
 		break;
 	case SWCFG_SETTRUNK:
 		DEV_GET;
 		err = sw_set_port_trunk(rcu_dereference(dev->sw_port), arg.ext.trunk);
+
+		if (!err) {
+		  vtp_send_join(&sw);
+		}
 		break;
 	case SWCFG_SETPORTVLAN:	
 		DEV_GET;
-		err = sw_set_port_vlan(rcu_dereference(dev->sw_port), arg.vlan);	
+		err = sw_set_port_vlan(rcu_dereference(dev->sw_port), arg.vlan);
+
+		if (!err) {
+		  vtp_send_join(&sw);
+		}
 		break;
 	case SWCFG_CLEARMACINT:
 		PORT_GET;
@@ -578,6 +654,7 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 	case SWCFG_DISABLEPORT:
 		PORT_GET;
 		sw_set_port_flag(port, SW_PFL_ADMDISABLED);
+		sw_stp_disable_port(port);
 		sw_disable_port(port);
 		err = 0;
 		break;
@@ -585,6 +662,7 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 		PORT_GET;
 		sw_res_port_flag(port, SW_PFL_ADMDISABLED);
 		sw_enable_port(port);
+		sw_stp_enable_port(port);
 		err = 0;
 		break;
 	case SWCFG_SETTRUNKVLANS:
@@ -594,6 +672,10 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 			break;
 		}
 		err = sw_set_port_forbidden_vlans(port, bitmap);
+
+		if (!err) {
+		  vtp_send_join(&sw);
+		}
 		break;
 	case SWCFG_ADDTRUNKVLANS:
 		PORT_GET;
@@ -602,6 +684,10 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 			break;
 		}
 		err = sw_add_port_forbidden_vlans(port, bitmap);
+
+		if (!err) {
+		  vtp_send_join(&sw);
+		}
 		break;
 	case SWCFG_DELTRUNKVLANS:
 		PORT_GET;
@@ -610,6 +696,9 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 			break;
 		}
 		err = sw_del_port_forbidden_vlans(port, bitmap);
+		if (!err) {
+		  vtp_send_join(&sw);
+		}
 		break;
 	case SWCFG_SETIFDESC:
 		PORT_GET;
@@ -693,8 +782,118 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 		err = sw_get_vdb(&arg);
 		if (copy_to_user(uarg, &arg, sizeof(struct net_switch_ioctl_arg)))
 			err = -EFAULT;
-	}
+		break;
+	case  SWCFG_STP_PORT_PRIO:
+	        PORT_GET;
+	        set_port_priority(port, arg.ext.cfg.prio);
+		err = 0;
+	        break;
+	case SWCFG_STP_PORT_COST:
+  	        PORT_GET;
+                set_port_cost(port, arg.ext.cfg.cost); 
+		err = 0;
+	        break;
+	case SWCFG_STP_SW_PRIO:
+	        set_bridge_priority(&sw, arg.ext.prio);
+		err = 0;
+	        break;
+	case SWCFG_STP_FORWARD_DELAY:
+	        set_sw_forward_delay(&sw, arg.ext.forward_delay);
+		err = 0;
+	        break;
+	case SWCFG_STP_MAX_AGE:
+	        set_sw_max_age(&sw, arg.ext.max_age);
+	        err = 0;
+	        break;
+	case SWCFG_STP_HELLO_TIME:
+	        set_sw_hello_time(&sw, arg.ext.hello_time);
+	        err = 0;
+	        break;
+	case SWCFG_STP_SW_SHOW:
+	        err = 0;
+	        break;
+	case SWCFG_STP_PORT_SHOW:
+	        err = 0;
+		break;
+	case SWCFG_STP_ENABLE:
+	        printk(KERN_INFO "Enable stp");
+		err = 0;
+		if (!atomic_read(&sw.stp_vars.stp_enabled))
+		    sw_stp_enable(&sw);
+		else 
+		    err = -EINVAL;
+	        break;
+	case SWCFG_STP_DISABLE:
+	        printk(KERN_INFO "Disable stp");
+		err = 0;
+		if (atomic_read(&sw.stp_vars.stp_enabled))
+		  sw_stp_disable(&sw);
+		else
+		  err = -EINVAL;
+	        break;
+	case SWCFG_VTP_SET_DOMAIN: /* Set VTP administrative domain */
+		if((err = vtp_set_timestamp(&sw, arg.timestamp)))
+		{
+			printk(KERN_INFO "vtp_set_timestamp ERR: %d\n", err);
+			break;
+		}
+		
+		err = sw_vtp_set_domain(&sw, arg.ext.vtp_domain);
+		printk(KERN_INFO "sw_vtp_set_domain ERR: %d\n", err);
+		/* Send vtp join to inform that the switch joined the domain*/
+		if (!err) {
+		  vtp_send_join(&sw);
+		}
+		break;
+	case SWCFG_VTP_SET_FILE: /* Configure IFS filesystem file where VTP configuration is stored. */
+		err = 0;
+		break;
+	case SWCFG_VTP_SET_INTERFACE:/* Configure interface as the preferred source for the VTP IP updater address */
+		err = 0;
+		break;
+	case SWCFG_VTP_SET_MODE: /* Configure VTP device mode */
+		printk(KERN_INFO "ioctl timestamp: %s\n", arg.timestamp);
 
+		if((err = vtp_set_timestamp(&sw, arg.timestamp)))
+		{
+			printk(KERN_INFO "vtp_set_timestamp ERR: %d\n", err);
+			break;
+		}
+		
+		printk(KERN_INFO "ioctl mode = %d\n", arg.ext.vtp_mode);
+		spin_lock_bh(&sw.vtp_vars.lock);
+		err = sw_vtp_enable(&sw, arg.ext.vtp_mode);
+		spin_unlock_bh(&sw.vtp_vars.lock);
+		break;
+	case SWCFG_VTP_SET_PASSWORD: /* Set the password for the VTP administrative domain */
+		if((err = vtp_set_timestamp(&sw, arg.timestamp)))
+		{
+			printk(KERN_INFO "vtp_set_timestamp ERR: %d\n", err);
+			break;
+		}
+	
+		err = sw_vtp_set_password(&sw,arg.ext.vtp_password.password, arg.ext.vtp_password.md5);
+		printk(KERN_INFO "sw_vtp_set_password: err = %d\n", err);
+		break;
+	case SWCFG_VTP_ENABLE_PRUNING: /* Set the administrative domain to permit pruning */
+		if((err = vtp_set_timestamp(&sw, arg.timestamp)))
+			break;
+
+		spin_lock_bh(&sw.vtp_vars.lock);
+		vtp_pruning_enable(&sw);
+		spin_unlock_bh(&sw.vtp_vars.lock);
+		err = 0;
+		break;
+	case SWCFG_VTP_SET_VERSION: /* Set the administrative domain to VTP version */
+		if((err = vtp_set_timestamp(&sw, arg.timestamp)))
+			break;
+
+		spin_lock_bh(&sw.vtp_vars.lock);
+		err = sw_vtp_set_version(&sw, arg.ext.vtp_version);
+		spin_unlock_bh(&sw.vtp_vars.lock);
+		break;
+	}
+	
 	if (do_put)
 		dev_put(dev);
 

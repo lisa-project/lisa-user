@@ -21,6 +21,7 @@
 #include <linux/sockios.h>
 #include <net/if.h>
 #include <sys/ioctl.h>
+#define __USE_XOPEN
 #include <unistd.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -32,11 +33,19 @@
 #include "config_if.h"
 #include "config_line.h"
 #include "shared.h"
-#include "cdp.h"
-
+#include "md5.h"
 #include <errno.h>
 extern int errno;
 char hostname_default[] = "Switch\0";
+char prio_range[] = "<0-65535>\0";
+char hello_time_range[] = "<1-10>\0";
+char forward_delay_range[] = "<6-40>\0";
+char max_age_range[] = "<4-30>\0";
+
+char max_age_lim[2] = {4, 30};
+char forward_delay_lim[2] = {6, 40};
+char hello_time_lim[2] = {1, 10};
+
 int vlan_no; /* selected vlan when entering (config-vlan) mode */
 
 static char salt_base[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789./";
@@ -73,8 +82,6 @@ static void cmd_int_eth(FILE *out, char **argv) {
 
 	cmd_root = &command_root_config_if_eth;
 	strcpy(sel_eth, ioctl_arg.if_name);
-	/* Enable CDP on this interface */
-	cmd_cdp_if_enable(out, argv);
 }
 
 static void cmd_no_int_eth(FILE *out, char **argv) {
@@ -84,8 +91,6 @@ static void cmd_no_int_eth(FILE *out, char **argv) {
 	ioctl_arg.cmd = SWCFG_DELIF;
 	ioctl_arg.if_name = if_name_eth(arg);
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
-	/* Disable CDP on this interface */
-	cmd_cdp_if_disable(out, argv);
 }
 
 static void cmd_int_vlan(FILE *out, char **argv) {
@@ -264,6 +269,8 @@ static void cmd_exit(FILE *out, char **argv) {
 	cmd_root = &command_root_config;
 }
 
+
+
 int valid_host(char *arg, char lookahead) {
 	return 1;
 }
@@ -312,18 +319,356 @@ int valid_vtyno2(char *arg, char lookahead) {
 	return 1;
 }
 
-int valid_holdtime(char *arg, char lookahead) {
-	int ht = atoi(arg);
 
-	return (ht >= 10 && ht <= 255);
+/**************************************************************************************************
+* STP functions and commands
+***************************************************************************************************/
+int valid_prio_range(char *arg, char lookahead) {
+	int no;
+	if(sscanf(arg, "%d", &no) != 1)
+		return 0;
+	if(no < 0 || no > 65535)
+		return 0;
+	return 1;
 }
 
-int valid_timer(char *arg, char lookahead) {
-	int t = atoi(arg);
-
-	return (t >= 5 && t <= 254);
+int valid_hello_time(char *arg, char lookahead) {
+	char no;
+	if(sscanf(arg, "%c", &no) != 1)
+		return 0;
+	if(no < hello_time_lim[0] || no > hello_time_lim[1])
+		return 0;
+	return 1;
 }
 
+
+int valid_max_age(char *arg, char lookahead) {
+  	char no;
+	if(sscanf(arg, "%c", &no) != 1)
+		return 0;
+	if(no < max_age_lim[0] || no > max_age_lim[1])
+		return 0;
+	return 1;
+}
+
+int valid_forward_delay(char *arg, char lookahead) {
+  	char no;
+	if(sscanf(arg, "%c", &no) != 1)
+		return 0;
+	if(no < forward_delay_lim[0] || no > forward_delay_lim[1])
+		return 0;
+	return 1;
+}
+
+
+
+void cmd_sw_prio(FILE* out, char** argv) {
+  unsigned int prio;
+  char *arg = *argv;
+  struct net_switch_ioctl_arg ioctl_arg;
+
+  sscanf(arg, "%u", &prio);
+
+  ioctl_arg.cmd = SWCFG_STP_SW_PRIO;
+  ioctl_arg.if_name = sel_eth;
+  ioctl_arg.ext.prio = prio;
+
+  ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
+}
+
+static sw_command_t sh_prio[] = {
+  {prio_range, 15, valid_prio_range, cmd_sw_prio, RUN, "Priority values", NULL},
+  {NULL, 0, NULL, NULL, 0, NULL, NULL}
+};
+
+void cmd_sw_hello_time(FILE* out, char** argv) {
+  char hello_time;
+  char *arg = *argv;
+  struct net_switch_ioctl_arg ioctl_arg;
+
+  sscanf(arg, "%c", &hello_time);
+
+  ioctl_arg.cmd = SWCFG_STP_HELLO_TIME;
+  ioctl_arg.if_name = sel_eth;
+  ioctl_arg.ext.hello_time = hello_time;
+
+  ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
+}
+
+
+void cmd_sw_max_age(FILE* out, char** argv) {
+  char max_age;
+  char *arg = *argv;
+  struct net_switch_ioctl_arg ioctl_arg;
+
+  sscanf(arg, "%c", &max_age);
+
+  ioctl_arg.cmd = SWCFG_STP_MAX_AGE;
+  ioctl_arg.if_name = sel_eth;
+  ioctl_arg.ext.max_age = max_age;
+
+  ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
+}
+
+
+void cmd_sw_forward_delay(FILE* out, char** argv) {
+  char forward_delay;
+  char *arg = *argv;
+  struct net_switch_ioctl_arg ioctl_arg;
+
+  sscanf(arg, "%c", &forward_delay);
+
+  ioctl_arg.cmd = SWCFG_STP_FORWARD_DELAY;
+  ioctl_arg.if_name = sel_eth;
+  ioctl_arg.ext.forward_delay = forward_delay;
+
+  ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
+}
+
+void cmd_sw_stp_enable(FILE* out, char** argv) {
+  struct net_switch_ioctl_arg ioctl_arg;
+  int stat;
+
+  ioctl_arg.cmd = SWCFG_STP_ENABLE;
+  
+  stat = ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
+
+  if (stat != 0)
+    fprintf(out, "STP already enabled\n");
+}
+
+
+void cmd_sw_stp_disable(FILE* out, char** argv) {
+  struct net_switch_ioctl_arg ioctl_arg;
+  int stat;
+
+  ioctl_arg.cmd = SWCFG_STP_DISABLE;
+  
+  stat = ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
+
+  if (stat != 0)
+    fprintf(out, "STP already disabled\n");
+}
+
+static sw_command_t sh_hello_time[] = {
+  {hello_time_range, 15, valid_hello_time, cmd_sw_hello_time, RUN, "", NULL},
+  {NULL, 0, NULL, NULL, 0, NULL, NULL}
+};
+
+static sw_command_t sh_max_age[] = {
+  {max_age_range, 15, valid_max_age, cmd_sw_max_age, RUN, "", NULL},
+  {NULL, 0, NULL, NULL, 0, NULL, NULL}
+};
+
+static sw_command_t sh_forward_delay[] = {
+  {forward_delay_range, 15, valid_forward_delay, cmd_sw_forward_delay, RUN, "", NULL},
+  {NULL, 0, NULL, NULL, 0, NULL, NULL}
+};
+
+static sw_command_t sh_sw_stp[] = {
+  {"enable", 15, NULL, cmd_sw_stp_enable, RUN, "Enable stp", NULL},
+  {"disable", 15, NULL, cmd_sw_stp_disable, RUN, "Disable stp", NULL},
+  {"priority", 15, NULL, NULL, 0, "Configure switch priority", sh_prio},
+  {"hello time", 15, NULL, NULL, 0, "Configure switch hello time", sh_hello_time},
+  {"max age", 15, NULL, NULL, 0, "Configure switch max age", sh_max_age},
+  {"forward delay", 15, NULL, NULL, 0, "Configure switch forward delay", sh_forward_delay},
+  {NULL, 0, NULL, NULL, 0, NULL, NULL}
+};
+
+
+/**************************************************************************************************
+* VTP definitions, functions and commands
+***************************************************************************************************/
+void set_timestamp(char* timestamp)
+{
+	time_t rawtime;
+	struct tm * timeinfo;
+	int ret;
+	
+	time ( &rawtime );
+	timeinfo = localtime ( &rawtime );
+
+	memset(timestamp, 0, VTP_TIMESTAMP_SIZE+1);
+		
+	ret = snprintf(timestamp, VTP_TIMESTAMP_SIZE+1, "%02d%02d%02d%02d%02d%02d", 
+		timeinfo->tm_year % 100,
+		timeinfo->tm_mon,
+		timeinfo->tm_mday,
+		timeinfo->tm_hour,
+		timeinfo->tm_min,
+		timeinfo->tm_sec);
+}
+
+int valid_vtp_domain(char *arg, char lookahead) 
+{
+	if(arg == NULL)
+		return 0;
+	if(strlen(arg) < 1)
+		return 0;
+	if(strlen(arg) > 32)
+		return 0;
+	
+	return 1;
+}
+
+void cmd_sw_vtp_domain(FILE* out, char** argv) 
+{
+	char *arg = *argv;
+	struct net_switch_ioctl_arg ioctl_arg;
+	
+	printf("cmd_sw_vtp_domain: %s %d\n", arg, strlen(arg));
+
+	ioctl_arg.cmd = SWCFG_VTP_SET_DOMAIN;
+	ioctl_arg.ext.vtp_domain = arg;
+	set_timestamp(ioctl_arg.timestamp);
+	
+	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
+}
+
+int valid_vtp_mode(char *arg, char lookahead) 
+{
+	if(arg == NULL)
+		return 0;
+	
+	if(strcmp(arg, "client") == 0)
+		return 1;
+	if(strcmp(arg, "server") == 0)
+		return 1;
+	if(strcmp(arg, "transparent") == 0)
+		return 1;
+	
+	return 0;
+}
+
+char determine_vtp_mode(char* mode)
+{
+	if(mode == NULL)
+		return VTP_MODE_TRANSPARENT;
+	
+	if(strcmp(mode, "client") == 0)
+		return VTP_MODE_CLIENT;
+	if(strcmp(mode, "server") == 0)
+		return VTP_MODE_SERVER;
+	
+	return VTP_MODE_TRANSPARENT;
+}
+
+void cmd_sw_vtp_mode(FILE* out, char** argv) 
+{
+	char *mode = *argv;
+	struct net_switch_ioctl_arg ioctl_arg;
+	
+	ioctl_arg.cmd = SWCFG_VTP_SET_MODE;	
+	ioctl_arg.ext.vtp_mode = determine_vtp_mode(mode);
+	set_timestamp(ioctl_arg.timestamp);
+
+	printf("vtp_mode: mode = %d timestamp = %s \n", 
+		ioctl_arg.ext.vtp_mode, ioctl_arg.timestamp);
+	
+	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
+}
+
+int valid_vtp_password(char *arg, char lookahead) 
+{
+	if(arg == NULL)
+		return 0;
+	if(strlen(arg) < 8)
+		return 0;
+	if(strlen(arg) > 64)
+		return 0;
+	
+	return 1;
+}
+
+unsigned char* get_md5(char* arg)
+{
+  char* md5_digest = md5(arg);
+  print(md5_digest, 16);
+  return md5_digest;
+}
+
+void cmd_sw_vtp_password(FILE* out, char** argv) 
+{
+	char *arg = *argv;
+	struct net_switch_ioctl_arg ioctl_arg;
+	
+	ioctl_arg.cmd = SWCFG_VTP_SET_PASSWORD;
+	ioctl_arg.ext.vtp_password.password = arg;
+	ioctl_arg.ext.vtp_password.md5 = get_md5(arg);
+	set_timestamp(ioctl_arg.timestamp);
+
+	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
+}
+
+void cmd_sw_vtp_pruning(FILE* out, char** argv) 
+{
+	struct net_switch_ioctl_arg ioctl_arg;
+	
+	ioctl_arg.cmd = SWCFG_VTP_ENABLE_PRUNING;
+	set_timestamp(ioctl_arg.timestamp);
+	
+	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
+}
+
+int valid_vtp_version(char *arg, char lookahead) 
+{
+	char mode;
+
+	mode = atoi(arg);
+	
+	printf("version = %d\n", mode);	
+	if((mode != 1) && (mode != 2))
+		return 0;
+	
+	return 1;
+}
+
+void cmd_sw_vtp_version(FILE* out, char** argv) 
+{
+	char *arg = *argv;
+	unsigned char version;
+	struct net_switch_ioctl_arg ioctl_arg;
+
+	version = atoi(arg);
+
+	ioctl_arg.cmd = SWCFG_VTP_SET_VERSION;
+	ioctl_arg.ext.vtp_version = version;
+	set_timestamp(ioctl_arg.timestamp);
+	
+	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
+}
+
+static sw_command_t sh_vtp_domain[] = {
+  {"name", 15, valid_vtp_domain, cmd_sw_vtp_domain, RUN, "", NULL},
+  {NULL, 0, NULL, NULL, 0, NULL, NULL}
+};
+
+static sw_command_t sh_vtp_mode[] = {
+  {"[ server | client | transparent ]", 15, valid_vtp_mode, cmd_sw_vtp_mode, RUN, "", NULL},
+  {NULL, 0, NULL, NULL, 0, NULL, NULL}
+};
+
+static sw_command_t sh_vtp_password[] = {
+  {"password", 15, valid_vtp_password, cmd_sw_vtp_password, RUN, "", NULL},
+  {NULL, 0, NULL, NULL, 0, NULL, NULL}
+};
+
+static sw_command_t sh_vtp_version[] = {
+  {"<1-2>", 15, valid_vtp_version, cmd_sw_vtp_version, RUN, "", NULL},
+  {NULL, 0, NULL, NULL, 0, NULL, NULL}
+};
+
+
+static sw_command_t sh_sw_vtp[] = {
+  {"domain", 15, NULL, NULL, 0, "Set the name of the VTP administrative domain.", sh_vtp_domain},
+  {"file", 15, NULL, NULL, 0, "Configure IFS filesystem file where VTP configuration is stored", NULL},
+  {"interface", 15, NULL, NULL, 0, "Configure interface as the preferred source for the VTP IP updater address", NULL},
+  {"mode", 15, NULL, NULL, 0, "Configure VTP device mode.", sh_vtp_mode},
+  {"password", 15, NULL, NULL, 0, "Set the password for the VTP administrative domain.", sh_vtp_password},
+  {"pruning", 15, NULL, cmd_sw_vtp_pruning, RUN, "Set the administrative domain to permit pruning.", NULL},
+  {"version", 15, NULL, NULL, 0, "Set the administrative domain to VTP version.", sh_vtp_version},
+  {NULL, 0, NULL, NULL, 0, NULL, NULL}
+};
 
 static sw_command_t sh_no_int_eth[] = {
 	{eth_range,				15,	valid_eth,	cmd_no_int_eth,		RUN,		"Ethernet interface number",					NULL},
@@ -428,14 +773,7 @@ static sw_command_t sh_novlan[] = {
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
 
-static sw_command_t sh_no_cdp[] = {
-	{"advertise-v2",		15,	NULL,		cmd_no_cdp_v2,		RUN,		"CDP sends version-2 advertisements",			NULL},
-	{"run",					15,	NULL,		cmd_no_cdp_run,		RUN,		"",												NULL},
-	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
-};
-
 static sw_command_t sh_no[] = {
-	{"cdp",					15, NULL,		NULL,				0, 			"Global CDP configuration subcommands",			sh_no_cdp},
 	{"enable",				15,	NULL,		NULL,				0,			"Modify enable password parameters",			sh_noenable},
 	{"hostname",			15,	NULL,		cmd_nohostname,		RUN,		"Set system's network name",					NULL},
 	{"interface",			15,	NULL,		NULL,				0,			"Select an interface to configure",				sh_no_int},
@@ -510,27 +848,8 @@ static sw_command_t sh_vlan[] = {
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
 
-static sw_command_t sh_cdp_holdtime[] = {
-	{"<10-255>",			15,	valid_holdtime,		cmd_cdp_holdtime,	RUN,	"Length  of time  (in sec) that receiver must keep this packet",	NULL},
-	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
-};
-
-static sw_command_t sh_cdp_timer[] = {
-	{"<5-254>",				15,	valid_timer,		cmd_cdp_timer,		RUN,	"Rate at which CDP packets are sent (in  sec)",	NULL},
-	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
-};
-
-static sw_command_t sh_cdp[] = {
-	{"advertise-v2",		15,	NULL,		cmd_cdp_version,	RUN,		"CDP sends version-2 advertisements",			NULL},
-	{"holdtime",			15,	NULL,		NULL,				0,			"Specify the holdtime (in sec) to be sent in packets", sh_cdp_holdtime},
-	{"timer",				15,	NULL,		NULL,				0,			"Specify the rate at which CDP packets are sent (in sec)", sh_cdp_timer},
-	{"run",					15,	NULL,		cmd_cdp_run,		RUN,		"",												NULL},
-	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
-};
-
 /* main (config) mode commands */
 static sw_command_t sh[] = {
-	{"cdp",					15,	NULL,		NULL,				0,			"Global CDP configuration subcommands",			sh_cdp},
 	{"enable",				15,	NULL,		NULL,				0,			"Modify enable password parameters",			sh_enable},
 	{"end",					15,	NULL,		cmd_end,			RUN,		"Exit from configure mode",						NULL},
 	{"exit",				15,	NULL,		cmd_end,			RUN,		"Exit from configure mode",						NULL},
@@ -540,6 +859,8 @@ static sw_command_t sh[] = {
 	{"mac-address-table",	15,	NULL,		NULL,				0,			"Configure the MAC address table",				sh_mac},
 	{"no",					15,	valid_no,	NULL,				PTCNT|CMPL, "Negate a command or set its defaults",			sh_no},
 	{"vlan",				15, NULL,		NULL,				0,			"Vlan commands",								sh_vlan},
+	{"spanning_tree", 15, NULL, NULL, 0, "Configure spanning tree parameters", sh_sw_stp},
+	{"vtp", 15, NULL, NULL, 0, "Configure VTP parameters", sh_sw_vtp},
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
 

@@ -24,11 +24,28 @@
 #include <linux/wait.h>
 #include <linux/spinlock.h>
 #include <linux/net_switch.h>
+#include <linux/timer.h>
 #include <asm/semaphore.h>
 #include <asm/atomic.h>
 
+#include "sw_private_stp.h"
+#include "sw_private_vtp.h"
+
 #define SW_HASH_SIZE_BITS 12
 #define SW_HASH_SIZE (1 << SW_HASH_SIZE_BITS)
+
+#define SW_VLAN_ACTIVE		0
+#define SW_VLAN_SUSPENDED	1
+
+
+#define bitoctet(b) ((b)/8)
+#define mask(b) ( 1 << (7 - ((b) % 8)) )
+/* Set bit b */
+#define bitset(bitset, b) ( (bitset)[bitoctet(b)]  |= mask(b) ); printk(KERN_INFO "ADD VLAN for interface %d\n", b);
+/* Clear bit b */
+#define bitclear(bitset, b) ( (bitset)[bitoctet(b)] &= ~mask(b) ); printk(KERN_INFO "DEL VLAN for interface %d\n", b);
+/* Return 0 if bit no set, >0 otherwise */
+#define bittest(bitset, b) ( (bitset)[bitoctet(b)] & mask(b) ) 
 
 /* Hash bucket */
 struct net_switch_bucket {
@@ -46,8 +63,13 @@ struct net_switch_bucket {
 
 struct net_switch_vdb_entry {
 	char *name;
+	u8 status;
 	struct list_head trunk_ports;
 	struct list_head non_trunk_ports;
+	struct rcu_head rcu;
+	
+	u16 vlan;
+	struct net_switch* sw;
 };
 
 struct net_switch_port {
@@ -74,6 +96,12 @@ struct net_switch_port {
 	/* Physical configuration settings */
 	int speed;
 	int duplex;
+
+	/* STP */
+	struct port_stp_vars stp_vars;
+
+	/* VTP */
+	struct sw_port_vtp_vars vtp_vars;
 };
 
 struct net_switch_vif_priv {
@@ -104,12 +132,18 @@ struct net_switch {
 	
 	/* Cache of forwarding database entries */
 	kmem_cache_t *fdb_cache;
-
-    /* Cache of link structures */
-    kmem_cache_t *vdb_cache;
+	
+	/* Cache of link structures */
+	kmem_cache_t *vdb_cache;
 
 	/* Template for virtual interfaces mac */
 	unsigned char vif_mac[ETH_ALEN];
+
+	/* STP */
+	struct bridge_stp_vars stp_vars;
+
+	/* VTP */
+	struct sw_vtp_vars vtp_vars;
 };
 
 
@@ -193,6 +227,7 @@ extern void sw_device_down(struct net_device *);
 extern void sw_fdb_init(struct net_switch *);
 extern int fdb_cleanup_port(struct net_switch_port *, int);
 extern int fdb_cleanup_vlan(struct net_switch *, int, int);
+extern int fdb_cleanup_vlan_irq(struct net_switch *, int, int);
 extern int fdb_cleanup_by_type(struct net_switch *, int);
 extern int fdb_learn(unsigned char *, struct net_switch_port *, int, int, int);
 extern int fdb_del(struct net_switch *, unsigned char *,
@@ -205,6 +240,7 @@ extern void sw_fdb_exit(struct net_switch *);
 extern int sw_vdb_add_vlan(struct net_switch *, int, char *);
 extern int sw_vdb_add_vlan_default(struct net_switch *, int);
 extern int sw_vdb_del_vlan(struct net_switch *, int);
+extern int sw_vdb_del_vlan_irq(struct net_switch *, int);
 extern int sw_vdb_set_vlan_name(struct net_switch *, int, char *);
 extern void __init sw_vdb_init(struct net_switch *);
 extern void __exit sw_vdb_exit(struct net_switch *);
@@ -226,6 +262,8 @@ extern void dump_mem(void *, int);
 #define VLAN_TAG_BYTES 4
 
 /* sw_forward.c */
+extern void add_vlan_tag(struct sk_buff*, int);
+extern void strip_vlan_tag(struct sk_buff*); 
 extern int sw_forward(struct net_switch_port *,
 	struct sk_buff *, struct skb_extra *);
 
@@ -237,5 +275,181 @@ extern int sw_vif_enable(struct net_switch *, int);
 extern int sw_vif_disable(struct net_switch *, int);
 extern void sw_vif_cleanup(struct net_switch *);
 extern void sw_vif_rx(struct sk_buff *);
+
+
+/**************************************************************************
+*		STP files and functions
+***************************************************************************/
+
+/* sw_stp.c */
+extern void sw_stp_enable(struct net_switch*);
+extern void sw_stp_disable(struct net_switch*);
+extern void become_designated_port(struct net_switch_port*);
+extern void config_bpdu_generation(struct net_switch*);
+extern void transmit_config(struct net_switch_port*);
+extern void configuration_update(struct net_switch* );
+extern void root_selection(struct net_switch* );
+extern void designated_port_selection(struct net_switch* ); 
+extern void port_state_selection(struct net_switch* );
+extern void topology_change_detection(struct net_switch* );
+extern void received_config_bpdu(struct net_switch_port*, struct sw_stp_bpdu*); 
+extern void received_tcn_bpdu(struct net_switch_port*);
+extern void set_bridge_priority(struct net_switch*, u16);
+extern void become_root_bridge(struct net_switch*);
+extern void set_sw_forward_delay(struct net_switch*, char);
+extern void set_sw_max_age(struct net_switch*, char);
+extern void set_sw_hello_time(struct net_switch*, char);
+
+/* sw_stp_if.c */
+extern void sw_stp_init_port(struct net_switch_port*);
+extern void sw_stp_enable_port(struct net_switch_port*);
+extern void sw_stp_disable_port(struct net_switch_port*);
+extern void sw_stp_handle_bpdu(struct sk_buff* skb);
+extern void set_port_priority(struct net_switch_port*, u8);
+extern void sw_detect_port_speed(struct net_switch_port*);
+extern void set_port_cost(struct net_switch_port*, u32);
+
+/* sw_stp_bpdu.c */
+extern void send_config_bpdu(struct net_switch_port*, struct sw_stp_bpdu*);
+extern void sw_stp_handle_bpdu(struct sk_buff* skb);
+extern void send_tcn_bpdu(struct net_switch_port* );
+
+/* sw_stp_timer.c */
+extern void sw_stp_timers_init(struct net_switch*);
+extern void sw_stp_timers_start(struct net_switch*);
+extern void sw_stp_port_timers_init(struct net_switch_port*);
+extern void sw_stp_port_timers_start(struct net_switch_port*);
+
+extern void transmit_tcn(struct net_switch* sw);
+
+
+static inline int is_designated_port(struct net_switch_port* p)
+{
+	return !memcmp(&p->stp_vars.designated_bridge, &p->sw->stp_vars.bridge_id, sizeof(bridge_id)) && 
+		p->stp_vars.designated_port == p->stp_vars.port_id;
+}
+
+static inline int is_disabled_port(struct net_switch_port* p)
+{
+	return (!(p->dev->flags & IFF_UP) && 
+		(p->stp_vars.state == STP_STATE_DISABLED));
+}
+
+static inline int is_root_bridge(struct net_switch* sw)
+{
+	return (memcmp(&sw->stp_vars.bridge_id, &sw->stp_vars.designated_root, sizeof(bridge_id)) == 0);
+}
+
+static inline int bridge_id_cmp(bridge_id *a, bridge_id *b)
+{
+	return memcmp(a, b, sizeof(bridge_id));
+}
+
+static inline unsigned long topology_chage_time(struct net_switch* sw)
+{
+  return sw->stp_vars.bridge_max_age + sw->stp_vars.bridge_forward_delay;
+}
+
+static inline void set_port_state(struct net_switch_port* p, u8 state)
+{
+	p->stp_vars.state = state;
+}
+
+static inline void set_path_cost(struct net_switch_port* p, u32 path_cost)
+{
+	p->stp_vars.path_cost = path_cost;
+}
+
+static inline void enable_change_detection(struct net_switch_port* p)
+{
+	p->stp_vars.change_detection_enabled = 1;
+}
+
+static inline void disable_change_detection(struct net_switch_port* p)
+{
+	p->stp_vars.change_detection_enabled = 0;
+}
+
+static inline int can_forward(struct net_switch_port* p)
+{
+	return !is_disabled_port(p) && 
+		atomic_read(&p->sw->stp_vars.stp_enabled) && 
+		(p->stp_vars.state == STP_STATE_FORWARDING);
+}	
+
+static inline int is_disabled_or_blocked_port(struct net_switch_port* p)
+{
+	return is_disabled_port(p) || 
+		(atomic_read(&p->sw->stp_vars.stp_enabled) && 
+		(p->stp_vars.state == STP_STATE_BLOCKING));
+}
+
+static inline void sw_timer_init(struct timer_list* timer, void (* function) (unsigned long), unsigned long data) 
+{
+	//printk(KERN_INFO "Timer init\n");
+	
+	init_timer(timer);
+	timer->data = data;
+	timer->function = function;
+}
+
+
+/**************************************************************************
+*		VTP files and functions
+***************************************************************************/
+
+/* sw_vtp.c */
+extern void sw_vtp_init(struct net_switch*);
+extern int sw_vtp_enable(struct net_switch*, char);
+extern void sw_vtp_disable(struct net_switch*);
+extern int sw_vtp_set_domain(struct net_switch*, char*);
+extern int sw_vtp_set_mode(struct net_switch*, u8);
+extern int sw_vtp_set_password(struct net_switch*, char*, unsigned char*);
+extern int sw_vtp_set_version(struct net_switch*, char);
+extern void sw_vtp_prune_vlans(struct net_switch_port*, u16);
+extern int vtp_pruning_enable(struct net_switch* sw);
+extern int vtp_pruning_disable(struct net_switch*);
+extern void vtp_rcvd_summary(struct net_switch_port*, struct vtp_summary*);
+extern void vtp_rcvd_subset(struct net_switch_port*, struct vtp_subset*);
+extern void vtp_rcvd_request(struct net_switch_port*, struct vtp_request*);
+extern void vtp_rcvd_join(struct net_switch_port*, struct vtp_join*);
+extern int vtp_set_timestamp(struct net_switch*, char*);
+
+
+/* sw_vtp_messages.c */
+extern void vtp_send_message(struct net_switch_port*, unsigned char*, int);
+extern void vtp_send_summary(struct net_switch*, u8, u16);
+extern void vtp_send_subsets(struct net_switch*, u16);
+extern void vtp_send_request(struct net_switch*);
+extern void vtp_send_join(struct net_switch*);
+extern void vtp_handle_message(struct sk_buff*);
+extern void destroy_subset_list(struct net_switch*);
+extern void destroy_subset(struct vtp_subset*);
+
+
+/* sw_vtp_timers.c */
+void sw_summary_timer_expired(unsigned long arg);
+
+static inline int is_vtp_enabled(struct net_switch* sw)
+{
+	return atomic_read(&sw->vtp_vars.vtp_enabled);
+}
+
+static inline int is_vtp_client(struct net_switch* sw)
+{
+	return sw->vtp_vars.mode == VTP_MODE_CLIENT;
+}
+
+static inline int is_vtp_server(struct net_switch* sw)
+{
+	return sw->vtp_vars.mode == VTP_MODE_SERVER;
+}
+
+static inline int is_vtp_transparent(struct net_switch* sw)
+{
+	return sw->vtp_vars.mode == VTP_MODE_TRANSPARENT;
+}
+
+
 
 #endif

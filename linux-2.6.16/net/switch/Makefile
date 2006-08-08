@@ -1,6 +1,6 @@
 obj-$(CONFIG_SWITCH) += switch.o
 
-switch-objs := sw.o sw_fdb.o sw_proc.o sw_vdb.o sw_forward.o sw_ioctl.o sw_vif.o
+switch-objs := sw.o sw_fdb.o sw_proc.o sw_vdb.o sw_forward.o sw_ioctl.o sw_vif.o sw_stp.o sw_stp_if.o sw_stp_timers.o sw_stp_bpdu.o sw_vtp.o sw_vtp_timers.o sw_vtp_messages.o
 
 ##
 # Config section; will be moved to kernel config
@@ -32,7 +32,7 @@ PWD=$(shell pwd)
 all: modules
 
 modules:
-	$(MAKE) -C $(KDIR) M=$(PWD) modules
+	$(MAKE) -C ${KDIR}  M=$(PWD) modules
 
 clean:
 	rm -f *.o *.ko *.mod.* *.mod

@@ -19,7 +19,9 @@
 #include "sw_private.h"
 #include "sw_debug.h"
 
-__dbg_static inline void add_vlan_tag(struct sk_buff *skb, int vlan) {
+//__dbg_static inline 
+void add_vlan_tag(struct sk_buff *skb, int vlan) 
+{
 	int nhead = (ETH_HLEN + VLAN_TAG_BYTES) - (skb->data - skb->head);
 	
 	/* If we don't have enough headroom, we make some :D */
@@ -35,11 +37,13 @@ __dbg_static inline void add_vlan_tag(struct sk_buff *skb, int vlan) {
 	memmove(skb->mac.raw-VLAN_TAG_BYTES, skb->mac.raw, 2 * ETH_ALEN);	
 	skb->mac.raw -= VLAN_TAG_BYTES;
 	skb_push(skb, VLAN_TAG_BYTES);
-	*(short *)skb->data = htons((short)vlan);
+	*(short *)(skb->mac.raw + ETH_HLEN) = htons((short)vlan);
 	*(short *)(skb->mac.raw + ETH_HLEN - 2) = htons(ETH_P_8021Q);
 }
 
-__dbg_static inline void strip_vlan_tag(struct sk_buff *skb) {
+//__dbg_static inline 
+void strip_vlan_tag(struct sk_buff *skb) 
+{
 	memmove(skb->mac.raw+VLAN_TAG_BYTES, skb->mac.raw, 2 * ETH_ALEN);
 	skb->mac.raw+=VLAN_TAG_BYTES;
 	skb_pull(skb, VLAN_TAG_BYTES);
@@ -133,6 +137,11 @@ __dbg_static int __sw_flood(struct net_switch *sw, struct net_switch_port *in,
 	list_for_each_entry_rcu(link, lh1, lh) {
 		if (link->port == in) continue;
 		if (prev) {
+
+			/* Check if out port is in stp forwarding state. */
+			if(!can_forward(prev->port)) 
+				continue;
+
 			__sw_flood_inc_cloned;
 			skb2 = skb_clone(skb, GFP_ATOMIC);
 			sw_skb_xmit(skb, prev->port->dev, PACKET_BROADCAST);
@@ -149,6 +158,11 @@ __dbg_static int __sw_flood(struct net_switch *sw, struct net_switch_port *in,
 			   in lh2; make a copy of the skb, then send the last skb from
 			   lh1
 			 */
+
+			/* Check if out port is in stp forwarding state. */
+			if(!can_forward(prev->port)) 
+				continue;
+
 			__sw_flood_inc_copied;
 			skb2 = skb_copy_expand(skb, ETH_HLEN+VLAN_TAG_BYTES, 0, GFP_ATOMIC);
 			f(skb2, vlan);
@@ -160,6 +174,11 @@ __dbg_static int __sw_flood(struct net_switch *sw, struct net_switch_port *in,
 			continue;
 		}
 		if (prev) {
+
+			/* Check if out port is in stp forwarding state. */
+			if(!can_forward(prev->port)) 
+				continue;
+
 			if (needs_tag_change) {
 				/* 0 elements in lh1, and we're at the 2nd element in lh2;
 				   make sure skb is an exclusive copy and apply the tag
@@ -179,7 +198,10 @@ __dbg_static int __sw_flood(struct net_switch *sw, struct net_switch_port *in,
 		}
 		prev = link;
 	}
-	if (prev) {
+
+	/* Check if out port is in stp forwarding state. */
+	if (prev && can_forward(prev->port)) {
+
 		if (needs_tag_change && prev != oldprev) {
 			/* lh2 is not empty, so the remaining element is from lh2,
 			   but the tag change was not applied
@@ -244,6 +266,11 @@ __dbg_static int __sw_multicast(struct net_switch *sw, struct net_switch_port *i
 				(!first_trunkness && entry->port->vlan != vlan))
 			continue;
 		if (prev) {
+
+			/* Check if out port is in stp forwarding state. */
+			if(!can_forward(prev->port)) 
+				continue;
+
 			__sw_flood_inc_cloned;
 			skb2 = skb_clone(skb, GFP_ATOMIC);
 			/* FIXME: PACKET_MULTICAST */
@@ -270,6 +297,11 @@ __dbg_static int __sw_multicast(struct net_switch *sw, struct net_switch_port *i
 			   in lh2; make a copy of the skb, then send the last skb from
 			   lh1
 			 */
+
+			/* Check if out port is in stp forwarding state. */
+			if(!can_forward(prev->port)) 
+				continue;
+
 			__sw_flood_inc_copied;
 			skb2 = skb_copy_expand(skb, ETH_HLEN+VLAN_TAG_BYTES, 0, GFP_ATOMIC);
 			f(skb2, vlan);
@@ -281,6 +313,11 @@ __dbg_static int __sw_multicast(struct net_switch *sw, struct net_switch_port *i
 			continue;
 		}
 		if (prev) {
+
+			/* Check if out port is in stp forwarding state. */
+			if(!can_forward(prev->port)) 
+				continue;
+
 			if (needs_tag_change) {
 				/* 0 elements in lh1, and we're at the 2nd element in lh2;
 				   make sure skb is an exclusive copy and apply the tag
@@ -300,7 +337,9 @@ __dbg_static int __sw_multicast(struct net_switch *sw, struct net_switch_port *i
 		}
 		prev = entry;
 	}
-	if (prev) {
+	
+	/* Check if out port is in stp forwarding state. */
+	if (prev && can_forward(prev->port)) {
 		if (needs_tag_change && prev != oldprev) {
 			/* lh2 is not empty, so the remaining element is from lh2,
 			   but the tag change was not applied
@@ -387,6 +426,7 @@ int sw_forward(struct net_switch_port *in,
 	dbg("sw_forward: usage count %d\n", atomic_read(&skb_shinfo(skb)->dataref) != 1);
 	if (sw_vif_forward(skb, skb_e))
 		return ret;
+	
 	rcu_read_lock();
 	if (is_mcast_mac(skb->mac.raw)) {
 		ret = __sw_multicast(sw, in, skb, skb_e->vlan,
@@ -399,10 +439,17 @@ int sw_forward(struct net_switch_port *in,
 		return ret;
 	}
 	if (fdb_lookup(bucket, skb->mac.raw, skb_e->vlan, &out)) {
-		/* fdb entry found */
+		// fdb entry found
 		rcu_read_unlock();
+
+		// Check if out port is in stp forwarding state.
+		if(!can_forward(out->port))
+		{
+			goto free_skb;
+		}
+		
 		if (in == out->port) {
-			/* in_port == out_port */
+			// in_port == out_port
 			dbg("forward: Dropping frame, dport %s == sport %s\n",
 				out->port->dev->name, in->dev->name);
 			goto free_skb; 
@@ -426,12 +473,12 @@ int sw_forward(struct net_switch_port *in,
 		rcu_read_unlock();
 		dbg("forward: Flooding frame from %s to all necessary ports\n",
 				in->dev->name);
-		/*
-		   The fact that skb_e->vlan exists in the vdb is based
-		   _only_ on the checks performed in sw_handle_frame()
-		 */
+		// The fact that skb_e->vlan exists in the vdb is based
+		//   _only_ on the checks performed in sw_handle_frame()
+		 
 		ret = sw_flood(sw, in, skb, skb_e->vlan);
-	}	
+	}
+		
 	return ret; 
 	
 free_skb:	

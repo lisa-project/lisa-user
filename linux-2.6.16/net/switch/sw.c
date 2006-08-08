@@ -91,60 +91,194 @@ void dump_packet(const struct sk_buff *skb) {
 __dbg_static int sw_handle_frame(struct net_switch_port *port, struct sk_buff **pskb) {
 	struct sk_buff *skb = *pskb;
 	struct skb_extra skb_e;
-
+	
+	//printk(KERN_INFO "Port %s: rcvd frame.\n", port->dev->name);
+	
 	if(port->flags & (SW_PFL_DISABLED | SW_PFL_DROPALL)) {
 		dbg("Received frame on disabled port %s\n", port->dev->name);
+		printk(KERN_INFO "Received frame on disabled port %s\n", port->dev->name);
 		goto free_skb;
 	}
 
-	if(skb->protocol == ntohs(ETH_P_8021Q)) {
-		skb_e.vlan = ntohs(*(unsigned short *)skb->data) & 4095;
-		skb_e.has_vlan_tag = 1;
-	} else {
-		skb_e.vlan = port->vlan;
-		skb_e.has_vlan_tag = 0;
-	}
-
-	/* Perform some sanity checks */
-	if (!sw.vdb[skb_e.vlan]) {
-		dbg("Vlan %d doesn't exist int the vdb\n", skb_e.vlan);
+	/* Check if stp enabled and port is disabled or in stp blocking state. */
+	if(atomic_read(&port->sw->stp_vars.stp_enabled) && is_disabled_or_blocked_port(port))
+	{			
 		goto free_skb;
 	}
-	if((port->flags & SW_PFL_TRUNK) && !skb_e.has_vlan_tag) {
-		dbg("Received untagged frame on TRUNK port %s\n", port->dev->name);
-		goto free_skb;
-	}
-	if(!(port->flags & SW_PFL_TRUNK) && skb_e.has_vlan_tag) {
-		dbg("Received tagged frame on non-TRUNK port %s\n", port->dev->name);
-		goto free_skb;
-	}
-
-	/* If interface is in trunk, check if the vlan is allowed */
-	if((port->flags & SW_PFL_TRUNK) &&
-			(port->forbidden_vlans[skb_e.vlan / 8] & (1 << (skb_e.vlan % 8)))) {
-		dbg("Received frame on vlan %d, which is forbidden on %s\n",
-				skb_e.vlan, port->dev->name);
-		goto free_skb;
-	}
+	
 
 	/* Perform some sanity checks on source mac */
 	if(is_null_mac(skb->mac.raw + 6)) {
 		dbg("Received null-smac packet on %s\n", port->dev->name);
+		printk(KERN_INFO "Received null-smac packet on %s\n", port->dev->name);
 		goto free_skb;
 	}
 
 	if(is_bcast_mac(skb->mac.raw + 6)) {
 		dbg("Received bcast-smac packet on %s\n", port->dev->name);
+		printk(KERN_INFO "Received bcast-smac packet on %s\n", port->dev->name);
 		goto free_skb;
 	}
 
-	/* Update the fdb */
-	fdb_learn(skb->mac.raw + 6, port, skb_e.vlan, SW_FDB_DYN, 0);
 
-	sw_forward(port, skb, &skb_e);
+	/* If stp is enabled the mac will be learnead if port is in FORWARDING or LEARNING */
+	if (atomic_read(&port->sw->stp_vars.stp_enabled)) {
+	  /* If port is in Learning or Forwarding state, it can learn the new mac address. */
+	  if(port->stp_vars.state == STP_STATE_LEARNING || 
+	     port->stp_vars.state == STP_STATE_FORWARDING)
+	    {
+		/* Update the fdb */
+		fdb_learn(skb->mac.raw + 6, port, skb_e.vlan, SW_FDB_DYN, 0);
+	    }
+	
+	}
+	else {
+	  fdb_learn(skb->mac.raw + 6, port, skb_e.vlan, SW_FDB_DYN, 0);
+	}
+
+	/*
+	printk(KERN_INFO "stp_enabled = %d stp_multicast_mac = %d\n",
+	       port->sw->stp_vars.stp_enabled,
+	       memcmp(skb->mac.raw, stp_multicast_mac, ETH_ALEN));
+	*/
+	/* Check to see if reaceived frame is a BPDU and STP is enabled. */
+	if(atomic_read(&port->sw->stp_vars.stp_enabled))
+	{
+
+	  if( !memcmp(skb->mac.raw, stp_multicast_mac, ETH_ALEN))
+	  {
+		//printk(KERN_INFO "Port %s: rcvd bpdu.\n", port->dev->name);
+		sw_stp_handle_bpdu(skb);
+	  }
+	  /* If port is in Forwarding state and the frame is not a bpdu it must forward the frame. */
+	  else if(port->stp_vars.state == STP_STATE_FORWARDING)
+	  {
+		  
+	    if(skb->protocol == ntohs(ETH_P_8021Q)) {
+		skb_e.vlan = ntohs(*(unsigned short *)(skb->mac.raw+ 2*ETH_ALEN + 2)) & 4095;
+		skb_e.has_vlan_tag = 1;
+	    } else {
+		skb_e.vlan = port->vlan;
+		skb_e.has_vlan_tag = 0;
+	    }
+
+	    /* Perform some sanity checks */
+	    if (!sw.vdb[skb_e.vlan]) {
+	      dbg("Vlan %d doesn't exist int the vdb\n", skb_e.vlan);
+	      printk(KERN_INFO "Vlan %d doesn't exist int the vdb\n", skb_e.vlan);
+	      goto free_skb;
+	    }
+	    if((port->flags & SW_PFL_TRUNK) && !skb_e.has_vlan_tag) {
+	      dbg("Received untagged frame on TRUNK port %s\n", port->dev->name);
+	      printk(KERN_INFO "Received untagged frame on TRUNK port %s\n", port->dev->name);
+
+	      /*********/
+	      /* DEBUG */
+	      /*********/
+	      if( !memcmp(skb->mac.raw, stp_multicast_mac, ETH_ALEN))
+	      {
+		printk(KERN_INFO "Port %s: rcvd bpdu.\n", port->dev->name);
+	      }
+	      else if(!memcmp(skb->mac.raw, vtp_multicast_mac, ETH_ALEN)) {
+		printk(KERN_INFO "Port %s receved vtp \n", port->dev->name);
+	      }
+	      goto free_skb;
+	    }
+
+	    if(!(port->flags & SW_PFL_TRUNK) && skb_e.has_vlan_tag) {
+	      dbg("Received tagged frame on non-TRUNK port %s\n", port->dev->name);
+	      printk(KERN_INFO "Received tagged frame on non-TRUNK port %s\n", port->dev->name);
+	      goto free_skb;
+	    }
+
+	    /* If interface is in trunk, check if the vlan is allowed */
+	    if((port->flags & SW_PFL_TRUNK) &&
+	       (port->forbidden_vlans[skb_e.vlan / 8] & (1 << (skb_e.vlan % 8)))) {
+	      dbg("Received frame on vlan %d, which is forbidden on %s\n",
+		  skb_e.vlan, port->dev->name);
+	      
+	      printk(KERN_INFO "Received frame on vlan %d, which is forbidden on %s\n",
+		     skb_e.vlan, port->dev->name);
+	      goto free_skb;
+	    }
+
+	    /* Check if frame contains VTP info */
+	    if( !memcmp(skb->mac.raw, vtp_multicast_mac, ETH_ALEN) && is_vtp_enabled(port->sw))
+	    {
+	      //printk(KERN_INFO "Handle vtp frame\n");
+	      /* Check vtp mode */
+	      if (!is_vtp_transparent(port->sw))
+		vtp_handle_message(skb);
+	    }  
+	 
+	   sw_forward(port, skb, &skb_e);
+	  }
+	}// END IF stp_enabled
+	else {
+		
+	    if(skb->protocol == ntohs(ETH_P_8021Q)) {
+		skb_e.vlan = ntohs(*(unsigned short *)(skb->mac.raw + 2*ETH_ALEN + 2)) & 4095;
+		skb_e.has_vlan_tag = 1;
+	    } else {
+		skb_e.vlan = port->vlan;
+		skb_e.has_vlan_tag = 0;
+	    }
+
+	    /* Perform some sanity checks */
+	    if (!sw.vdb[skb_e.vlan]) {
+	      dbg("Vlan %d doesn't exist int the vdb\n", skb_e.vlan);
+	      printk(KERN_INFO "Vlan %d doesn't exist int the vdb\n", skb_e.vlan);
+	      goto free_skb;
+	    }
+	    if((port->flags & SW_PFL_TRUNK) && !skb_e.has_vlan_tag) {
+	      dbg("Received untagged frame on TRUNK port %s\n", port->dev->name);
+	      printk(KERN_INFO "Received untagged frame on TRUNK port %s\n", port->dev->name);
+	      /*********/
+	      /* DEBUG */
+	      /*********/
+	      if( !memcmp(skb->mac.raw, stp_multicast_mac, ETH_ALEN))
+	      {
+		printk(KERN_INFO "Port %s: rcvd bpdu.\n", port->dev->name);
+	      }
+	      else if(!memcmp(skb->mac.raw, vtp_multicast_mac, ETH_ALEN)) {
+		printk(KERN_INFO "Port %s receved vtp \n", port->dev->name);
+	      }
+
+	      goto free_skb;
+	    }
+
+	    if(!(port->flags & SW_PFL_TRUNK) && skb_e.has_vlan_tag) {
+	      dbg("Received tagged frame on non-TRUNK port %s\n", port->dev->name);
+	      printk(KERN_INFO "Received tagged frame on non-TRUNK port %s\n", port->dev->name);
+	      goto free_skb;
+	    }
+
+	    /* If interface is in trunk, check if the vlan is allowed */
+	    if((port->flags & SW_PFL_TRUNK) &&
+	       (port->forbidden_vlans[skb_e.vlan / 8] & (1 << (skb_e.vlan % 8)))) {
+	      dbg("Received frame on vlan %d, which is forbidden on %s\n",
+		  skb_e.vlan, port->dev->name);
+	      
+	      printk(KERN_INFO "Received frame on vlan %d, which is forbidden on %s\n",
+		     skb_e.vlan, port->dev->name);
+	      goto free_skb;
+	    }
+
+	    /* Check if frame contains VTP info */
+	    if( !memcmp(skb->mac.raw, vtp_multicast_mac, ETH_ALEN) && is_vtp_enabled(port->sw))
+	    {
+	      //printk(KERN_INFO "Handle vtp frame\n");
+	      if (!is_vtp_transparent(port->sw))
+		vtp_handle_message(skb);
+	    }  	   
+	    sw_forward(port, skb, &skb_e);
+	}
+
+
 	return NET_RX_SUCCESS;
 
 free_skb:
+	//printk(KERN_INFO "Port %s: free_skb\n", port->dev->name);
 	dev_kfree_skb(skb);
 	return NET_RX_DROP;
 }
@@ -200,12 +334,22 @@ static void init_switch(struct net_switch *sw) {
 	sw_fdb_init(sw);
 	init_switch_proc();
 	sw_vdb_init(sw);
+	
+	//STP is enabled
+	spin_lock_init(&sw->stp_vars.lock);
+	
+	sw_stp_enable(sw);
+	sw_vtp_init(sw);
 }
 
 /* Free everything associated with a switch */
 static void exit_switch(struct net_switch *sw) {
 	struct list_head *pos, *n;
 	struct net_switch_port *port;
+	
+	//STP is disabled and all data needed by STP is freed
+	sw_stp_disable(sw);
+	sw_vtp_disable(sw);
 
 	/* Remove all interfaces from switch */
 	list_for_each_safe(pos, n, &sw->ports) {
@@ -216,7 +360,7 @@ static void exit_switch(struct net_switch *sw) {
 	sw_vdb_exit(sw);
 	sw_vif_cleanup(sw);
 	cleanup_switch_proc();
-}
+}	
 
 
 /* Module initialization */
@@ -224,8 +368,12 @@ static int switch_init(void) {
 	init_switch(&sw);
 	swioctl_set(sw_deviceless_ioctl);
 	sw_handle_frame_hook = sw_handle_frame;
-	dbg("Switch module initialized, switch_init at 0x%p, "
+	//dbg("Switch module initialized, switch_init at 0x%p, "
+	//		"sw_handle_frame at 0x%p\n", switch_init, sw_handle_frame);
+	
+	printk( KERN_INFO "Switch module initialized, switch_init at 0x%p, "
 			"sw_handle_frame at 0x%p\n", switch_init, sw_handle_frame);
+	
 	return 0;
 }
 
@@ -234,7 +382,9 @@ static void switch_exit(void) {
 	exit_switch(&sw);
 	swioctl_set(NULL);
 	sw_handle_frame_hook = NULL;
-	dbg("Switch module unloaded\n");
+	//dbg("Switch module unloaded\n");
+	
+	printk(KERN_INFO "Switch module unloaded\n");
 }
 
 #ifdef DEBUG

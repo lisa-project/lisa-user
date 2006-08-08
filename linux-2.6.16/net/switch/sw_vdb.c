@@ -40,6 +40,7 @@ int sw_vdb_add_vlan(struct net_switch *sw, int vlan, char *name) {
 	}
 	strncpy(entry->name, name, SW_MAX_VLAN_NAME);
     entry->name[SW_MAX_VLAN_NAME] = '\0';
+    entry->status = SW_VLAN_ACTIVE;
     INIT_LIST_HEAD(&entry->trunk_ports);
     INIT_LIST_HEAD(&entry->non_trunk_ports);
 	rcu_assign_pointer(sw->vdb[vlan], entry);
@@ -74,11 +75,35 @@ int sw_vdb_add_vlan_default(struct net_switch *sw, int vlan) {
 	return sw_vdb_add_vlan(sw, vlan, buf);
 }
 
+void del_vlan(struct rcu_head* head)
+{
+	struct net_switch_vdb_entry* entry = container_of(head, struct net_switch_vdb_entry, rcu);
+	struct net_switch* sw = entry->sw;
+	struct net_switch_vdb_link *link, *tmp;
+	
+	/* Now nobody learns macs on this vlan, so we can safely remove
+	all entrues from the fdb
+	*/
+	fdb_cleanup_vlan_irq(sw, entry->vlan, SW_FDB_ANY);
+	/* Subsequent invocations of the forwarding code will "see" this
+	VLAN as deleted and will not run on this VLAN. So we can safely
+	free the link structures without further synchronization.
+	*/
+	list_for_each_entry_safe(link, tmp, &entry->trunk_ports, lh) {
+		kmem_cache_free(sw->vdb_cache, link);
+	}
+	list_for_each_entry_safe(link, tmp, &entry->non_trunk_ports, lh) {
+		kmem_cache_free(sw->vdb_cache, link);
+	}
+	kfree(entry->name);
+	kfree(entry);
+}
+
 /* Remove a vlan from the vlan database */
 int sw_vdb_del_vlan(struct net_switch *sw, int vlan) {
 	struct net_switch_vdb_entry *entry;
 	struct net_switch_vdb_link *link, *tmp;
-
+	
 	if(sw_invalid_vlan(vlan))
 		return -EINVAL;
 	if(!(entry = sw->vdb[vlan]))
@@ -90,14 +115,15 @@ int sw_vdb_del_vlan(struct net_switch *sw, int vlan) {
 	}
 	rcu_assign_pointer(sw->vdb[vlan], NULL);
 	synchronize_sched();
+	
 	/* Now nobody learns macs on this vlan, so we can safely remove
-	   all entrues from the fdb
-	 */
-	fdb_cleanup_vlan(sw, vlan, SW_FDB_ANY);
+	all entrues from the fdb
+	*/
+	fdb_cleanup_vlan_irq(sw, entry->vlan, SW_FDB_ANY);
 	/* Subsequent invocations of the forwarding code will "see" this
-	   VLAN as deleted and will not run on this VLAN. So we can safely
-	   free the link structures without further synchronization.
-	 */
+	VLAN as deleted and will not run on this VLAN. So we can safely
+	free the link structures without further synchronization.
+	*/
 	list_for_each_entry_safe(link, tmp, &entry->trunk_ports, lh) {
 		kmem_cache_free(sw->vdb_cache, link);
 	}
@@ -106,8 +132,36 @@ int sw_vdb_del_vlan(struct net_switch *sw, int vlan) {
 	}
 	kfree(entry->name);
 	kfree(entry);
+	
+	return 0;
+}
+
+int sw_vdb_del_vlan_irq(struct net_switch *sw, int vlan) {
+	struct net_switch_vdb_entry *entry;
+	struct net_switch_vdb_link *link;
+	
+	if(sw_invalid_vlan(vlan))
+		return -EINVAL;
+	if(!(entry = sw->vdb[vlan]))
+		return -ENOENT;
+	if(sw_is_default_vlan(vlan))
+		return -EPERM;
+	list_for_each_entry(link, &entry->non_trunk_ports, lh) {
+		sw_disable_port(link->port);
+	}
+	rcu_assign_pointer(sw->vdb[vlan], NULL);
+		
+	entry->sw = sw;
+	entry->vlan = vlan;
+	
+	call_rcu(&entry->rcu, del_vlan);
 
 	return 0;
+}
+
+
+void do_nothing(struct rcu_head* rcu)
+{
 }
 
 /* Rename a vlan */
@@ -129,7 +183,10 @@ int sw_vdb_set_vlan_name(struct net_switch *sw, int vlan, char *name) {
     entry_name[SW_MAX_VLAN_NAME] = '\0';
 	old_name = entry->name;
 	rcu_assign_pointer(entry->name, entry_name);
-	synchronize_sched();
+	//synchronize_sched();
+	
+	call_rcu(&entry->rcu, do_nothing);
+	
 	kfree(old_name);
 
 	return 0;
@@ -192,6 +249,11 @@ int sw_vdb_add_port(int vlan, struct net_switch_port *port) {
 	}
 	dbg("vdb: Added port %s to vlan %d\n", port->dev->name, vlan);
 
+	/* Check if vlan < 1008 */
+	if (bitoctet(vlan) < 126 && sw_vdb_vlan_exists(port->sw, vlan)) {
+	  /* Add vlan to active vlans for port */
+	  bitset(port->vtp_vars.active_vlans, vlan);
+	}
 	return 0;
 }
 
@@ -200,15 +262,22 @@ int sw_vdb_del_port(int vlan, struct net_switch_port *port) {
 	struct net_switch_vdb_link *link;
 	struct list_head *lh;
 
-    if(sw_invalid_vlan(vlan))
-        return -EINVAL;
+	if(sw_invalid_vlan(vlan))
+	  return -EINVAL;
+       
 		
 	if (!port) 
 		return -EINVAL;	
 		
 	if(!port->sw->vdb[vlan])
 		return -ENOENT;
-		
+	
+	/* Check if vlan < 1008 */
+	if (bitoctet(vlan) < 126 && sw_vdb_vlan_exists(port->sw, vlan)) {
+	  /* Remove vlan from active vlans for port */
+	  bitclear(port->vtp_vars.active_vlans, vlan);
+	}	
+
 	lh = (port->flags & SW_PFL_TRUNK) ?
 		&port->sw->vdb[vlan]->trunk_ports :
 		&port->sw->vdb[vlan]->non_trunk_ports;
@@ -221,6 +290,7 @@ int sw_vdb_del_port(int vlan, struct net_switch_port *port) {
 			return 0;
 		}
 	}
+
 	
 	return -ENOENT;
 }

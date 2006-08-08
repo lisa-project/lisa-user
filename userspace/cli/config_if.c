@@ -26,10 +26,11 @@
 #include "config.h"
 #include "config_if.h"
 #include "ip.h"
-#include "cdp.h"
 
 char sel_eth[IFNAMSIZ];
 char sel_vlan[IFNAMSIZ];
+char port_prio_range[] = "<0-255>\0";
+char port_cost_range[] = "<1-65535>\0";
 int int_type;
 
 static void cmd_exit(FILE *out, char **argv) {
@@ -559,13 +560,87 @@ static void cmd_du_half(FILE *out, char **argv) {
 	struct net_switch_ioctl_arg ioctl_arg;
 
 	ioctl_arg.cmd = SWCFG_SETDUPLEX;
+
+
+
 	ioctl_arg.if_name = sel_eth;
 	ioctl_arg.ext.duplex = SW_DUPLEX_HALF;
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
+static void cmd_stp(FILE *out, char **argv) {
+  fprintf(out, "BAU");
+}
+
+static void cmd_stp_port_prio(FILE *out, char **argv) {
+        char prio;
+	char *arg = *argv;
+	struct net_switch_ioctl_arg ioctl_arg;
+
+	sscanf(arg, "%c", &prio);
+
+	ioctl_arg.cmd = SWCFG_STP_PORT_PRIO;
+	ioctl_arg.if_name = sel_eth;
+	ioctl_arg.ext.cfg.prio = prio;
+	
+	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
+
+  fprintf(out, "Seting port priority");
+}
+
+static void cmd_stp_port_cost(FILE *out, char **argv) {
+  unsigned int cost;
+  char *arg = *argv;
+  struct net_switch_ioctl_arg ioctl_arg;
+
+  sscanf(arg, "%u", &cost);
+
+  ioctl_arg.cmd = SWCFG_STP_PORT_COST;
+  ioctl_arg.if_name = sel_eth;
+  ioctl_arg.ext.cfg.cost = cost;
+
+  ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
+  fprintf(out, "Setting port cost");
+}
+
+int valid_port_prio(char *arg, char lookahead) {
+	int no;
+	if(sscanf(arg, "%d", &no) != 1)
+		return 0;
+	if(no < 0 || no > 255)
+		return 0;
+	return 1;
+}
+
+int valid_port_cost(char *arg, char lookahead) {
+  unsigned int no;
+  if (sscanf(arg, "%u", &no) != 1)
+    return 0;
+  if (no < 0 || no > 65535) 
+    return 0;
+
+  return 1;
+}
+
+ 
 char VLAN_IDs_of_the_allowed_VLANs[] =
 "VLAN IDs of the allowed VLANs when this port is in trunking mode\0";
+
+static sw_command_t sw_port_prio[] = {
+  {port_prio_range, 15, valid_port_prio, cmd_stp_port_prio, RUN, "", NULL},
+  {NULL, 0, NULL, NULL, 0, NULL, NULL}
+};
+
+static sw_command_t sw_port_cost[] = {
+  {port_cost_range, 15, valid_port_cost, cmd_stp_port_cost, RUN, "", NULL},
+  {NULL, 0, NULL, NULL, 0, NULL, NULL}
+};
+
+static sw_command_t sh_stp[] = {
+  {"port-priority", 2, NULL, NULL, 0, "Configure port priority", sw_port_prio},
+  {"cost", 2, NULL, NULL, 0, "Configure port cost", sw_port_cost},
+  {NULL, 0, NULL, NULL, 0, NULL, NULL}
+};
 
 static sw_command_t sh_acc_vlan[] = {
 	{vlan_range,			1,	valid_vlan,	cmd_acc_vlan,	RUN,		"VLAN ID of the VLAN when this port is in access mode",	NULL},
@@ -672,13 +747,7 @@ static sw_command_t sh_duplex[] = {
 	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
 };
 
-static sw_command_t sh_no_eth_cdp[] = {
-	{"enable",				2,	NULL, cmd_cdp_if_disable, RUN,			"Enable CDP on interface",							NULL},
-	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
-};
-
 static sw_command_t sh_no[] = {
-	{"cdp",					2,	NULL,		NULL,			0,			"CDP interface subcommands",						sh_no_eth_cdp},
 	{"description",			2,	NULL,		cmd_noethdesc,	RUN,		"Interface specific description",					NULL},
 	{"duplex",				2,	NULL,		cmd_du_auto,	RUN,		"Configure duplex operation.",						NULL},
 	{"shutdown",			2,	NULL,		cmd_noshutd,	RUN,		"Shutdown the selected interface",					NULL},
@@ -687,14 +756,7 @@ static sw_command_t sh_no[] = {
 	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
 };
 
-
-static sw_command_t sh_eth_cdp[] = {
-	{"enable",				2,	NULL,	cmd_cdp_if_enable, RUN,			"Enable CDP on interface",							NULL},
-	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
-};
-
 static sw_command_t sh_eth[] = {
-	{"cdp",					2,	NULL,		NULL,			0,			"CDP interface subcommands",						sh_eth_cdp},
 	{"description",			2,	NULL,		NULL,			0,			"Interface specific description",					sh_ethdesc},
 	{"duplex",				2,	NULL,		NULL,			0,			"Configure duplex operation.",						sh_duplex},
 	{"end"	,				2,	NULL,		cmd_end,		RUN,		"End interface configuration mode",					NULL},
@@ -705,6 +767,7 @@ static sw_command_t sh_eth[] = {
 	{"shutdown",			2,	NULL,		cmd_shutd,		RUN,		"Shutdown the selected interface",					NULL},
 	{"speed",				2,	NULL,		NULL,			0,			"Configure speed operation.",						sh_speed},
 	{"switchport",			2,	NULL,		NULL,			0,			"Set switching mode characteristics",				sh_switchport},
+	{"spanning-tree", 2, NULL, NULL, NULL, "Configure spanning tree parameters for the interface", sh_stp},
 	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
 };
 
@@ -747,7 +810,7 @@ static sw_command_t sh_vlan[] = {
 	{"interface",			2,	NULL,		NULL,			0,			"Select an interface to configure",					sh_conf_int},
 	{"no",					2,	valid_no,	NULL,			PTCNT|CMPL,	"Negate a command or set its defaults",				sh_no_vlan},
 	{"shutdown",			2,	NULL,		cmd_shutd_v,	RUN,		"Shutdown the selected interface",					NULL},
-	{NULL,					0,	NULL,		NULL,			0,			NULL,											NULL}
+	{NULL,					0,	NULL,		NULL,			0,			NULL,    					NULL}
 };
 
 sw_command_root_t command_root_config_if_eth =			{"%s(config-if)%c",			sh_eth};
