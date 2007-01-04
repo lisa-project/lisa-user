@@ -1,0 +1,4 @@
+functii interesante din net/packet/af_packet.c
+
+packet_rcv: cum se pune un socket buffer in coada unui socket
+packet_recvmsg: cum se extrage un sk buf din coada
