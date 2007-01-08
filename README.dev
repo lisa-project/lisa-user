@@ -106,6 +106,7 @@ kernel.
 		* all files from net/switch
 		* include/linux/net_switch.h
 		* include/linux/netdevice.h
+		* include/linux/socket.h
 		* include/linux/sockios.h
 		* include/linux/switch.h
 	

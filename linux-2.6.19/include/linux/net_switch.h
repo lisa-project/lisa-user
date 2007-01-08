@@ -182,4 +182,15 @@ struct net_switch_ioctl_arg {
 	((ptr)[0] == 0x01 && (ptr)[1] == 0x00 && (ptr)[2] == 0x0c && \
 	  (ptr)[3] == 0xcc && (ptr)[4] == 0xcc && (ptr)[5] == 0xcc)
 
+/* Dummy "ethernet" protocol types (in addition to those defined in
+ * include/linux/if_ether.h.
+ *
+ * We use these for our custom protocol family implementation. They
+ * have no meaning whatsoever with respect to the protocol field of
+ * ethernet frames.
+ */
+#define ETH_P_CDP	0x0020
+#define ETH_P_VTP	0x0021
+#define ETH_P_STP	0x0022
+
 #endif
