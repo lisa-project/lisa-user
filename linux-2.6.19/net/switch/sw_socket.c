@@ -15,6 +15,13 @@
  *    along with Linux Multilayer Switch; if not, write to the Free Software
  *    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+
+#include <linux/types.h>
+#include <linux/socket.h>
+#include <linux/skbuff.h>
+#include <net/protocol.h>
+#include <net/sock.h>
+
 #include "sw_private.h"
 #include "sw_debug.h"
 
@@ -46,16 +53,29 @@ static inline struct switch_sock *sw_sk(struct sock *sk) {
 	return (struct switch_sock *)sk;
 }
 
-static struct proto switch_proto {
+/* Almost copy-paste from af_packet.c */
+static void sw_sock_destruct(struct sock *sk) {
+	BUG_TRAP(!atomic_read(&sk->sk_rmem_alloc));
+	BUG_TRAP(!atomic_read(&sk->sk_wmem_alloc));
+
+	if (!sock_flag(sk, SOCK_DEAD)) {
+		printk("Attempt to release alive switch socket: %p\n", sk);
+		return;
+	}
+
+	//atomic_dec(&packet_socks_nr); FIXME
+}
+
+static struct proto switch_proto = {
 	.name = "SWITCH",
 	.owner = THIS_MODULE,
 	.obj_size = sizeof(struct switch_sock)
 };
 
-static const struct sw_sock_ops;
+static const struct proto_ops sw_sock_ops;
 
 static int sw_sock_create(struct socket *sock, int protocol) {
-	struct socket *sk;
+	struct sock *sk;
 	struct switch_sock *sws;
 
 	if(!capable(CAP_NET_RAW))
@@ -76,13 +96,39 @@ static int sw_sock_create(struct socket *sock, int protocol) {
 	sk->sk_family = PF_SWITCH;
 	sws->proto = protocol;
 
-	sk->sk_destruct = switch_sock_destruct;
+	sk->sk_destruct = sw_sock_destruct;
 
 	return 0;
 }
 
+static int sw_sock_release(struct socket *sock) {
+	//FIXME must implement
+	return 0;
+}
 
-static const struct sw_sock_ops = {
+static int sw_sock_bind(struct socket *sock, struct sockaddr *uaddr, int addr_len) {
+	//FIXME must implement
+	return 0;
+}
+
+static int sw_sock_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) {
+	//FIXME must implement, if we plan to migrate "deviceless ioctls" here :)
+	return 0;
+}
+
+static int sw_sock_sendmsg(struct kiocb *iocb, struct socket *sock,
+		struct msghdr *msg, size_t len) {
+	//FIXME must implement
+	return 0;
+}
+
+static int sw_sock_recvmsg(struct kiocb *iocb, struct socket *sock,
+		struct msghdr *msg, size_t len, int flags) {
+	//FIXME must implement
+	return 0;
+}
+
+static const struct proto_ops sw_sock_ops = {
 	.family =		PF_SWITCH,
 	.owner =		THIS_MODULE,
 	.release = 		sw_sock_release,
@@ -90,8 +136,8 @@ static const struct sw_sock_ops = {
 	.connect =		sock_no_connect,
 	.socketpair =	sock_no_socketpair,
 	.accept =		sock_no_accept,
-	.getname =		sw_sock_getname,
-	.poll =			sw_sock_poll,
+	.getname =		sock_no_getname,
+	.poll =			datagram_poll,
 	.ioctl =		sw_sock_ioctl,
 	.listen =		sock_no_listen,
 	.shutdown =		sock_no_shutdown,
@@ -112,7 +158,7 @@ static struct net_proto_family switch_family_ops = {
 void sw_sock_exit(void) {
 	sock_unregister(PF_SWITCH);
 	proto_unregister(&switch_proto);
-	dbg("Sucessfully unregistered PF_SWITCH protocol family");
+	dbg("Sucessfully unregistered PF_SWITCH protocol family\n");
 }
 
 int sw_sock_init(void) {
@@ -122,7 +168,7 @@ int sw_sock_init(void) {
 		goto out;
 	
 	sock_register(&switch_family_ops);
-	dbg("Sucessfully registered PF_SWITCH protocol family");
+	dbg("Sucessfully registered PF_SWITCH protocol family\n");
 out:
 	return err;
 }

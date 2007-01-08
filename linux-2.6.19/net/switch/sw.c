@@ -28,6 +28,7 @@
 #include "sw_private.h"
 #include "sw_debug.h"
 #include "sw_proc.h"
+#include "sw_socket.h"
 
 MODULE_DESCRIPTION("Cool stuff");
 MODULE_AUTHOR("us");

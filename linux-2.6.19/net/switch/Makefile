@@ -16,7 +16,7 @@ CFGFLAGS += -DNET_SWITCH_NOVLANFORIF=1
 # CFGFLAGS += -DNET_SWITCH_TRUNKDEFAULTVLANS
 
 # Enable debugging
-#CFGFLAGS += -DDEBUG -g
+CFGFLAGS += -DDEBUG -g
 
 ##
 # End of config section

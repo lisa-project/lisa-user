@@ -1,4 +1,14 @@
 functii interesante din net/packet/af_packet.c
 
 packet_rcv: cum se pune un socket buffer in coada unui socket
+  |
+  +-- > atentie la comentariul de la datagram_poll() - aici cred
+  ca trebuie folosit sock_writeable();
+  cum se defineste sk->sk_wmem_alloc ?!!
+
 packet_recvmsg: cum se extrage un sk buf din coada
+
+
+functii interesante:
+net/core/datagram.c: datagram_poll()
+
