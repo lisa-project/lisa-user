@@ -4,7 +4,7 @@ CFLAGS +=-Wall -I$(KDIR)/include -I../include -fPIC -D_XOPEN_SOURCE=500 $(shell 
 #CFLAGS +=-DDEBUG
 LDFLAGS=-lpcap -lpthread -lm $(shell libnet-config --libs)
 
-all: cdpd
+all: cdpd test_sock
 
 cdpd: cdp_aging.o cdp_configuration.o cdp_send.o cdpd.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)

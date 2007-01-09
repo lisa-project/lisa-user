@@ -37,16 +37,19 @@
  * in net/packet/af_packet.c.
  */
 
+DEFINE_MUTEX(sw_ioctl_mutex);
+
 /* Custom structure that wraps the kernel "sock" struct. We use it to be
  * able to add implementation-specific data to the socket structure.
  */
 struct switch_sock {
-	/* struct sock has to be the first member of packet_sock to keep
+	/* struct sock has to be the first member of switch_sock to keep
 	 * consistency with the rest of the kernel */
 	struct sock			sk;
 
 	/* implementation-specific fields follow */
-	int					proto;
+	int					proto;			/* socket protocol number */
+	struct list_head	port_chain;		/* link to port list of sockets */
 };
 
 static inline struct switch_sock *sw_sk(struct sock *sk) {
@@ -55,6 +58,7 @@ static inline struct switch_sock *sw_sk(struct sock *sk) {
 
 /* Almost copy-paste from af_packet.c */
 static void sw_sock_destruct(struct sock *sk) {
+	dbg("sw_sock_destruct, sk=%p\n", sk);
 	BUG_TRAP(!atomic_read(&sk->sk_rmem_alloc));
 	BUG_TRAP(!atomic_read(&sk->sk_wmem_alloc));
 
@@ -78,6 +82,7 @@ static int sw_sock_create(struct socket *sock, int protocol) {
 	struct sock *sk;
 	struct switch_sock *sws;
 
+	dbg("sw_sock_create, proro=%d\n", protocol);
 	if(!capable(CAP_NET_RAW))
 		return -EPERM;
 	if(sock->type != SOCK_RAW)
@@ -102,28 +107,78 @@ static int sw_sock_create(struct socket *sock, int protocol) {
 }
 
 static int sw_sock_release(struct socket *sock) {
+	dbg("sw_sock_release, sock=%p\n", sock);
 	//FIXME must implement
+	return 0;
+}
+
+static int bind_switch_port(struct switch_sock *sws, struct net_switch_port *port) {
 	return 0;
 }
 
 static int sw_sock_bind(struct socket *sock, struct sockaddr *uaddr, int addr_len) {
-	//FIXME must implement
-	return 0;
+	struct net_device *dev = NULL;
+	struct switch_sock *sws = sw_sk(sock->sk);
+	int err;
+
+	dbg("sw_sock_bind, sk=%p\n", sws);
+
+	if(addr_len < sizeof(struct sockaddr))
+		return -EINVAL;
+	if(uaddr->sa_family != AF_SWITCH)
+		return -EINVAL;
+	dev = dev_get_by_name(uaddr->sa_data);
+	if(dev == NULL)
+		return -ENODEV;
+	
+	/* prevent devices from being added or removed from the switch */
+	mutex_lock(&sw_ioctl_mutex);
+
+	if(dev->sw_port == NULL) {
+		err = -ENODEV; /* FIXME: better suited value */
+	} else {
+		err = bind_switch_port(sws, dev->sw_port);
+	}
+
+	mutex_unlock(&sw_ioctl_mutex);
+	dev_put(dev); /* dev_get_by_name() calls dev_hold() */
+	return err;
 }
 
+/* First implementation of Linux Multilayer Switch used a hook in
+ * sock_ioctl(), which is the socket-specific implementation
+ * of the ioctl() generic file operation. It is referenced in
+ * the socket_file_ops structure at the beginnig of socket.c.
+ *
+ * In sock_ioctl() we added a new branch to the switch statement:
+ * our own hook to call our particular ioctl() handler. But the
+ * default branch of the switch statement calls sock->ops->ioctl(),
+ * which points to sw_sock_ioctl().
+ *
+ * Now that we have our own protocol implementation, we prefer
+ * using our own ioctl() handler than hijacking the main socket
+ * ioctl() handler.
+ */
 static int sw_sock_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) {
-	//FIXME must implement, if we plan to migrate "deviceless ioctls" here :)
-	return 0;
+	int err;
+	void __user *argp = (void __user *)arg;
+
+	mutex_lock(&sw_ioctl_mutex);
+	err = sw_deviceless_ioctl(cmd, argp);
+	mutex_unlock(&sw_ioctl_mutex);
+	return err;
 }
 
 static int sw_sock_sendmsg(struct kiocb *iocb, struct socket *sock,
 		struct msghdr *msg, size_t len) {
+	dbg("sw_sock_sendmsg, sk=%p\n", sock->sk);
 	//FIXME must implement
 	return 0;
 }
 
 static int sw_sock_recvmsg(struct kiocb *iocb, struct socket *sock,
 		struct msghdr *msg, size_t len, int flags) {
+	dbg("sw_sock_recvmsg, sk=%p\n", sock->sk);
 	//FIXME must implement
 	return 0;
 }

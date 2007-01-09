@@ -74,6 +74,9 @@ struct net_switch_port {
 	/* Physical configuration settings */
 	int speed;
 	int duplex;
+
+	/* List heads for switch sockets */
+	struct list_head sock_cdp;
 };
 
 struct net_switch_vif_priv {

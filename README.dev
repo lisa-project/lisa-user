@@ -99,16 +99,15 @@ kernel.
  source tree under version control. However, you must keep under version control the following files from the
  linux kernel source tree:
  
-		* net/socket.c
 		* net/Kconfig
 		* net/Makefile
 		* net/core/dev.c
 		* all files from net/switch
+		* include/linux/net.h
 		* include/linux/net_switch.h
 		* include/linux/netdevice.h
 		* include/linux/socket.h
 		* include/linux/sockios.h
-		* include/linux/switch.h
 	
 3. Userspace Tools Issues
 
