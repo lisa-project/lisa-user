@@ -209,9 +209,67 @@ static int sw_sock_sendmsg(struct kiocb *iocb, struct socket *sock,
 
 static int sw_sock_recvmsg(struct kiocb *iocb, struct socket *sock,
 		struct msghdr *msg, size_t len, int flags) {
+	struct sock *sk = sock->sk;
+	int copied, err;
+	struct sk_buff *skb;
+
 	dbg("sw_sock_recvmsg, sk=%p\n", sock->sk);
-	//FIXME must implement
-	return 0;
+
+	err = -EINVAL;
+	if(flags & ~(MSG_DONTWAIT))
+		goto out;
+	
+	/* Call the generic datagram receiver. This handles all sorts
+	 * of horrible races and re-entrancy so we can forget about it
+	 * in the protocol layers.
+	 *
+	 * Now it will return ENETDOWN, if device have just gone down,
+	 * but then it will block.
+	 */
+
+	skb = skb_recv_datagram(sk, flags, flags & MSG_DONTWAIT, &err);
+
+	/* An error occurred so return it. Because skb_recv_datagram() 
+	 * handles the blocking we don't see and worry about blocking
+	 * retries.
+	 */
+	if(skb == NULL)
+		goto out;
+
+	/* We don't return any address. If we change our mind, then
+	 * msg->msg_namelen should be the address length and
+	 * msg->msg_name should point to the address
+	 */
+	msg->msg_namelen = 0;
+	//msg->msg_namelen = sll->sll_halen + offsetof(struct sockaddr_ll, sll_addr);
+	
+	/* You lose any data beyond the buffer you gave. If it worries a
+	 * user program they can ask the device for its MTU anyway.
+	 */
+	copied = skb->len;
+	if(copied > len) {
+		copied = len;
+		msg->msg_flags |= MSG_TRUNC;
+	}
+
+	err = skb_copy_datagram_iovec(skb, 0, msg->msg_iov, copied);
+	if (err)
+		goto out_free;
+
+	sock_recv_timestamp(msg, sk, skb);
+
+	//if (msg->msg_name)
+	//	memcpy(msg->msg_name, skb->cb, msg->msg_namelen);
+
+	/* Free or return the buffer as appropriate. Again this
+	 * hides all the races and re-entrancy issues from us.
+	 */
+	err = (flags & MSG_TRUNC) ? skb->len : copied;
+
+out_free:
+	skb_free_datagram(sk, skb);
+out:
+	return err;
 }
 
 static const struct proto_ops sw_sock_ops = {
