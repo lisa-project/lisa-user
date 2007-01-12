@@ -22,6 +22,7 @@
 #include "command.h"
 #include "cdpd.h"
 #include "cdp_ipc.h"
+#include "switch_socket.h"
 
 sw_command_root_t *cmd_root = &command_root_main;
 char prompt[MAX_HOSTNAME + 32];
@@ -678,7 +679,7 @@ int climain(void) {
 	assert(!status);
 	swcli_init_readline();
 
-	sock_fd = socket(PF_PACKET, SOCK_RAW, 0);
+	sock_fd = socket(PF_SWITCH, SOCK_RAW, 0);
 	if(sock_fd == -1) {
 		perror("socket");
 		return 1;

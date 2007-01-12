@@ -21,6 +21,7 @@
 #include "config.h"
 #include "cdpd.h"
 #include "cdp_ipc.h"
+#include "switch_socket.h"
 
 extern int sock_fd;
 extern sw_command_root_t *cmd_root;
@@ -90,7 +91,7 @@ int main(int argc, char *argv[]) {
 	out = fopen("/dev/null", "w");
 	assert(out);
 	
-	sock_fd = socket(PF_PACKET, SOCK_RAW, 0);
+	sock_fd = socket(PF_SWITCH, SOCK_RAW, 0);
 	if (sock_fd ==  -1) {
 		perror("socket");
 		return 1;

@@ -87,6 +87,8 @@ static int sw_sock_create(struct socket *sock, int protocol) {
 		return -EPERM;
 	if(sock->type != SOCK_RAW)
 		return -ESOCKTNOSUPPORT;
+	if(protocol)
+		return -ESOCKTNOSUPPORT;
 
 	sock->state = SS_UNCONNECTED;
 
@@ -99,35 +101,63 @@ static int sw_sock_create(struct socket *sock, int protocol) {
 
 	sws = sw_sk(sk);
 	sk->sk_family = PF_SWITCH;
-	sws->proto = protocol;
+	sws->proto = 0;
 
 	sk->sk_destruct = sw_sock_destruct;
 
 	return 0;
 }
 
-static int sw_sock_release(struct socket *sock) {
-	dbg("sw_sock_release, sock=%p\n", sock);
-	//FIXME must implement
+static int bind_switch_port(struct switch_sock *sws, struct net_switch_port *port, int proto) {
+	struct list_head *lh;
+
+	switch(proto) {
+	case ETH_P_CDP:
+		lh = &port->sock_cdp;
+		break;
+	default:
+		return -EINVAL;
+	}
+	//FIXME prepare socket for reception
+	sws->proto = proto;
+
+	/* now the socket is ready and we can publish it to the port */
+	list_add_tail_rcu(&sws->port_chain, lh);
 	return 0;
 }
 
-static int bind_switch_port(struct switch_sock *sws, struct net_switch_port *port) {
+static void unbind_switch_port(struct switch_sock *sws) {
+	if(!sws->proto)
+		return;
+	list_del_rcu(&sws->port_chain);
+	synchronize_rcu();
+	sws->proto = 0;
+	//FIXME flush queues now?
+}
+
+static int sw_sock_release(struct socket *sock) {
+	struct switch_sock *sws = sw_sk(sock->sk);
+	
+	dbg("sw_sock_release, sock=%p\n", sock);
+	unbind_switch_port(sws); //FIXME sw_ioctl_mutex is not locked
+	//FIXME must implement
 	return 0;
 }
 
 static int sw_sock_bind(struct socket *sock, struct sockaddr *uaddr, int addr_len) {
 	struct net_device *dev = NULL;
 	struct switch_sock *sws = sw_sk(sock->sk);
+	struct sockaddr_sw *sw_addr = (struct sockaddr_sw *)uaddr;
 	int err;
 
 	dbg("sw_sock_bind, sk=%p\n", sws);
 
-	if(addr_len < sizeof(struct sockaddr))
+	if(addr_len < sizeof(struct sockaddr_sw))
 		return -EINVAL;
-	if(uaddr->sa_family != AF_SWITCH)
+	if(sw_addr->ssw_family != AF_SWITCH)
 		return -EINVAL;
-	dev = dev_get_by_name(uaddr->sa_data);
+	//FIXME copy_from_user before using uaddr ?
+	dev = dev_get_by_name(sw_addr->ssw_if_name);
 	if(dev == NULL)
 		return -ENODEV;
 	
@@ -137,7 +167,8 @@ static int sw_sock_bind(struct socket *sock, struct sockaddr *uaddr, int addr_le
 	if(dev->sw_port == NULL) {
 		err = -ENODEV; /* FIXME: better suited value */
 	} else {
-		err = bind_switch_port(sws, dev->sw_port);
+		unbind_switch_port(sws);
+		err = bind_switch_port(sws, dev->sw_port, sw_addr->ssw_proto);
 	}
 
 	mutex_unlock(&sw_ioctl_mutex);

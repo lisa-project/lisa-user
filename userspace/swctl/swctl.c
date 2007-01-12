@@ -29,6 +29,8 @@
 
 #include <assert.h>
 
+#include "switch_socket.h"
+
 #define INITIAL_BUF_SIZE 4096
 #define ETH_ALEN 6
 
@@ -102,7 +104,7 @@ int main(int argc, char **argv) {
 		return 0;
 	}
 	
-	sock = socket(PF_PACKET, SOCK_RAW, 0);
+	sock = socket(PF_SWITCH, SOCK_RAW, 0);
 	if (sock == -1) {
 		perror("socket");
 		return 0;

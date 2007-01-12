@@ -193,4 +193,10 @@ struct net_switch_ioctl_arg {
 #define ETH_P_VTP	0x0021
 #define ETH_P_STP	0x0022
 
+struct sockaddr_sw {
+	unsigned short			ssw_family;
+	char					ssw_if_name[IFNAMSIZ];
+	int						ssw_proto;
+};
+
 #endif

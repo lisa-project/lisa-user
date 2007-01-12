@@ -10,5 +10,9 @@ packet_recvmsg: cum se extrage un sk buf din coada
 
 
 functii interesante:
-net/core/datagram.c: datagram_poll()
+net/core/datagram.c:
+datagram_poll()
+skb_recv_datagram()
 
+net/core/skbuff.c:
+skb_queue_tail()
