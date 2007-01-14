@@ -20,6 +20,7 @@
 #include "cdpd.h"
 #include "cdp_ipc.h"
 #include "debug.h"
+#include "switch_socket.h"
 #include <signal.h>
 
 /* Two linked lists with the cdp registered and de-registered interfaces */
@@ -86,7 +87,7 @@ void register_cdp_interface(char *ifname) {
 	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 	assert(sockfd>=0);
 
-	swsockfd = socket(PF_PACKET, SOCK_RAW, 0);
+	swsockfd = socket(PF_SWITCH, SOCK_RAW, 0);
 	assert(swsockfd>=0);
 
 	/* get interface flags */

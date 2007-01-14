@@ -39,7 +39,11 @@
 
 DEFINE_MUTEX(sw_ioctl_mutex);
 
-/* Custom structure that wraps the kernel "sock" struct. We use it to be
+/* First 8 bytes in a cdp frame after mac header and length */
+static unsigned char cdp_hdr_bytes[] = { 0xaa, 0xaa, 0x03, 0x00, 0x00, 0x0c, 0x20, 0x00 };
+
+/*  FIXME: shouldn't this be moved to a header file? (or we consider it private and leave it here)?
+ *  Custom structure that wraps the kernel "sock" struct. We use it to be
  * able to add implementation-specific data to the socket structure.
  */
 struct switch_sock {
@@ -52,6 +56,81 @@ struct switch_sock {
 	struct list_head	port_chain;		/* link to port list of sockets */
 };
 
+/* Enqueue a sk_buff to a socket receive queue.
+ */
+static int sw_socket_enqueue(struct sk_buff *skb, struct net_device *dev, struct switch_sock *sw_sock) {
+	struct sock *sk = &sw_sock->sk;
+
+	if (skb->pkt_type == PACKET_LOOPBACK)
+		goto skb_unhandled;
+
+	skb->dev = dev;
+
+	if (atomic_read(&sk->sk_rmem_alloc) + skb->truesize >=
+			(unsigned)sk->sk_rcvbuf)
+		goto skb_unhandled;
+
+	if (dev->hard_header) {
+		if (sk->sk_type != SOCK_DGRAM)
+			skb_push(skb, skb->data - skb->mac.raw);
+		else if (skb->pkt_type == PACKET_OUTGOING)
+			skb_pull(skb, skb->nh.raw - skb->data);
+	}
+
+	/* clone the skb if others we're sharing it with others  */
+	if (skb_shared(skb)) {
+		struct sk_buff *nskb = skb_clone(skb, GFP_ATOMIC);
+
+		if (nskb == NULL)
+			goto skb_unhandled;
+
+		skb = nskb;
+	}
+
+	skb_set_owner_r(skb, sk);
+	skb->dev = NULL;
+	dst_release(skb->dst);
+	skb->dst = NULL;
+
+	nf_reset(skb);
+
+	/* queue the skb in the socket recieve queue */
+	spin_lock(&sk->sk_receive_queue.lock);
+	dbg("enqueuing skb=%p to sk_receive_queue=%p\n", skb, &sk->sk_receive_queue);
+	__skb_queue_tail(&sk->sk_receive_queue, skb);
+	spin_unlock(&sk->sk_receive_queue.lock);
+
+	/* notify blocked reader that data is available */
+	sk->sk_data_ready(sk, skb->len);
+	return 1;
+
+skb_unhandled:
+	kfree_skb(skb);
+	return 0;
+}
+
+/* Socket filter: all packets are filtered through this function.
+ * If we recognize a protocol we're interested in, we enqueue the
+ * socket buffer to the appropriate switch socket and return non
+ * zero value, so the packet doesn't get in the forwarding algorithm.
+ */
+int sw_socket_filter(struct sk_buff *skb, struct net_switch_port *port) {
+	int handled = 0;
+	struct switch_sock *sw_sk; 
+
+	/* If we're dealing with CDP packets enqueue them to the sockets of protocol
+	 type ETH_P_CDP registered to the incoming port */
+	if (is_cdp_vtp_dst(skb->mac.raw) && skb->len >= CDP_HDR_LEN && skb->len < port->dev->mtu
+			            && is_cdp_frame(skb->data, cdp_hdr_bytes)) {
+		list_for_each_entry_rcu(sw_sk, &port->sock_cdp, port_chain) {
+			/* Be nice and increase the usage count on this skb */
+			atomic_inc(&skb->users);
+			handled |= sw_socket_enqueue(skb, port->dev, sw_sk);
+		}
+	}
+	return handled;
+}
+
 static inline struct switch_sock *sw_sk(struct sock *sk) {
 	return (struct switch_sock *)sk;
 }
@@ -63,11 +142,9 @@ static void sw_sock_destruct(struct sock *sk) {
 	BUG_TRAP(!atomic_read(&sk->sk_wmem_alloc));
 
 	if (!sock_flag(sk, SOCK_DEAD)) {
-		printk("Attempt to release alive switch socket: %p\n", sk);
+		dbg("Attempt to release alive switch socket: %p\n", sk);
 		return;
 	}
-
-	//atomic_dec(&packet_socks_nr); FIXME
 }
 
 static struct proto switch_proto = {
@@ -82,7 +159,7 @@ static int sw_sock_create(struct socket *sock, int protocol) {
 	struct sock *sk;
 	struct switch_sock *sws;
 
-	dbg("sw_sock_create, proro=%d\n", protocol);
+	dbg("sw_sock_create(sock=%p), proto=%d\n", sock, protocol);
 	if(!capable(CAP_NET_RAW))
 		return -EPERM;
 	if(sock->type != SOCK_RAW)
@@ -104,6 +181,7 @@ static int sw_sock_create(struct socket *sock, int protocol) {
 	sws->proto = 0;
 
 	sk->sk_destruct = sw_sock_destruct;
+	dbg("sk_sock_create, created sk %p\n", sk);
 
 	return 0;
 }
@@ -115,10 +193,11 @@ static int bind_switch_port(struct switch_sock *sws, struct net_switch_port *por
 	case ETH_P_CDP:
 		lh = &port->sock_cdp;
 		break;
+	/* FIXME: here we should handle other protocols as well */
 	default:
 		return -EINVAL;
 	}
-	//FIXME prepare socket for reception
+
 	sws->proto = proto;
 
 	/* now the socket is ready and we can publish it to the port */
@@ -132,15 +211,28 @@ static void unbind_switch_port(struct switch_sock *sws) {
 	list_del_rcu(&sws->port_chain);
 	synchronize_rcu();
 	sws->proto = 0;
-	//FIXME flush queues now?
 }
 
 static int sw_sock_release(struct socket *sock) {
-	struct switch_sock *sws = sw_sk(sock->sk);
+	struct sock *sk = sock->sk;
+	struct switch_sock *sws = sw_sk(sk);
 	
-	dbg("sw_sock_release, sock=%p\n", sock);
-	unbind_switch_port(sws); //FIXME sw_ioctl_mutex is not locked
-	//FIXME must implement
+	dbg("sw_sock_release(sock=%p) sk=%p\n", sock, sock->sk);
+
+	unbind_switch_port(sws);
+
+	/* set socket to be dead for the destructor to be called */
+	sock_orphan(sk);
+	sock->sk = NULL;
+
+	/* purge tx, rx queue */
+	skb_queue_purge(&sk->sk_write_queue);
+	skb_queue_purge(&sk->sk_error_queue);
+	skb_queue_purge(&sk->sk_receive_queue);
+
+	/* decrement usage count */
+	sock_put(sk);
+
 	return 0;
 }
 
@@ -156,16 +248,16 @@ static int sw_sock_bind(struct socket *sock, struct sockaddr *uaddr, int addr_le
 		return -EINVAL;
 	if(sw_addr->ssw_family != AF_SWITCH)
 		return -EINVAL;
-	//FIXME copy_from_user before using uaddr ?
+
 	dev = dev_get_by_name(sw_addr->ssw_if_name);
 	if(dev == NULL)
 		return -ENODEV;
-	
+
 	/* prevent devices from being added or removed from the switch */
 	mutex_lock(&sw_ioctl_mutex);
 
 	if(dev->sw_port == NULL) {
-		err = -ENODEV; /* FIXME: better suited value */
+		err = -ENODEV;
 	} else {
 		unbind_switch_port(sws);
 		err = bind_switch_port(sws, dev->sw_port, sw_addr->ssw_proto);
@@ -202,9 +294,96 @@ static int sw_sock_ioctl(struct socket *sock, unsigned int cmd, unsigned long ar
 
 static int sw_sock_sendmsg(struct kiocb *iocb, struct socket *sock,
 		struct msghdr *msg, size_t len) {
-	dbg("sw_sock_sendmsg, sk=%p\n", sock->sk);
-	//FIXME must implement
-	return 0;
+	struct sock *sk = sock->sk;
+	struct sockaddr_sw *sw_addr = (struct sockaddr_sw *)msg->msg_name;
+	struct sk_buff *skb;
+	struct net_device *dev;
+	unsigned short proto = 0;
+	int err = 0;
+
+	dbg("sw_sock_sendmsg, sk=%p\n", sk);
+
+	/* Must have an address */
+	if (!sw_addr)
+		return -ENOTCONN;
+	
+	/* verify that the protocol family is AF_SWITCH */
+	if (sw_addr->ssw_family != AF_SWITCH)
+		return -EINVAL;
+
+	/* verify the address */
+	if (msg->msg_namelen < sizeof(struct sockaddr_sw))
+		return -EINVAL;
+	if (msg->msg_namelen == sizeof(struct sockaddr_sw))
+		proto = sw_addr->ssw_proto;
+
+	dev = dev_get_by_name(sw_addr->ssw_if_name);
+	err = -ENODEV;
+	if (dev == NULL)
+		goto out_unlock;
+
+	dbg("sw_sock_sendmsg, proto=%x, if_name=%s\n", proto, sw_addr->ssw_if_name);
+
+	/* Since this is a raw protocol, the user is responsible for doing 
+	 the fragmentation. Message size cannot exceed device mtu. */
+	err = -EMSGSIZE;
+	if (len > dev->mtu + dev->hard_header_len) {
+		dbg("sw_sock_sendmsg, len(%d) exceeds mtu (%d)+ hard_header_len(%d)\n",
+				len, dev->mtu, dev->hard_header_len);
+		goto out_unlock;
+	}
+
+	err = -ENOBUFS;
+	skb = sock_wmalloc(sk, len + LL_RESERVED_SPACE(dev), 0, GFP_KERNEL);
+	if (skb == NULL) {
+		dbg("sw_sock_sendmsg, sock_wmalloc failed\n");
+		goto out_unlock;
+	}
+	dbg("sw_sock_sendmsg, skb allocated at %p\n", skb);
+
+	/* Fill the socket buffer  */
+	/* Save space for drivers that write hard header at Tx time (implement
+	   the hard_header method)*/
+	skb_reserve(skb, LL_RESERVED_SPACE(dev));
+	skb->nh.raw = skb->data;
+
+	/* Align data correctly */
+	if (dev->hard_header) {
+		skb->data -= dev->hard_header_len;
+		skb->tail -= dev->hard_header_len;
+		if (len < dev->hard_header_len)
+			skb->nh.raw = skb->data;
+	}
+
+	/* Copy data from msg */
+	err = memcpy_fromiovec(skb_put(skb,len), msg->msg_iov, len);
+	skb->protocol = proto;
+	skb->dev = dev;
+	skb->priority = sk->sk_priority;
+	if (err) {
+		dbg("sw_sock_sendmsg, memcpy_fromiovec failed\n");
+		goto out_free;
+	}
+
+	err = -ENETDOWN;
+	if (!(dev->flags & IFF_UP)) {
+		dbg("sw_sock_sendmsg, interface is down\n");
+		goto out_free;
+	}
+
+	/* send skb */
+	dbg("sw_sock_sendmsg, sending skb (len=%d)\n", len);
+	dev_queue_xmit(skb);
+	dev_put(dev);
+	return len;
+
+	/* Error recovery */
+out_free:
+	kfree_skb(skb);
+out_unlock:
+	if (dev)
+		dev_put(dev);
+	return err;
 }
 
 static int sw_sock_recvmsg(struct kiocb *iocb, struct socket *sock,
@@ -233,15 +412,16 @@ static int sw_sock_recvmsg(struct kiocb *iocb, struct socket *sock,
 	 * handles the blocking we don't see and worry about blocking
 	 * retries.
 	 */
-	if(skb == NULL)
+	if(skb == NULL) {
+		dbg("skb null after returning from skb_recv_datagram\n");
 		goto out;
+	}
 
 	/* We don't return any address. If we change our mind, then
 	 * msg->msg_namelen should be the address length and
 	 * msg->msg_name should point to the address
 	 */
 	msg->msg_namelen = 0;
-	//msg->msg_namelen = sll->sll_halen + offsetof(struct sockaddr_ll, sll_addr);
 	
 	/* You lose any data beyond the buffer you gave. If it worries a
 	 * user program they can ask the device for its MTU anyway.
@@ -257,9 +437,6 @@ static int sw_sock_recvmsg(struct kiocb *iocb, struct socket *sock,
 		goto out_free;
 
 	sock_recv_timestamp(msg, sk, skb);
-
-	//if (msg->msg_name)
-	//	memcpy(msg->msg_name, skb->cb, msg->msg_namelen);
 
 	/* Free or return the buffer as appropriate. Again this
 	 * hides all the races and re-entrancy issues from us.

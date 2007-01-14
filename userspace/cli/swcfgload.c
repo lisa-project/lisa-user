@@ -101,12 +101,16 @@ int main(int argc, char *argv[]) {
 	dbg("my pid: %d\n", my_pid);
 	if ((cdp_ipc_qid = msgget(CDP_IPC_QUEUE_KEY, 0666)) == -1) {
 		perror("CDP ipc queue doesn't exist. Is cdpd running?");
+		fclose(out);
+		close(sock_fd);
 		return 1;
 	}
 	dbg("cdp_ipc_qid: %d\n", cdp_ipc_qid);
 	cdp_enabled = 1;
 	
 	if ((fp = fopen(config_name, "r")) == NULL) {
+		fclose(out);
+		close(sock_fd);
 		return 1;
 	}	
 	while (fgets(cmd, sizeof(cmd), fp)) {
@@ -121,5 +125,6 @@ int main(int argc, char *argv[]) {
 	}
 	fclose(out);
 	fclose(fp);
+	close(sock_fd);
 	return 0;
 }

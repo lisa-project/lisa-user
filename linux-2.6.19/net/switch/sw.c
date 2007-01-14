@@ -38,9 +38,6 @@ extern int (*sw_handle_frame_hook)(struct net_switch_port *p, struct sk_buff **p
 
 struct net_switch sw;
 
-/* first 8 bytes in a cdp frame after mac header and length */
-static unsigned char cdp_hdr_bytes[] = { 0xaa, 0xaa, 0x03, 0x00, 0x00, 0x0c, 0x20, 0x00 };
-
 void dump_packet(const struct sk_buff *skb) {
 	int i;
 	
@@ -106,12 +103,9 @@ __dbg_static int sw_handle_frame(struct net_switch_port *port, struct sk_buff **
 		skb_e.has_vlan_tag = 0;
 	}
 	
-	/* Drop cdp frames (check dst mac, frame header and do some sanity checks) */
-	if(is_cdp_vtp_dst(skb->mac.raw) && skb->len >= CDP_HDR_LEN && skb->len < port->dev->mtu 
-			&& is_cdp_frame(skb->data, cdp_hdr_bytes)) {
-		dbg("Dropping cdp frame on %s\n", port->dev->name);
+	/* Pass incoming packets through the switch socket filter */
+	if (sw_socket_filter(skb, port))
 		goto free_skb;
-	}
 
 	/* Perform some sanity checks */
 	if (!sw.vdb[skb_e.vlan]) {

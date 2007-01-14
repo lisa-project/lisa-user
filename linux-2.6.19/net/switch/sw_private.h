@@ -246,4 +246,7 @@ extern int sw_vif_disable(struct net_switch *, int);
 extern void sw_vif_cleanup(struct net_switch *);
 extern void sw_vif_rx(struct sk_buff *);
 
+/* sw_socket.c */
+extern int sw_socket_filter(struct sk_buff *, struct net_switch_port *);
+
 #endif
