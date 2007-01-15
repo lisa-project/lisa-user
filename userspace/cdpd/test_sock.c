@@ -49,7 +49,7 @@ int main(int argc, char **argv) {
 	memset(buf, 0, sizeof(buf));
 	for (i=0; i<sizeof(buf); i++)
 		buf[i] = i;
-	if (sendto(fd, buf, sizeof(buf), 0, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+	if (send(fd, buf, sizeof(buf), 0) < 0)
 		perror("send");
 
 	/* Test release() */

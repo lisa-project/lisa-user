@@ -41,9 +41,10 @@ struct net_switch sw;
 void dump_packet(const struct sk_buff *skb) {
 	int i;
 	
-	printk(KERN_DEBUG "dev=%s: proto=0x%hx mac_len=%d "
+	printk(KERN_DEBUG "dev=%s: proto=0x%hx mac_len=%d len=%d "
 			"head=0x%p data=0x%p tail=0x%p end=0x%p mac=0x%p\n",
 			skb->dev->name, ntohs(skb->protocol), skb->mac_len,
+			skb->len,
 			skb->head, skb->data, skb->tail, skb->end, skb->mac.raw);
 	printk("MAC dump: ");
 	if(skb->mac.raw)

@@ -91,6 +91,7 @@ static int sw_addif(struct net_device *dev) {
 	port->duplex = SW_DUPLEX_AUTO;
 	port->flags = SW_PFL_DISABLED;
 	INIT_LIST_HEAD(&port->sock_cdp);
+	INIT_LIST_HEAD(&port->sock_vtp);
 	/* FIXME configure physical characteristics of device (i.e. speed) */
 #ifdef NET_SWITCH_TRUNKDEFAULTVLANS
 	memset(port->forbidden_vlans, 0xff, 512);

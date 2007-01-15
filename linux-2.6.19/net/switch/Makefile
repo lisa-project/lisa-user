@@ -15,6 +15,9 @@ CFGFLAGS += -DNET_SWITCH_NOVLANFORIF=1
 # Force default vlans to always be allowed in trunk mode
 # CFGFLAGS += -DNET_SWITCH_TRUNKDEFAULTVLANS
 
+# Make additional checks when identifying CDP, VTP and STP frames
+CFGFLAGS += -DSW_SOCK_FILTER_PARANOIA
+
 # Enable debugging
 CFGFLAGS += -DDEBUG -g
 

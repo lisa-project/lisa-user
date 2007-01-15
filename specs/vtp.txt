@@ -1,0 +1,17 @@
+From http://www.hackingciscoexposed.com/pdf/chapter12.pdf:
+
+VTP is a yet another Cisco proprietary protocol designed to make the network administrator’s
+life easier by enabling centralized administration of VLANs. VTP data
+propagates inside 802.1q or ISL frames on VLAN 1. These frames are sent to the destination
+MAC address 01.00.0C.CC.CC.CC with a Logical Link Control (LLC) code AAAA
+and a type of 2004 in the SNAP header.
+
+To use VTP, switches have to be added to a VTP domain as VTP servers, clients, or transparent
+devices. When a new VLAN is confi gured on a VTP server, it will be automatically
+distributed among all switches in the VTP domain. Switches confi gured as transparent will
+propagate VTP information without altering their own VLAN assignments. On a network
+with dozens of operational Catalyst switches, this is very useful. At the same time, if an attacker
+can insert a rogue VTP server into the domain, she would have complete control over
+the VTP domain VLANs. To stop it, VTP implements MD5-based frame authentication.
+Unfortunately, in our experience, many system administrators don’t turn it on. But even so,
+an attacker can crack the MD5 hash if a guessable password is in use.

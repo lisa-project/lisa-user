@@ -39,21 +39,24 @@
 
 DEFINE_MUTEX(sw_ioctl_mutex);
 
-/* First 8 bytes in a cdp frame after mac header and length */
-static unsigned char cdp_hdr_bytes[] = { 0xaa, 0xaa, 0x03, 0x00, 0x00, 0x0c, 0x20, 0x00 };
+/* FIXME: maybe we should move this to a header file */
+#define ETH_HDLC_CDP 0x2000
+#define ETH_HDLC_VTP 0x2004
 
-/*  FIXME: shouldn't this be moved to a header file? (or we consider it private and leave it here)?
- *  Custom structure that wraps the kernel "sock" struct. We use it to be
+
+/* FIXME: shouldn't this be moved to a header file? (or we consider it private and leave it here)?
+ * Custom structure that wraps the kernel "sock" struct. We use it to be
  * able to add implementation-specific data to the socket structure.
  */
 struct switch_sock {
 	/* struct sock has to be the first member of switch_sock to keep
 	 * consistency with the rest of the kernel */
-	struct sock			sk;
+	struct sock				sk;
 
 	/* implementation-specific fields follow */
-	int					proto;			/* socket protocol number */
-	struct list_head	port_chain;		/* link to port list of sockets */
+	int						proto;			/* socket protocol number */
+	struct list_head		port_chain;		/* link to port list of sockets */
+	struct net_switch_port	*port;			/* required for sendmsg() */
 };
 
 /* Enqueue a sk_buff to a socket receive queue.
@@ -109,6 +112,17 @@ skb_unhandled:
 	return 0;
 }
 
+static unsigned char cdp_vtp_dst[6] = {0x01, 0x00, 0x0c, 0xcc, 0xcc, 0xcc};
+static unsigned char filter_paranoia[5] = {0xaa, 0x03, 0x00, 0x00, 0x0c};
+/*                                          S    N C F \______  ______/
+ *                                          S    e o i        \/
+ *                                          A    t n e   Organization
+ *                                          P    W t l    Identifier
+ *                                               a r d     (CISCO)
+ *                                               r o
+ *                                               e l
+ */
+
 /* Socket filter: all packets are filtered through this function.
  * If we recognize a protocol we're interested in, we enqueue the
  * socket buffer to the appropriate switch socket and return non
@@ -118,16 +132,42 @@ int sw_socket_filter(struct sk_buff *skb, struct net_switch_port *port) {
 	int handled = 0;
 	struct switch_sock *sw_sk; 
 
-	/* If we're dealing with CDP packets enqueue them to the sockets of protocol
-	 type ETH_P_CDP registered to the incoming port */
-	if (is_cdp_vtp_dst(skb->mac.raw) && skb->len >= CDP_HDR_LEN && skb->len < port->dev->mtu
-			            && is_cdp_frame(skb->data, cdp_hdr_bytes)) {
+	/* First identify SNAP frames. See specs/ether_frame_formats.html for
+	 * details */
+	if(skb->len >= port->dev->mtu || skb->data[0] != 0xaa)
+		goto out;
+	
+#ifdef SW_SOCK_FILTER_PARANOIA
+	/* Also check SSAP, Control Field, and Organization ID */
+	if(memcmp(filter_paranoia, skb->data + 1, sizeof(filter_paranoia)))
+		goto out;
+#endif
+	
+	/* Both CDP and VTP frames are sent to a specific multicast address */
+	if(memcmp(cdp_vtp_dst, skb->mac.raw, sizeof(cdp_vtp_dst)))
+		goto out;
+
+	/* Check for HDLC protocol type (offset 6 within LLC field) */
+	switch(ntohs(*(short *)(skb->data + 6))) {
+	case ETH_HDLC_CDP:
+		dbg("Identified CDP frame on %s\n", port->dev->name);
 		list_for_each_entry_rcu(sw_sk, &port->sock_cdp, port_chain) {
 			/* Be nice and increase the usage count on this skb */
 			atomic_inc(&skb->users);
 			handled |= sw_socket_enqueue(skb, port->dev, sw_sk);
 		}
+		break;
+	case ETH_HDLC_VTP:
+		dbg("Identified VTP frame on %s\n", port->dev->name);
+		list_for_each_entry_rcu(sw_sk, &port->sock_vtp, port_chain) {
+			/* Be nice and increase the usage count on this skb */
+			atomic_inc(&skb->users);
+			handled |= sw_socket_enqueue(skb, port->dev, sw_sk);
+			/* FIXME VTP frames must be forwarded when we are transparent */
+		}
+		break;
 	}
+out:
 	return handled;
 }
 
@@ -199,6 +239,7 @@ static int bind_switch_port(struct switch_sock *sws, struct net_switch_port *por
 	}
 
 	sws->proto = proto;
+	sws->port = port;
 
 	/* now the socket is ready and we can publish it to the port */
 	list_add_tail_rcu(&sws->port_chain, lh);
@@ -295,34 +336,40 @@ static int sw_sock_ioctl(struct socket *sock, unsigned int cmd, unsigned long ar
 static int sw_sock_sendmsg(struct kiocb *iocb, struct socket *sock,
 		struct msghdr *msg, size_t len) {
 	struct sock *sk = sock->sk;
-	struct sockaddr_sw *sw_addr = (struct sockaddr_sw *)msg->msg_name;
+	struct switch_sock *sws = sw_sk(sk);
 	struct sk_buff *skb;
-	struct net_device *dev;
+	struct net_device *dev = NULL;
 	unsigned short proto = 0;
 	int err = 0;
 
 	dbg("sw_sock_sendmsg, sk=%p\n", sk);
 
-	/* Must have an address */
-	if (!sw_addr)
-		return -ENOTCONN;
+	if (msg->msg_name == NULL) {
+		/* check if we are connected */
+		if (!sws->proto)
+			return -ENOTCONN;
+		
+		dev = sws->port->dev;
+		dev_hold(dev);
+	} else {
+		struct sockaddr_sw *sw_addr = (struct sockaddr_sw *)msg->msg_name;
+
+		/* verify that the protocol family is AF_SWITCH */
+		if (sw_addr != NULL && sw_addr->ssw_family != AF_SWITCH)
+			return -EINVAL;
+
+		/* verify the address */
+		if (msg->msg_namelen < sizeof(struct sockaddr_sw))
+			return -EINVAL;
+		if (msg->msg_namelen == sizeof(struct sockaddr_sw))
+			proto = sw_addr->ssw_proto;
+
+		dev = dev_get_by_name(sw_addr->ssw_if_name);
+		if (dev == NULL)
+			return -ENODEV;
+	}
 	
-	/* verify that the protocol family is AF_SWITCH */
-	if (sw_addr->ssw_family != AF_SWITCH)
-		return -EINVAL;
-
-	/* verify the address */
-	if (msg->msg_namelen < sizeof(struct sockaddr_sw))
-		return -EINVAL;
-	if (msg->msg_namelen == sizeof(struct sockaddr_sw))
-		proto = sw_addr->ssw_proto;
-
-	dev = dev_get_by_name(sw_addr->ssw_if_name);
-	err = -ENODEV;
-	if (dev == NULL)
-		goto out_unlock;
-
-	dbg("sw_sock_sendmsg, proto=%x, if_name=%s\n", proto, sw_addr->ssw_if_name);
+	dbg("sw_sock_sendmsg, proto=%x, if_name=%s\n", proto, dev->name);
 
 	/* Since this is a raw protocol, the user is responsible for doing 
 	 the fragmentation. Message size cannot exceed device mtu. */

@@ -77,6 +77,7 @@ struct net_switch_port {
 
 	/* List heads for switch sockets */
 	struct list_head sock_cdp;
+	struct list_head sock_vtp;
 };
 
 struct net_switch_vif_priv {
@@ -184,11 +185,6 @@ static __inline__ int sw_mac_hash(const unsigned char *mac) {
 static __inline__ int sw_vlan_hash(const int vlan) {
 	return vlan % SW_VIF_HASH_SIZE; 
 }
-
-/* things related to cdp header checking */
-#define CDP_HDR_LEN 8
-/* check if ptr is a cdp frame */
-#define is_cdp_frame(ptr,hdr) (!memcmp(ptr, hdr, CDP_HDR_LEN)) 
 
 /* sw.c */
 extern void dump_packet(const struct sk_buff *);

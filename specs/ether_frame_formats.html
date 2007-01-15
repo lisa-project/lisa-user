@@ -1,0 +1,223 @@
+<html>
+<head>
+<META NAME="name" CONTENT="content" >
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=iso-8859-1">
+<title>Ethernet Frame Types</title>
+<META NAME="Keywords" CONTENT="ethernet, frame types, 802.2, 802.3, LAN, IPX, SPX, FTAM, Novell">
+<META NAME="Description" CONTENT="Telecom Corner Technical Reference Site">
+<meta name="author" content="Jared Hall">
+</head>
+<body bgcolor="#ffffff" text="#ff0000">
+<p>
+<center>
+<a href="http://jared.tbi.net"><img src="http://telecom.tbi.net/advertis/hireme.gif" border=2 alt="Hire me!"></a>
+
+</center>
+<p>
+<hr size=5 noshade width=75%>
+<p>
+<a href="lans1.html#pcnov1">
+<img align=top src="return.gif" alt="RETURN TO LANS" width="100" height="30">Return to the LAN page.</a>
+</p>
+<p>
+<h1>Introduction</h1>
+</p>
+<p>
+There are a variety of Ethernet Frame Types that may be observed in a Novell
+LAN environment.  This depends upon the version of NetWare, and the
+applications employed.
+</p>
+<p>
+<pre>NetWare 2.X   : Ethernet 802.3 (Raw)
+                Ethernet II
+
+NetWare 3.X   : Ethernet 802.3 (Raw)
+                Ethernet II
+                Ethernet 802.2
+                Ethernet SNAP (Sub-Network Access Protocol)
+</pre>
+<p>
+Not all frame types can support all traffic variants.  For example, NetWare
+IPX/SPX packets are usually transmitted by 802.3 (Raw) frames.  In fact, the
+802.3 frame type can only support IPX/SPX traffic.  When TCP traffic is
+generated, the Ethernet II frame is often used.  Some desktop LAN analyzers
+will employ SNAP frames.
+</p>
+<p>
+<h1>Ethernet Frame Types</h1>
+</p>
+<p>
+<img src="novphy2.gif" width="581" height="172">
+</p>
+<p>
+<h2>Ethernet 802.3 (Raw)</h2>
+</p>
+<p>
+This is the original (and default) frame type used by NetWare.  IT CAN ONLY
+SUPPORT NOVELL IPX/SPX TRAFFIC!  The frame is similar to that described in
+802.3 except that it does not contain the Logical Link Control (LLC)
+information in the packet.
+</p>
+<p>
+<pre>Preamble            : 8 bytes
+Destination Address : 6 bytes
+Source Address      : 6 bytes
+Length Field        : 2 bytes
+Data Field          : Between 46 and 1500 bytes
+Pad Characters      : Variable, stuffs data field up to 46 bytes
+Frame Check Sequence: 4 bytes
+Min Frame Length    : 64 bytes
+Max Frame Length    : 1518 bytes (not including Preamble)
+</pre>
+</p>
+<p>
+<h2>Ethernet 802.2</h2>
+</p>
+<p>
+This frame includes fields from 802.3 and 802.2 (Logical Link Control) and can
+support the Novell IPX/SPX and FTAM (File Transfer, Access, and Management)
+protocols.  The frame parameters are identical to those listed above, EXCEPT
+that the first three bytes of the data field are used to indicate 802.2 header
+(LLC) information.
+</p>
+<p>
+<pre>Preamble            : 8 bytes
+Destination Address : 6 bytes
+Source Address      : 6 bytes
+Length Field        : 2 bytes
+Data Field          : Between 46 and 1500 bytes (including LLC)
+Pad Characters      : Variable, stuffs data field up to 46 bytes
+Frame Check Sequence: 4 bytes
+Min Frame Length    : 64 bytes
+Max Frame Length    : 1518 bytes (not including Preamble)
+</pre>
+</p>
+<p>
+The LLC field consists of:
+</p>
+<p>
+<pre>Destination Service Access Point (DSAP): 1 byte  (NetWare 0xE0)
+Source Service Access Point (SSAP)     : 1 byte  (NetWare 0xE0)
+Control Field                          : 1 byte  (NetWare 0x03)
+</pre>
+</p>
+<p>
+NetWare IPX/SPX packets will assign a hexadecimal value of E0 to the DSAP and
+SSAP fields and a hexadecimal value of 03 to the Control field.  The "03"
+Control value indicates an unnumbered 802.2 layer.
+</p>
+<p>
+<h2>Ethernet II</h2>
+</p>
+<p>
+Again, a similar frame type, EXCEPT that the two-byte Length field has been
+replaced with a two-byte Type field (Ethertype).  Ethernet II frames can
+support Novell IPX/SPX, TCP/IP, and AppleTalk Phase 1 protocols.  Ethernet II
+frames do not use a LLC header in the data field.
+</p>
+<p>
+<pre>Preamble            : 8 bytes
+Destination Address : 6 bytes
+Source Address      : 6 bytes
+Ethernet Type       : 2 bytes (Novell 0x81-37)
+Data Field          : Between 46 and 1500 bytes
+Pad Characters      : Variable, stuffs data field up to 46 bytes
+Frame Check Sequence: 4 bytes
+Min Frame Length    : 64 bytes
+Max Frame Length    : 1518 bytes (not including Preamble)
+</pre>
+</p>
+<p>
+The Ethernet Type field is coded with hexadecimal 8137 for transport of
+NetWare IPX/SPX packets.
+</p>
+<p>
+<a href="etype.html"><strong>Go here for more information on EtherType variable
+assignments</strong></a>
+</p>
+<p>
+<h2>Ethernet SNAP</h2>
+</p>
+<p>
+Sub-Network Access Protocol (SNAP) is similar to 802.2, with LLC parameters,
+but with expanded LLC capabilities.  Ethernet SNAP can support IPX/SPX,
+TCP/IP, and AppleTalk Phase 2 protocols.
+</p>
+<p>
+<pre>Preamble            : 8 bytes
+Destination Address : 6 bytes
+Source Address      : 6 bytes
+Length Field        : 2 bytes
+Data Field          : Between 46 and 1500 bytes (including LLC)
+Pad Characters      : Variable, stuffs data field up to 46 bytes
+Frame Check Sequence: 4 bytes
+Min Frame Length    : 64 bytes
+Max Frame Length    : 1518 bytes (not including Preamble)
+</pre>
+</p>
+<p>
+The LLC field (the first eight bytes in the data field) consists of:
+</p>
+<p>
+<pre>Destination Service Access Point (DSAP): 1 byte  (0xAA)
+Source Service Access Point (SSAP)     : 1 byte  (0xAA)
+Control Field                          : 1 byte  (NetWare 0x03)
+Organizational Code                    : 3 bytes (0x00-00-00)
+Ethernet Type                          : 2 bytes (NetWare 0x81-37)
+</pre>
+</p>
+<p>
+<a href="etype.html"><strong>Go here for more information on EtherType variable
+assignments</strong></a>
+</p>
+<p>
+Hexadecimal AA (decimal 170) values are usually employed for the DSAP and SSAP
+values.  Netware uses a hexadecimal 03 in the SNAP Control field and will use
+the 0x81-37 Ethernet Type value.  Usually, the Organizational Code is coded as
+all 0s (0x00-00-00) and NetWare is no exception.
+</p>
+<p>
+<h2>Distinguishing Between Frame Types</h2>
+</p>
+<p>
+1)  Receive good frame.<br>
+2)  Analyze frame.  Perform the following steps, in order:<br>
+</p>
+<p>
+<ul>
+<li>If the EtherType/Length value is greater than 0x05-DC (decimal 1500), then process the frame as Ethernet II.  Any EtherType value
+greater than 0x05-DC (such as 0x0800 for IP or 0x81-37 for NetWare IPX/SPX) will be interpreted as an Ethernet II frame.
+</ul>
+</p>
+<p>
+<ul>
+<li>If the IPX header (0xFF-FF) follows the Length field, the frame is interpreted as a 802.3 (Raw) frame with Netware IPX/SPX traffic.
+Standard SSAP and DSAP values do not include hexadecimal FF, so the 802.3 (Raw) frame can be distinguished from LLC frames (Ethernet
+SNAP, 802.2).
+</ul>
+</p>
+<p>
+<ul>
+<li>Next, the byte following the length field (DSAP) is examined.  If the value is 0xAA, the frame is interpreted as a SNAP frame.
+Otherwise, it is interpreted as a 802.2 frame.
+</ul>
+</p>
+</body>
+<meta name="description" content="Telecom Corner Technical Reference Site">
+<meta name="author" content="Jared Hall">
+<address>
+<center>
+<!--webbot bot="HitCounter" u-custom i-image="4" i-resetvalue="0" PREVIEW="&lt;strong&gt;[Hit Counter]&lt;/strong&gt;" i-digits="8" startspan --><img src="_vti_bin/fpcount.exe/?Page=address.html|Image=4|Digits=8" alt="Hit Counter"><!--webbot bot="HitCounter" i-checksum="52669" endspan --></address>
+<p>
+<font face="arial" size=-1>
+| <a href="http://telecom.tbi.net/">Home</a> | <a href="/history1.html">History</a> | <a href="/mux1.html">Multiplex</a> | <a href="/transmission.htm">Xmission</a> | <a href="/nets.htm">Networking</a> | <a href="/switching.htm">Switching</a> | <a href="/mod1.html">Modulation</a> |
+</font>
+</center>
+<p>
+<font size=-1>
+frmlan.html, &#169;1998 All rights reserved<br>
+Tampa Bay Interactive, Inc.<br>
+Last Revised on: Monday, 25-Oct-2004 19:46:10 EDT<br>
+</font>
+</p>
+</html>
