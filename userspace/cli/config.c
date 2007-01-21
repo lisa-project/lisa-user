@@ -16,14 +16,16 @@
  *    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, 
  *    MA  02111-1307  USA
  */
+#include <sys/types.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
 
+#include <linux/if.h>
+#include <linux/if_ether.h>
 #include <linux/net_switch.h>
 #include <linux/sockios.h>
-#include <net/if.h>
-#include <sys/ioctl.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <sys/types.h>
 #include <regex.h>
 #include <time.h>
 

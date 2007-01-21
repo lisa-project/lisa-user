@@ -20,21 +20,24 @@
 #ifndef _CDPD_H
 #define _CDPD_H
 
-#include <pthread.h>
 #include <semaphore.h>
+#include <pthread.h>
 
 #include <sys/types.h>
 #include <sys/ioctl.h>
 #include <sys/utsname.h>
 #include <sys/wait.h>
-
+#include <sys/select.h>
+#include <sys/socket.h>
+#include <linux/if.h>
+#include <linux/if_ether.h>
 #include <linux/net_switch.h>
 #include <linux/sockios.h>
+
+#include <errno.h>
 #include <assert.h>
 #include <ctype.h>
 #include <fcntl.h>
-#include <pcap.h>
-#include <libnet.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -45,10 +48,6 @@
 
 #include "common.h"
 #include "list.h"
-
-/* pcap filter expression for cdp */
-#define PCAP_CDP_FILTER "ether multicast and ether[20:2] = 0x2000 and ether src not %02hx:%02hx:%02hx:%02hx:%02hx:%02hx"
-
 
 /* integer to alphanumeric mapping */
 typedef struct {
@@ -75,6 +74,8 @@ typedef struct {
  * | ...					|
  * +------------------------+
  */
+
+#define MAX_CDP_FRAME_SIZE 2048
 
 /* constants for the 'type' field */
 #define TYPE_DEVICE_ID			0x0001
@@ -195,29 +196,29 @@ static const description_table device_capabilities[] = {
 /* CDP Frame Header */
 struct cdp_frame_header {
 /* Ethernet 802.3 header */
-	u_char dst_addr[ETH_ALEN];
-	u_char src_addr[ETH_ALEN];
-	u_int16_t length;
+	unsigned char dst_addr[ETH_ALEN];
+	unsigned char src_addr[ETH_ALEN];
+	unsigned short length;
 /* LLC */
-	u_int8_t dsap;
-	u_int8_t ssap;
+	unsigned char dsap;
+	unsigned char ssap;
 /* LLC control */
-	u_int8_t control;
-	u_int8_t oui[3];
-	u_int16_t protocol_id;
+	unsigned char control;
+	unsigned char oui[3];
+	unsigned short protocol_id;
 } __attribute__ ((packed));
 
 /* CDP Packet Header */
 struct cdp_hdr {
-	u_int8_t	version;			/* cdp version */
-	u_int8_t	time_to_live;		/* cdp ttl (holdtime) */
-	u_int16_t	checksum;			/* checksum */
+	unsigned char version;			/* cdp version */
+	unsigned char time_to_live;		/* cdp ttl (holdtime) */
+	unsigned short checksum;		/* checksum */
 };
 
 /* CDP Frame Data */
 struct cdp_field {
-	u_int16_t	type;
-	u_int16_t	length;
+	unsigned short	type;
+	unsigned short	length;
 };
 
 /**
@@ -244,27 +245,27 @@ struct cdp_field {
  * - Management VLAN [ 2 bytes ] ( 0x029a, adica 666)
  */
 struct protocol_hello {
-	u_int32_t oui; 							/* OUI (0x00000c for Cisco) */
-	u_int16_t protocol_id;					/* Protocol Id (0x0112 for Cluster Management) */
-	u_char payload[27];						/* the other fields */ 
+	unsigned int oui; 							/* OUI (0x00000c for Cisco) */
+	unsigned short protocol_id;					/* Protocol Id (0x0112 for Cluster Management) */
+	unsigned char payload[27];					/* the other fields */ 
 };
 
 /* CDP neighbor */
 struct cdp_neighbor {
 	struct cdp_interface *interface;		/* Interface */
-	u_int8_t ttl;							/* Holdtime (time to live) */
-	u_int8_t cdp_version;
+	unsigned char ttl;						/* Holdtime (time to live) */
+	unsigned char cdp_version;
 	char device_id[64];						/* Device ID */
-	u_char num_addr;						/* Number of decoded addresses */
-	u_int32_t addr[8];						/* Device addresses */
+	unsigned char num_addr;					/* Number of decoded addresses */
+	unsigned int addr[8];					/* Device addresses */
 	char port_id[32];						/* Port ID */			
-	u_char cap;								/* Capabilities */
+	unsigned char cap;						/* Capabilities */
 	char software_version[255];				/* Software (Cisco IOS version) */
 	char platform[32];						/* Hardware platform of the device */
 	char vtp_mgmt_domain[32];				/* VTP Management Domain */
 	struct protocol_hello p_hello;			/* Protocol Hello */
-	u_char duplex;							/* Duplex */
-	u_int16_t native_vlan;					/* Native VLAN */
+	unsigned char duplex;					/* Duplex */
+	unsigned short native_vlan;				/* Native VLAN */
 	struct  cdp_neighbor_heap_node *hnode;	/* Pointer to the associated heap node structure */
 	struct list_head lh;					/* list head */
 };
@@ -272,10 +273,7 @@ struct cdp_neighbor {
 /* CDP interface */
 struct cdp_interface {
 	char name[IFNAMSIZ];					/* Name of the interface */
-	bpf_u_int32 addr, netmask;				/* IP/netmask */
-	pcap_t *pcap;							/* pcap structure */
-	struct libnet_ether_addr *hwaddr;		/* hardware address */
-	libnet_t *llink;						/* libnet link */
+	int sw_sock_fd;							/* Our PF_SWITCH socket */
 	sem_t n_sem;							/* semaphore used for locking on the neighbor list */
 	struct list_head neighbors;				/* list of cdp neighbors (on this interface) */
 	struct list_head lh;
@@ -290,21 +288,21 @@ struct cdp_interface {
 
 /* CDP configuration parameters */
 struct cdp_configuration {
-	u_int8_t	enabled;				/* enabled flag */
-	u_int8_t 	version;				/* cdp version */
-	u_int8_t 	holdtime;				/* cdp ttl (holdtime) in seconds */
-	u_int8_t	timer;					/* rate at which packets are sent (in seconds) */
-	u_int32_t	capabilities;			/* device capabilities */
+	unsigned char	enabled;				/* enabled flag */
+	unsigned char 	version;				/* cdp version */
+	unsigned char 	holdtime;				/* cdp ttl (holdtime) in seconds */
+	unsigned char	timer;					/* rate at which packets are sent (in seconds) */
+	unsigned int	capabilities;			/* device capabilities */
 	char		software_version[255];	/* software version information */
 	char		platform[16];			/* platform information */
-	u_int8_t	duplex;					/* duplex */
+	unsigned char	duplex;					/* duplex */
 };
 
 struct cdp_traffic_stats {
-	u_int32_t	v1_in;
-	u_int32_t	v2_in;
-	u_int32_t	v1_out;
-	u_int32_t	v2_out;
+	unsigned int	v1_in;
+	unsigned int	v2_in;
+	unsigned int	v1_out;
+	unsigned int	v2_out;
 };
 
 /* CDP neighbor heap (used for neighbor aging mechanism) */

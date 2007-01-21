@@ -3,6 +3,8 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <linux/if.h>
+#include <linux/if_ether.h>
 #include <linux/net_switch.h>
 #include <linux/socket.h>
 

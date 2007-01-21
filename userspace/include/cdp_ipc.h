@@ -23,7 +23,6 @@
 #include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
-#include <net/if.h>
 
 /* maximum message size */
 #define CDP_IPC_MSGSIZE 4096

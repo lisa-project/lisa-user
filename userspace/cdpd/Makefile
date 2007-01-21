@@ -1,8 +1,8 @@
 .PHONY: all clean
 
-CFLAGS +=-Wall -I$(KDIR)/include -I../include -fPIC -D_XOPEN_SOURCE=500 $(shell libnet-config --cflags --defines)
+CFLAGS +=-Wall -I$(KDIR)/include -I../include -fPIC -D_XOPEN_SOURCE=500
 CFLAGS +=-DDEBUG
-LDFLAGS=-lpcap -lpthread -lm $(shell libnet-config --libs)
+LDFLAGS=-lpthread -lm
 
 all: cdpd test_sock
 
@@ -10,4 +10,4 @@ cdpd: cdp_aging.o cdp_configuration.o cdp_send.o cdpd.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 clean:
-	rm -f *.o cdpd
+	rm -f *.o cdpd test_sock

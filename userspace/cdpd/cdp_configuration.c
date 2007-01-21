@@ -24,7 +24,7 @@
 /**
  * Configuration management via a IPC message queueue.
  */
-extern struct cdp_configuration cfg;
+extern struct cdp_configuration ccfg;
 extern struct list_head registered_interfaces;
 extern struct cdp_traffic_stats cdp_stats;
 
@@ -178,7 +178,7 @@ static void cdp_ipc_show(struct cdp_ipc_message *m, struct cdp_ipc_message *r) {
 	dbg("[ipc listener]: show type: %d\n", sq->show_type);
 	switch (sq->show_type) {
 	case CDP_IPC_SHOW_CFG: 
-		memcpy(cdpr->data, &cfg, sizeof(cfg)); 
+		memcpy(cdpr->data, &ccfg, sizeof(ccfg)); 
 		break;
 	case CDP_IPC_SHOW_STATS:
 		memcpy(cdpr->data, &cdp_stats, sizeof(cdp_stats));
@@ -211,22 +211,22 @@ static void cdp_ipc_conf(struct cdp_ipc_message *m, struct cdp_ipc_message *r) {
 	case CDP_IPC_CFG_VERSION:
 		dbg("[ipc_listener]: cdp advertise-v2 : %d\n", cq->field_value);
 		if (cq->field_value >= 1 && cq->field_value <=2)
-			cfg.version = cq->field_value;
+			ccfg.version = cq->field_value;
 		break;
 	case CDP_IPC_CFG_HOLDTIME:
 		dbg("[ipc listener]: cdp holdtime %d\n", cq->field_value);
 		if (cq->field_value >= 10)
-			cfg.holdtime = cq->field_value;
+			ccfg.holdtime = cq->field_value;
 		break;
 	case CDP_IPC_CFG_TIMER:
 		dbg("[ipc listener]: cdp timer %d\n", cq->field_value);
 		if (cq->field_value >= 5 && cq->field_value <= 254)
-			cfg.timer = cq->field_value;
+			ccfg.timer = cq->field_value;
 		break;
 	case CDP_IPC_CFG_ENABLED:
 		dbg("[ipc listener]: cdp enabled %d\n", cq->field_value);
 		if (cq->field_value <= 1)
-			cfg.enabled = cq->field_value;
+			ccfg.enabled = cq->field_value;
 		break;
 	default:
 		dbg("[ipc listener]: invalid configuration field id: %d\n", cq->field_id);
