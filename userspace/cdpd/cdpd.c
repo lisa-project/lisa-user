@@ -368,7 +368,6 @@ static void decode_field(struct cdp_neighbor **ne, int type, int len, char *fiel
 		break;
 	default:
 		dbg("\t\twe don't decode [%s].\n", get_description(type, field_types));
-		exit(1);
 	}
 }
 

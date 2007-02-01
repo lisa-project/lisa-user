@@ -25,6 +25,10 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "cdp_ipc.h"
+
+extern int cdp_adm_query(int, char *, struct cdp_ipc_message *);
+
 extern void cmd_sh_cdp(FILE *, char **);
 extern void cmd_sh_cdp_int(FILE *, char **);
 extern void cmd_sh_cdp_ne(FILE *, char **);

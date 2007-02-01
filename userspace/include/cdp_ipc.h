@@ -24,6 +24,8 @@
 #include <sys/ipc.h>
 #include <sys/msg.h>
 
+#include "cdpd.h"
+
 /* maximum message size */
 #define CDP_IPC_MSGSIZE 4096
 /* ipc queue key */

@@ -19,7 +19,6 @@
 
 #include <linux/net_switch.h>
 #include <linux/sockios.h>
-#include <net/if.h>
 #include <sys/ioctl.h>
 
 #include "climain.h"

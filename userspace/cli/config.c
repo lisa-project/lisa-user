@@ -60,34 +60,90 @@ static void cmd_nohostname(FILE *out, char **argv) {
 static void cmd_int_eth(FILE *out, char **argv) {
 	char *arg = *argv;
 	struct net_switch_ioctl_arg ioctl_arg;
+	struct cdp_ipc_message r;
 
 	ioctl_arg.cmd = SWCFG_ADDIF;
 	ioctl_arg.if_name = if_name_eth(arg);
-	do {
-		if(!ioctl(sock_fd, SIOCSWCFG, &ioctl_arg))
-			break;
-		if(errno == ENODEV) {
+	if(ioctl(sock_fd, SIOCSWCFG, &ioctl_arg)) {
+		switch(errno) {
+		case ENODEV:
 			fprintf(out, "Command rejected: device %s does not exist\n",
 					ioctl_arg.if_name);
 			return;
+		case EBUSY:
+			/* Interface already in the switch; just ignore the
+			   error and go on */
+			break;
+		default:
+			fprintf(out, "Command rejected: ioctl() failed\n");
+			return;
 		}
-	} while(0);
+	} else {
+		/* Enable CDP on this interface */
+		cdp_adm_query(CDP_IPC_IF_ENABLE, ioctl_arg.if_name, &r);
+	}
 
 	cmd_root = &command_root_config_if_eth;
 	strcpy(sel_eth, ioctl_arg.if_name);
-	/* Enable CDP on this interface */
-	cmd_cdp_if_enable(out, argv);
+}
+
+/* Add any kind of interface to the switch.
+ */
+static void cmd_int_any(FILE *out, char **argv) {
+	struct net_switch_ioctl_arg ioctl_arg;
+	struct cdp_ipc_message r;
+
+	ioctl_arg.cmd = SWCFG_ADDIF;
+	ioctl_arg.if_name = argv[0];
+	/* Only vlan virtual interfaces must not be added. We do not need
+	 * to check this here. Just do the ioctl() and the kernel code
+	 * will report EINVAL if we try to add a vif.
+	 */
+	if(ioctl(sock_fd, SIOCSWCFG, &ioctl_arg)) {
+		switch(errno) {
+		case ENODEV:
+			fprintf(out, "Command rejected: device %s does not exist\n",
+					ioctl_arg.if_name);
+			return;
+		case EINVAL:
+			fprintf(out, "I don't like VIFs\n");
+			/* FIXME fall back to cmd_int_vlan */
+			return;
+		case EBUSY:
+			/* Interface already in the switch; just ignore the
+			   error and go on */
+			break;
+		default:
+			fprintf(out, "Command rejected: ioctl() failed\n");
+			return;
+		}
+	} else {
+		/* Enable CDP on this interface */
+		cdp_adm_query(CDP_IPC_IF_ENABLE, ioctl_arg.if_name, &r);
+	}
+
+	cmd_root = &command_root_config_if_eth;
+	strcpy(sel_eth, ioctl_arg.if_name);
 }
 
 static void cmd_no_int_eth(FILE *out, char **argv) {
 	char *arg = argv[1]; /* argv[0] is "no" */
 	struct net_switch_ioctl_arg ioctl_arg;
+	struct cdp_ipc_message r;
 	
 	ioctl_arg.cmd = SWCFG_DELIF;
 	ioctl_arg.if_name = if_name_eth(arg);
-	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
+
 	/* Disable CDP on this interface */
-	cmd_cdp_if_disable(out, argv);
+	cdp_adm_query(CDP_IPC_IF_DISABLE, ioctl_arg.if_name, &r);
+	
+	/* FIXME nu avem un race aici? codul de kernel pentru socketzi
+	 * are nevoie ca device-ul sa fie port in switch => nu poate fi
+	 * scos portul pana nu se inchid toti socketzii; aici doar trimit
+	 * comanda prin ipc si dureaza pana cdpd inchide socketul.
+	 */
+
+	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
 static void cmd_int_vlan(FILE *out, char **argv) {
@@ -105,6 +161,19 @@ static void cmd_int_vlan(FILE *out, char **argv) {
 
 static void cmd_no_int_vlan(FILE *out, char **argv) {
 	fprintf(out, "FIXME\n");
+}
+
+static void cmd_no_int_any(FILE *out, char **argv) {
+	struct net_switch_ioctl_arg ioctl_arg;
+	struct cdp_ipc_message r;
+
+	ioctl_arg.cmd = SWCFG_DELIF;
+	ioctl_arg.if_name = argv[1]; /* argv[0] is "no" */
+
+	/* Disable CDP on this interface */
+	cdp_adm_query(CDP_IPC_IF_DISABLE, ioctl_arg.if_name, &r);
+
+	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
 static void cmd_macstatic(FILE *out, char **argv) {
@@ -326,6 +395,10 @@ int valid_timer(char *arg, char lookahead) {
 	return (t >= 5 && t <= 254);
 }
 
+int valid_any(char *arg, char lookahead) {
+	return 1;
+}
+
 
 static sw_command_t sh_no_int_eth[] = {
 	{eth_range,				15,	valid_eth,	cmd_no_int_eth,		RUN,		"Ethernet interface number",					NULL},
@@ -350,12 +423,14 @@ static sw_command_t sh_int_vlan[] = {
 static sw_command_t sh_no_int[] = {
 	{"ethernet",			15,	NULL,		NULL,				0,			"Ethernet IEEE 802.3",							sh_no_int_eth},
 	{"vlan",				15,	NULL,		NULL,				0,			"LMS Vlans",									sh_no_int_vlan},
+	{"WORD",				15,	valid_any,	cmd_no_int_any,		RUN,		"Any interface name",							NULL},
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
 
 sw_command_t sh_conf_int[] = {
-	{"ethernet",			15,	NULL,		NULL,				0,			 "Ethernet IEEE 802.3",							sh_int_eth},
-	{"vlan",				15,	NULL,		NULL,				0,			 "LMS Vlans",									sh_int_vlan},
+	{"ethernet",			15,	NULL,		NULL,				0,			"Ethernet IEEE 802.3",							sh_int_eth},
+	{"vlan",				15,	NULL,		NULL,				0,			"LMS Vlans",									sh_int_vlan},
+	{"WORD",				15,	valid_any,	cmd_int_any,		RUN,		"Any interface name",							NULL},
 	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
 };
 

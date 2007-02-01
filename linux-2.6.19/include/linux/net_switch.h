@@ -70,8 +70,13 @@
 #include <linux/if.h>
 #else
 #ifndef _LINUX_IF_H
-#include <net/if.h>
-#include <net/ethernet.h>
+#include <sys/types.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+
+#include <linux/if.h>
+#include <linux/if_ether.h>
+
 #endif
 #endif
 
