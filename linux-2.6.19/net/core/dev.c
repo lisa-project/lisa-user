@@ -1726,7 +1726,7 @@ static __inline__ int handle_bridge(struct sk_buff **pskb,
 
 /* Define switch handling hook */
 #if defined(CONFIG_SWITCH) || defined (CONFIG_SWITCH_MODULE)
-int (*sw_handle_frame_hook)(struct net_switch_port *p, struct sk_buff **pskb);
+int (*sw_handle_frame_hook)(struct net_switch_port *, struct sk_buff **, int *);
 
 static __inline__ int handle_switch(struct sk_buff **pskb,
 				    struct packet_type **pt_prev, int *ret,
@@ -1752,8 +1752,7 @@ static __inline__ int handle_switch(struct sk_buff **pskb,
 		*pt_prev = NULL;
 	}
 	
-	*ret = sw_handle_frame_hook(port, pskb);
-	return 1;
+	return sw_handle_frame_hook(port, pskb, ret);
 }
 #else
 #define handle_switch(skb, pt_prev, ret, orig_dev)	(0)

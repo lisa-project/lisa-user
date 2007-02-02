@@ -1,11 +1,15 @@
 Concluzii:
 * cand se trece din "switchport" in "no switchport" si inapoi, se pastreaza
   toata configuratia de switching
+* atat running-config cat si start-up config dupa "wr me" nu contin
+  configuratia de switching daca portul e routed => dupa reload se pierde
+  configuratia de switching
 * cand se trece din "no switchport" in "switchport" si inapoi, configuratia
   de rutare (adrese etc.) se pierde
 * in mod "no switchport" apar in meniu toate comenzile de switching, le poti
   executa, dar raspunsul este "Command rejected: Gi0/11 not a switching port."
 * in mod "switchport" nu apar in mediu comenzile de rutare
+* mac-urile statice puse pe un port nu se pierd cand portul devine routed
 
 Starea interfetelor in "sh int status":
 Gi0/5     NVC-SW             connected    trunk      a-full a-1000 1000BaseLX

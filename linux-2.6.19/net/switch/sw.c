@@ -34,7 +34,7 @@ MODULE_AUTHOR("us");
 MODULE_LICENSE("GPL");
 MODULE_VERSION("0.1");
 
-extern int (*sw_handle_frame_hook)(struct net_switch_port *p, struct sk_buff **pskb);
+extern int (*sw_handle_frame_hook)(struct net_switch_port *, struct sk_buff **, int *);
 
 struct net_switch sw;
 
@@ -82,26 +82,22 @@ void dump_packet(const struct sk_buff *skb) {
       locked. This is normally done in netif_receive_skb(). If for any
 	  stupid reason this doesn't happen, things will go terribly wrong.
 
-   3. Our return value is propagated back to driver_poll(). We should
+   3. The value we put in ret is propagated back to driver_poll(). We should
       return NET_RX_DROP if the packet was discarded for any reason or
-	  NET_RX_SUCCES if we handled the packet. We shouldn't however return
+	  NET_RX_SUCCES if we handled the packet. We shouldn't however put
 	  NET_RX_DROP if we touched the packet in any way.
+   4. Return non-zero if we processed the packet (and we "absorbed" it).
+      Otherwise (on zero return value) the packet will be processed by
+	  upper layers. This is used for routed switch ports.
  */
-__dbg_static int sw_handle_frame(struct net_switch_port *port, struct sk_buff **pskb) {
+__dbg_static int sw_handle_frame(struct net_switch_port *port,
+		struct sk_buff **pskb, int *ret) {
 	struct sk_buff *skb = *pskb;
 	struct skb_extra skb_e;
 
 	if(port->flags & SW_PFL_DISABLED) {
 		dbg("Received frame on disabled port %s\n", port->dev->name);
 		goto free_skb;
-	}
-
-	if(skb->protocol == ntohs(ETH_P_8021Q)) {
-		skb_e.vlan = ntohs(*(unsigned short *)skb->data) & 4095;
-		skb_e.has_vlan_tag = 1;
-	} else {
-		skb_e.vlan = port->vlan;
-		skb_e.has_vlan_tag = 0;
 	}
 	
 	/* Pass incoming packets through the switch socket filter */
@@ -116,8 +112,25 @@ __dbg_static int sw_handle_frame(struct net_switch_port *port, struct sk_buff **
 	 * port is routed.
 	 */
 
-	if(port->flags & (SW_PFL_DROPALL | SW_PFL_NOSWITCHPORT))
+	if(port->flags & SW_PFL_DROPALL)
 		goto free_skb;
+
+	/* If port is routed, pass the skb back for upper layer
+	 * processing. Still SW_PFL_DROPALL has priority over
+	 * SW_PFL_NOSWITCHPORT because SW_PFL_DROPALL is used for
+	 * synchronization during configuration changes.
+	 */
+	if (port->flags & SW_PFL_NOSWITCHPORT)
+		return 0;
+
+	/* Switched packet processing begins here */
+	if(skb->protocol == ntohs(ETH_P_8021Q)) {
+		skb_e.vlan = ntohs(*(unsigned short *)skb->data) & 4095;
+		skb_e.has_vlan_tag = 1;
+	} else {
+		skb_e.vlan = port->vlan;
+		skb_e.has_vlan_tag = 0;
+	}
 
 	/* Perform some sanity checks */
 	if (!sw.vdb[skb_e.vlan]) {
@@ -157,11 +170,13 @@ __dbg_static int sw_handle_frame(struct net_switch_port *port, struct sk_buff **
 	fdb_learn(skb->mac.raw + 6, port, skb_e.vlan, SW_FDB_DYN, 0);
 
 	sw_forward(port, skb, &skb_e);
-	return NET_RX_SUCCESS;
+	*ret = NET_RX_SUCCESS;
+	return 1;
 
 free_skb:
 	dev_kfree_skb(skb);
-	return NET_RX_DROP;
+	*ret = NET_RX_DROP;
+	return 1;
 }
 
 void sw_device_up(struct net_device *dev) {

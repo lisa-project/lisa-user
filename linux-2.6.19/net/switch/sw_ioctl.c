@@ -184,9 +184,12 @@ static int sw_set_port_trunk(struct net_switch_port *port, int trunk) {
 
 	if (!port)
 		return -EINVAL;
+	if (port->flags & SW_PFL_NOSWITCHPORT)
+		return -EACCES;
+
 	if(port->flags & SW_PFL_TRUNK) {
 		if(trunk)
-			return -EINVAL;
+			return -EEXIST;
 		sw_set_port_flag_rcu(port, SW_PFL_DROPALL);
 		__sw_remove_from_vlans(port);
 		sw_res_port_flag(port, SW_PFL_TRUNK);
@@ -206,7 +209,7 @@ static int sw_set_port_trunk(struct net_switch_port *port, int trunk) {
 		sw_res_port_flag(port, SW_PFL_DROPALL);
 	} else {
 		if(!trunk)
-			return -EINVAL;
+			return -EEXIST;
 		sw_set_port_flag_rcu(port, SW_PFL_DROPALL);
 		sw_vdb_del_port(port->vlan, port);
 		sw_set_port_flag(port, SW_PFL_TRUNK);
@@ -221,12 +224,25 @@ static int sw_set_port_trunk(struct net_switch_port *port, int trunk) {
 }
 
 static int sw_set_port_access(struct net_switch_port *port, int access) {
+	int status;
+
 	if (!port)
 		return -EINVAL;
+	if (port->flags & SW_PFL_NOSWITCHPORT)
+		return -EACCES;
+
 	if(access) {
-		sw_set_port_trunk(port, 0);
+		/* cmd: switchport mode access */
+		if((status = sw_set_port_trunk(port, 0)))
+			return status;
 		sw_set_port_flag(port, SW_PFL_ACCESS);
 	} else {
+		/* cmd: no switchport mode access
+		 * Just reset the flag. Note that if we are in trunk mode,
+		 * then "no switchport mode access" leaves us in trunk mode.
+		 * Just resetting the flag is ok regardless of the current
+		 * access mode.
+		 */
 		sw_res_port_flag(port, SW_PFL_ACCESS);
 	}
 	return 0;
@@ -240,7 +256,7 @@ static int sw_set_switchport(struct net_switch_port *port, int switchport) {
 	if (port->flags & SW_PFL_NOSWITCHPORT) {
 		/* port is routed and we change it to switched */
 		if (!switchport)
-			return -EINVAL;
+			return -EEXIST;
 		sw_set_port_flag_rcu(port, SW_PFL_DROPALL);
 		if (port->flags & SW_PFL_TRUNK)
 			__sw_add_to_vlans(port);
@@ -255,13 +271,24 @@ static int sw_set_switchport(struct net_switch_port *port, int switchport) {
 	} else {
 		/* port is switched and we change it to routed */
 		if (switchport)
-			return -EINVAL;
+			return -EEXIST;
 		sw_set_port_flag_rcu(port, SW_PFL_DROPALL);
 		if (port->flags & SW_PFL_TRUNK)
 	        __sw_remove_from_vlans(port);
 		else
 			sw_vdb_del_port(port->vlan, port);
 		fdb_cleanup_port(port, SW_FDB_DYN);
+		/* FIXME FIXME FIXME
+		   - scoaterea portului din vlan-uri opreste flood-ul catre
+		     portul respectiv
+		   - stergerea mac-urilor dinamice opreste unicast catre
+		     portul respectiv
+		   - RAMANE UNICAST pe MAC STATIC!!! - la unicast ar trebui
+		     pusa si conditia de switched port inainte de a trimite
+			 pachetul atunci cand am gasit un mac care se potriveste
+		   - nu e clarificat multicast-ul -- ramane de vazut cum se
+		     va implementa igmp snooping
+		 */
 		sw_set_port_flag(port, SW_PFL_NOSWITCHPORT);
 		/* Make sure it was not disabled by assigning a non-existent vlan */
 		sw_enable_port(port);
@@ -279,6 +306,11 @@ static int sw_set_port_forbidden_vlans(struct net_switch_port *port,
 	unsigned char *old = port->forbidden_vlans;
 	unsigned char mask;
 	int n, vlan = 0;
+
+	if (!port)
+		return -EINVAL;
+	if (port->flags & SW_PFL_NOSWITCHPORT)
+		return -EACCES;
 
 #ifdef NET_SWITCH_TRUNKDEFAULTVLANS
 	__sw_allow_default_vlans(forbidden_vlans);
@@ -316,6 +348,11 @@ static int sw_add_port_forbidden_vlans(struct net_switch_port *port,
 	unsigned char *old = port->forbidden_vlans;
 	int n;
 
+	if (!port)
+		return -EINVAL;
+	if (port->flags & SW_PFL_NOSWITCHPORT)
+		return -EACCES;
+
 	for(n = 0; n < 512; n++, old++, new++, p++)
 		*p = *old & *new;
 	return sw_set_port_forbidden_vlans(port, bmp);
@@ -332,6 +369,11 @@ static int sw_del_port_forbidden_vlans(struct net_switch_port *port,
 	unsigned char *new = forbidden_vlans;
 	unsigned char *old = port->forbidden_vlans;
 	int n;
+
+	if (!port)
+		return -EINVAL;
+	if (port->flags & SW_PFL_NOSWITCHPORT)
+		return -EACCES;
 
 	for(n = 0; n < 512; n++, old++, new++, p++)
 		*p = *old | ~*new;
@@ -355,10 +397,13 @@ static int __add_vlan_default(struct net_switch *sw, int vlan) {
 static int sw_set_port_vlan(struct net_switch_port *port, int vlan) {
 	int status;
 
-	if(!port)
+	if (!port)
 		return -EINVAL;
+	if (port->flags & SW_PFL_NOSWITCHPORT)
+		return -EACCES;
 	if(port->vlan == vlan)
 		return 0;
+
 	if(port->flags & SW_PFL_TRUNK) {
 		port->vlan = vlan;
 #if NET_SWITCH_NOVLANFORIF == 1
@@ -542,7 +587,7 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 		break;
 	case SWCFG_DELVLAN:
 		if (sw_is_default_vlan(arg.vlan)) {
-			err = -EPERM;
+			err = -EACCES;
 			break;
 		}
 		err = sw_vdb_del_vlan(&sw, arg.vlan);
