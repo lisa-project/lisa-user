@@ -208,14 +208,19 @@ static int cdp_add_duplex(unsigned char *buffer) {
 	return sizeof(struct cdp_field) + 1;
 }
 
-static unsigned short cdp_checksum(unsigned short *buffer, size_t nwords) {
-	unsigned long sum;
+static unsigned short cdp_checksum(unsigned short *buffer, size_t len) {
+	unsigned long sum = 0;
 
-	for (sum = 0; nwords > 0; nwords--)
+	while (len > 1) {
 		sum += *buffer++;
+		len -= 2;
+	}
+	if (len == 1)
+		sum += htons(*buffer);
+
 	sum = (sum >> 16) + (sum & 0xffff);
-	sum += (sum >> 16);
-	return ~sum;
+
+	return (~(sum + (sum >> 16)) & 0xffff);
 }
 
 void *cdp_send_loop(void *arg) {
@@ -243,7 +248,7 @@ void *cdp_send_loop(void *arg) {
 			/* checksum */
 			((struct cdp_hdr *)(data + sizeof(struct cdp_frame_header)))->checksum =
 				cdp_checksum((unsigned short *)(data+sizeof(struct cdp_frame_header)),
-						(offset-sizeof(struct cdp_frame_header))>>1);
+						offset-sizeof(struct cdp_frame_header));
 			if ((r=send(entry->sw_sock_fd, data, offset, 0))!=offset)
 				dbg("Wrote only %d bytes (error was: %s).\n", r, strerror(errno));
 			dbg("Sent CDP packet of %d bytes on %s.\n", r, entry->name);

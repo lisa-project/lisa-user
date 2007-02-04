@@ -64,6 +64,25 @@ static const char *get_description(unsigned short val, const description_table *
 #endif
 
 /**
+ * setup a switch socket.
+ */
+static int setup_switch_socket(int fd, char *ifname) {
+	struct sockaddr_sw addr;
+
+	memset(&addr, 0, sizeof(addr));
+	addr.ssw_family = AF_SWITCH;
+	strncpy(addr.ssw_if_name, ifname, sizeof(addr.ssw_if_name)-1);
+	addr.ssw_proto = ETH_P_CDP;
+	if (bind(fd, (struct sockaddr *)&addr, sizeof(addr))) {
+		perror("bind");
+		close(fd);
+		return -1;
+	}
+	fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0) | O_NONBLOCK);
+	return 0;
+}
+
+/**
  * add an interface to the list of cdp-enabled
  * interfaces.
  */
@@ -72,7 +91,6 @@ void register_cdp_interface(char *ifname) {
 	struct ifreq ifr;
 	struct net_switch_ioctl_arg ioctl_arg;
 	struct cdp_interface *entry, *tmp;
-	struct sockaddr_sw addr;
 
 	dbg("Enabling cdp on '%s'\n", ifname);
 
@@ -127,24 +145,20 @@ void register_cdp_interface(char *ifname) {
 	/* search for the interface in the deregistered_interfaces list */
 	list_for_each_entry_safe(entry, tmp, &deregistered_interfaces, lh)
 		if (!strncmp(ifname, entry->name, IFNAMSIZ)) {
+			/* if setup_switch_socket fails, the interface will not be
+			 registered */
+			if (setup_switch_socket(fd, ifname))
+				return;
+			entry->sw_sock_fd = fd;
 			list_del(&entry->lh);
 			list_add_tail(&entry->lh, &registered_interfaces);
-			close(fd);
 			return;
 		}
 
 	/* Bind the switch socket to the interface before
 	 allocating the cdp_interface structure */
-	memset(&addr, 0, sizeof(addr));
-	addr.ssw_family = AF_SWITCH;
-	strncpy(addr.ssw_if_name, ifname, sizeof(addr.ssw_if_name)-1);
-	addr.ssw_proto = ETH_P_CDP;
-	if (bind(fd, (struct sockaddr *)&addr, sizeof(addr))) {
-		perror("bind");
-		close(fd);
+	if (setup_switch_socket(fd, ifname))
 		return;
-	}
-	fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0) | O_NONBLOCK);
 
 	/* if not found, we must allocate the structure and do the 
 	   proper intialization */
@@ -172,6 +186,9 @@ void unregister_cdp_interface(char *ifname) {
 	dbg("Disabling cdp on '%s'\n", ifname);
 	list_for_each_entry_safe(entry, tmp, &registered_interfaces, lh)
 		if (!strncmp(ifname, entry->name, IFNAMSIZ)) {
+			/* close the switch socket before moving the entry to
+			 the deregistered interfaces list */
+			close(entry->sw_sock_fd);
 			list_del(&entry->lh);
 			list_add_tail(&entry->lh, &deregistered_interfaces);
 		}
