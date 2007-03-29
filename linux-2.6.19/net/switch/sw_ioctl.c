@@ -789,6 +789,11 @@ int sw_deviceless_ioctl(unsigned int cmd, void __user *uarg) {
 		err = sw_get_vdb(&arg);
 		if (copy_to_user(uarg, &arg, sizeof(struct net_switch_ioctl_arg)))
 			err = -EFAULT;
+		break;
+	case SWCFG_SETSWPORT:
+		PORT_GET;
+		err = sw_set_switchport(port, arg.ext.switchport);
+		break;
 	}
 
 	if (do_put)

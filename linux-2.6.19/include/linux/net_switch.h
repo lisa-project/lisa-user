@@ -50,6 +50,7 @@
 #define SWCFG_DISABLEVIF	0x23	/* administratively disable virtual interface */
 #define SWCFG_GETAGETIME	0x24	/* get fdb aging time interval */
 #define SWCFG_GETVDB		0x30	/* copy the whole vlan database to userspace */
+#define SWCFG_SETSWPORT		0x40	/* set port type to switched (1) or routed (0) */
 
 #define SW_PFL_DISABLED     0x01
 #define SW_PFL_ACCESS		0x02
@@ -137,6 +138,7 @@ struct net_switch_ioctl_arg {
 		struct net_switch_ifcfg cfg;
 		struct net_switch_mac_arg marg;
 		struct net_switch_usr_vdb_arg varg;
+		int switchport;
 	} ext;
 };
 

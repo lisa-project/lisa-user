@@ -563,6 +563,24 @@ static void cmd_du_half(FILE *out, char **argv) {
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
+static void cmd_swport_on(FILE *out, char **argv) {
+	struct net_switch_ioctl_arg ioctl_arg;
+
+	ioctl_arg.cmd = SWCFG_SETSWPORT;
+	ioctl_arg.if_name = sel_eth;
+	ioctl_arg.ext.switchport = 1;
+	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
+}
+
+static void cmd_swport_off(FILE *out, char **argv) {
+	struct net_switch_ioctl_arg ioctl_arg;
+
+	ioctl_arg.cmd = SWCFG_SETSWPORT;
+	ioctl_arg.if_name = sel_eth;
+	ioctl_arg.ext.switchport = 0;
+	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
+}
+
 char VLAN_IDs_of_the_allowed_VLANs[] =
 "VLAN IDs of the allowed VLANs when this port is in trunking mode\0";
 
@@ -682,7 +700,7 @@ static sw_command_t sh_no[] = {
 	{"duplex",				2,	NULL,		cmd_du_auto,	RUN,		"Configure duplex operation.",						NULL},
 	{"shutdown",			2,	NULL,		cmd_noshutd,	RUN,		"Shutdown the selected interface",					NULL},
 	{"speed",				2,	NULL,		cmd_sp_auto,	RUN,		"Configure speed operation.",						NULL},
-	{"switchport",			2,	NULL,		NULL,			0,			"Set switching mode characteristics",				sh_noswitchport},
+	{"switchport",			2,	NULL,		cmd_swport_off,	RUN,		"Set switching mode characteristics",				sh_noswitchport},
 	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
 };
 
@@ -703,7 +721,7 @@ static sw_command_t sh_eth[] = {
 	{"no",					2,	NULL,		NULL,			0,			"Negate a command or set its defaults",				sh_no},
 	{"shutdown",			2,	NULL,		cmd_shutd,		RUN,		"Shutdown the selected interface",					NULL},
 	{"speed",				2,	NULL,		NULL,			0,			"Configure speed operation.",						sh_speed},
-	{"switchport",			2,	NULL,		NULL,			0,			"Set switching mode characteristics",				sh_switchport},
+	{"switchport",			2,	NULL,		cmd_swport_on,	RUN,		"Set switching mode characteristics",				sh_switchport},
 	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
 };
 
