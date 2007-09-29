@@ -20,7 +20,7 @@
 #ifndef _SWITCH_SOCKET_H
 #define _SWITCH_SOCKET_H
 
-#define AF_SWITCH	32	/* Linux Multilayer Switch	*/
+#define AF_SWITCH	33	/* Linux Multilayer Switch	*/
 #define PF_SWITCH	AF_SWITCH
 
 #endif

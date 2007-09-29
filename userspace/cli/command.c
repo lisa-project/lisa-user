@@ -209,7 +209,10 @@ static void cmd_show_start(FILE *out, char **argv) {
 	char buf[1024];
 	FILE *fp;
 
-	fp = fopen(cfg_name, "r");
+	if (!(fp = fopen(cfg_name, "r"))) {
+		perror("fopen");
+		return;
+	}
 	while (fgets(buf, sizeof(buf), fp)) {
 		buf[sizeof(buf)-1] = '\0';
 		fprintf(out, buf);
