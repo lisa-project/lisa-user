@@ -9,3 +9,47 @@ MLS
 
 * When we have static multicast macs, forward matching packets to
   all appropriate ports, not just the first
+
+BUG FIXING
+1) Completion comanda de configurare interface ...
+2) no interface ... mumu
+3) show run / start nu arata interfetele != eth, vlan
+
+XEN INTEGRATION
+
+1) Creare domeniu / Start domeniu existent (Script: vif-lisa)
+
+1.a) Creare interfata tagged:
+
+ swctl addtagged if_name tag_name
+
+ Aici se creeaza asocierea interfata - tag intr-o zona de shared memory si 
+ se adauga interfata in switch.
+
+1.b) Daca nu exista fisierul /etc/lisa/tags/tag_name atunci scriptul vif-lisa
+il creeaza si pune in el description cu numele domeniului.
+
+1.c) Incarcare configuratie interfata tagged:
+
+- Modificare swcfgload sa citeasca comenzile de la stdin
+
+ swcfgload -i if_name < /etc/lisa/tags/tag_name
+
+ cfgfile contine numai comenzile de configurare interfata (nu contine 
+comanda interface if_name).
+
+2) Salvarea configuratiei (write mem)
+
+Se salveaza totul intr-un fisier global: /etc/lisa/config, cu exceptia configuratiei
+interfetelor "tagged" care se salveaza in fisierele /etc/lisa/tags/tag_name.
+
+3) Incarcarea configuratiei globale la startup lisa:
+
+swcfgload < /etc/lisa/config
+
+4) Shutdown domeniu (Script: vif-lisa):
+
+swctl del if_name
+
+OBS: se va sterge si asocierea interfetei cu tag-ul din shared memory
+
