@@ -174,7 +174,7 @@ static void cdp_ipc_show(struct cdp_ipc_message *m, struct cdp_ipc_message *r) {
 	cdpr = (struct cdp_response *) r->buf;
 	memset(cdpr->data, 0, sizeof(cdpr->data));
 	dbg("[ipc_listener]: ipc show query.\n");
-	dbg("[ipc listener]: response type: %d\n", r->type);
+	dbg("[ipc listener]: response type: %ld\n", r->type);
 	dbg("[ipc listener]: show type: %d\n", sq->show_type);
 	switch (sq->show_type) {
 	case CDP_IPC_SHOW_CFG: 
@@ -271,12 +271,12 @@ void *cdp_ipc_listen(void *arg) {
 	dbg("cdp ipc listen\n");
 	for (;;) {
 		/* receive a message from the message queue */
-		if ((s = msgrcv(qid, &m, sizeof(struct cdp_ipc_message), 1, 0)) < 0) {
+		if ((s = msgrcv(qid, &m, CDP_IPC_MSGSIZE, 1, 0)) < 0) {
 			perror("msgrcv");
 			continue;
 		}
 		/* interpret & compose response */
-		dbg("[ipc listener]: received message of type: %d\n", m.type);
+		dbg("[ipc listener]: received message of type: %ld\n", m.type);
 		dbg("[ipc listener]: sender pid is: %d\n", *((pid_t *)m.buf));
 		/* response type is the sender's pid */
 		r.type = *((pid_t *)m.buf);
@@ -292,7 +292,7 @@ void *cdp_ipc_listen(void *arg) {
 			break;
 		}
 		/* send the response */
-		s = msgsnd(qid, &r, sizeof(struct cdp_ipc_message), 0);
+		s = msgsnd(qid, &r, CDP_IPC_MSGSIZE, 0);
 		dbg("sent response, result: %d\n", s);
 	}
 	pthread_exit(NULL);

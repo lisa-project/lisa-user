@@ -27,7 +27,7 @@
 #include "cdpd.h"
 
 /* maximum message size */
-#define CDP_IPC_MSGSIZE 4096
+#define CDP_IPC_BUFSIZE 4096
 /* ipc queue key */
 #define CDP_IPC_QUEUE_KEY 0x143
 
@@ -55,10 +55,13 @@
 
 /* ipc message structure */
 struct cdp_ipc_message {
-	int type;					/* message type (pid of the cli process, or 1 for the cdpd thread) */
-	int query_type;				/* query type (show, conf or adm) */
-	char buf[CDP_IPC_MSGSIZE];	/* message data */
+	long type;                 /* message type (pid of the cli process, or 1 for the cdpd thread) */
+	int query_type;            /* query type (show, conf or adm) */
+	char buf[CDP_IPC_BUFSIZE]; /* message data */
 };
+
+/* ipc message size for msgsnd, msgrcv */
+#define CDP_IPC_MSGSIZE  (sizeof(struct cdp_ipc_message)-sizeof(long))
 
 /**
  * show cdp ... command query
@@ -81,7 +84,7 @@ struct cdp_adm_query {
 };
 
 struct cdp_response {
-	char data[CDP_IPC_MSGSIZE-1];
+	char data[CDP_IPC_BUFSIZE-1];
 };
 
 struct cdp_ipc_neighbor {

@@ -166,6 +166,7 @@ static void cmd_no_int_vlan(FILE *out, char **argv) {
 static void cmd_no_int_any(FILE *out, char **argv) {
 	struct net_switch_ioctl_arg ioctl_arg;
 	struct cdp_ipc_message r;
+	int ret;
 
 	ioctl_arg.cmd = SWCFG_DELIF;
 	ioctl_arg.if_name = argv[1]; /* argv[0] is "no" */
@@ -173,7 +174,8 @@ static void cmd_no_int_any(FILE *out, char **argv) {
 	/* Disable CDP on this interface */
 	cdp_adm_query(CDP_IPC_IF_DISABLE, ioctl_arg.if_name, &r);
 
-	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
+	if (ret = ioctl(sock_fd, SIOCSWCFG, &ioctl_arg))
+		perror("ioctl");
 }
 
 static void cmd_macstatic(FILE *out, char **argv) {
@@ -399,6 +401,10 @@ int valid_any(char *arg, char lookahead) {
 	return 1;
 }
 
+int valid_any_word(char *arg, char lookahead) {
+	return !whitespace(lookahead);
+}
+
 
 static sw_command_t sh_no_int_eth[] = {
 	{eth_range,				15,	valid_eth,	cmd_no_int_eth,		RUN,		"Ethernet interface number",					NULL},
@@ -421,17 +427,17 @@ static sw_command_t sh_int_vlan[] = {
 };
 
 static sw_command_t sh_no_int[] = {
-	{"ethernet",			15,	NULL,		NULL,				0,			"Ethernet IEEE 802.3",							sh_no_int_eth},
-	{"vlan",				15,	NULL,		NULL,				0,			"LMS Vlans",									sh_no_int_vlan},
-	{"WORD",				15,	valid_any,	cmd_no_int_any,		RUN,		"Any interface name",							NULL},
-	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+	{"ethernet",			15,	NULL,			NULL,				0,			"Ethernet IEEE 802.3",							sh_no_int_eth},
+	{"vlan",				15,	NULL,			NULL,				0,			"LMS Vlans",									sh_no_int_vlan},
+	{"WORD",				15,	valid_any_word,	cmd_no_int_any,		RUN,		"Any interface name",							NULL},
+	{NULL,					0,	NULL,			NULL,				0,			NULL,											NULL}
 };
 
 sw_command_t sh_conf_int[] = {
-	{"ethernet",			15,	NULL,		NULL,				0,			"Ethernet IEEE 802.3",							sh_int_eth},
-	{"vlan",				15,	NULL,		NULL,				0,			"LMS Vlans",									sh_int_vlan},
-	{"WORD",				15,	valid_any,	cmd_int_any,		RUN,		"Any interface name",							NULL},
-	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+	{"ethernet",			15,	NULL,			NULL,				0,			"Ethernet IEEE 802.3",							sh_int_eth},
+	{"vlan",				15,	NULL,			NULL,				0,			"LMS Vlans",									sh_int_vlan},
+	{"WORD",				15,	valid_any_word,	cmd_int_any,		RUN,		"Any interface name",							NULL},
+	{NULL,					0,	NULL,			NULL,				0,			NULL,											NULL}
 };
 
 static sw_command_t sh_macstatic_ifp[] = {

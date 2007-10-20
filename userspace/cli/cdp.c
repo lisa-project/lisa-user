@@ -31,12 +31,12 @@ int get_cdp_configuration(struct cdp_configuration *conf) {
 	q->show_type = CDP_IPC_SHOW_CFG;
 	m.buf[sizeof(m.buf)-1] = '\0';
 
-	if ((s = msgsnd(cdp_ipc_qid, &m, sizeof(struct cdp_ipc_message), 0)) < 0) {
+	if ((s = msgsnd(cdp_ipc_qid, &m, CDP_IPC_MSGSIZE, 0)) < 0) {
 		perror("msgsnd");
 		return 1;
 	}
 
-	if ((s = msgrcv(cdp_ipc_qid, &r, sizeof(struct cdp_ipc_message), my_pid, 0)) < 0) {
+	if ((s = msgrcv(cdp_ipc_qid, &r, CDP_IPC_MSGSIZE, my_pid, 0)) < 0) {
 		perror("msgrcv");
 		return 1 ;
 	}
@@ -67,12 +67,12 @@ static int get_cdp_neighbors(struct cdp_ipc_message *r, char *interface, char *d
 	}
 	m.buf[sizeof(m.buf)-1] = '\0';
 
-	if ((s = msgsnd(cdp_ipc_qid, &m, sizeof(struct cdp_ipc_message), 0)) < 0) {
+	if ((s = msgsnd(cdp_ipc_qid, &m, CDP_IPC_MSGSIZE, 0)) < 0) {
 		perror("msgsnd");
 		return 1;
 	}
 
-	if ((s = msgrcv(cdp_ipc_qid, r, sizeof(struct cdp_ipc_message), my_pid, 0)) < 0) {
+	if ((s = msgrcv(cdp_ipc_qid, r, CDP_IPC_MSGSIZE, my_pid, 0)) < 0) {
 		perror("msgrcv");
 		return 1;
 	}
@@ -97,12 +97,12 @@ static int get_cdp_interfaces(struct cdp_ipc_message *r, char *interface) {
 	}
 	m.buf[sizeof(m.buf)-1] = '\0';
 
-	if ((s = msgsnd(cdp_ipc_qid, &m, sizeof(struct cdp_ipc_message), 0)) < 0) {
+	if ((s = msgsnd(cdp_ipc_qid, &m, CDP_IPC_MSGSIZE, 0)) < 0) {
 		perror("msgsnd");
 		return 1;
 	}
 
-	if ((s = msgrcv(cdp_ipc_qid, r, sizeof(struct cdp_ipc_message), my_pid, 0)) < 0) {
+	if ((s = msgrcv(cdp_ipc_qid, r, CDP_IPC_MSGSIZE, my_pid, 0)) < 0) {
 		perror("msgrcv");
 		return 1;
 	}
@@ -378,12 +378,12 @@ void cmd_sh_cdp_traffic(FILE *out, char **argv) {
 	q->show_type = CDP_IPC_SHOW_STATS;
 	m.buf[sizeof(m.buf)-1] = '\0';
 
-	if ((s = msgsnd(cdp_ipc_qid, &m, sizeof(struct cdp_ipc_message), 0)) < 0) {
+	if ((s = msgsnd(cdp_ipc_qid, &m, CDP_IPC_MSGSIZE, 0)) < 0) {
 		perror("msgsnd");
 		return;
 	}
 
-	if ((s = msgrcv(cdp_ipc_qid, &r, sizeof(struct cdp_ipc_message), my_pid, 0)) < 0) {
+	if ((s = msgrcv(cdp_ipc_qid, &r, CDP_IPC_MSGSIZE, my_pid, 0)) < 0) {
 		perror("msgrcv");
 		return;
 	}
@@ -412,12 +412,12 @@ static int do_configuration_query(int field_id, int value) {
 	cf->field_value = value;
 	m.buf[sizeof(m.buf)-1] = '\0';
 
-	if ((s = msgsnd(cdp_ipc_qid, &m, sizeof(struct cdp_ipc_message), 0)) < 0) {
+	if ((s = msgsnd(cdp_ipc_qid, &m, CDP_IPC_MSGSIZE, 0)) < 0) {
 		perror("msgsnd");
 		return 1;
 	}
 
-	if ((s = msgrcv(cdp_ipc_qid, &r, sizeof(struct cdp_ipc_message), my_pid, 0)) < 0) {
+	if ((s = msgrcv(cdp_ipc_qid, &r, CDP_IPC_MSGSIZE, my_pid, 0)) < 0) {
 		perror("msgrcv");
 		return 1;
 	}
@@ -440,12 +440,12 @@ int cdp_adm_query(int query_type, char *interface, struct cdp_ipc_message *r) {
 	adm->interface[IFNAMSIZ-1] = '\0';
 	m.buf[sizeof(m.buf)-1] = '\0';
 
-	if ((s = msgsnd(cdp_ipc_qid, &m, sizeof(struct cdp_ipc_message), 0)) < 0) {
+	if ((s = msgsnd(cdp_ipc_qid, &m, CDP_IPC_MSGSIZE, 0)) < 0) {
 		perror("msgsnd");
 		return 1;
 	}
 
-	if ((s = msgrcv(cdp_ipc_qid, r, sizeof(struct cdp_ipc_message), my_pid, 0)) < 0) {
+	if ((s = msgrcv(cdp_ipc_qid, r, CDP_IPC_MSGSIZE, my_pid, 0)) < 0) {
 		perror("msgrcv");
 		return 1;
 	}
