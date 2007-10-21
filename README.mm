@@ -1,6 +1,54 @@
 FIXME: move this somewhere else
 
-Good mm practices:
+1. MM area map
+
+mm_private.area
+|
+|
+`->.---------------------.
+   |                     |  \
+   |  struct mm_shared   |   } sizeof (struct mm_shared)
+   |                     |  /
+   +---------------------+
+   |                     |  \
+   |  static data        |   } mm_private.static_size
+   |                     |  /
+   +---------------------+  ------------------
+   | .-----------------. |  -                 \
+   | | struct mm_chunk | |   \                |
+   | +-----------------+ |    } mm_chunk.size |
+   | | chunk data      | |   /                |
+   | '-----------------' |  -                 |
+   |   ...............   |                    |
+   |                     |                     } mm_private.dynamic_size
+   | .-----------------. |                    |
+   | | struct mm_chunk | |                    |
+   | +-----------------+ |                    |
+   | | chunk data      | |                    |
+   | '-----------------' |                    |
+   |   ...............   |                    |
+   |                     |                    /
+   '---------------------'  ------------------
+
+All mm_ptr_t are relative to the start of the whole structure (which is
+mapped at mm_private.area in the process virtual memory).
+
+ .--------------------------------------------------------------------.
+ |                                                                    |
+ | .------------------.   .------------------.   .------------------. |
+ | | struct mm_shared |   | struct mm_chunk  |   | struct mm_chunk  | |
+ | |      .....       |   |      .....       |   |      .....       | |
+ | |                  |   |                  |   |                  | |
+  -+--->.---+---.<-.  | .-+--->.---+---.<-.  | .-+--->.---+---.<-.  | |
+   | lh | p | n |--+--+-' | lh | p | n |--+--+-' | lh | p | n |--+--+-'
+   |    '---+---'  |  |   |    '---+---'  |  |   |    '---+---'  |  |  
+   |      |....     --+---+------'....     --+----------'.....   |  |
+   '------+-----------'   '------------------'   '---------------+--'
+          |                                                      |
+          '------------------------------------------------------'
+
+
+2. Good mm practices
 * use mm_create() durig the init phase of your code and make it globally
   accessible (i.e. global variable) so you can easily call mm_
   primitives;

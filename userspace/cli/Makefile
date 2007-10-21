@@ -1,5 +1,5 @@
 CFLAGS = -g -Wall -I$(KDIR)/include -I ../include -fPIC -D_GNU_SOURCE
-LDFLAGS = -L. -lreadline -lcurses -lutil -lcrypt
+LDFLAGS = -L. -lreadline -lcurses -lutil -lcrypt -lrt
 
 __LOGIN_PATH := \"$(shell pwd)/swlogin\"
 __FILTER_PATH := \"$(shell pwd)/filter\"
@@ -16,14 +16,14 @@ endif
 
 all: swcli swclid swlogin filter swcon swcfgload reboot
 
-libswcli.so: climain.o command.o config.o config_if.o config_line.o build_config.o if.o shared.o netlink.o ip.o cdp.o
+libswcli.so: climain.o command.o config.o config_if.o config_line.o build_config.o if.o shared.o netlink.o ip.o cdp.o ../lib/misc.o ../lib/mm.o
 	cd ../lib && make
-	$(CC) $(CFLAGS) -shared -Wl,-soname,libswcli.so -o $@ $^ ../lib/misc.o
+	$(CC) $(CFLAGS) -shared -Wl,-soname,libswcli.so -o $@ $^
 
 swcli: swcli.o libswcli.so
 	$(CC) $(LDFLAGS) -lswcli -o $@ $^
 
-swclid: swclid.o shared.o
+swclid: swclid.o shared.o ../lib/mm.o
 
 swcon: swcon.o libswcli.so
 	$(CC) $(LDFLAGS) -lswcli -o $@ $^

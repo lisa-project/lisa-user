@@ -25,13 +25,16 @@
 typedef unsigned int mm_ptr_t;
 #define MM_NULL 0
 
+#define MM_STATIC(mm) ((void *)((mm)->area + sizeof(struct mm_shared)))
+
 /* mm managed area handle */
 struct mm_private {
-	int fd;
-	sem_t *sem;
-	int lock;
-	char *area;
-	size_t mapped_size;
+	int fd;				/* file descriptor of posix shm area */
+	sem_t *sem;			/* posix semaphore for shm area synchronization */
+	int lock;			/* mm_lock() counter */
+	char *area;			/* base pointer of mmap'ed pages */
+	size_t mapped_size;	/* total size of mmap'ed pages */
+	int init;			/* whether mm_create() created (1) or opened (0) */
 };
 
 /* kernel style list for mm */
@@ -217,5 +220,7 @@ static __inline__ int mm_list_empty(struct mm_private *mm, mm_ptr_t head)
 		n = mm_addr(mm, mm_list_entry(pos->member.next, typeof(*pos), member));	\
 	     &pos->member != mm_addr(mm, head); 					\
 	     pos = n, n = mm_addr(mm, mm_list_entry(pos->member.next, typeof(*pos), member)))
+
+extern struct mm_private *mm_create(const char *, size_t, size_t);
 
 #endif

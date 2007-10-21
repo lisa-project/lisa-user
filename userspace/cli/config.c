@@ -234,7 +234,7 @@ static void __setenpw(FILE *out, int lev, char **argv) {
 		secret = crypt(*argv, salt);
 	}
 	cfg_lock();
-	strcpy(cfg->enable_secret[lev], secret);
+	strcpy(CFG->enable_secret[lev], secret);
 	cfg_unlock();
 }
 
@@ -249,14 +249,14 @@ static void cmd_setenpwlev(FILE *out, char **argv) {
 
 static void cmd_noensecret(FILE *out, char **argv) {
 	cfg_lock();
-	cfg->enable_secret[CLI_MAX_ENABLE][0] = '\0';
+	CFG->enable_secret[CLI_MAX_ENABLE][0] = '\0';
 	cfg_unlock();
 }
 
 static void cmd_noensecret_lev(FILE *out, char **argv) {
 	int lev = atoi(argv[1]);
 	cfg_lock();
-	cfg->enable_secret[lev][0] = '\0';
+	CFG->enable_secret[lev][0] = '\0';
 	cfg_unlock();
 }
 

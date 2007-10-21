@@ -365,12 +365,12 @@ int build_config(FILE *out) {
 	fputs("!\n", out);
 	cfg_lock();
 	for(i = 1; i < CLI_MAX_ENABLE; i++) {
-		if(cfg->enable_secret[i][0] == '\0')
+		if(CFG->enable_secret[i][0] == '\0')
 			continue;
-		fprintf(out, "enable secret level %d 5 %s\n", i, cfg->enable_secret[i]);
+		fprintf(out, "enable secret level %d 5 %s\n", i, CFG->enable_secret[i]);
 	}
-	if(cfg->enable_secret[CLI_MAX_ENABLE][0] != '\0') {
-		fprintf(out, "enable secret 5 %s\n", cfg->enable_secret[i]);
+	if(CFG->enable_secret[CLI_MAX_ENABLE][0] != '\0') {
+		fprintf(out, "enable secret 5 %s\n", CFG->enable_secret[i]);
 	}
 	cfg_unlock();
 
@@ -413,7 +413,7 @@ int build_config(FILE *out) {
 
 	/* line vty stuff */
 	fprintf(out, "!\nline vty 0 15\n");
-	fprintf(out, " password %s\n", cfg->vty[0].passwd);
+	fprintf(out, " password %s\n", CFG->vty[0].passwd);
 #ifdef USE_EXIT_IN_CONF
 	fprintf(out, "exit\n");
 #endif

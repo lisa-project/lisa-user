@@ -24,7 +24,12 @@
 #include "shared.h"
 
 static int password_valid(char *pw, void *arg) {
-	return !strcmp(pw, cfg->vty[0].passwd);
+	int ret;
+
+	cfg_lock();
+	ret = !strcmp(pw, CFG->vty[0].passwd);
+	cfg_unlock();
+	return ret;
 }
 
 int max_attempts = 3;

@@ -20,6 +20,8 @@
 #ifndef _SHARED_H
 #define _SHARED_H
 
+#include "mm.h"
+
 #define CLI_PASS_LEN 30
 #define CLI_SECRET_LEN 30
 #define CLI_MAX_ENABLE 15
@@ -34,11 +36,20 @@ struct cli_config {
 	struct cli_vty_config vty[CLI_MAX_VTY + 1];
 };
 
-extern struct cli_config *cfg;
+extern struct mm_private *cfg;
+#define CFG ((struct cli_config *)MM_STATIC(cfg))
 
 extern int cfg_init(void);
-extern int cfg_lock(void);
-extern int cfg_unlock(void);
+
+static __inline__ void cfg_lock(void)
+{
+	mm_lock(cfg);
+}
+
+static __inline__ void cfg_unlock(void) {
+	mm_unlock(cfg);
+}
+
 extern int cfg_checkpass(int, int (*)(char *, void *), void *);
 extern int cfg_waitcr(void);
 extern int read_key(void);

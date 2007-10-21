@@ -80,6 +80,7 @@ struct mm_private *mm_create(const char *name, size_t static_size, size_t dynami
 			mm_area = mm_map(ret);
 			if (NULL == mm_area)
 				break;
+			ret->init = 0;
 		} else {
 			/* we just created the shm area, must setup; if
 			 * something goes wrong, delete the shm area and
@@ -99,6 +100,7 @@ struct mm_private *mm_create(const char *name, size_t static_size, size_t dynami
 			((struct mm_shared *)mm_area)->dynamic_size = ret->mapped_size -
 				(sizeof(struct mm_shared) + static_size);
 			MM_INIT_LIST_HEAD(ret, mm_ptr(ret, &((struct mm_shared *)mm_area)->lh));
+			ret->init = 1;
 		}
 
 		mm_unlock(ret);

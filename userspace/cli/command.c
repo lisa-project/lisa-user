@@ -84,7 +84,7 @@ static void cmd_enable(FILE *out, char **argv) {
 	if(req > priv) {
 		fail = 1;
 		cfg_lock();
-		strcpy(secret, cfg->enable_secret[req]);
+		strcpy(secret, CFG->enable_secret[req]);
 		cfg_unlock();
 		if(secret[0] == '\0') {
 			if(console_session) {
