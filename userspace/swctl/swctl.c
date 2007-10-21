@@ -30,6 +30,7 @@
 #include <assert.h>
 
 #include "switch_socket.h"
+#include "shared.h"
 
 #define INITIAL_BUF_SIZE 4096
 #define ETH_ALEN 6
@@ -69,6 +70,7 @@ void usage() {
 	printf("Usage: swctl [command] [args]\n\n"
 		"Command can be any of:\n"
 		"  add iface_name\t\t\tAdds an interface to switch.\n"
+		"  addtagged iface_name tag_name\t\tAdds an interface to switch and assigns tag.\n"
 		"  del iface_name\t\t\tRemoves an iterface from switch\n"
 		"  addvlan vlan_no vlan_name\t\tAdds a vlan to the vlan database\n"
 		"  delvlan vlan_no\t\t\tDeletes a vlan from the vlan database\n"
@@ -123,6 +125,26 @@ int main(int argc, char **argv) {
 		return 0;
 	}
 
+	if(!strcmp(argv[1], "addtagged")) {
+		char buf[IFNAMSIZ];
+		if (argc < 4) {
+			usage();
+			return 0;
+		}
+		user_arg.cmd = SWCFG_ADDIF;
+		user_arg.if_name = argv[2];
+		status = ioctl(sock, SIOCSWCFG, &user_arg);
+		if (status) {
+			perror("add failed");
+			return 1;
+		}
+		if (cfg_set_if_tag(argv[2], argv[3], buf)) {
+			fprintf(stderr, "Tag %s already assigned to %s\n", argv[3], buf);
+			return 1;
+		}
+		return 0;
+	}
+
 	if(!strcmp(argv[1], "del")) {
 		if (argc < 3) {
 			usage();
@@ -133,6 +155,7 @@ int main(int argc, char **argv) {
 		status = ioctl(sock, SIOCSWCFG, &user_arg);
 		if(status)
 			perror("del failed");
+		cfg_set_if_tag(argv[2], NULL, NULL);
 		return 0;
 	}
 

@@ -1,5 +1,5 @@
 CFLAGS = -I$(KDIR)/include -I ../include -Wall
-LDFLAGS =
+LDFLAGS = -L../cli -lswcli
 
 .PHONY: all clean
 

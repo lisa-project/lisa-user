@@ -59,5 +59,18 @@ extern int read_key(void);
 extern const char config_file[];
 extern const char config_tags_path[];
 
+/* lookup interface arg0 and put tag into arg1; return 0 if
+ * interface has a tag, 1 otherwise
+ */
 extern int cfg_get_if_tag(char *, char *);
+
+/* 1. if arg1 is not null, then assign tag arg1 to interface
+ * arg0; if arg2 is not NULL and tag is already assigned to
+ * another interface, put the other interface's name into arg2.
+ * return 0 if operation successful, 1 if tag is already assigned
+ * to another interface
+ * 2. if arg1 is null, delete tag for interface arg0. return 0 if
+ * successfull, 1 if interface had no tag assigned.
+ */
+extern int cfg_set_if_tag(char *, char *, char *);
 #endif

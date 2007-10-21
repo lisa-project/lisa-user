@@ -350,11 +350,10 @@ void dump_mac_aging_time(FILE *out) {
 		fprintf(out, "mac-address-table aging-time %li\n!\n", age);
 }
 
-long build_config(FILE *out, int skip_tagged_if) {
+int build_config(FILE *out, int skip_tagged_if) {
 	FILE *f;
 	char buf[4096];
 	int i;
-	long ret;
 
 	/* hostname */
 	gethostname(buf, sizeof(buf));

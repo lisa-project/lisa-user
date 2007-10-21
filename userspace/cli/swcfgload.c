@@ -182,7 +182,7 @@ int main(int argc, char *argv[]) {
 	int status, ret;
 
 	argc--;
-	if (argc > 0 && argc < 2 || argc > 3) {
+	if ((argc > 0 && argc < 2) || argc > 3) {
 		fprintf(stderr, "Usage:\n"
 				"  %s\n"
 				"    Load main configuration from %s.\n"

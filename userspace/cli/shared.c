@@ -109,3 +109,7 @@ const char config_tags_path[] = "/etc/lisa/tags";
 int cfg_get_if_tag(char *if_name, char *tag) {
 	return 0;
 }
+
+int cfg_set_if_tag(char *if_name, char *tag, char *other_if) {
+	return 0;
+}
