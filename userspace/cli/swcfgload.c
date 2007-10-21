@@ -17,7 +17,10 @@
  *    MA  02111-1307  USA
  */
 
+#include <linux/limits.h>
+
 #include "climain.h"
+#include "shared.h"
 #include "config.h"
 #include "cdpd.h"
 #include "cdp_ipc.h"
@@ -33,7 +36,7 @@ int cdp_enabled;
 pid_t my_pid;
 FILE *out;
 
-void swcfgload_exec(sw_execution_state_t *exc) {
+int swcfgload_exec(sw_execution_state_t *exc) {
 	
 	if (exc->num >= exc->size) {
 		exc->func_args = realloc(exc->func_args,
@@ -44,9 +47,15 @@ void swcfgload_exec(sw_execution_state_t *exc) {
 	exc->func_args[exc->num++] = NULL;
 
 	exc->func(out, exc->func_args);
+	return 0;
+	/* FIXME make exc->func (all handlers) return a status code;
+	 * useful for example for loading interface configuration
+	 * from /etc/lisa/tags to know if the "interface <if_name>"
+	 * command failed (and abort the process)
+	 */
 }
 
-void swcfgload_exec_cmd(char *cmd) {
+int swcfgload_exec_cmd(char *cmd) {
 	int ret;
 	
 	init_exec_state(&exec_state);
@@ -70,20 +79,122 @@ void swcfgload_exec_cmd(char *cmd) {
 
 	if (exec_state.func == NULL) {
 		fprintf(stderr, "Warning: Unimplemented command: '%s'\n", cmd);
-		return;
+		return 1;
 	}
 
-	swcfgload_exec(&exec_state);
+	return swcfgload_exec(&exec_state);
+}
+
+int load_main_config(void) {
+	FILE *fp;
+	char cmd[1024];	
+
+	my_pid = getpid();
+	dbg("my pid: %d\n", my_pid);
+	if ((cdp_ipc_qid = msgget(CDP_IPC_QUEUE_KEY, 0666)) == -1) {
+		perror("CDP ipc queue doesn't exist. Is cdpd running?");
+		return 1;
+	}
+	dbg("cdp_ipc_qid: %d\n", cdp_ipc_qid);
+	cdp_enabled = 1;
+	
+	if ((fp = fopen(config_file, "r")) == NULL) {
+		return 1;
+	}
+
+	while (fgets(cmd, sizeof(cmd), fp)) {
+		cmd[strlen(cmd) - 1] = '\0'; /* FIXME we don't crash, but it's ugly */
+		if (cmd[0] == '!')
+			continue;
+#ifndef USE_EXIT_IN_CONF
+		if (cmd[0] != ' ')
+			cmd_root = &command_root_config;
+#endif
+		swcfgload_exec_cmd(cmd);
+	}
+
+	fclose(fp);
+	return 0;
+}
+
+int load_tag_config(int argc, char **argv) {
+	/* argv[0] is if_name;
+	 * argv[1] is tag_name;
+	 * argv[2] is description, if argc > 2.
+	 */
+
+	FILE *fp;
+	char cmd[1024];	
+	char path[PATH_MAX];
+
+	if (snprintf(cmd, sizeof(cmd), "interface %s", argv[0]) > sizeof(cmd)) {
+		fprintf(stderr, "Invalid interface: %s\n", argv[0]);
+		return 1;
+	}
+
+	if (snprintf(path, sizeof(path), "%s/%s", config_tags_path, argv[1]) > sizeof(path)) {
+		fprintf(stderr, "Invalid tag: %s\n", argv[1]);
+		return 1;
+	}
+	
+	if ((fp = fopen(path, "r")) == NULL) {
+		fprintf(stderr, "Could not open %s\n", path);
+		return 1;
+	}
+
+	if (swcfgload_exec_cmd(cmd)) {
+		/* FIXME maybe we get more detailed information from
+		 * command exit status (which now is not implemented at all :P)
+		 */
+		fprintf(stderr, "Could not add interface %s", argv[0]);
+		fclose(fp);
+		return 1;
+	}
+
+	do {
+		if (argc <= 2)
+			break;
+		if (snprintf(cmd, sizeof(cmd), "description %s", argv[2]) < sizeof(cmd))
+			break;
+		swcfgload_exec_cmd(cmd);
+	} while (0);
+		
+
+	while (fgets(cmd, sizeof(cmd), fp)) {
+		cmd[strlen(cmd) - 1] = '\0'; /* FIXME we don't crash, but it's ugly */
+		if (cmd[0] == '!')
+			continue;
+#ifdef USE_EXIT_IN_CONF
+		if (!strncmp(cmd, "exit", 4))
+			break;
+#else
+		if (cmd[0] != ' ')
+			break;
+#endif
+		swcfgload_exec_cmd(cmd);
+	}
+
+	fclose(fp);
+	return 0;
 }
 
 int main(int argc, char *argv[]) {
-	FILE *fp;
-	char config_name[] = "/flash/config.text";
-	char cmd[1024];	
-	int status;
+	int status, ret;
+
+	argc--;
+	if (argc > 0 && argc < 2 || argc > 3) {
+		fprintf(stderr, "Usage:\n"
+				"  %s\n"
+				"    Load main configuration from %s.\n"
+				"  %s <if_name> <tag_name> [<description>]\n"
+				"    Load configuration in %s/<tag_name> into interface\n"
+				"    <if_name> and optionally assign description <description>\n"
+				"    to the interface <if_name>.\n",
+				argv[0], config_file, argv[0], config_tags_path);
+		return 1;
+	}
 	
 	priv = 15;
-	cmd_root = &command_root_config;
 	
 	status = cfg_init();
 	assert(!status);
@@ -96,35 +207,11 @@ int main(int argc, char *argv[]) {
 		perror("socket");
 		return 1;
 	}
-	
-	my_pid = getpid();
-	dbg("my pid: %d\n", my_pid);
-	if ((cdp_ipc_qid = msgget(CDP_IPC_QUEUE_KEY, 0666)) == -1) {
-		perror("CDP ipc queue doesn't exist. Is cdpd running?");
-		fclose(out);
-		close(sock_fd);
-		return 1;
-	}
-	dbg("cdp_ipc_qid: %d\n", cdp_ipc_qid);
-	cdp_enabled = 1;
-	
-	if ((fp = fopen(config_name, "r")) == NULL) {
-		fclose(out);
-		close(sock_fd);
-		return 1;
-	}	
-	while (fgets(cmd, sizeof(cmd), fp)) {
-		cmd[strlen(cmd)-1] = '\0';
-		if (cmd[0] == '!')
-			continue;
-#ifndef USE_EXIT_IN_CONF
-		if (cmd[0] != ' ')
-			cmd_root = &command_root_config;
-#endif
-		swcfgload_exec_cmd(cmd);
-	}
+
+	cmd_root = &command_root_config;
+	ret = argc ? load_tag_config(argc, argv + 1) : load_main_config();
+
 	fclose(out);
-	fclose(fp);
 	close(sock_fd);
-	return 0;
+	return ret;
 }

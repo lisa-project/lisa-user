@@ -27,6 +27,8 @@
 #define CLI_MAX_ENABLE 15
 #define CLI_MAX_VTY 15
 
+#define CLI_MAX_TAG 40
+
 struct cli_vty_config {
 	char passwd[CLI_PASS_LEN + 1];
 };
@@ -54,4 +56,8 @@ extern int cfg_checkpass(int, int (*)(char *, void *), void *);
 extern int cfg_waitcr(void);
 extern int read_key(void);
 
+extern const char config_file[];
+extern const char config_tags_path[];
+
+extern int cfg_get_if_tag(char *, char *);
 #endif

@@ -26,26 +26,25 @@ XEN INTEGRATION
  Aici se creeaza asocierea interfata - tag intr-o zona de shared memory si 
  se adauga interfata in switch.
 
-1.b) Daca nu exista fisierul /etc/lisa/tags/tag_name atunci scriptul vif-lisa
-il creeaza si pune in el description cu numele domeniului.
+1.b) Incarcare configuratie interfata tagged:
 
-1.c) Incarcare configuratie interfata tagged:
+ swcfgload if_name tag_name [if_description]
 
-- Modificare swcfgload sa citeasca comenzile de la stdin
-
- swcfgload -i if_name < /etc/lisa/tags/tag_name
-
- cfgfile contine numai comenzile de configurare interfata (nu contine 
+* cfgfile := /etc/lisa/tags/tag_name
+* cfgfile contine numai comenzile de configurare interfata (nu contine 
 comanda interface if_name).
+* daca cfgfile nu exista (domeniu nou) atunci nu se intampla nimic -- normal
+pentru ca daca nu se da wr mem pana la oprirea domeniului, atunci inseamna
+ca nu i s-a salvat configuratia si data viitoare porneste cu configuratie "goala"
 
 2) Salvarea configuratiei (write mem)
 
-Se salveaza totul intr-un fisier global: /etc/lisa/config, cu exceptia configuratiei
+Se salveaza totul intr-un fisier global: /etc/lisa/config.text, cu exceptia configuratiei
 interfetelor "tagged" care se salveaza in fisierele /etc/lisa/tags/tag_name.
 
 3) Incarcarea configuratiei globale la startup lisa:
 
-swcfgload < /etc/lisa/config
+swcfgload
 
 4) Shutdown domeniu (Script: vif-lisa):
 

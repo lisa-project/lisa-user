@@ -179,7 +179,12 @@ static void cmd_run_eth(FILE *out, char **argv) {
 		tmp = mk_tmp_stream(tmp_name, "w+");
 		if(tmp == NULL)
 			break;
-		status = build_int_eth_config(tmp, parse_eth(arg));
+		/* FIXME FIXME FIXME this is broken: build_int_eth_config now
+		 * needs the interface name as second argument; this will
+		 * definitely segfault !!!!
+		 * FIXME FIXME FIXME
+		 */
+		status = build_int_eth_config(tmp, parse_eth(arg), 1);
 		if(status)
 			break;
 		fprintf(out, "\nCurrent configuration : %ld bytes\n", ftell(tmp));
@@ -205,11 +210,10 @@ static void cmd_show_priv(FILE *out, char **argv) {
 }
 
 static void cmd_show_start(FILE *out, char **argv) {
-	char cfg_name[] = "/flash/config.text";
 	char buf[1024];
 	FILE *fp;
 
-	if (!(fp = fopen(cfg_name, "r"))) {
+	if (!(fp = fopen(config_file, "r"))) {
 		perror("fopen");
 		return;
 	}
@@ -231,7 +235,7 @@ static void cmd_show_run(FILE *out, char **argv) {
 		tmp = mk_tmp_stream(tmp_name, "w+");
 		if(tmp == NULL)
 			break;
-		status = build_config(tmp);
+		status = build_config(tmp, 1);
 		if(status)
 			break;
 		fprintf(out, "\nCurrent configuration : %ld bytes\n", ftell(tmp));
@@ -591,16 +595,15 @@ static void cmd_sh_mac_age(FILE *out, char **argv) {
 static void cmd_wrme(FILE *out, char **argv) {
 	int status;
 	FILE *tmp = NULL;
-	char tmp_name[] = "/flash/config.text";
 
 	fprintf(out, "Building configuration...\n");
 	fflush(out);
 	cfg_lock();
 	do {
-		tmp = fopen(tmp_name, "w+");
+		tmp = fopen(config_file, "w+");
 		if(tmp == NULL)
 			break;
-		status = build_config(tmp);
+		status = build_config(tmp, 0);
 		if(status) {
 			fclose(tmp);
 			break;

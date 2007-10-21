@@ -103,14 +103,12 @@ void list_vlans(unsigned char *bmp, FILE *out) {
 	fputc('\n', out);
 }
 
-int build_int_eth_config(FILE *out, int num) {
-	char if_name[IFNAMSIZ];
+int build_int_eth_config(FILE *out, char *if_name, int put_if_cmd) {
 	struct net_switch_ioctl_arg ioctl_arg;
 	unsigned char bmp[SW_VLAN_BMP_NO];
 	char desc[SW_MAX_PORT_DESC];
 	int need_trunk_vlans = 1;
 
-	sprintf(if_name, "eth%d", num);
 	ioctl_arg.cmd = SWCFG_GETIFCFG;
 	ioctl_arg.if_name = if_name;
 	ioctl_arg.ext.cfg.forbidden_vlans = bmp;
@@ -118,7 +116,8 @@ int build_int_eth_config(FILE *out, int num) {
 	if(ioctl(sock_fd, SIOCSWCFG, &ioctl_arg) == -1)
 		return errno;
 
-	fprintf(out, "!\ninterface ethernet %d\n", num);
+	if (put_if_cmd)
+		fprintf(out, "!\ninterface %s\n", if_name);
 	/* description */
 	if(strlen(desc))
 		fprintf(out, " description %s\n", desc);
@@ -351,10 +350,11 @@ void dump_mac_aging_time(FILE *out) {
 		fprintf(out, "mac-address-table aging-time %li\n!\n", age);
 }
 
-int build_config(FILE *out) {
-	char buf[4096], *p1, *p2;
+long build_config(FILE *out, int skip_tagged_if) {
 	FILE *f;
+	char buf[4096];
 	int i;
+	long ret;
 
 	/* hostname */
 	gethostname(buf, sizeof(buf));
@@ -379,19 +379,41 @@ int build_config(FILE *out) {
 	
 	/* physical interfaces */
 	f = fopen("/proc/net/dev", "r");
+	/* FIXME (blade) get interface list directly from switch via ioctl() */
 	assert(f != NULL);
 	while(fgets(buf, sizeof(buf), f) != NULL) {
-		if((p1 = strchr(buf, ':')) == NULL)
+		char *p;
+		char tag[CLI_MAX_TAG];
+
+		/* parse interface name from /proc/net/dev line */
+		if ((p = strchr(buf, ':')) == NULL)
 			continue;
-		*p1 = '\0';
-		for(p1 = buf; *p1 == ' '; p1++);
-		if(strstr(p1, "eth") != p1)
+		*p = '\0';
+		for(p = buf; *p == ' '; p++);
+
+		if (cfg_get_if_tag(p, tag)) {
+			char path[PATH_MAX];
+			FILE *tag_file;
+
+			if (skip_tagged_if)
+				continue;
+
+			if (snprintf(path, sizeof(path), "%s/%s", config_tags_path, tag) > sizeof(path)) {
+				continue;
+				/* FIXME do something more intelligent :) */
+			}
+
+			if (NULL == (tag_file = fopen(path, "w+"))) {
+				continue;
+				/* FIXME do something more intelligent :) */
+			}
+
+			build_int_eth_config(tag_file, p, 0);
+			fclose(tag_file);
 			continue;
-		p1 += 3;
-		for(p2 = p1; is_digit(*p2); p2++);
-		if(*p2 != '\0')
-			continue;
-		build_int_eth_config(out, atoi(p1));
+		}
+
+		build_int_eth_config(out, p, 1);
 		fprintf(out, "!\n");
 	}
 	fclose(f);

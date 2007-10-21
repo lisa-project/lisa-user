@@ -104,6 +104,7 @@ struct mm_private *mm_create(const char *name, size_t static_size, size_t dynami
 		}
 
 		mm_unlock(ret);
+		ret->area = mm_area;
 		return ret;
 	} while(0);
 

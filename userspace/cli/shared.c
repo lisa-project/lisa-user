@@ -102,3 +102,10 @@ int read_key() {
 	tcsetattr(0, TCSANOW, &t_old);
 	return ret;
 }
+
+const char config_file[] = "/etc/lisa/config.text";
+const char config_tags_path[] = "/etc/lisa/tags";
+
+int cfg_get_if_tag(char *if_name, char *tag) {
+	return 0;
+}
