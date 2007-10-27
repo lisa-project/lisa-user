@@ -585,186 +585,698 @@ char VLAN_IDs_of_the_allowed_VLANs[] =
 "VLAN IDs of the allowed VLANs when this port is in trunking mode\0";
 
 static sw_command_t sh_acc_vlan[] = {
-	{vlan_range,			1,	valid_vlan,	cmd_acc_vlan,	RUN,		"VLAN ID of the VLAN when this port is in access mode",	NULL},
-	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
+	{
+		.name   = vlan_range,
+		.priv   = 1,
+		.valid  = valid_vlan,
+		.func   = cmd_acc_vlan,
+		.state  = RUN,
+		.doc    = "VLAN ID of the VLAN when this port is in access mode",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_access[] = {
-	{"vlan",				1,	NULL,		NULL,			0,			"Set VLAN when interface is in access mode",		sh_acc_vlan},
-	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
+	{
+		.name   = "vlan",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Set VLAN when interface is in access mode",
+		.subcmd = sh_acc_vlan
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_noaccess[] = {
-	{"vlan",				1,	NULL,		cmd_noacc_vlan,	RUN,		"Set VLAN when interface is in access mode",		NULL},
-	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
+	{
+		.name   = "vlan",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = cmd_noacc_vlan,
+		.state  = RUN,
+		.doc    = "Set VLAN when interface is in access mode",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_mode[] = {
-	{"access",				2,	NULL,		cmd_access,		RUN,		"Set trunking mode to ACCESS unconditionally",		NULL},
-	{"trunk",				2,	NULL,		cmd_trunk,		RUN,		"Set trunking mode to TRUNK unconditionally",		NULL},
-	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
+	{
+		.name   = "access",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = cmd_access,
+		.state  = RUN,
+		.doc    = "Set trunking mode to ACCESS unconditionally",
+		.subcmd = NULL
+	},
+	{
+		.name   = "trunk",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = cmd_trunk,
+		.state  = RUN,
+		.doc    = "Set trunking mode to TRUNK unconditionally",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_addvlan[] = {
-	{"WORD",				2,	valid_vlst,	cmd_addvlans,	RUN,		VLAN_IDs_of_the_allowed_VLANs,						NULL},
-	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
+	{
+		.name   = "WORD",
+		.priv   = 2,
+		.valid  = valid_vlst,
+		.func   = cmd_addvlans,
+		.state  = RUN,
+		.doc    = VLAN_IDs_of_the_allowed_VLANs,
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_excvlan[] = {
-	{"WORD",				2,	valid_vlst,	cmd_excvlans,	RUN,		VLAN_IDs_of_the_allowed_VLANs,						NULL},
-	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
+	{
+		.name   = "WORD",
+		.priv   = 2,
+		.valid  = valid_vlst,
+		.func   = cmd_excvlans,
+		.state  = RUN,
+		.doc    = VLAN_IDs_of_the_allowed_VLANs,
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_remvlan[] = {
-	{"WORD",				2,	valid_vlst,	cmd_remvlans,	RUN,		VLAN_IDs_of_the_allowed_VLANs,						NULL},
-	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
+	{
+		.name   = "WORD",
+		.priv   = 2,
+		.valid  = valid_vlst,
+		.func   = cmd_remvlans,
+		.state  = RUN,
+		.doc    = VLAN_IDs_of_the_allowed_VLANs,
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_all_vlan[] = {
-	{"WORD",				2,	valid_vlst,	cmd_setvlans,	RUN,		VLAN_IDs_of_the_allowed_VLANs,						NULL},
-	{"add",					2,	NULL,		NULL,			0,			"add VLANs to the current list",					sh_addvlan},
-	{"all",					2,	NULL,		cmd_allvlans,	RUN,		"all VLANs",										NULL},
-	{"except",				2,	NULL,		NULL,			0,			"all VLANs except the following",					sh_excvlan},
-	{"none",				2,	NULL,		cmd_novlans,	RUN,		"no VLANs",											NULL},
-	{"remove",				2,	NULL,		NULL,			0,			"remove VLANs from the current list",				sh_remvlan},
-	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
+	{
+		.name   = "WORD",
+		.priv   = 2,
+		.valid  = valid_vlst,
+		.func   = cmd_setvlans,
+		.state  = RUN,
+		.doc    = VLAN_IDs_of_the_allowed_VLANs,
+		.subcmd = NULL
+	},
+	{
+		.name   = "add",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "add VLANs to the current list",
+		.subcmd = sh_addvlan
+	},
+	{
+		.name   = "all",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = cmd_allvlans,
+		.state  = RUN,
+		.doc    = "all VLANs",
+		.subcmd = NULL
+	},
+	{
+		.name   = "except",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "all VLANs except the following",
+		.subcmd = sh_excvlan
+	},
+	{
+		.name   = "none",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = cmd_novlans,
+		.state  = RUN,
+		.doc    = "no VLANs",
+		.subcmd = NULL
+	},
+	{
+		.name   = "remove",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "remove VLANs from the current list",
+		.subcmd = sh_remvlan
+	},
+	SW_COMMAND_LIST_END
 };
 
 static char Set_allowed_VLANs[] =
 "Set allowed VLANs when interface is in trunking mode\0";
 
 static sw_command_t sh_allowed[] = {
-	{"vlan",				2,	NULL,		NULL,			0,			Set_allowed_VLANs,									sh_all_vlan},
-	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
+	{
+		.name   = "vlan",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = Set_allowed_VLANs,
+		.subcmd = sh_all_vlan
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_noallowed[] = {
-	{"vlan",				2,	NULL,		cmd_allvlans,	RUN,		Set_allowed_VLANs,									NULL},
-	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
+	{
+		.name   = "vlan",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = cmd_allvlans,
+		.state  = RUN,
+		.doc    = Set_allowed_VLANs,
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
 static char Set_allowed_VLAN_characteristics[] =
 "Set allowed VLAN characteristics when interface is in trunking mode\0";
 
 static sw_command_t sh_trunk[] = {
-	{"allowed",				2,	NULL,		NULL,			0,			Set_allowed_VLAN_characteristics,					sh_allowed},
-	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
+	{
+		.name   = "allowed",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = Set_allowed_VLAN_characteristics,
+		.subcmd = sh_allowed
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_notrunk[] = {
-	{"allowed",				2,	NULL,		NULL,			0,			Set_allowed_VLAN_characteristics,					sh_noallowed},
-	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
+	{
+		.name   = "allowed",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = Set_allowed_VLAN_characteristics,
+		.subcmd = sh_noallowed
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_switchport[] = {
-	{"access",				2,	NULL,		NULL,			0,			"Set access mode characteristics of the interface",	sh_access},
-	{"mode",				2,	NULL,		NULL,			0,			"Set trunking mode of the interface",				sh_mode},
-	{"trunk",				2,	NULL,		NULL,			0,			"Set trunking characteristics of the interface",	sh_trunk},
-	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
+	{
+		.name   = "access",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Set access mode characteristics of the interface",
+		.subcmd = sh_access
+	},
+	{
+		.name   = "mode",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Set trunking mode of the interface",
+		.subcmd = sh_mode
+	},
+	{
+		.name   = "trunk",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Set trunking characteristics of the interface",
+		.subcmd = sh_trunk
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_noswitchport[] = {
-	{"access",				2,	NULL,		NULL,			0,			"Set access mode characteristics of the interface",	sh_noaccess},
-	{"mode",				2,	NULL,		cmd_nomode,		RUN,		"Set trunking mode of the interface",				NULL},
-	{"trunk",				2,	NULL,		NULL,			0,			"Set trunking characteristics of the interface",	sh_notrunk},
-	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
+	{
+		.name   = "access",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Set access mode characteristics of the interface",
+		.subcmd = sh_noaccess
+	},
+	{
+		.name   = "mode",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = cmd_nomode,
+		.state  = RUN,
+		.doc    = "Set trunking mode of the interface",
+		.subcmd = NULL
+	},
+	{
+		.name   = "trunk",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Set trunking characteristics of the interface",
+		.subcmd = sh_notrunk
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_ethdesc[] = {
-	{"LINE",				2,	valid_desc,	cmd_setethdesc,	RUN,		"A character string describing this interface",		NULL},
-	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
+	{
+		.name   = "LINE",
+		.priv   = 2,
+		.valid  = valid_desc,
+		.func   = cmd_setethdesc,
+		.state  = RUN,
+		.doc    = "A character string describing this interface",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_speed[] = {
-	{"10",					2,	NULL,		cmd_sp_10,		RUN,		"Force 10 Mbps operation",							NULL},
-	{"100",					2,	NULL,		cmd_sp_100,		RUN,		"Force 100 Mbps operation",							NULL},
-	{"auto",				2,	NULL,		cmd_sp_auto,	RUN,		"Enable AUTO speed configuration",					NULL},
-	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
+	{
+		.name   = "10",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = cmd_sp_10,
+		.state  = RUN,
+		.doc    = "Force 10 Mbps operation",
+		.subcmd = NULL
+	},
+	{
+		.name   = "100",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = cmd_sp_100,
+		.state  = RUN,
+		.doc    = "Force 100 Mbps operation",
+		.subcmd = NULL
+	},
+	{
+		.name   = "auto",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = cmd_sp_auto,
+		.state  = RUN,
+		.doc    = "Enable AUTO speed configuration",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_duplex[] = {
-	{"auto",				2,	NULL,		cmd_du_auto,	RUN,		"Enable AUTO duplex configuration",					NULL},
-	{"full",				2,	NULL,		cmd_du_full,	RUN,		"Force full duplex operation",						NULL},
-	{"half",				2,	NULL,		cmd_du_half,	RUN,		"Force half-duplex operation",						NULL},
-	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
+	{
+		.name   = "auto",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = cmd_du_auto,
+		.state  = RUN,
+		.doc    = "Enable AUTO duplex configuration",
+		.subcmd = NULL
+	},
+	{
+		.name   = "full",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = cmd_du_full,
+		.state  = RUN,
+		.doc    = "Force full duplex operation",
+		.subcmd = NULL
+	},
+	{
+		.name   = "half",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = cmd_du_half,
+		.state  = RUN,
+		.doc    = "Force half-duplex operation",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_no_eth_cdp[] = {
-	{"enable",				2,	NULL, cmd_cdp_if_disable, RUN,			"Enable CDP on interface",							NULL},
-	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
+	{
+		.name   = "enable",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = cmd_cdp_if_disable,
+		.state  = RUN,
+		.doc    = "Enable CDP on interface",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_no[] = {
-	{"cdp",					2,	NULL,		NULL,			0,			"CDP interface subcommands",						sh_no_eth_cdp},
-	{"description",			2,	NULL,		cmd_noethdesc,	RUN,		"Interface specific description",					NULL},
-	{"duplex",				2,	NULL,		cmd_du_auto,	RUN,		"Configure duplex operation.",						NULL},
-	{"shutdown",			2,	NULL,		cmd_noshutd,	RUN,		"Shutdown the selected interface",					NULL},
-	{"speed",				2,	NULL,		cmd_sp_auto,	RUN,		"Configure speed operation.",						NULL},
-	{"switchport",			2,	NULL,		cmd_swport_off,	RUN,		"Set switching mode characteristics",				sh_noswitchport},
-	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
+	{
+		.name   = "cdp",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "CDP interface subcommands",
+		.subcmd = sh_no_eth_cdp
+	},
+	{
+		.name   = "description",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = cmd_noethdesc,
+		.state  = RUN,
+		.doc    = "Interface specific description",
+		.subcmd = NULL
+	},
+	{
+		.name   = "duplex",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = cmd_du_auto,
+		.state  = RUN,
+		.doc    = "Configure duplex operation.",
+		.subcmd = NULL
+	},
+	{
+		.name   = "shutdown",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = cmd_noshutd,
+		.state  = RUN,
+		.doc    = "Shutdown the selected interface",
+		.subcmd = NULL
+	},
+	{
+		.name   = "speed",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = cmd_sp_auto,
+		.state  = RUN,
+		.doc    = "Configure speed operation.",
+		.subcmd = NULL
+	},
+	{
+		.name   = "switchport",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = cmd_swport_off,
+		.state  = RUN,
+		.doc    = "Set switching mode characteristics",
+		.subcmd = sh_noswitchport
+	},
+	SW_COMMAND_LIST_END
 };
 
 
 static sw_command_t sh_eth_cdp[] = {
-	{"enable",				2,	NULL,	cmd_cdp_if_enable, RUN,			"Enable CDP on interface",							NULL},
-	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
+	{
+		.name   = "enable",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = cmd_cdp_if_enable,
+		.state  = RUN,
+		.doc    = "Enable CDP on interface",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_eth[] = {
-	{"cdp",					2,	NULL,		NULL,			0,			"CDP interface subcommands",						sh_eth_cdp},
-	{"description",			2,	NULL,		NULL,			0,			"Interface specific description",					sh_ethdesc},
-	{"duplex",				2,	NULL,		NULL,			0,			"Configure duplex operation.",						sh_duplex},
-	{"end"	,				2,	NULL,		cmd_end,		RUN,		"End interface configuration mode",					NULL},
-	{"exit",				2,	NULL,		cmd_exit,		RUN,		"Exit from interface configuration mode",			NULL},
-	{"help",				2,	NULL,		cmd_help,		RUN,		"Descrption of the interactive help system",		NULL},
-	{"interface",			2,	NULL,		NULL,			0,			"Select an interface to configure",					sh_conf_int},
-	{"no",					2,	NULL,		NULL,			0,			"Negate a command or set its defaults",				sh_no},
-	{"shutdown",			2,	NULL,		cmd_shutd,		RUN,		"Shutdown the selected interface",					NULL},
-	{"speed",				2,	NULL,		NULL,			0,			"Configure speed operation.",						sh_speed},
-	{"switchport",			2,	NULL,		cmd_swport_on,	RUN,		"Set switching mode characteristics",				sh_switchport},
-	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
+	{
+		.name   = "cdp",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "CDP interface subcommands",
+		.subcmd = sh_eth_cdp
+	},
+	{
+		.name   = "description",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Interface specific description",
+		.subcmd = sh_ethdesc
+	},
+	{
+		.name   = "duplex",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Configure duplex operation.",
+		.subcmd = sh_duplex
+	},
+	{
+		.name   = "end",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = cmd_end,
+		.state  = RUN,
+		.doc    = "End interface configuration mode",
+		.subcmd = NULL
+	},
+	{
+		.name   = "exit",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = cmd_exit,
+		.state  = RUN,
+		.doc    = "Exit from interface configuration mode",
+		.subcmd = NULL
+	},
+	{
+		.name   = "help",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = cmd_help,
+		.state  = RUN,
+		.doc    = "Descrption of the interactive help system",
+		.subcmd = NULL
+	},
+	{
+		.name   = "interface",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Select an interface to configure",
+		.subcmd = sh_conf_int
+	},
+	{
+		.name   = "no",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Negate a command or set its defaults",
+		.subcmd = sh_no
+	},
+	{
+		.name   = "shutdown",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = cmd_shutd,
+		.state  = RUN,
+		.doc    = "Shutdown the selected interface",
+		.subcmd = NULL
+	},
+	{
+		.name   = "speed",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Configure speed operation.",
+		.subcmd = sh_speed
+	},
+	{
+		.name   = "switchport",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = cmd_swport_on,
+		.state  = RUN,
+		.doc    = "Set switching mode characteristics",
+		.subcmd = sh_switchport
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_ip_second[] = {
-	{"secondary",			2,	valid_sec,	cmd_ip,			RUN|PTCNT|CMPL,		"Make this IP address a secondary address"},
-	{NULL,					0,	NULL,		NULL,			0,			NULL,											NULL}
+	{
+		.name   = "secondary",
+		.priv   = 2,
+		.valid  = valid_sec,
+		.func   = cmd_ip,
+		.state  = RUN|PTCNT|CMPL,
+		.doc    = "Make this IP address a secondary address",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_ip_netmask[] = {
-	{"A.B.C.D",				2,	valid_mask,	cmd_ip,			RUN|PTCNT,		"IP subnet mask",									sh_ip_second},
-	{NULL,					0,	NULL,		NULL,			0,			NULL,											NULL}
+	{
+		.name   = "A.B.C.D",
+		.priv   = 2,
+		.valid  = valid_mask,
+		.func   = cmd_ip,
+		.state  = RUN|PTCNT,
+		.doc    = "IP subnet mask",
+		.subcmd = sh_ip_second
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_ip_addr[] = {
-	{"A.B.C.D",				2,	valid_ip,	NULL,			PTCNT,			"IP address",										sh_ip_netmask},
-	{NULL,					0,	NULL,		NULL,			0,			NULL,											NULL}
+	{
+		.name   = "A.B.C.D",
+		.priv   = 2,
+		.valid  = valid_ip,
+		.func   = NULL,
+		.state  = PTCNT,
+		.doc    = "IP address",
+		.subcmd = sh_ip_netmask
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_ip[] = {
-	{"address",				2,	NULL,		NULL,			0,		"Set the IP address of an interface",				sh_ip_addr},
-	{NULL,					0,	NULL,		NULL,			0,			NULL,											NULL}
+	{
+		.name   = "address",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Set the IP address of an interface",
+		.subcmd = sh_ip_addr
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_no_ip[] = {
-	{"address",				2,	NULL,		cmd_no_ip,		RUN,		"Set the IP address of an interface",				sh_ip_addr},
-	{NULL,					0,	NULL,		NULL,			0,			NULL,											NULL}
+	{
+		.name   = "address",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = cmd_no_ip,
+		.state  = RUN,
+		.doc    = "Set the IP address of an interface",
+		.subcmd = sh_ip_addr
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_no_vlan[] = {
-	{"shutdown",			2,	NULL,		cmd_noshutd_v,	RUN,		"Shutdown the selected interface",					NULL},
-	{"ip",					2,	NULL,		NULL,			0,			"Interface Internet Protocol config commands",		sh_no_ip},
-	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
+	{
+		.name   = "shutdown",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = cmd_noshutd_v,
+		.state  = RUN,
+		.doc    = "Shutdown the selected interface",
+		.subcmd = NULL
+	},
+	{
+		.name   = "ip",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Interface Internet Protocol config commands",
+		.subcmd = sh_no_ip
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_vlan[] = {
-	{"end",					2,	NULL,		cmd_end,		RUN,		"Exit from interface configuration mode",			NULL},
-	{"exit",				2,	NULL,		cmd_exit,		RUN,		"End interface configuration mode",					NULL},
-	{"help",				2,	NULL,		cmd_help,		RUN,		"Description of the interactive help system",		NULL},
-	{"ip",					2,	NULL,		NULL,			0,			"Interface Internet Protocol config commands",		sh_ip},
-	{"interface",			2,	NULL,		NULL,			0,			"Select an interface to configure",					sh_conf_int},
-	{"no",					2,	valid_no,	NULL,			PTCNT|CMPL,	"Negate a command or set its defaults",				sh_no_vlan},
-	{"shutdown",			2,	NULL,		cmd_shutd_v,	RUN,		"Shutdown the selected interface",					NULL},
-	{NULL,					0,	NULL,		NULL,			0,			NULL,											NULL}
+	{
+		.name   = "end",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = cmd_end,
+		.state  = RUN,
+		.doc    = "Exit from interface configuration mode",
+		.subcmd = NULL
+	},
+	{
+		.name   = "exit",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = cmd_exit,
+		.state  = RUN,
+		.doc    = "End interface configuration mode",
+		.subcmd = NULL
+	},
+	{
+		.name   = "help",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = cmd_help,
+		.state  = RUN,
+		.doc    = "Description of the interactive help system",
+		.subcmd = NULL
+	},
+	{
+		.name   = "ip",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Interface Internet Protocol config commands",
+		.subcmd = sh_ip
+	},
+	{
+		.name   = "interface",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Select an interface to configure",
+		.subcmd = sh_conf_int
+	},
+	{
+		.name   = "no",
+		.priv   = 2,
+		.valid  = valid_no,
+		.func   = NULL,
+		.state  = PTCNT|CMPL,
+		.doc    = "Negate a command or set its defaults",
+		.subcmd = sh_no_vlan
+	},
+	{
+		.name   = "shutdown",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = cmd_shutd_v,
+		.state  = RUN,
+		.doc    = "Shutdown the selected interface",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
 sw_command_root_t command_root_config_if_eth =			{"%s(config-if)%c",			sh_eth};

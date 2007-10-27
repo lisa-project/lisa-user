@@ -749,289 +749,1274 @@ int valid_priv(char *arg, char lookahead) {
 	return 0;
 }
 
+/* Pipe regex (the argument for pipe modifiers) */
 static sw_command_t sh_pipe_regex[] = {
-	{"LINE",				1,  valid_regex,	NULL,			RUN,		"Regular Expression",								NULL},
-	{NULL,					0,  NULL,			NULL,			0,			NULL,												NULL}
+	{
+		.name   = "LINE",
+		.priv   = 1,
+		.valid  = valid_regex,
+		.func   = NULL,
+		.state  = RUN,
+		.doc    = "Regular Expression",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
+/* Pipe modifiers (begin, exclude, include, grep) menu node */
 static sw_command_t sh_pipe_mod[] = {
-	{"begin",				1,  NULL,			NULL,			MODE_BEGIN,		"Begin with the line that matches",				sh_pipe_regex},
-	{"exclude",				1,  NULL,			NULL,			MODE_EXCLUDE,	"Exclude lines that match",						sh_pipe_regex},
-	{"include",				1,  NULL,			NULL,			MODE_INCLUDE,	"Include lines that match",						sh_pipe_regex},
-	{"grep",				1,  NULL,			NULL,			MODE_GREP,		"Linux grep functionality",						sh_pipe_regex},
-	{NULL,					0,  NULL,			NULL,			0,			NULL,												NULL}
+	{
+		.name   = "begin",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = MODE_BEGIN,
+		.doc    = "Begin with the line that matches",
+		.subcmd = sh_pipe_regex
+	},
+	{
+		.name   = "exclude",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = MODE_EXCLUDE,
+		.doc    = "Exclude lines that match",
+		.subcmd = sh_pipe_regex
+	},
+	{
+		.name   = "include",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = MODE_INCLUDE,
+		.doc    = "Include lines that match",
+		.subcmd = sh_pipe_regex
+	},
+	{
+		.name   = "grep",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = MODE_GREP,
+		.doc    = "Linux grep functionality",
+		.subcmd = sh_pipe_regex
+	},
+	SW_COMMAND_LIST_END
 };
 
+/* Pipe menu node (can be accessed from many places) */
 sw_command_t sh_pipe[] = {
-	{"|",					1,  NULL,			NULL,			0,			"Output modifiers",									sh_pipe_mod},
-	{NULL,					0,  NULL,			NULL,			0,			NULL,												NULL}
+	{
+		.name   = "|",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Output modifiers",
+		.subcmd = sh_pipe_mod
+	},
+	SW_COMMAND_LIST_END
 };
 
+/* #show interfaces ethernet ...# menu node */
 static sw_command_t sh_int_eth[] = {
-	{eth_range,				1,	valid_eth,		cmd_int_eth,	RUN,		"Ethernet interface number",						NULL},
-	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
+	/* #show interfaces ethernet <0-7># */
+	{
+		.name   = eth_range,
+		.priv   = 1,
+		.valid  = valid_eth,
+		.func   = cmd_int_eth,
+		.state  = RUN,
+		.doc    = "Ethernet interface number",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
+/* #show interfaces vlan ...# menu node */
 static sw_command_t sh_int_vlan[] = {
-	{vlan_range,			1,	valid_vlan,		cmd_int_vlan,	RUN,		"Vlan interface number",							NULL},
-	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
+	/* #show interfaces vlan <1-1094># */
+	{
+		.name   = vlan_range,
+		.priv   = 1,
+		.valid  = valid_vlan,
+		.func   = cmd_int_vlan,
+		.state  = RUN,
+		.doc    = "Vlan interface number",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
+/* #show running-config interface ethernet ...# menu node */
 static sw_command_t sh_run_eth[] = {
-	{eth_range,				2,	valid_eth,		cmd_run_eth,	RUN,		"Ethernet interface number",						NULL},
-	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
+	/* #show running-config interface ethernet <0-7># */
+	{
+		.name   = eth_range,
+		.priv   = 2,
+		.valid  = valid_eth,
+		.func   = cmd_run_eth,
+		.state  = RUN,
+		.doc    = "Ethernet interface number",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
+/* #show running-config interface vlan ...# menu node */
 static sw_command_t sh_run_vlan[] = {
-	{vlan_range,			2,	valid_vlan,		cmd_run_vlan,	RUN,		"Vlan interface number",							NULL},
-	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
+	/* #show running-config interface vlan <1-1094># */
+	{
+		.name   = vlan_range,
+		.priv   = 2,
+		.valid  = valid_vlan,
+		.func   = cmd_run_vlan,
+		.state  = RUN,
+		.doc    = "Vlan interface number",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
+/* #show mac-address-table [dynamic] vlan ...# menu node */
 static sw_command_t sh_mac_vlan[] = {
-	{vlan_range,			1,	valid_vlan,		cmd_sh_mac_vlan,RUN|PTCNT,	"Vlan interface number",							sh_pipe},
-	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
+	/* #show mac-address-table [dynamic] vlan <1-1094># */
+	{
+		.name   = vlan_range,
+		.priv   = 1,
+		.valid  = valid_vlan,
+		.func   = cmd_sh_mac_vlan,
+		.state  = RUN|PTCNT,
+		.doc    = "Vlan interface number",
+		.subcmd = sh_pipe
+	},
+	SW_COMMAND_LIST_END
 };
 
+/* #show mac-address-table interface ethernet <0-7> ...# menu node */
 static sw_command_t sh_sh_m_eth[] = {
-	{"vlan",				1,	NULL,			NULL,			0,			 "VLAN keyword",									sh_mac_vlan},
-	{"|",					1,	NULL,			NULL,			0,			"Output modifiers",									sh_pipe_mod},
-	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
+	/* #show mac-address-table interface ethernet <0-7> vlan# */
+	{
+		.name   = "vlan",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "VLAN keyword",
+		.subcmd = sh_mac_vlan
+	},
+	/* #show mac-address-table interface ethernet <0-7> |# */
+	{
+		.name   = "|",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Output modifiers",
+		.subcmd = sh_pipe_mod
+	},
+	SW_COMMAND_LIST_END
 };
 
+/* #show mac-address-table interface ethernet ...# menu node */
 static sw_command_t sh_mac_eth[] = {
-	{eth_range,				0,	valid_eth,		cmd_sh_mac_eth,	RUN|PTCNT,	"Ethernet interface number",						sh_sh_m_eth},
-	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
+	/* #show mac-address-table interface ethernet <0-7># */
+	{
+		.name   = eth_range,
+		.priv   = 0,
+		.valid  = valid_eth,
+		.func   = cmd_sh_mac_eth,
+		.state  = RUN|PTCNT,
+		.doc    = "Ethernet interface number",
+		.subcmd = sh_sh_m_eth
+	},
+	SW_COMMAND_LIST_END
 };
 
+/* #show interfaces ...# menu node */
 static sw_command_t sh_sh_int[] = {
-	{"ethernet",			1,	NULL,			NULL,			0,			"Ethernet IEEE 802.3",								sh_int_eth},
-	{"vlan",				1,	NULL,			NULL,			0,			"LMS Vlans",										sh_int_vlan},
-	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
+	/* #show interfaces ethernet# */
+	{
+		.name   = "ethernet",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Ethernet IEEE 802.3",
+		.subcmd = sh_int_eth
+	},
+	/* #show interfaces vlan# */
+	{
+		.name   = "vlan",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "LMS Vlans",
+		.subcmd = sh_int_vlan
+	},
+	SW_COMMAND_LIST_END
 };
 
+/* #show cdp interface ethernet ...# menu node */
 static sw_command_t sh_cdp_int_eth[] = {
-	{eth_range,				1,	valid_eth,  cmd_sh_cdp_int,   RUN,			"Ethernet interface number",						NULL},
-	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
+	/* #show cdp interface ethernet <0-7># */
+	{
+		.name   = eth_range,
+		.priv   = 1,
+		.valid  = valid_eth,
+		.func   = cmd_sh_cdp_int,
+		.state  = RUN,
+		.doc    = "Ethernet interface number",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
+/* #show cdp neighbors ethernet <0-7> ...# menu node */
 static sw_command_t sh_cdp_ne_det[] = {
-	{ "detail",				1,  NULL,	cmd_sh_cdp_ne_detail,	  RUN,			"Show detailed information",					sh_pipe},
-	{NULL,					0,	NULL,					NULL,		0,			NULL,											NULL}
+	/* #show cdp neighbors ethernet <0-7> detail# */
+	{
+		.name   = "detail",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = cmd_sh_cdp_ne_detail,
+		.state  = RUN,
+		.doc    = "Show detailed information",
+		.subcmd = sh_pipe
+	},
+	SW_COMMAND_LIST_END
 };
 
+/* #show cdp neighbors ethernet ...# menu node */
 static sw_command_t sh_cdp_ne_eth[] = {
-	{eth_range,				1,	valid_eth,  cmd_sh_cdp_ne_int, RUN|PTCNT,	"Ethernet interface number",						sh_cdp_ne_det},
-	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
+	/* #show cdp neigbors ethernet <0-7># */
+	{
+		.name   = eth_range,
+		.priv   = 1,
+		.valid  = valid_eth,
+		.func   = cmd_sh_cdp_ne_int,
+		.state  = RUN|PTCNT,
+		.doc    = "Ethernet interface number",
+		.subcmd = sh_cdp_ne_det
+	},
+	SW_COMMAND_LIST_END
 };
 
+/* #show cdp interface ...# menu node */
 static sw_command_t sh_cdp_int[] = {
-	{"ethernet",			1,	NULL,			NULL,			0,			"Ethernet IEEE 802.3",								sh_cdp_int_eth},
-	{ "|",					1, 	NULL,			NULL,	 	    0,			"Output modifiers",									sh_pipe_mod},
-	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
+	/* #show cdp interface ethernet# */
+	{
+		.name   = "ethernet",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Ethernet IEEE 802.3",
+		.subcmd = sh_cdp_int_eth
+	},
+	/* #show cdp interface |# */
+	{
+		.name   = "|",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Output modifiers",
+		.subcmd = sh_pipe_mod
+	},
+	SW_COMMAND_LIST_END
 };
 
+/* #show cdp entry * version ...# menu node */
 static sw_command_t sh_cdp_entry_ve[] = {
-	{"protocol",			1, 	valid_protocol,		cmd_sh_cdp_entry,	RUN|PTCNT|CMPL,		"Protocol information",				sh_pipe},
-	{ "|",					1, 	NULL,							NULL,	  			 0,		"Output modifiers",					sh_pipe_mod},
-	{NULL,					0,	NULL,							NULL,	  			 0,		NULL,								NULL}
+	/* #show cdp entry * version protocol# */
+	{
+		.name   = "protocol",
+		.priv   = 1,
+		.valid  = valid_protocol,
+		.func   = cmd_sh_cdp_entry,
+		.state  = RUN|PTCNT|CMPL,
+		.doc    = "Protocol information",
+		.subcmd = sh_pipe
+	},
+	/* #show cdp entry * version |# */
+	{
+		.name   = "|",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Output modifiers",
+		.subcmd = sh_pipe_mod
+	},
+	SW_COMMAND_LIST_END
 };
 
+/* #show cdp entry * ...# menu node */
 static sw_command_t sh_sh_cdp_entry[] = {
-	{"protocol",			1, 	valid_protocol,		cmd_sh_cdp_entry,	RUN|PTCNT|CMPL,		"Protocol information",				sh_pipe},
-	{"version",				1,	valid_version,		cmd_sh_cdp_entry,	RUN|PTCNT|CMPL,		"Version information",				sh_cdp_entry_ve},
-	{ "|",					1,			 NULL,					NULL,	 			 0,		"Output modifiers",					sh_pipe_mod},
-	{NULL,					0,			 NULL,					NULL,	 			 0,		NULL,										NULL}
+	/* #show cdp entry * protocol# */
+	{
+		.name   = "protocol",
+		.priv   = 1,
+		.valid  = valid_protocol,
+		.func   = cmd_sh_cdp_entry,
+		.state  = RUN|PTCNT|CMPL,
+		.doc    = "Protocol information",
+		.subcmd = sh_pipe
+	},
+	/* #show cdp entry * version# */
+	{
+		.name   = "version",
+		.priv   = 1,
+		.valid  = valid_version,
+		.func   = cmd_sh_cdp_entry,
+		.state  = RUN|PTCNT|CMPL,
+		.doc    = "Version information",
+		.subcmd = sh_cdp_entry_ve
+	},
+	/* #show cdp entry * |# */
+	{
+		.name   = "|",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Output modifiers",
+		.subcmd = sh_pipe_mod
+	},
+	SW_COMMAND_LIST_END
 };
 
+/* #show cdp entry ...# menu node */
 static sw_command_t sh_cdp_entry[] = {
-	{"*",					1,	valid_star,			cmd_sh_cdp_entry,		RUN|PTCNT|CMPL,		"all CDP neighbor entries",			sh_sh_cdp_entry},
-	{"WORD",				1, valid_regex,			cmd_sh_cdp_entry,			 RUN|PTCNT,		"Name of CDP neighbor entry",		sh_sh_cdp_entry},
-	{NULL,					0,	 NULL,							NULL,					 0,		NULL,								NULL}
+	/* #show cdp entry *# */
+	{
+		.name   = "*",
+		.priv   = 1,
+		.valid  = valid_star,
+		.func   = cmd_sh_cdp_entry,
+		.state  = RUN|PTCNT|CMPL,
+		.doc    = "all CDP neighbor entries",
+		.subcmd = sh_sh_cdp_entry
+	},
+	/* #show cdp entry WORD# */
+	{
+		.name   = "WORD",
+		.priv   = 1,
+		.valid  = valid_regex,
+		.func   = cmd_sh_cdp_entry,
+		.state  = RUN|PTCNT,
+		.doc    = "Name of CDP neighbor entry",
+		.subcmd = sh_sh_cdp_entry
+	},
+	SW_COMMAND_LIST_END
 };
 
+/* #show cdp neighbors ...# menu node */
 static sw_command_t sh_cdp_ne[] = {
-	{"ethernet",			1,	NULL,			NULL,				0,			"Ethernet IEEE 802.3",							sh_cdp_ne_eth},
-	{ "detail",				1,  NULL,	cmd_sh_cdp_ne_detail,	  RUN,			"Show detailed information",					sh_pipe},
-	{"|",					1,	NULL,			NULL,			  	0,			"Output modifiers",								sh_pipe_mod},
-	{NULL,					0,	NULL,			NULL,				0,			NULL,											NULL}
+	/* #show cdp neighbors ethernet# */
+	{
+		.name   = "ethernet",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Ethernet IEEE 802.3",
+		.subcmd = sh_cdp_ne_eth
+	},
+	/* #show cdp neighbors detail# */
+	{
+		.name   = "detail",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = cmd_sh_cdp_ne_detail,
+		.state  = RUN,
+		.doc    = "Show detailed information",
+		.subcmd = sh_pipe
+	},
+	/* #show cdp neighbors |# */
+	{
+		.name   = "|",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Output modifiers",
+		.subcmd = sh_pipe_mod
+	},
+	SW_COMMAND_LIST_END
 };
 
+/* #show cdp ...# menu node*/
 static sw_command_t sh_cdp[] = {
-	{"entry",				1,  NULL,				   NULL,			0,			"Information for specific neighbor entry",	sh_cdp_entry},
-	{"holdtime",			1,	NULL,	cmd_sh_cdp_holdtime,		  RUN,			"Time CDP info kept by neighbors",			sh_pipe},
-	{"interface",			1,	NULL,	cmd_sh_cdp_int,			 	  RUN,			"CDP interface status and configuration",	sh_cdp_int},
-	{"neighbors",			1, 	NULL,	cmd_sh_cdp_ne,				  RUN,			"CDP neighbor entries",						sh_cdp_ne},
-	{"run",					1,	NULL,	cmd_sh_cdp_run,				  RUN,			"CDP process running",						sh_pipe},
-	{"timer",				1,	NULL,	cmd_sh_cdp_timer,			  RUN,			"Time CDP info is resent to neighbors",		sh_pipe},
-	{"traffic",				1,	NULL,	cmd_sh_cdp_traffic,			  RUN,			"CDP statistics",							sh_pipe},
-	{"|",					1, 	NULL,			NULL,					0,			"Output modifiers",							sh_pipe_mod},
-	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
+	/* #show cdp entry# */
+	{
+		.name   = "entry",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Information for specific neighbor entry",
+		.subcmd = sh_cdp_entry
+	},
+	/* #show cdp holdtime# */
+	{
+		.name   = "holdtime",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = cmd_sh_cdp_holdtime,
+		.state  = RUN,
+		.doc    = "Time CDP info kept by neighbors",
+		.subcmd = sh_pipe
+	},
+	/* #show cdp interface# */
+	{
+		.name   = "interface",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = cmd_sh_cdp_int,
+		.state  = RUN,
+		.doc    = "CDP interface status and configuration",
+		.subcmd = sh_cdp_int
+	},
+	/* #show cdp neighbors# */
+	{
+		.name   = "neighbors",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = cmd_sh_cdp_ne,
+		.state  = RUN,
+		.doc    = "CDP neighbor entries",
+		.subcmd = sh_cdp_ne
+	},
+	/* #show cdp run# */
+	{
+		.name   = "run",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = cmd_sh_cdp_run,
+		.state  = RUN,
+		.doc    = "CDP process running",
+		.subcmd = sh_pipe
+	},
+	/* #show cdp timer# */
+	{
+		.name   = "timer",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = cmd_sh_cdp_timer,
+		.state  = RUN,
+		.doc    = "Time CDP info is resent to neighbors",
+		.subcmd = sh_pipe
+	},
+	/* #show cdp traffic# */
+	{
+		.name   = "traffic",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = cmd_sh_cdp_traffic,
+		.state  = RUN,
+		.doc    = "CDP statistics",
+		.subcmd = sh_pipe
+	},
+	/* #show cdp |# */
+	{
+		.name   = "|",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Output modifiers",
+		.subcmd = sh_pipe_mod
+	},
+	SW_COMMAND_LIST_END
 };
 
+/* #show running-config interface ...# menu node */
 static sw_command_t sh_sh_run_int[] = {
-	{"ethernet",			2,	NULL,			NULL,			0,			"Ethernet IEEE 802.3",								sh_run_eth},
-	{"vlan",				2,	NULL,			NULL,			0,			"LMS Vlans",										sh_run_vlan},
-	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
+	/* #show running-config interface ethernet# */
+	{
+		.name   = "ethernet",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Ethernet IEEE 802.3",
+		.subcmd = sh_run_eth
+	},
+	/* #show running-config interface vlan# */
+	{
+		.name   = "vlan",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "LMS Vlans",
+		.subcmd = sh_run_vlan
+	},
+	SW_COMMAND_LIST_END
 };
 
+/* #show mac-address-table dynamic interface ...#  or
+   #show mac-address-table interface ...# menu node */
 static sw_command_t sh_sh_mac_int[] = {
-	{"ethernet",			1,	NULL,			NULL,			0,			"Ethernet IEEE 802.3",								sh_mac_eth},
-	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
+	/* #show mac-address-table [dynamic] interface ethernet# or
+	 * #show mac-address-table interface ethernet# */
+	{
+		.name   = "ethernet",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Ethernet IEEE 802.3",
+		.subcmd = sh_mac_eth
+	},
+	SW_COMMAND_LIST_END
 };
 
+/* #show mac-address-table address ...# menu node */
 static sw_command_t sh_sh_mac_addr[] = {
-	{"H.H.H",				1,	valid_mac,		cmd_sh_addr,	RUN|PTCNT,	"48 bit mac address",								NULL},
-	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
+	/* #show mac-address-table address H.H.H# */
+	{
+		.name   = "H.H.H",
+		.priv   = 1,
+		.valid  = valid_mac,
+		.func   = cmd_sh_addr,
+		.state  = RUN|PTCNT,
+		.doc    = "48 bit mac address",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
+/* #show mac-address-table dynamic ...# menu node */
 static sw_command_t sh_sh_mac_sel[] = {
-	{"address",				1,	NULL,			NULL,			0,			"address keyword",									sh_sh_mac_addr},
-	{"interface",			1,	NULL,			NULL,			0,			"interface keyword",								sh_sh_mac_int},
-	{"vlan",				1,	NULL,			NULL,			0,			 "VLAN keyword",									sh_mac_vlan},
-	{"|",					1,	NULL,			NULL,			0,			"Output modifiers",									sh_pipe_mod},
-	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
+	/* #show mac-address-table dynamic address# */
+	{
+		.name   = "address",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "address keyword",
+		.subcmd = sh_sh_mac_addr
+	},
+	/* #show mac-address-table dynamic interface# */
+	{
+		.name   = "interface",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "interface keyword",
+		.subcmd = sh_sh_mac_int
+	},
+	/* #show mac-address-table dynamic vlan# */
+	{
+		.name   = "vlan",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "VLAN keyword",
+		.subcmd = sh_mac_vlan
+	},
+	/* #show mac-address-table dynamic |# */
+	{
+		.name   = "|",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Output modifiers",
+		.subcmd = sh_pipe_mod
+	},
+	SW_COMMAND_LIST_END
 };
 
+/* #show mac-address-table ...# menu node */
 static sw_command_t sh_mac_addr_table[] = {
-	{"address",				1,	NULL,			NULL,			0,			"address keyword",									sh_sh_mac_addr},
-	{"aging-time",			1,	NULL,			cmd_sh_mac_age,			RUN,		"aging-time keyword",						sh_pipe},
-	{"dynamic",				1,	valid_dyn,		cmd_show_mac,	RUN|CMPL|PTCNT,	"dynamic entry type",								sh_sh_mac_sel},
-	{"interface",			1,	NULL,			NULL,			0,			"interface keyword",								sh_sh_mac_int},
-	{"static",				1,	valid_static,	cmd_show_mac,	RUN|CMPL|PTCNT,	"static entry type",								sh_sh_mac_sel},
-	{"vlan",				1,	NULL,			NULL,			0,			 "VLAN keyword",									sh_mac_vlan},
-	{"|",					1,	NULL,			NULL,			0,			"Output modifiers",									sh_pipe_mod},
-	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
+	/* #show mac-address-table address# */
+	{
+		.name   = "address",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "address keyword",
+		.subcmd = sh_sh_mac_addr
+	},
+	/* #show mac-address-table aging-time# */
+	{
+		.name   = "aging-time",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = cmd_sh_mac_age,
+		.state  = RUN,
+		.doc    = "aging-time keyword",
+		.subcmd = sh_pipe
+	},
+	/* #show mac-address-table dynamic# */
+	{
+		.name   = "dynamic",
+		.priv   = 1,
+		.valid  = valid_dyn,
+		.func   = cmd_show_mac,
+		.state  = RUN|CMPL|PTCNT,
+		.doc    = "dynamic entry type",
+		.subcmd = sh_sh_mac_sel
+	},
+	/* #show mac-address-table interface# */
+	{
+		.name   = "interface",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "interface keyword",
+		.subcmd = sh_sh_mac_int
+	},
+	/* #show mac-address-table static# */
+	{
+		.name   = "static",
+		.priv   = 1,
+		.valid  = valid_static,
+		.func   = cmd_show_mac,
+		.state  = RUN|CMPL|PTCNT,
+		.doc    = "static entry type",
+		.subcmd = sh_sh_mac_sel
+	},
+	/* #show mac-address-table vlan# */
+	{
+		.name   = "vlan",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "VLAN keyword",
+		.subcmd = sh_mac_vlan
+	},
+	/* #show mac-address-table |# */
+	{
+		.name   = "|",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Output modifiers",
+		.subcmd = sh_pipe_mod
+	},
+	SW_COMMAND_LIST_END
 };
 
+/* #show running-config ...# menu node */
 static sw_command_t sh_show_run[] = {
-	{"interface",			1,	NULL,			NULL,			0,			"Show interface configuration",						sh_sh_run_int},
-	{"|",					1,  NULL,			NULL,			0,			"Output modifiers",									sh_pipe_mod},
-	{NULL,					0,  NULL,			NULL,			0,			NULL,												NULL}
+	/* #show running-config interface# */
+	{
+		.name   = "interface",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Show interface configuration",
+		.subcmd = sh_sh_run_int
+	},
+	/* #show running-config |# */
+	{
+		.name   = "|",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Output modifiers",
+		.subcmd = sh_pipe_mod
+	},
+	SW_COMMAND_LIST_END
 };
 
+/* #show mac ...# menu node */
 static sw_command_t sh_sh_mac[] = {
-	{"address-table",		1,	NULL,			cmd_show_mac,	RUN,		"MAC forwarding table",								sh_mac_addr_table},
-	{NULL,					0,  NULL,			NULL,			0,			NULL,												NULL}
+	/* #show mac address-table# */
+	{
+		.name   = "address-table",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = cmd_show_mac,
+		.state  = RUN,
+		.doc    = "MAC forwarding table",
+		.subcmd = sh_mac_addr_table
+	},
+	SW_COMMAND_LIST_END
 };
 
+/* #show vlan ...# menu node */
 static sw_command_t sh_show_vlan[] = {
-	{"brief",				1, 	NULL,			cmd_show_vlan,	RUN,		"VTP all VLAN status in brief",						sh_pipe},
-	{"|",					1,  NULL,			NULL,			0,			"Output modifiers",									sh_pipe_mod},
-	{NULL,					0,  NULL,			NULL,			0,			NULL,												NULL}
+	/* #show vlan brief# */
+	{
+		.name   = "brief",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = cmd_show_vlan,
+		.state  = RUN,
+		.doc    = "VTP all VLAN status in brief",
+		.subcmd = sh_pipe
+	},
+	/* #show vlan |# */
+	{
+		.name   = "|",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Output modifiers",
+		.subcmd = sh_pipe_mod
+	},
+	SW_COMMAND_LIST_END
 };
 
+/* #show ...# menu node */
 static sw_command_t sh_show[] = {
-	{"arp",					1,	NULL,			NULL,			RUN,		"ARP table",										NULL},
-	{"clock",				1,	NULL,			NULL,			RUN,		"Display the system clock",							NULL},
-	{"cdp",					1,	NULL,			cmd_sh_cdp,		RUN,		"CDP Information",									sh_cdp},
-	{"history",				1,	NULL,			cmd_history,	RUN,		"Display the session command history",				sh_pipe},
-	{"interfaces",			1,	NULL,			cmd_sh_int,		RUN,		"Interface status and configuration",				sh_sh_int},
-	{"ip",					1,	NULL,			cmd_sh_ip,		RUN,		"IP information",									NULL},
-	{"mac",					1,	NULL,			NULL,			0,			"MAC configuration",								sh_sh_mac},
-	{"mac-address-table",	1,	NULL,			cmd_show_mac,	RUN,		"MAC forwarding table",								sh_mac_addr_table},
-	{"privilege",			2,	NULL,			cmd_show_priv,	RUN,		"Show current privilege level",						NULL},
-	{"running-config",		2,	NULL,			cmd_show_run,	RUN,		"Current operating configuration",					sh_show_run},
-	{"sessions",			1,	NULL,			NULL,			RUN,		"Information about Telnet connections",				NULL},
-	{"startup-config",		1,	NULL,			cmd_show_start,	RUN,		"Contents of startup configuration",				NULL},
-	{"users",				1,	NULL,			NULL,			RUN,		"Display information about terminal lines",			NULL},
-	{"version",				1,	NULL,			cmd_show_ver,			RUN,		"System hardware and software status",				NULL},
-	{"vlan",				1,	NULL,			cmd_show_vlan,	RUN,		"VTP VLAN status",									sh_show_vlan},
-	{NULL,					0,  NULL,			NULL,			0,			NULL,												NULL}
+	/* #show arp# */
+	{
+		.name   = "arp",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = RUN,
+		.doc    = "ARP table",
+		.subcmd = NULL
+	},
+	/* #show clock# */
+	{
+		.name   = "clock",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = RUN,
+		.doc    = "Display the system clock",
+		.subcmd = NULL
+	},
+	/* #show cdp# */
+	{
+		.name   = "cdp",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = cmd_sh_cdp,
+		.state  = RUN,
+		.doc    = "CDP Information",
+		.subcmd = sh_cdp
+	},
+	/* #show history# */
+	{
+		.name   = "history",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = cmd_history,
+		.state  = RUN,
+		.doc    = "Display the session command history",
+		.subcmd = sh_pipe
+	},
+	/* #show interfaces# */
+	{
+		.name   = "interfaces",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = cmd_sh_int,
+		.state  = RUN,
+		.doc    = "Interface status and configuration",
+		.subcmd = sh_sh_int
+	},
+	/* #show ip# */
+	{
+		.name   = "ip",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = cmd_sh_ip,
+		.state  = RUN,
+		.doc    = "IP information",
+		.subcmd = NULL
+	},
+	/* #show mac# */
+	{
+		.name   = "mac",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "MAC configuration",
+		.subcmd = sh_sh_mac
+	},
+	/* #show mac-address-table# */
+	{
+		.name   = "mac-address-table",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = cmd_show_mac,
+		.state  = RUN,
+		.doc    = "MAC forwarding table",
+		.subcmd = sh_mac_addr_table
+	},
+	/* #show privilege# */
+	{
+		.name   = "privilege",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = cmd_show_priv,
+		.state  = RUN,
+		.doc    = "Show current privilege level",
+		.subcmd = NULL
+	},
+	/* #show running-config# */
+	{
+		.name   = "running-config",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = cmd_show_run,
+		.state  = RUN,
+		.doc    = "Current operating configuration",
+		.subcmd = sh_show_run
+	},
+	/* #show sessions# */
+	{
+		.name   = "sessions",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = RUN,
+		.doc    = "Information about Telnet connections",
+		.subcmd = NULL
+	},
+	/* #show startup-config# */
+	{
+		.name   = "startup-config",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = cmd_show_start,
+		.state  = RUN,
+		.doc    = "Contents of startup configuration",
+		.subcmd = NULL
+	},
+	/* #show users# */
+	{
+		.name   = "users",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = RUN,
+		.doc    = "Display information about terminal lines",
+		.subcmd = NULL
+	},
+	/* #show version# */
+	{
+		.name   = "version",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = cmd_show_ver,
+		.state  = RUN,
+		.doc    = "System hardware and software status",
+		.subcmd = NULL
+	},
+	/* #show vlan# */
+	{
+		.name   = "vlan",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = cmd_show_vlan,
+		.state  = RUN,
+		.doc    = "VTP VLAN status",
+		.subcmd = sh_show_vlan
+	},
+	SW_COMMAND_LIST_END
 };
 
+/* #configure ...# menu node */
 static sw_command_t sh_conf[] = {
-	{"terminal",			2,	NULL,			cmd_conf_t,		RUN,		"Configure from the terminal",						NULL},
-	{NULL,					0,  NULL,			NULL,			0,			NULL,												NULL}
+	/* #configure terminal# */
+	{
+		.name   = "terminal",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = cmd_conf_t,
+		.state  = RUN,
+		.doc    = "Configure from the terminal",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
+/* #ping ...# menu node */
 static sw_command_t sh_ping[] = {
-	{"WORD",				1,	valid_regex,	cmd_ping,		RUN|PTCNT,	"Ping destination address or hostname",				NULL},
-	{NULL,					0,  NULL,			NULL,			0,			NULL,												NULL}
+	/* #ping WORD# */
+	{
+		.name   = "WORD",
+		.priv   = 1,
+		.valid  = valid_regex,
+		.func   = cmd_ping,
+		.state  = RUN|PTCNT,
+		.doc    = "Ping destination address or hostname",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
+/* #traceroute ...# menu node */
 static sw_command_t sh_trace[] = {
-	{"WORD",				1,	valid_regex,	cmd_trace,		RUN|PTCNT,	"Ping destination address or hostname",				NULL},
-	{NULL,					0,  NULL,			NULL,			0,			NULL,												NULL}
+	/* #traceroute WORD# */
+	{
+		.name   = "WORD",
+		.priv   = 1,
+		.valid  = valid_regex,
+		.func   = cmd_trace,
+		.state  = RUN|PTCNT,
+		.doc    = "Ping destination address or hostname",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
 char priv_range[] = "<1-15>\0";
 
+/* #enable ...# menu node */
 static sw_command_t sh_enable[] = {
-	{priv_range,			1,	valid_priv,		cmd_enable,		RUN|PTCNT|NPG,"Enable level",									NULL},
-	{NULL,					0,  NULL,			NULL,			0,			NULL,												NULL}
+	/* #enable <1-15># */
+	{
+		.name   = priv_range,
+		.priv   = 1,
+		.valid  = valid_priv,
+		.func   = cmd_enable,
+		.state  = RUN|PTCNT|NPG,
+		.doc    = "Enable level",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
+/* #disable ...# menu node */
 static sw_command_t sh_disable[] = {
-	{priv_range,			1,	valid_priv,		cmd_disable,	RUN|PTCNT|NPG,"Privilege level to go to",								NULL},
-	{NULL,					0,  NULL,			NULL,			0,			NULL,												NULL}
+	/* #disable <1-15># */
+	{
+		.name   = priv_range,
+		.priv   = 1,
+		.valid  = valid_priv,
+		.func   = cmd_disable,
+		.state  = RUN|PTCNT|NPG,
+		.doc    = "Privilege level to go to",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
+/* #clear mac-address-table dynamic interface ethernet ...# menu node */
 static sw_command_t sh_clr_eth[] = {
-	{eth_range,				2,	valid_eth,		cmd_clr_mac_eth,RUN|PTCNT,	"Ethernet interface number",						NULL},
-	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
+	/* #clear mac-address-table dynamic interface ethernet <0-7># */
+	{
+		.name   = eth_range,
+		.priv   = 2,
+		.valid  = valid_eth,
+		.func   = cmd_clr_mac_eth,
+		.state  = RUN|PTCNT,
+		.doc    = "Ethernet interface number",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
+/* #clear mac address-table dynamic address ...# menu node */
 static sw_command_t sh_clr_sel_addr[] = {
-	{"H.H.H",				2,	valid_mac,		cmd_clr_mac_adr,RUN|PTCNT,	"48 bit mac address",								NULL},
-	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
+	/* #clear mac-address-table dynamic address H.H.H# */
+	{
+		.name   = "H.H.H",
+		.priv   = 2,
+		.valid  = valid_mac,
+		.func   = cmd_clr_mac_adr,
+		.state  = RUN|PTCNT,
+		.doc    = "48 bit mac address",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
+/* #clear mac-address-table dynamic interface ...# */
 static sw_command_t sh_clr_sel_int[] = {
-	{"ethernet",			2,	NULL,			NULL,			0,			"Ethernet IEEE 802.3",								sh_clr_eth},
-	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
+	/* #clear mac-address-table dynamic interface ethernet# */
+	{
+		.name   = "ethernet",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Ethernet IEEE 802.3",
+		.subcmd = sh_clr_eth
+	},
+	SW_COMMAND_LIST_END
 };
 
+/* #clear mac-address-table dynamic vlan ...# menu node */
 static sw_command_t sh_clr_sel_vlan[] = {
-	{vlan_range,			2,	valid_vlan,		cmd_clr_mac_vl,RUN|PTCNT,	"Vlan interface number",							NULL},
-	{NULL,					0,	NULL,			NULL,			0,			NULL,												NULL}
+	/* #clear mac-address-table dynamic vlan <1-1094># */
+	{
+		.name   = vlan_range,
+		.priv   = 2,
+		.valid  = valid_vlan,
+		.func   = cmd_clr_mac_vl,
+		.state  = RUN|PTCNT,
+		.doc    = "Vlan interface number",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
+/* #clear mac address-table dynamic ...# menu node */
 static sw_command_t sh_clr_sel[] = {
-	{"address",				2,	NULL,			NULL,			0,			"address keyword",									sh_clr_sel_addr},
-	{"interface",			2,	NULL,			NULL,			0,			"interface keyword",								sh_clr_sel_int},
-	{"vlan",				2,	NULL,			NULL,			0,			"vlan keyword",										sh_clr_sel_vlan},
-	{NULL,					0,  NULL,			NULL,			0,			NULL,												NULL}
+	/* #clear mac-address-table dynamic address# */
+	{
+		.name   = "address",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "address keyword",
+		.subcmd = sh_clr_sel_addr
+	},
+	/* #clear mac-address-table dynamic interface# */
+	{
+		.name   = "interface",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "interface keyword",
+		.subcmd = sh_clr_sel_int
+	},
+	/* #clear mac-address-table dynamic vlan# */
+	{
+		.name   = "vlan",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "vlan keyword",
+		.subcmd = sh_clr_sel_vlan
+	},
+	SW_COMMAND_LIST_END
 };
 
+/* #clear mac-address-table ...# menu node*/
 static sw_command_t sh_clr_mac_addr[] = {
-	{"dynamic",				2,	NULL,			cmd_clr_mac,	RUN,		"dynamic entry type",								sh_clr_sel},
-	{NULL,					0,  NULL,			NULL,			0,			NULL,												NULL}
+	/* #clear mac-address-table dynamic# or
+	 * #clear mac address-table dynamic# */
+	{
+		.name   = "dynamic",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = cmd_clr_mac,
+		.state  = RUN,
+		.doc    = "dynamic entry type",
+		.subcmd = sh_clr_sel
+	},
+	SW_COMMAND_LIST_END
 };
 
+/* #clear mac ...# menu node*/
 static sw_command_t sh_clr_mac[] = {
-	{"address-table",		2,	NULL,			NULL,			0,			"MAC forwarding table",								sh_clr_mac_addr},
-	{NULL,					0,  NULL,			NULL,			0,			NULL,												NULL}
+	/* #clear mac address-table# */
+	{
+		.name   = "address-table",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "MAC forwarding table",
+		.subcmd = sh_clr_mac_addr
+	},
+	SW_COMMAND_LIST_END
 };
 
+/* #clear ...#  menu node */
 static sw_command_t sh_clear[] = {
-	{"mac",					2,	NULL,			NULL,			0,			"MAC forwarding table",								sh_clr_mac},
-	{"mac-address-table",	2,	NULL,			NULL,			0,			"MAC forwarding table",								sh_clr_mac_addr},
-	{NULL,					0,  NULL,			NULL,			0,			NULL,												NULL}
+	/* #clear mac# */
+	{
+		.name   = "mac",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "MAC forwarding table",
+		.subcmd = sh_clr_mac
+	},
+	/* #clear mac-address-table# */
+	{
+		.name   = "mac-address-table",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "MAC forwarding table",
+		.subcmd = sh_clr_mac_addr
+	},
+	SW_COMMAND_LIST_END
 };
 
+/* #write ...# menu node */
 static sw_command_t sh_write[] = {
-	{"memory",				15,	NULL,			cmd_wrme,		RUN,		"Write to NV memory",								NULL},
-	{NULL,					0,  NULL,			NULL,			0,			NULL,												NULL}
+	/* #write memory# */
+	{
+		.name   = "memory",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = cmd_wrme,
+		.state  = RUN,
+		.doc    = "Write to NV memory",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
+/* Main menu node */
 static sw_command_t sh[] = {
-	{"clear",				2,	NULL, 			NULL,			0,			"Reset functions",									sh_clear},
-	{"configure",			15,	NULL,			NULL,			0,			"Enter configuration mode",							sh_conf},
-	{"disable",				2,	NULL,			cmd_disable,	RUN,		"Turn off privileged commands",						sh_disable},
-	{"enable",				1,	NULL,			cmd_enable,		RUN|NPG,	"Turn on privileged commands",						sh_enable},
-	{"exit",				1,	NULL,			cmd_exit,		RUN,		"Exit from the EXEC",								NULL},
-	{"help",				1,	NULL,			cmd_help,		RUN,		"Description of the interactive help system",		NULL},
-	{"logout",				1,	NULL,			cmd_exit,		RUN,		"Exit from the EXEC",								NULL},
-	{"ping",				1,	NULL,			NULL,			0,			"Send echo messages",								sh_ping},
-	{"reload",				1,	NULL,			cmd_reload,		RUN|NPG,	"Halt and perform a cold restart",					NULL},
-	{"quit",				1,	NULL,			cmd_exit,		RUN,		"Exit from the EXEC",								NULL},
-	{"show",				1,	NULL,			NULL,			0,			"Show running system information",					sh_show},
-//	{"telnet",				1,	NULL,			NULL,			0,			"Open a telnet connection",							NULL},
-//	{"terminal",			1,	NULL,			NULL,			0,			"Set terminal line parameters",						NULL},
-	{"traceroute",			1,	NULL,			NULL,			0,			"Trace route to destination",						sh_trace},
-	{"where",				1,	NULL,			NULL,			RUN,		"List active connections",							NULL},
-	{"write",				15,	NULL,			NULL,			0,			"Write running configuration to memory",			sh_write},
-	{NULL,					0,  NULL,			NULL,			0,			NULL,												NULL}
+	/* #clear# */
+	{
+		.name   = "clear",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Reset functions",
+		.subcmd = sh_clear
+	},
+	/* #configure# */
+	{
+		.name   = "configure",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Enter configuration mode",
+		.subcmd = sh_conf
+	},
+	/* #disable# */
+	{
+		.name   = "disable",
+		.priv   = 2,
+		.valid  = NULL,
+		.func   = cmd_disable,
+		.state  = RUN,
+		.doc    = "Turn off privileged commands",
+		.subcmd = sh_disable
+	},
+	/* #enable# */
+	{
+		.name   = "enable",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = cmd_enable,
+		.state  = RUN|NPG,
+		.doc    = "Turn on privileged commands",
+		.subcmd = sh_enable
+	},
+	/* #exit# */
+	{
+		.name   = "exit",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = cmd_exit,
+		.state  = RUN,
+		.doc    = "Exit from the EXEC",
+		.subcmd = NULL
+	},
+	/* #help# */
+	{
+		.name   = "help",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = cmd_help,
+		.state  = RUN,
+		.doc    = "Description of the interactive help system",
+		.subcmd = NULL
+	},
+	/* #logout# */
+	{
+		.name   = "logout",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = cmd_exit,
+		.state  = RUN,
+		.doc    = "Exit from the EXEC",
+		.subcmd = NULL
+	},
+	/* #ping# */
+	{
+		.name   = "ping",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Send echo messages",
+		.subcmd = sh_ping
+	},
+	/* #reload# */
+	{
+		.name   = "reload",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = cmd_reload,
+		.state  = RUN|NPG,
+		.doc    = "Halt and perform a cold restart",
+		.subcmd = NULL
+	},
+	/* #quit# */
+	{
+		.name   = "quit",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = cmd_exit,
+		.state  = RUN,
+		.doc    = "Exit from the EXEC",
+		.subcmd = NULL
+	},
+	/* #show# */
+	{
+		.name   = "show",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Show running system information",
+		.subcmd = sh_show
+	},
+	/* #traceroute# */
+	{
+		.name   = "traceroute",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Trace route to destination",
+		.subcmd = sh_trace
+	},
+	/* #where# */
+	{
+		.name   = "where",
+		.priv   = 1,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = RUN,
+		.doc    = "List active connections",
+		.subcmd = NULL
+	},
+	/* #write# */
+	{
+		.name   = "write",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Write running configuration to memory",
+		.subcmd = sh_write
+	},
+	SW_COMMAND_LIST_END
 };
 
-sw_command_root_t command_root_main =					{"%s%c",					sh};
+/* Main command menu */
+sw_command_root_t command_root_main = {"%s%c", sh};

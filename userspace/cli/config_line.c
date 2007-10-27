@@ -43,21 +43,69 @@ static void cmd_setpw(FILE *out, char **argv) {
 }
 
 static sw_command_t sh_line_pattern[] = {
-	{"LINE",				15, valid_regex, cmd_setpw,	RUN,		"The UNENCRYPTED (cleartext) line password",		NULL},		
-	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
+	{
+		.name   = "LINE",
+		.priv   = 15,
+		.valid  = valid_regex,
+		.func   = cmd_setpw,
+		.state  = RUN,
+		.doc    = "The UNENCRYPTED (cleartext) line password",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_pass[] = {
-	{"0",					15, valid_0,	NULL,			PTCNT,		"Specifies an UNENCRYPTED password will follow",	sh_line_pattern},
-	{"LINE",				15, valid_regex, cmd_setpw,	RUN,		"The UNENCRYPTED (cleartext) line password",		NULL},		
-	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
+	{
+		.name   = "0",
+		.priv   = 15,
+		.valid  = valid_0,
+		.func   = NULL,
+		.state  = PTCNT,
+		.doc    = "Specifies an UNENCRYPTED password will follow",
+		.subcmd = sh_line_pattern
+	},
+	{
+		.name   = "LINE",
+		.priv   = 15,
+		.valid  = valid_regex,
+		.func   = cmd_setpw,
+		.state  = RUN,
+		.doc    = "The UNENCRYPTED (cleartext) line password",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_line[] = {
-	{"password",			15,	NULL,		NULL,			0,			"Set a password",									sh_pass},
-	{"exit",				15,	NULL,		cmd_exit,		RUN,		"Exit from line configuration mode",				NULL},
-	{"end",					15,	NULL,		cmd_end,		RUN,		"End line configuration mode",				NULL},
-	{NULL,					0,	NULL,		NULL,			0,			NULL,												NULL}
+	{
+		.name   = "password",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Set a password",
+		.subcmd = sh_pass
+	},
+	{
+		.name   = "exit",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = cmd_exit,
+		.state  = RUN,
+		.doc    = "Exit from line configuration mode",
+		.subcmd = NULL
+	},
+	{
+		.name   = "end",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = cmd_end,
+		.state  = RUN,
+		.doc    = "End line configuration mode",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
 sw_command_root_t command_root_config_line =		{"%s(config-line)%c",			sh_line};

@@ -410,242 +410,825 @@ int valid_any_word(char *arg, char lookahead) {
 
 
 static sw_command_t sh_no_int_eth[] = {
-	{eth_range,				15,	valid_eth,	cmd_no_int_eth,		RUN,		"Ethernet interface number",					NULL},
-	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+	{
+		.name   = eth_range,
+		.priv   = 15,
+		.valid  = valid_eth,
+		.func   = cmd_no_int_eth,
+		.state  = RUN,
+		.doc    = "Ethernet interface number",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_int_eth[] = {
-	{eth_range,				15,	valid_eth,	cmd_int_eth,		RUN,		"Ethernet interface number",					NULL},
-	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+	{
+		.name   = eth_range,
+		.priv   = 15,
+		.valid  = valid_eth,
+		.func   = cmd_int_eth,
+		.state  = RUN,
+		.doc    = "Ethernet interface number",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_no_int_vlan[] = {
-	{vlan_range,			15,	valid_vlan,	cmd_no_int_vlan,	RUN,		"Vlan interface number",						NULL},
-	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+	{
+		.name   = vlan_range,
+		.priv   = 15,
+		.valid  = valid_vlan,
+		.func   = cmd_no_int_vlan,
+		.state  = RUN,
+		.doc    = "Vlan interface number",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_int_vlan[] = {
-	{vlan_range,			15,	valid_vlan,	cmd_int_vlan,		RUN,		"Vlan interface number",						NULL},
-	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+	{
+		.name   = vlan_range,
+		.priv   = 15,
+		.valid  = valid_vlan,
+		.func   = cmd_int_vlan,
+		.state  = RUN,
+		.doc    = "Vlan interface number",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_no_int[] = {
-	{"ethernet",			15,	NULL,			NULL,				0,			"Ethernet IEEE 802.3",							sh_no_int_eth},
-	{"vlan",				15,	NULL,			NULL,				0,			"LMS Vlans",									sh_no_int_vlan},
-	{"WORD",				15,	valid_any_word,	cmd_no_int_any,		RUN,		"Any interface name",							NULL},
-	{NULL,					0,	NULL,			NULL,				0,			NULL,											NULL}
+	{
+		.name   = "ethernet",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Ethernet IEEE 802.3",
+		.subcmd = sh_no_int_eth
+	},
+	{
+		.name   = "vlan",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "LMS Vlans",
+		.subcmd = sh_no_int_vlan
+	},
+	{
+		.name   = "WORD",
+		.priv   = 15,
+		.valid  = valid_any_word,
+		.func   = cmd_no_int_any,
+		.state  = RUN,
+		.doc    = "Any interface name",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
 sw_command_t sh_conf_int[] = {
-	{"ethernet",			15,	NULL,			NULL,				0,			"Ethernet IEEE 802.3",							sh_int_eth},
-	{"vlan",				15,	NULL,			NULL,				0,			"LMS Vlans",									sh_int_vlan},
-	{"WORD",				15,	valid_any_word,	cmd_int_any,		RUN,		"Any interface name",							NULL},
-	{NULL,					0,	NULL,			NULL,				0,			NULL,											NULL}
+	{
+		.name   = "ethernet",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Ethernet IEEE 802.3",
+		.subcmd = sh_int_eth
+	},
+	{
+		.name   = "vlan",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "LMS Vlans",
+		.subcmd = sh_int_vlan
+	},
+	{
+		.name   = "WORD",
+		.priv   = 15,
+		.valid  = valid_any_word,
+		.func   = cmd_int_any,
+		.state  = RUN,
+		.doc    = "Any interface name",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_macstatic_ifp[] = {
-	{eth_range,				15,	valid_eth,	cmd_macstatic,		RUN|PTCNT,	"Ethernet interface number",					NULL},
-	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+	{
+		.name   = eth_range,
+		.priv   = 15,
+		.valid  = valid_eth,
+		.func   = cmd_macstatic,
+		.state  = RUN|PTCNT,
+		.doc    = "Ethernet interface number",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_macstatic_if[] = {
-	{"ethernet",			15,	NULL,		NULL,				0,			"Ethernet IEEE 802.3",							sh_macstatic_ifp},
-	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+	{
+		.name   = "ethernet",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Ethernet IEEE 802.3",
+		.subcmd = sh_macstatic_ifp
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_macstatic_i[] = {
-	{"interface",			15,	NULL,		NULL,				0,			"interface",									sh_macstatic_if},
-	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+	{
+		.name   = "interface",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "interface",
+		.subcmd = sh_macstatic_if
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_macstatic_vp[] = {
-	{vlan_range,			15,	valid_vlan,	NULL,				PTCNT,		"VLAN id of mac address table",					sh_macstatic_i},
-	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+	{
+		.name   = vlan_range,
+		.priv   = 15,
+		.valid  = valid_vlan,
+		.func   = NULL,
+		.state  = PTCNT,
+		.doc    = "VLAN id of mac address table",
+		.subcmd = sh_macstatic_i
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_macstatic_v[] = {
-	{"vlan",				15,	NULL,		NULL,				0,			"VLAN keyword",									sh_macstatic_vp},
-	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+	{
+		.name   = "vlan",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "VLAN keyword",
+		.subcmd = sh_macstatic_vp
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_macstatic[] = {
-	{"H.H.H",				15,	valid_mac,	NULL,				PTCNT,		"48 bit mac address",							sh_macstatic_v},
-	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+	{
+		.name   = "H.H.H",
+		.priv   = 15,
+		.valid  = valid_mac,
+		.func   = NULL,
+		.state  = PTCNT,
+		.doc    = "48 bit mac address",
+		.subcmd = sh_macstatic_v
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_nomac[] = {
-	{"aging-time",			15,	NULL,		cmd_set_noaging,	RUN,		"Set MAC address table entry maximum age",		NULL},
-	{"static",				15,	NULL,		NULL,				0,			"static keyword",								sh_macstatic},
-	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+	{
+		.name   = "aging-time",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = cmd_set_noaging,
+		.state  = RUN,
+		.doc    = "Set MAC address table entry maximum age",
+		.subcmd = NULL
+	},
+	{
+		.name   = "static",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "static keyword",
+		.subcmd = sh_macstatic
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_macaging[] = {
-	{"<10-1000000>",		15,	valid_age,	cmd_set_aging,		RUN,		"Maximum age in seconds",		NULL},
-	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+	{
+		.name   = "<10-1000000>",
+		.priv   = 15,
+		.valid  = valid_age,
+		.func   = cmd_set_aging,
+		.state  = RUN,
+		.doc    = "Maximum age in seconds",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 static sw_command_t sh_mac[] = {
-	{"aging-time",			15,	NULL,		NULL,				0,			"Set MAC address table entry maximum age",		sh_macaging},
-	{"static",				15,	NULL,		NULL,				0,			"static keyword",								sh_macstatic},
-	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+	{
+		.name   = "aging-time",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Set MAC address table entry maximum age",
+		.subcmd = sh_macaging
+	},
+	{
+		.name   = "static",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "static keyword",
+		.subcmd = sh_macstatic
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_hostname[] = {
-	{"WORD",				15,	valid_host,	cmd_hostname,		RUN|PTCNT,	"This system's network name",					NULL},
-	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+	{
+		.name   = "WORD",
+		.priv   = 15,
+		.valid  = valid_host,
+		.func   = cmd_hostname,
+		.state  = RUN|PTCNT,
+		.doc    = "This system's network name",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_noenlev[] = {
-	{priv_range,			15,	valid_priv,	cmd_noensecret_lev,	RUN|PTCNT,	"Level number",									NULL},
-	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+	{
+		.name   = priv_range,
+		.priv   = 15,
+		.valid  = valid_priv,
+		.func   = cmd_noensecret_lev,
+		.state  = RUN|PTCNT,
+		.doc    = "Level number",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_noensecret[] = {
-	{"level",				15,	NULL,		NULL,				0,			"Set exec level password",						sh_noenlev},
-	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+	{
+		.name   = "level",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Set exec level password",
+		.subcmd = sh_noenlev
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_noenable[] = {
-	{"secret",				15,	NULL,		cmd_noensecret,		RUN,		"Assign the privileged level secret",			sh_noensecret},
-	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+	{
+		.name   = "secret",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = cmd_noensecret,
+		.state  = RUN,
+		.doc    = "Assign the privileged level secret",
+		.subcmd = sh_noensecret
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_novlan[] = {
-	{"WORD",				15,	valid_vlan,	cmd_novlan,			RUN,		"ISL VLAN IDs 1-4094",							NULL},
-	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+	{
+		.name   = "WORD",
+		.priv   = 15,
+		.valid  = valid_vlan,
+		.func   = cmd_novlan,
+		.state  = RUN,
+		.doc    = "ISL VLAN IDs 1-4094",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_no_cdp[] = {
-	{"advertise-v2",		15,	NULL,		cmd_no_cdp_v2,		RUN,		"CDP sends version-2 advertisements",			NULL},
-	{"run",					15,	NULL,		cmd_no_cdp_run,		RUN,		"",												NULL},
-	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+	{
+		.name   = "advertise-v2",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = cmd_no_cdp_v2,
+		.state  = RUN,
+		.doc    = "CDP sends version-2 advertisements",
+		.subcmd = NULL
+	},
+	{
+		.name   = "run",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = cmd_no_cdp_run,
+		.state  = RUN,
+		.doc    = "",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_no[] = {
-	{"cdp",					15, NULL,		NULL,				0, 			"Global CDP configuration subcommands",			sh_no_cdp},
-	{"enable",				15,	NULL,		NULL,				0,			"Modify enable password parameters",			sh_noenable},
-	{"hostname",			15,	NULL,		cmd_nohostname,		RUN,		"Set system's network name",					NULL},
-	{"interface",			15,	NULL,		NULL,				0,			"Select an interface to configure",				sh_no_int},
-	{"mac-address-table",	15,	NULL,		NULL,				0,			"Configure the MAC address table",				sh_nomac},
-	{"vlan",				15,	NULL,		NULL,				0,			"Vlan commands",								sh_novlan},
-	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+	{
+		.name   = "cdp",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Global CDP configuration subcommands",
+		.subcmd = sh_no_cdp
+	},
+	{
+		.name   = "enable",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Modify enable password parameters",
+		.subcmd = sh_noenable
+	},
+	{
+		.name   = "hostname",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = cmd_nohostname,
+		.state  = RUN,
+		.doc    = "Set system's network name",
+		.subcmd = NULL
+	},
+	{
+		.name   = "interface",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Select an interface to configure",
+		.subcmd = sh_no_int
+	},
+	{
+		.name   = "mac-address-table",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Configure the MAC address table",
+		.subcmd = sh_nomac
+	},
+	{
+		.name   = "vlan",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Vlan commands",
+		.subcmd = sh_novlan
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_secret_line[] = {
-	{"LINE",				15,	valid_lin,	cmd_setenpw,		RUN,		"The UNENCRYPTED (cleartext) 'enable' secret",	NULL},
-	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+	{
+		.name   = "LINE",
+		.priv   = 15,
+		.valid  = valid_lin,
+		.func   = cmd_setenpw,
+		.state  = RUN,
+		.doc    = "The UNENCRYPTED (cleartext) 'enable' secret",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_secret_lineenc[] = {
-	{"LINE",				15,	valid_lin,	cmd_setenpw,		RUN,		"The ENCRYPTED 'enable' secret string",			NULL},
-	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+	{
+		.name   = "LINE",
+		.priv   = 15,
+		.valid  = valid_lin,
+		.func   = cmd_setenpw,
+		.state  = RUN,
+		.doc    = "The ENCRYPTED 'enable' secret string",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_secret_linelev[] = {
-	{"LINE",				15,	valid_lin,	cmd_setenpwlev,		RUN,		"The UNENCRYPTED (cleartext) 'enable' secret",	NULL},
-	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+	{
+		.name   = "LINE",
+		.priv   = 15,
+		.valid  = valid_lin,
+		.func   = cmd_setenpwlev,
+		.state  = RUN,
+		.doc    = "The UNENCRYPTED (cleartext) 'enable' secret",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_secret_lineenclev[] = {
-	{"LINE",				15,	valid_lin,	cmd_setenpwlev,		RUN,		"The ENCRYPTED 'enable' secret string",			NULL},
-	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+	{
+		.name   = "LINE",
+		.priv   = 15,
+		.valid  = valid_lin,
+		.func   = cmd_setenpwlev,
+		.state  = RUN,
+		.doc    = "The ENCRYPTED 'enable' secret string",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_secret_lev_x[] = {
-	{"0",					15,	valid_0,	NULL,				PTCNT|CMPL,	"Specifies an UNENCRYPTED password will follow",sh_secret_linelev},
-	{"5",					15,	valid_5,	NULL,				PTCNT|CMPL,	"Specifies an ENCRYPTED secret will follow",	sh_secret_lineenclev},
-	{"LINE",				15,	valid_lin,	cmd_setenpwlev,		RUN,		"The UNENCRYPTED (cleartext) 'enable' secret",	NULL},
-	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+	{
+		.name   = "0",
+		.priv   = 15,
+		.valid  = valid_0,
+		.func   = NULL,
+		.state  = PTCNT|CMPL,
+		.doc    = "Specifies an UNENCRYPTED password will follow",
+		.subcmd = sh_secret_linelev
+	},
+	{
+		.name   = "5",
+		.priv   = 15,
+		.valid  = valid_5,
+		.func   = NULL,
+		.state  = PTCNT|CMPL,
+		.doc    = "Specifies an ENCRYPTED secret will follow",
+		.subcmd = sh_secret_lineenclev
+	},
+	{
+		.name   = "LINE",
+		.priv   = 15,
+		.valid  = valid_lin,
+		.func   = cmd_setenpwlev,
+		.state  = RUN,
+		.doc    = "The UNENCRYPTED (cleartext) 'enable' secret",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_secret_level[] = {
-	{priv_range,			15,	valid_priv,	NULL,				PTCNT,		"Level number",									sh_secret_lev_x},
-	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+	{
+		.name   = priv_range,
+		.priv   = 15,
+		.valid  = valid_priv,
+		.func   = NULL,
+		.state  = PTCNT,
+		.doc    = "Level number",
+		.subcmd = sh_secret_lev_x
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_secret[] = {
-	{"0",					15,	valid_0,	NULL,				PTCNT|CMPL,	"Specifies an UNENCRYPTED password will follow",sh_secret_line},
-	{"5",					15,	valid_5,	NULL,				PTCNT|CMPL,	"Specifies an ENCRYPTED secret will follow",	sh_secret_lineenc},
-	{"LINE",				15,	valid_lin,	cmd_setenpw,		RUN,		"The UNENCRYPTED (cleartext) 'enable' secret",	NULL},
-	{"level",				15,	NULL,		NULL,				0,			"Set exec level password",						sh_secret_level},
-	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+	{
+		.name   = "0",
+		.priv   = 15,
+		.valid  = valid_0,
+		.func   = NULL,
+		.state  = PTCNT|CMPL,
+		.doc    = "Specifies an UNENCRYPTED password will follow",
+		.subcmd = sh_secret_line
+	},
+	{
+		.name   = "5",
+		.priv   = 15,
+		.valid  = valid_5,
+		.func   = NULL,
+		.state  = PTCNT|CMPL,
+		.doc    = "Specifies an ENCRYPTED secret will follow",
+		.subcmd = sh_secret_lineenc
+	},
+	{
+		.name   = "LINE",
+		.priv   = 15,
+		.valid  = valid_lin,
+		.func   = cmd_setenpw,
+		.state  = RUN,
+		.doc    = "The UNENCRYPTED (cleartext) 'enable' secret",
+		.subcmd = NULL
+	},
+	{
+		.name   = "level",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Set exec level password",
+		.subcmd = sh_secret_level
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_enable[] = {
-	{"secret",				15,	NULL,		NULL,				0,			"Assign the privileged level secret",			sh_secret},
-	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+	{
+		.name   = "secret",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Assign the privileged level secret",
+		.subcmd = sh_secret
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_conf_line_vty2[] = {
-	{vty_range,			15,	valid_vtyno2,	cmd_linevty,		RUN|PTCNT,	"Last Line number",									NULL},
-	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+	{
+		.name   = vty_range,
+		.priv   = 15,
+		.valid  = valid_vtyno2,
+		.func   = cmd_linevty,
+		.state  = RUN|PTCNT,
+		.doc    = "Last Line number",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_conf_line_vty1[] = {
-	{"<0-15>",				15,	valid_vtyno1,NULL,				PTCNT,		"First Line number",							sh_conf_line_vty2},
-	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
-
+	{
+		.name   = "<0-15>",
+		.priv   = 15,
+		.valid  = valid_vtyno1,
+		.func   = NULL,
+		.state  = PTCNT,
+		.doc    = "First Line number",
+		.subcmd = sh_conf_line_vty2
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_conf_line[] = {
-	{"vty",					15,	NULL,		NULL,				0,			"Virtual terminal",								sh_conf_line_vty1},
-	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+	{
+		.name   = "vty",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Virtual terminal",
+		.subcmd = sh_conf_line_vty1
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_vlan[] = {
-	{"WORD",				15,	valid_vlan,	cmd_vlan,			RUN,		"ISL VLAN IDs 1-4094",							NULL},
-	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+	{
+		.name   = "WORD",
+		.priv   = 15,
+		.valid  = valid_vlan,
+		.func   = cmd_vlan,
+		.state  = RUN,
+		.doc    = "ISL VLAN IDs 1-4094",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_cdp_holdtime[] = {
-	{"<10-255>",			15,	valid_holdtime,		cmd_cdp_holdtime,	RUN,	"Length  of time  (in sec) that receiver must keep this packet",	NULL},
-	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+	{
+		.name   = "<10-255>",
+		.priv   = 15,
+		.valid  = valid_holdtime,
+		.func   = cmd_cdp_holdtime,
+		.state  = RUN,
+		.doc    = "Length  of time  (in sec) that receiver must keep this packet",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_cdp_timer[] = {
-	{"<5-254>",				15,	valid_timer,		cmd_cdp_timer,		RUN,	"Rate at which CDP packets are sent (in  sec)",	NULL},
-	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+	{
+		.name   = "<5-254>",
+		.priv   = 15,
+		.valid  = valid_timer,
+		.func   = cmd_cdp_timer,
+		.state  = RUN,
+		.doc    = "Rate at which CDP packets are sent (in  sec)",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_cdp[] = {
-	{"advertise-v2",		15,	NULL,		cmd_cdp_version,	RUN,		"CDP sends version-2 advertisements",			NULL},
-	{"holdtime",			15,	NULL,		NULL,				0,			"Specify the holdtime (in sec) to be sent in packets", sh_cdp_holdtime},
-	{"timer",				15,	NULL,		NULL,				0,			"Specify the rate at which CDP packets are sent (in sec)", sh_cdp_timer},
-	{"run",					15,	NULL,		cmd_cdp_run,		RUN,		"",												NULL},
-	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+	{
+		.name   = "advertise-v2",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = cmd_cdp_version,
+		.state  = RUN,
+		.doc    = "CDP sends version-2 advertisements",
+		.subcmd = NULL
+	},
+	{
+		.name   = "holdtime",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Specify the holdtime (in sec) to be sent in packets",
+		.subcmd = sh_cdp_holdtime
+	},
+	{
+		.name   = "timer",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Specify the rate at which CDP packets are sent (in sec)",
+		.subcmd = sh_cdp_timer
+	},
+	{
+		.name   = "run",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = cmd_cdp_run,
+		.state  = RUN,
+		.doc    = "",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
 /* main (config) mode commands */
 static sw_command_t sh[] = {
-	{"cdp",					15,	NULL,		NULL,				0,			"Global CDP configuration subcommands",			sh_cdp},
-	{"enable",				15,	NULL,		NULL,				0,			"Modify enable password parameters",			sh_enable},
-	{"end",					15,	NULL,		cmd_end,			RUN,		"Exit from configure mode",						NULL},
-	{"exit",				15,	NULL,		cmd_end,			RUN,		"Exit from configure mode",						NULL},
-	{"hostname",			15,	NULL,		NULL,				0,			"Set system's network name",					sh_hostname},
-	{"interface",			15,	NULL,		NULL,				0,			"Select an interface to configure",				sh_conf_int},
-	{"line",				15,	NULL,		NULL,				0,			"Configure a terminal line",					sh_conf_line},	
-	{"mac-address-table",	15,	NULL,		NULL,				0,			"Configure the MAC address table",				sh_mac},
-	{"no",					15,	valid_no,	NULL,				PTCNT|CMPL, "Negate a command or set its defaults",			sh_no},
-	{"vlan",				15, NULL,		NULL,				0,			"Vlan commands",								sh_vlan},
-	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+	{
+		.name   = "cdp",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Global CDP configuration subcommands",
+		.subcmd = sh_cdp
+	},
+	{
+		.name   = "enable",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Modify enable password parameters",
+		.subcmd = sh_enable
+	},
+	{
+		.name   = "end",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = cmd_end,
+		.state  = RUN,
+		.doc    = "Exit from configure mode",
+		.subcmd = NULL
+	},
+	{
+		.name   = "exit",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = cmd_end,
+		.state  = RUN,
+		.doc    = "Exit from configure mode",
+		.subcmd = NULL
+	},
+	{
+		.name   = "hostname",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Set system's network name",
+		.subcmd = sh_hostname
+	},
+	{
+		.name   = "interface",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Select an interface to configure",
+		.subcmd = sh_conf_int
+	},
+	{
+		.name   = "line",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Configure a terminal line",
+		.subcmd = sh_conf_line
+	},
+	{
+		.name   = "mac-address-table",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Configure the MAC address table",
+		.subcmd = sh_mac
+	},
+	{
+		.name   = "no",
+		.priv   = 15,
+		.valid  = valid_no,
+		.func   = NULL,
+		.state  = PTCNT|CMPL,
+		.doc    = "Negate a command or set its defaults",
+		.subcmd = sh_no
+	},
+	{
+		.name   = "vlan",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Vlan commands",
+		.subcmd = sh_vlan
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_name_vlan[] = {
-	{"WORD",				15,	valid_regex,cmd_namevlan,		RUN|PTCNT,	"The ascii name for the VLAN",					NULL},
-	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+	{
+		.name   = "WORD",
+		.priv   = 15,
+		.valid  = valid_regex,
+		.func   = cmd_namevlan,
+		.state  = RUN|PTCNT,
+		.doc    = "The ascii name for the VLAN",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
 static sw_command_t sh_vlan_no[] = {
-	{"name",				15,	NULL,		cmd_nonamevlan,		RUN,		"Ascii name of the VLAN",						NULL},
-	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+	{
+		.name   = "name",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = cmd_nonamevlan,
+		.state  = RUN,
+		.doc    = "Ascii name of the VLAN",
+		.subcmd = NULL
+	},
+	SW_COMMAND_LIST_END
 };
 
 /* (config-vlan) commands */
 static sw_command_t sh_cfg_vlan[] = {
-	{"exit",				15,	NULL,		cmd_exit,			RUN,		"Apply changes, bump revision number, and exit mode",NULL},
-	{"name",				15,	NULL,		NULL,				0,			"Ascii name of the VLAN",						sh_name_vlan},
-	{"no",					15,	NULL,		NULL,				0,			"Negate a command or set its defaults",			sh_vlan_no},
-	{"vlan",				15, NULL,		NULL,				0,			"Vlan commands",								sh_vlan},
-	{NULL,					0,	NULL,		NULL,				0,			NULL,											NULL}
+	{
+		.name   = "exit",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = cmd_exit,
+		.state  = RUN,
+		.doc    = "Apply changes, bump revision number, and exit mode",
+		.subcmd = NULL
+	},
+	{
+		.name   = "name",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Ascii name of the VLAN",
+		.subcmd = sh_name_vlan
+	},
+	{
+		.name   = "no",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Negate a command or set its defaults",
+		.subcmd = sh_vlan_no
+	},
+	{
+		.name   = "vlan",
+		.priv   = 15,
+		.valid  = NULL,
+		.func   = NULL,
+		.state  = 0,
+		.doc    = "Vlan commands",
+		.subcmd = sh_vlan
+	},
+	SW_COMMAND_LIST_END
 };
 
 sw_command_root_t command_root_config = 				{"%s(config)%c",			sh};

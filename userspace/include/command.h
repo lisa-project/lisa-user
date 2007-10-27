@@ -57,6 +57,7 @@
 typedef void (*sw_command_handler)(FILE *, char **);
 typedef int (*sw_validation_func)(char *, char);
 
+/* This structure defines a cli command */
 typedef struct cmd {
 	const char *name;					/* User printable name of the function */
 	int priv;               	/* Minimum privilege level to execute this */
@@ -66,6 +67,9 @@ typedef struct cmd {
 	const char *doc;					/* Documentation for this function */
 	struct cmd *subcmd;			/* Sub-commands */
 } sw_command_t;
+
+/* End marker for a set of commands */
+#define SW_COMMAND_LIST_END { NULL, 0, NULL, NULL, 0, NULL, NULL}
 
 typedef struct root {
     const char *prompt;
