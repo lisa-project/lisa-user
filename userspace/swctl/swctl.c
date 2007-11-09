@@ -131,17 +131,26 @@ int main(int argc, char **argv) {
 			usage();
 			return 0;
 		}
+		status = cfg_init();
+		assert(!status);
+
+		cfg_lock();
+		if (cfg_set_if_tag(argv[2], argv[3], buf)) {
+			cfg_unlock();
+			fprintf(stderr, "Tag %s already assigned to %s\n", argv[3], buf);
+			return 1;
+		}
+
 		user_arg.cmd = SWCFG_ADDIF;
 		user_arg.if_name = argv[2];
 		status = ioctl(sock, SIOCSWCFG, &user_arg);
 		if (status) {
+			cfg_set_if_tag(argv[2], NULL, NULL);
+			cfg_unlock();
 			perror("add failed");
 			return 1;
 		}
-		if (cfg_set_if_tag(argv[2], argv[3], buf)) {
-			fprintf(stderr, "Tag %s already assigned to %s\n", argv[3], buf);
-			return 1;
-		}
+		cfg_unlock();
 		return 0;
 	}
 
@@ -150,12 +159,20 @@ int main(int argc, char **argv) {
 			usage();
 			return 0;
 		}
+		status = cfg_init();
+		assert(!status);
+		cfg_lock();
+
 		user_arg.cmd = SWCFG_DELIF;
 		user_arg.if_name = argv[2];
 		status = ioctl(sock, SIOCSWCFG, &user_arg);
-		if(status)
+		if (status) {
+			cfg_unlock();
 			perror("del failed");
+			return 1;
+		}
 		cfg_set_if_tag(argv[2], NULL, NULL);
+		cfg_unlock();
 		return 0;
 	}
 

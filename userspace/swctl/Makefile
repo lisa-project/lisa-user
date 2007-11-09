@@ -1,4 +1,4 @@
-CFLAGS = -I$(KDIR)/include -I ../include -Wall
+CFLAGS = -I$(KDIR)/include -I ../include -Wall -g
 LDFLAGS = -L../cli -lswcli
 
 .PHONY: all clean

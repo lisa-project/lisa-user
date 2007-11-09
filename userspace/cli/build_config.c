@@ -382,7 +382,7 @@ int build_config(FILE *out, int skip_tagged_if) {
 	assert(f != NULL);
 	while(fgets(buf, sizeof(buf), f) != NULL) {
 		char *p;
-		char tag[CLI_MAX_TAG];
+		char tag[CLI_MAX_TAG + 1];
 
 		/* parse interface name from /proc/net/dev line */
 		if ((p = strchr(buf, ':')) == NULL)

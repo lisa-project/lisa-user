@@ -43,7 +43,6 @@ struct mm_private *mm_create(const char *name, size_t static_size, size_t dynami
 {
 	struct mm_private *ret;
 	int unlock = 0, unlink = 0; /* cleanup flags */
-	void *mm_area;
 
 	ret = malloc(sizeof(struct mm_private));
 	if (NULL == ret)
@@ -70,15 +69,15 @@ struct mm_private *mm_create(const char *name, size_t static_size, size_t dynami
 			ret->mapped_size = sizeof(struct mm_shared);
 			if (-1 == ret->fd)
 				break;
-			mm_area = mm_map(ret);
-			if (NULL == mm_area)
+			ret->area = mm_map(ret);
+			if (NULL == ret->area)
 				break;
 			ret->mapped_size = sizeof(struct mm_shared) +
-				((struct mm_shared *)mm_area)->static_size +
-				((struct mm_shared *)mm_area)->dynamic_size;
-			munmap(mm_area, sizeof(struct mm_shared));
-			mm_area = mm_map(ret);
-			if (NULL == mm_area)
+				((struct mm_shared *)ret->area)->static_size +
+				((struct mm_shared *)ret->area)->dynamic_size;
+			munmap(ret->area, sizeof(struct mm_shared));
+			ret->area = mm_map(ret);
+			if (NULL == ret->area)
 				break;
 			ret->init = 0;
 		} else {
@@ -91,20 +90,19 @@ struct mm_private *mm_create(const char *name, size_t static_size, size_t dynami
 
 			if (-1 == ftruncate(ret->fd, ret->mapped_size))
 				break;
-			mm_area = mm_map(ret);
-			if (NULL == mm_area)
+			ret->area = mm_map(ret);
+			if (NULL == ret->area)
 				break;
 
 			/* initialize shared data and dynamic allocator */
-			((struct mm_shared *)mm_area)->static_size = static_size;
-			((struct mm_shared *)mm_area)->dynamic_size = ret->mapped_size -
+			((struct mm_shared *)ret->area)->static_size = static_size;
+			((struct mm_shared *)ret->area)->dynamic_size = ret->mapped_size -
 				(sizeof(struct mm_shared) + static_size);
-			MM_INIT_LIST_HEAD(ret, mm_ptr(ret, &((struct mm_shared *)mm_area)->lh));
+			MM_INIT_LIST_HEAD(ret, mm_ptr(ret, &((struct mm_shared *)ret->area)->lh));
 			ret->init = 1;
 		}
 
 		mm_unlock(ret);
-		ret->area = mm_area;
 		return ret;
 	} while(0);
 

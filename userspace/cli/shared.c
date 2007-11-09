@@ -34,12 +34,26 @@
 
 #include "shared.h"
 
+/* the following need to be moved to shared.h as soon as we figure
+ * out how to fix the kernel/userspace headers mixing crap
+ */
+#define IFNAMSIZ 16
+/* arghhhh this is really nasty */
+
+struct if_tag {
+	char if_name[IFNAMSIZ];
+	char tag[CLI_MAX_TAG + 1];
+	struct mm_list_head lh;
+};
+/* end of things to be moved */
+
 extern int errno;
 
 struct mm_private *cfg = NULL;
 
 void cfg_init_data(void) {
 	memset(CFG, 0, sizeof(struct cli_config));
+	MM_INIT_LIST_HEAD(cfg, mm_ptr(cfg, &CFG->if_tags));
 }
 
 int cfg_init(void) {
@@ -106,10 +120,89 @@ int read_key() {
 const char config_file[] = "/etc/lisa/config.text";
 const char config_tags_path[] = "/etc/lisa/tags";
 
+static mm_ptr_t __cfg_get_if_tag(char *if_name) {
+	mm_ptr_t ret;
+
+	mm_list_for_each(cfg, ret, mm_ptr(cfg, &CFG->if_tags)) {
+		struct if_tag *tag =
+			mm_addr(cfg, mm_list_entry(ret, struct if_tag, lh));
+		if (!strcmp(if_name, tag->if_name))
+			return ret;
+	}
+
+	return MM_NULL;
+}
+
 int cfg_get_if_tag(char *if_name, char *tag) {
+	mm_ptr_t ptr = __cfg_get_if_tag(if_name);
+	struct if_tag *s_tag =
+		mm_addr(cfg, mm_list_entry(ptr, struct if_tag, lh));
+
+	if (MM_NULL == ptr)
+		return 1;
+	strcpy(tag, s_tag->tag);
+
 	return 0;
 }
 
+static int __cfg_del_if_tag(char *if_name) {
+	mm_ptr_t lh = __cfg_get_if_tag(if_name);
+
+	if (MM_NULL == lh)
+		return 1;
+	mm_list_del(cfg, lh);
+	mm_free(cfg, mm_list_entry(lh, struct if_tag, lh));
+	return 0;
+}
+
+static mm_ptr_t __cfg_get_tag_if(char *tag) {
+	mm_ptr_t ret;
+
+	mm_list_for_each(cfg, ret, mm_ptr(cfg, &CFG->if_tags)) {
+		struct if_tag *s_tag =
+			mm_addr(cfg, mm_list_entry(ret, struct if_tag, lh));
+		if (!strcmp(tag, s_tag->tag))
+			return ret;
+	}
+
+	return MM_NULL;
+}
+
 int cfg_set_if_tag(char *if_name, char *tag, char *other_if) {
+	mm_ptr_t lh;
+	struct if_tag *s_tag;
+
+	if (NULL == tag)
+		return __cfg_del_if_tag(if_name);
+
+	lh = __cfg_get_tag_if(tag);
+	if (MM_NULL != lh) {
+		if (NULL != other_if) {
+			s_tag = mm_addr(cfg, mm_list_entry(lh, struct if_tag, lh));
+			strcpy(other_if, s_tag->if_name);
+		}
+		return 1;
+	}
+
+	lh = __cfg_get_if_tag(if_name);
+	if (MM_NULL != lh) {
+		s_tag = mm_addr(cfg, mm_list_entry(lh, struct if_tag, lh));
+		strncpy(s_tag->tag, tag, CLI_MAX_TAG);
+		s_tag->tag[CLI_MAX_TAG] = '\0';
+		return 0;
+	}
+
+	s_tag = mm_addr(cfg, mm_alloc(cfg, sizeof(struct if_tag)));
+	if (NULL == s_tag) {
+		if (NULL != other_if)
+			*other_if = '\0';
+		return 1;
+	}
+
+	strncpy(s_tag->if_name, if_name, IFNAMSIZ);
+	strncpy(s_tag->tag, tag, CLI_MAX_TAG);
+	s_tag->tag[CLI_MAX_TAG] = '\0';
+	mm_list_add(cfg, mm_ptr(cfg, &s_tag->lh), mm_ptr(cfg, &CFG->if_tags));
+
 	return 0;
 }

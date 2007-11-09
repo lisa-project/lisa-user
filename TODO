@@ -15,6 +15,16 @@ BUG FIXING
 2) no interface ... mumu
 3) show run / start nu arata interfetele != eth, vlan
 
+BUG FIX build userspace
+
+1) flagul "-g" e pus dupa principii "random"; ar trebui sa se faca in toate Makefile
+o regula de genul "daca e definit DEBUG, atunci CFLAGS+= -g; se compileaza cu DEBUG=1 make
+pentru debugging
+
+2) daca se fac modificari in mm.c si se da make (general, in userspace), nu se recompileaza
+nimic; ar trebui buildate intai chestiile din lib, apoi restul sa aiba dependente
+
+
 XEN INTEGRATION
 
 1) Creare domeniu / Start domeniu existent (Script: vif-lisa)

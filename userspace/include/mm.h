@@ -57,12 +57,12 @@ struct mm_chunk {
 
 static __inline__ void *mm_addr(struct mm_private *mm, mm_ptr_t p)
 {
-	return (void *)(mm->area + p);
+	return MM_NULL == p ? NULL : (void *)(mm->area + p);
 }
 
 static __inline__ mm_ptr_t mm_ptr(struct mm_private *mm, void *a)
 {
-	return (char *)a - mm->area;
+	return NULL == a ? MM_NULL : (char *)a - mm->area;
 }
 
 static __inline__ void __mm_lock(struct mm_private *mm)
@@ -222,5 +222,8 @@ static __inline__ int mm_list_empty(struct mm_private *mm, mm_ptr_t head)
 	     pos = n, n = mm_addr(mm, mm_list_entry(pos->member.next, typeof(*pos), member)))
 
 extern struct mm_private *mm_create(const char *, size_t, size_t);
+extern mm_ptr_t mm_alloc(struct mm_private *, size_t);
+extern void mm_free(struct mm_private *, mm_ptr_t);
+extern mm_ptr_t mm_realloc(struct mm_private *, mm_ptr_t, size_t);
 
 #endif

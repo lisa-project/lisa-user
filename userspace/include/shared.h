@@ -36,6 +36,7 @@ struct cli_vty_config {
 struct cli_config {
 	char enable_secret[CLI_MAX_ENABLE + 1][CLI_SECRET_LEN + 1];
 	struct cli_vty_config vty[CLI_MAX_VTY + 1];
+	struct mm_list_head if_tags;
 };
 
 extern struct mm_private *cfg;
