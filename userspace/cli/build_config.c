@@ -350,7 +350,7 @@ void dump_mac_aging_time(FILE *out) {
 		fprintf(out, "mac-address-table aging-time %li\n!\n", age);
 }
 
-int build_config(FILE *out, int skip_tagged_if) {
+int build_config(FILE *out, int include_tagged_if) {
 	FILE *f;
 	char buf[4096];
 	int i;
@@ -383,6 +383,7 @@ int build_config(FILE *out, int skip_tagged_if) {
 	while(fgets(buf, sizeof(buf), f) != NULL) {
 		char *p;
 		char tag[CLI_MAX_TAG + 1];
+		int status = 0;
 
 		/* parse interface name from /proc/net/dev line */
 		if ((p = strchr(buf, ':')) == NULL)
@@ -390,25 +391,39 @@ int build_config(FILE *out, int skip_tagged_if) {
 		*p = '\0';
 		for(p = buf; *p == ' '; p++);
 
-		if (cfg_get_if_tag(p, tag)) {
+		do {
 			char path[PATH_MAX];
 			FILE *tag_file;
 
-			if (skip_tagged_if)
-				continue;
+			if (cfg_get_if_tag(p, tag))
+				break;
+
+			printf("if_tag: if='%s' tag='%s'\n", p, tag);
+
+			if (include_tagged_if) {
+				fprintf(out, "!\n!interface %s is tagged as \"%s\"\n", p, tag);
+				break;
+			}
 
 			if (snprintf(path, sizeof(path), "%s/%s", config_tags_path, tag) > sizeof(path)) {
-				continue;
-				/* FIXME do something more intelligent :) */
+				status = 1;
+				break;
 			}
 
 			if (NULL == (tag_file = fopen(path, "w+"))) {
-				continue;
-				/* FIXME do something more intelligent :) */
+				status = 1;
+				break;
 			}
 
 			build_int_eth_config(tag_file, p, 0);
 			fclose(tag_file);
+			status = 2;
+		} while (0);
+
+		switch (status) {
+		case 1:
+			fprintf(out, "!!cannot write separate config file for %s\n", p);
+		case 2:
 			continue;
 		}
 

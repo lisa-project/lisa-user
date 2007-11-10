@@ -15,6 +15,18 @@ BUG FIXING
 2) no interface ... mumu
 3) show run / start nu arata interfetele != eth, vlan
 
+Campurile de tip char[] cu lungime cunoscuta trebuie re-verificate, pentru a stabili
+(si a fi consecventi) una din urmatoarele reguli:
+* declaram campurile avand dimensiune exact cat constanta (ex. IFNAMSIZ) si folosim
+  intotdeauna strncpy cu constanta; string-ul NU este null terminated daca are exact
+  lungimea din constanta -> aici pot sa apara probleme pentru ca atunci cand se
+  "citeste" (adica se copiaza intr-un alt buffer "suficient de mare") string-ul
+  rezultat nu va fi de asemenea null-terminated
+* declaram campurile avand dimensiune constanta + 1, folosim strncpy pentru scriere
+  in ele (si punem '\0' in str[CONSTANTA] pentru a ne asigura ca e null-terminated);
+  folosim strcpy pentru citire (pentru ca este null terminated)
+
+
 BUG FIX build userspace
 
 1) flagul "-g" e pus dupa principii "random"; ar trebui sa se faca in toate Makefile

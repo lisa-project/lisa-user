@@ -169,7 +169,7 @@ static mm_ptr_t __cfg_get_tag_if(char *tag) {
 }
 
 int cfg_set_if_tag(char *if_name, char *tag, char *other_if) {
-	mm_ptr_t lh;
+	mm_ptr_t lh, mm_s_tag;
 	struct if_tag *s_tag;
 
 	if (NULL == tag)
@@ -192,7 +192,11 @@ int cfg_set_if_tag(char *if_name, char *tag, char *other_if) {
 		return 0;
 	}
 
-	s_tag = mm_addr(cfg, mm_alloc(cfg, sizeof(struct if_tag)));
+	mm_s_tag = mm_alloc(cfg, sizeof(struct if_tag));
+	/* first save mm pointer obtained from mm_alloc, then compute s_tag
+	 * pointer, because mm_alloc() can change cfg->area if the shm area
+	 * is extended (refer to README.mm for details) */
+	s_tag = mm_addr(cfg, mm_s_tag);
 	if (NULL == s_tag) {
 		if (NULL != other_if)
 			*other_if = '\0';
