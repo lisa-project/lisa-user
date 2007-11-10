@@ -173,9 +173,17 @@ static void cmd_no_int_any(FILE *out, char **argv) {
 
 	/* Disable CDP on this interface */
 	cdp_adm_query(CDP_IPC_IF_DISABLE, ioctl_arg.if_name, &r);
+	
+	/* FIXME FIXME FIXME FIXME
+	 * daca ioctl() de scos interfata esueaza din varii motive,
+	 * eu am apucat deja sa opresc cdp-ul pe ea. not good.
+	 * pe de alta parte, vezi si FIXME din cmd_no_int_eth
+	 */
 
 	if (ret = ioctl(sock_fd, SIOCSWCFG, &ioctl_arg))
 		perror("ioctl");
+
+	cfg_set_if_tag(argv[1], NULL, NULL);
 }
 
 static void cmd_macstatic(FILE *out, char **argv) {

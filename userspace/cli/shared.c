@@ -134,14 +134,19 @@ static mm_ptr_t __cfg_get_if_tag(char *if_name) {
 }
 
 int cfg_get_if_tag(char *if_name, char *tag) {
-	mm_ptr_t ptr = __cfg_get_if_tag(if_name);
-	struct if_tag *s_tag =
-		mm_addr(cfg, mm_list_entry(ptr, struct if_tag, lh));
+	mm_ptr_t ptr;
+	struct if_tag *s_tag;
 
-	if (MM_NULL == ptr)
+	cfg_lock();
+	ptr = __cfg_get_if_tag(if_name);
+	if (MM_NULL == ptr) {
+		cfg_unlock();
 		return 1;
+	}
+	s_tag = mm_addr(cfg, mm_list_entry(ptr, struct if_tag, lh));
 	strcpy(tag, s_tag->tag);
 
+	cfg_unlock();
 	return 0;
 }
 
@@ -171,9 +176,15 @@ static mm_ptr_t __cfg_get_tag_if(char *tag) {
 int cfg_set_if_tag(char *if_name, char *tag, char *other_if) {
 	mm_ptr_t lh, mm_s_tag;
 	struct if_tag *s_tag;
+	int ret;
 
-	if (NULL == tag)
-		return __cfg_del_if_tag(if_name);
+	cfg_lock();
+
+	if (NULL == tag) {
+		ret = __cfg_del_if_tag(if_name);
+		cfg_unlock();
+		return ret;
+	}
 
 	lh = __cfg_get_tag_if(tag);
 	if (MM_NULL != lh) {
@@ -181,6 +192,7 @@ int cfg_set_if_tag(char *if_name, char *tag, char *other_if) {
 			s_tag = mm_addr(cfg, mm_list_entry(lh, struct if_tag, lh));
 			strcpy(other_if, s_tag->if_name);
 		}
+		cfg_unlock();
 		return 1;
 	}
 
@@ -189,6 +201,7 @@ int cfg_set_if_tag(char *if_name, char *tag, char *other_if) {
 		s_tag = mm_addr(cfg, mm_list_entry(lh, struct if_tag, lh));
 		strncpy(s_tag->tag, tag, CLI_MAX_TAG);
 		s_tag->tag[CLI_MAX_TAG] = '\0';
+		cfg_unlock();
 		return 0;
 	}
 
@@ -200,6 +213,7 @@ int cfg_set_if_tag(char *if_name, char *tag, char *other_if) {
 	if (NULL == s_tag) {
 		if (NULL != other_if)
 			*other_if = '\0';
+		cfg_unlock();
 		return 1;
 	}
 
@@ -208,5 +222,6 @@ int cfg_set_if_tag(char *if_name, char *tag, char *other_if) {
 	s_tag->tag[CLI_MAX_TAG] = '\0';
 	mm_list_add(cfg, mm_ptr(cfg, &s_tag->lh), mm_ptr(cfg, &CFG->if_tags));
 
+	cfg_unlock();
 	return 0;
 }

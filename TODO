@@ -26,6 +26,14 @@ Campurile de tip char[] cu lungime cunoscuta trebuie re-verificate, pentru a sta
   in ele (si punem '\0' in str[CONSTANTA] pentru a ne asigura ca e null-terminated);
   folosim strcpy pentru citire (pentru ca este null terminated)
 
+Shared (shared.c)
+Trebuie asigurata consistenta intre comenzile de tipul cfg_ in sensul apelarii lor
+avand lock pe cfg sau nu: ori fiecare functie isi asigura singura zona critica
+(cfg_lock() si cfg_unlock()), ori trebuie asigurat din afara pentru toate. Hit:
+cfg_lock() poate fi apelat de mai multe ori, fara probleme. Mai bine se face din
+interior la fiecare => e mai sigur si mai usor de programat. Logic ar fi ca doar
+functiile (statice) cu __ la inceput sa functioneze cu zona critica asigurata din
+exterior.
 
 BUG FIX build userspace
 

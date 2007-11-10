@@ -209,7 +209,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	cmd_root = &command_root_config;
-	ret = argc > 1 ? load_tag_config(argc - 1, argv + 1) : load_main_config();
+	ret = argc ? load_tag_config(argc, argv + 1) : load_main_config();
 
 	fclose(out);
 	close(sock_fd);
