@@ -89,15 +89,6 @@ int load_main_config(void) {
 	FILE *fp;
 	char cmd[1024];	
 
-	my_pid = getpid();
-	dbg("my pid: %d\n", my_pid);
-	if ((cdp_ipc_qid = msgget(CDP_IPC_QUEUE_KEY, 0666)) == -1) {
-		perror("CDP ipc queue doesn't exist. Is cdpd running?");
-		return 1;
-	}
-	dbg("cdp_ipc_qid: %d\n", cdp_ipc_qid);
-	cdp_enabled = 1;
-	
 	if ((fp = fopen(config_file, "r")) == NULL) {
 		return 1;
 	}
@@ -207,6 +198,15 @@ int main(int argc, char *argv[]) {
 		perror("socket");
 		return 1;
 	}
+
+	my_pid = getpid();
+	dbg("my pid: %d\n", my_pid);
+	if ((cdp_ipc_qid = msgget(CDP_IPC_QUEUE_KEY, 0666)) == -1) {
+		perror("CDP ipc queue doesn't exist. Is cdpd running?");
+		return 1;
+	}
+	dbg("cdp_ipc_qid: %d\n", cdp_ipc_qid);
+	cdp_enabled = 1;
 
 	cmd_root = &command_root_config;
 	ret = argc ? load_tag_config(argc, argv + 1) : load_main_config();

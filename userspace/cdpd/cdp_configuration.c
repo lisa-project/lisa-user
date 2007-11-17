@@ -294,6 +294,8 @@ void *cdp_ipc_listen(void *arg) {
 		/* send the response */
 		s = msgsnd(qid, &r, CDP_IPC_MSGSIZE, 0);
 		dbg("sent response, result: %d\n", s);
+		if (s < 0)
+			perror("msgsnd");
 	}
 	pthread_exit(NULL);
 }

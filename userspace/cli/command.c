@@ -600,9 +600,10 @@ static void cmd_wrme(FILE *out, char **argv) {
 	fflush(out);
 	cfg_lock();
 	do {
-		tmp = fopen(config_file, "w+");
-		if(tmp == NULL)
+		if (!(tmp = fopen(config_file, "w+"))) {
+			perror("fopen");
 			break;
+		}
 		status = build_config(tmp, 0);
 		if(status) {
 			fclose(tmp);

@@ -35,6 +35,11 @@ interior la fiecare => e mai sigur si mai usor de programat. Logic ar fi ca doar
 functiile (statice) cu __ la inceput sa functioneze cu zona critica asigurata din
 exterior.
 
+Comanda write mem nu merge in cazul in care nu exista /etc/lisa si/sau /etc/lisa/tags.
+Normal de altfel, pt ca fopen intoarce eroare. Ar trebui totusi ca functia sa creeze
+directoarele in cazul in care nu exista.
+
+
 BUG FIX build userspace
 
 1) flagul "-g" e pus dupa principii "random"; ar trebui sa se faca in toate Makefile
