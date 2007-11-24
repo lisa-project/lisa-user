@@ -47,6 +47,9 @@
 #include "common.h"
 #include "list.h"
 
+/* the pid file of the cdp daemon */
+#define CDPD_PID_FILE "/var/run/cdpd.pid"
+
 /* integer to alphanumeric mapping */
 typedef struct {
 	const u_int16_t value;

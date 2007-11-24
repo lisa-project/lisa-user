@@ -449,7 +449,8 @@ int build_config(FILE *out, int include_tagged_if) {
 
 	/* line vty stuff */
 	fprintf(out, "!\nline vty 0 15\n");
-	fprintf(out, " password %s\n", CFG->vty[0].passwd);
+	if (strlen(CFG->vty[0].passwd))
+		fprintf(out, " password %s\n", CFG->vty[0].passwd);
 #ifdef USE_EXIT_IN_CONF
 	fprintf(out, "exit\n");
 #endif

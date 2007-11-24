@@ -52,7 +52,7 @@ static int cdp_ipc_get_interfaces(char *cdpr, char *ifname) {
 	int count = 0;
 	char *ptr = cdpr + sizeof(int);
 
-	dbg("requested interface: %s\n", ifname);
+	sys_dbg("requested interface: %s\n", ifname);
 	list_for_each_entry_safe(entry, tmp, &registered_interfaces, lh) {
 		sem_wait(&entry->n_sem);
 		if (ifname && strncmp(entry->name, ifname, strlen(ifname))) {
@@ -139,16 +139,16 @@ static int cdp_ipc_get_neighbors_devid(char *cdpr, char *device_id) {
 	int count = 0;
 	char *ptr = (char *) cdpr + sizeof(int);
 
-	dbg("getting cdp entries with devid: %s\n", device_id);
+	sys_dbg("getting cdp entries with devid: %s\n", device_id);
 	list_for_each_entry_safe(entry, tmp, &registered_interfaces, lh) {
 		sem_wait(&entry->n_sem);
 		list_for_each_entry_safe(n, t, &(entry->neighbors), lh) {
-			dbg("analizing device: %s ... ", n->device_id);
+			sys_dbg("analizing device: %s ... ", n->device_id);
 			if (strncmp(n->device_id, device_id, strlen(device_id))) {
-				dbg("not matched\n");
+				sys_dbg("not matched\n");
 				continue;
 			}
-			dbg("matched");
+			sys_dbg("matched");
 			cdp_ipc_add_neighbor(n, entry, ptr);
 			ptr += sizeof(struct cdp_ipc_neighbor);
 			count++;
@@ -160,14 +160,14 @@ static int cdp_ipc_get_neighbors_devid(char *cdpr, char *device_id) {
 		}
 		sem_post(&entry->n_sem);
 	}
-	dbg("%d matches for %s\n", count, device_id);
+	sys_dbg("%d matches for %s\n", count, device_id);
 	return count;
 }
 
 static void cdp_ipc_show(struct cdp_show *sq, char *cdpr) {
 	memset(cdpr, 0, CDP_MAX_RESPONSE_SIZE);
-	dbg("[ipc_listener]: ipc show query.\n");
-	dbg("[ipc listener]: show type: %d\n", sq->type);
+	sys_dbg("[ipc_listener]: ipc show query.\n");
+	sys_dbg("[ipc listener]: show type: %d\n", sq->type);
 	switch (sq->type) {
 	case CDP_SHOW_CFG:
 		memcpy(cdpr, &ccfg, sizeof(ccfg));
@@ -179,8 +179,8 @@ static void cdp_ipc_show(struct cdp_show *sq, char *cdpr) {
 		*((int *) cdpr) = cdp_ipc_get_interfaces(cdpr, sq->interface);
 		break;
 	case CDP_SHOW_NEIGHBORS:
-		dbg("[ipc listener]: interface: %s, %d\n", sq->interface, strlen(sq->interface));
-		dbg("[ipc listener]: device_id: %s, %d\n", sq->device_id, strlen(sq->device_id));
+		sys_dbg("[ipc listener]: interface: %s, %d\n", sq->interface, strlen(sq->interface));
+		sys_dbg("[ipc listener]: device_id: %s, %d\n", sq->device_id, strlen(sq->device_id));
 		if (strlen(sq->interface))
 			*((int *) cdpr) = cdp_ipc_get_neighbors_intf(cdpr, sq->interface);
 		else if (strlen(sq->device_id))
@@ -193,51 +193,51 @@ static void cdp_ipc_show(struct cdp_show *sq, char *cdpr) {
 
 static void cdp_ipc_conf(struct cdp_conf *cq, char *cdpr) {
 	memset(cdpr, 0, CDP_MAX_RESPONSE_SIZE);
-	dbg("[ipc_listener]: ipc conf query.\n");
+	sys_dbg("[ipc_listener]: ipc conf query.\n");
 	switch (cq->field_id) {
 	case CDP_CFG_VERSION:
-		dbg("[ipc_listener]: cdp advertise-v2 : %d\n", cq->field_value);
+		sys_dbg("[ipc_listener]: cdp advertise-v2 : %d\n", cq->field_value);
 		if (cq->field_value >= 1 && cq->field_value <=2)
 			ccfg.version = cq->field_value;
 		break;
 	case CDP_CFG_HOLDTIME:
-		dbg("[ipc listener]: cdp holdtime %d\n", cq->field_value);
+		sys_dbg("[ipc listener]: cdp holdtime %d\n", cq->field_value);
 		if (cq->field_value >= 10)
 			ccfg.holdtime = cq->field_value;
 		break;
 	case CDP_CFG_TIMER:
-		dbg("[ipc listener]: cdp timer %d\n", cq->field_value);
+		sys_dbg("[ipc listener]: cdp timer %d\n", cq->field_value);
 		if (cq->field_value >= 5 && cq->field_value <= 254)
 			ccfg.timer = cq->field_value;
 		break;
 	case CDP_CFG_ENABLED:
-		dbg("[ipc listener]: cdp enabled %d\n", cq->field_value);
+		sys_dbg("[ipc listener]: cdp enabled %d\n", cq->field_value);
 		if (cq->field_value <= 1)
 			ccfg.enabled = cq->field_value;
 		break;
 	default:
-		dbg("[ipc listener]: invalid configuration field id: %d\n", cq->field_id);
+		sys_dbg("[ipc listener]: invalid configuration field id: %d\n", cq->field_id);
 	}
 }
 
 static void cdp_ipc_adm(struct cdp_adm *aq, char *cdpr) {
 	memset(cdpr, 0, CDP_MAX_RESPONSE_SIZE);
-	dbg("[ipc listener]: ipc adm query.\n");
+	sys_dbg("[ipc listener]: ipc adm query.\n");
 	switch (aq->type) {
 	case CDP_IF_ENABLE:
-		dbg("[ipc listener]: Enable cdp on interface %s\n", aq->interface);
+		sys_dbg("[ipc listener]: Enable cdp on interface %s\n", aq->interface);
 		register_cdp_interface(aq->interface);
 		break;
 	case CDP_IF_DISABLE:
-		dbg("[ipc listener]: Disable cdp on interface %s\n", aq->interface);
+		sys_dbg("[ipc listener]: Disable cdp on interface %s\n", aq->interface);
 		unregister_cdp_interface(aq->interface);
 		break;
 	case CDP_IF_STATUS:
-		dbg("[ipc listener]: Get cdp status on interface %s\n", aq->interface);
+		sys_dbg("[ipc listener]: Get cdp status on interface %s\n", aq->interface);
 		*((int *) cdpr) = get_cdp_status(aq->interface);
 		break;
 	default:
-		dbg("[ipc listener]: Unknown administrative command type %d.\n", aq->type);
+		sys_dbg("[ipc listener]: Unknown administrative command type %d.\n", aq->type);
 	}
 }
 
@@ -250,13 +250,12 @@ static void cdp_ipc_send_response(struct cdp_request *m, char *r) {
 	qname[sizeof(qname)-1] = '\0';
 
 	if ((sq = mq_open(qname, O_WRONLY)) == -1) {
-		dbg("Unable to open queue '%s' for sending response.\n", qname);
-		perror("mq_open");
+		sys_dbg("Unable to open queue '%s' for sending response.\n", qname);
 		return;
 	}
 
 	if (mq_send(sq, (const char *)r, CDP_MAX_RESPONSE_SIZE, 0) < 0) {
-		perror("mq_send");
+		sys_dbg("Failed to send message on queue'%s'.\n", qname);
 		return;
 	}
 
@@ -277,37 +276,37 @@ void *cdp_ipc_listen(void *arg) {
 	/* We open the queue with O_EXCL because we need to assure we're the
 	 * only cdpd instance running. */
 	if ((rq = mq_open(cdp_queue_name, O_CREAT|O_EXCL|O_RDONLY, 0666, NULL)) == -1) {
-		perror("mq_open");
-		pthread_exit(NULL);
+		sys_dbg("Failed to create queue '%s'\n", cdp_queue_name);
+		exit(1);
 	}
 
 	/* set the message size attribute */
 	if (mq_getattr(rq, &attr) < 0) {
-		perror("mq_getattr");
-		pthread_exit(NULL);
+		sys_dbg("Failed to get queue attributes\n");
+		exit(1);
 	}
 
 	if (!(msg = malloc(attr.mq_msgsize+1))) {
-		perror("malloc");
-		pthread_exit(NULL);
+		sys_dbg("Failed to allocate receive buffer\n");
+		exit(1);
 	}
 
-	dbg("cdp ipc listen\n");
+	sys_dbg("cdp ipc listen\n");
 	/* loop listening for incoming requests */
 	for (;;) {
 		memset(msg, 0, attr.mq_msgsize+1);
 
 		/* receive a message from the message queue */
 		if (mq_receive(rq, msg, attr.mq_msgsize, NULL) < 0) {
-			perror("mq_receive");
-			pthread_exit(NULL);
+			sys_dbg("Message receive failed\n");
+			exit(1);
 		}
 
 		m = (struct cdp_request *)msg;
 
 		/* interpret & compose response */
-		dbg("[ipc listener]: received message of type: %d\n", m->type);
-		dbg("[ipc listener]: sender pid is: %d\n", m->pid);
+		sys_dbg("[ipc listener]: received message of type: %d\n", m->type);
+		sys_dbg("[ipc listener]: sender pid is: %d\n", m->pid);
 
 		switch (m->type) {
 		case CDP_SHOW_QUERY:

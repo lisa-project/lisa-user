@@ -25,6 +25,7 @@
 #include <readline/history.h>
 
 #include "filter.h"
+#include "misc.h"
 #include "debug.h"
 
 #define PING_PATH "/bin/ping"
@@ -89,7 +90,6 @@ extern char *if_name_vlan(char *);
 extern int parse_vlan(char *);
 extern int valid_mac(char *, char);
 extern int parse_mac(char *, unsigned char *);
-extern void cmd_showmac(FILE *, char *);
 extern int get_mac_age();
 extern char *default_vlan_name(int);
 

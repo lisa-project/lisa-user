@@ -84,7 +84,7 @@ void *cdp_clean_loop(void *arg) {
 
 	for (;;) {
 		sleep(1);
-		dbg("[cdp clean loop]\n");
+		sys_dbg("[cdp clean loop]\n");
 		/* if no neighbor was registered we continue */
 		if (hend < 0)
 			continue;
@@ -99,7 +99,7 @@ void *cdp_clean_loop(void *arg) {
 			}
 			n = ROOT(nheap).n;
 			i = n->interface;
-			dbg("[cdp cleaner]: cleaning cdp neighbor %s\n", n->device_id);
+			sys_dbg("[cdp cleaner]: cleaning cdp neighbor %s\n", n->device_id);
 			/* get the lock on the interface neighbor list */
 			sem_wait(&i->n_sem);
 			/* safely delete the expired neighbor */

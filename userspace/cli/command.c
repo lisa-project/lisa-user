@@ -180,14 +180,7 @@ static void cmd_run_eth(FILE *out, char **argv) {
 		tmp = mk_tmp_stream(tmp_name, "w+");
 		if(tmp == NULL)
 			break;
-		/* FIXME FIXME FIXME this is broken: build_int_eth_config now
-		 * needs the interface name as second argument; this will
-		 * definitely segfault !!!!
-		 * FIXME FIXME FIXME
-		 */
-		/** FIXME FIXME FIXME  (IoNutZ: parse_eth returns int, while
-		 * build_int_eth expects char *). */
-		status = build_int_eth_config(tmp, parse_eth(arg), 1);
+		status = build_int_eth_config(tmp, arg, 1);
 		if(status)
 			break;
 		fprintf(out, "\nCurrent configuration : %ld bytes\n", ftell(tmp));

@@ -22,10 +22,14 @@
 
 #ifdef DEBUG
 #include <stdio.h>
+#include <stdarg.h>
+#include <syslog.h>
 #define dbg(text,par...) do {\
 	fprintf(stderr, text, ##par);\
 	fflush(stderr);\
 } while(0)
+
+#define sys_dbg(text,par...) syslog(LOG_DEBUG, text, ##par)
 #define __dbg_static
 
 static inline void dump_mem(void *m, int len) {
@@ -43,6 +47,7 @@ static inline void dump_mem(void *m, int len) {
 }
 #else
 #define dbg(par...)
+#define sys_dbg(par...)
 #define __dbg_static static
 #define dump_mem(m, len)
 #endif

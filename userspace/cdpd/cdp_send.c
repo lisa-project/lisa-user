@@ -229,9 +229,9 @@ void *cdp_send_loop(void *arg) {
 
 	while (1) {
 		sleep(ccfg.timer);
-		dbg("cdp_send_loop()\n");
+		sys_dbg("cdp_send_loop()\n");
 		if (!ccfg.enabled) {
-			dbg("cdp is disabled\n");
+			sys_dbg("cdp is disabled\n");
 			continue;
 		}
 		list_for_each_entry_safe(entry, tmp, &registered_interfaces, lh) {
@@ -250,8 +250,8 @@ void *cdp_send_loop(void *arg) {
 				cdp_checksum((unsigned short *)(data+sizeof(struct cdp_frame_header)),
 						offset-sizeof(struct cdp_frame_header));
 			if ((r=send(entry->sw_sock_fd, data, offset, 0))!=offset)
-				dbg("Wrote only %d bytes (error was: %s).\n", r, strerror(errno));
-			dbg("Sent CDP packet of %d bytes on %s.\n", r, entry->name);
+				sys_dbg("Wrote only %d bytes (error was: %s).\n", r, strerror(errno));
+			sys_dbg("Sent CDP packet of %d bytes on %s.\n", r, entry->name);
 			/* update cdp out stats */
 			if (ccfg.version == 1)
 				cdp_stats.v1_out++;

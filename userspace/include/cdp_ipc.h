@@ -17,8 +17,8 @@
  *    MA  02111-1307  USA
  */
 
-#ifndef __CDP_IPC_H
-#define __CDP_IPC_H
+#ifndef _CDP_IPC_H
+#define _CDP_IPC_H
 
 #include <sys/types.h>
 #include <time.h>

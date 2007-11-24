@@ -17,8 +17,8 @@
  *    MA  02111-1307  USA
  */
 
-#ifndef __CDP_H
-#define __CDP_H
+#ifndef _CDP_H
+#define _CDP_H
 
 #include <stdio.h>
 #include <stdlib.h>

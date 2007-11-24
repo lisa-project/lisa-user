@@ -21,6 +21,7 @@
 #include "cdp_ipc.h"
 #include "debug.h"
 #include "switch_socket.h"
+#include "misc.h"
 #include <signal.h>
 
 /* Two linked lists with the cdp registered and de-registered interfaces */
@@ -92,11 +93,11 @@ void register_cdp_interface(char *ifname) {
 	struct net_switch_ioctl_arg ioctl_arg;
 	struct cdp_interface *entry, *tmp;
 
-	dbg("Enabling cdp on '%s'\n", ifname);
+	sys_dbg("Enabling cdp on '%s'\n", ifname);
 
 	/* check if the interface is virtual */
 	if (!strncmp(ifname, LMS_VIRT_PREFIX, strlen(LMS_VIRT_PREFIX))) {
-		dbg("interface %s is virtual.\n", ifname);
+		sys_dbg("interface %s is virtual.\n", ifname);
 		return;
 	}
 
@@ -111,7 +112,7 @@ void register_cdp_interface(char *ifname) {
 
 	/* interface is down */
 	if (!(ifr.ifr_flags & IFF_UP)) {
-		dbg("interface %s is down.\n", ifname);
+		sys_dbg("interface %s is down.\n", ifname);
 		close(sockfd);
 		return;
 	}
@@ -128,7 +129,7 @@ void register_cdp_interface(char *ifname) {
 	ioctl_arg.ext.cfg.forbidden_vlans = NULL;
 	ioctl_arg.ext.cfg.description = NULL;
 	if (ioctl(fd, SIOCSWCFG, &ioctl_arg)) {
-		dbg("interface %s is not in the switch.\n", ifname);
+		sys_dbg("interface %s is not in the switch.\n", ifname);
 		perror("ioctl");
 		close(fd);
 		return;
@@ -137,7 +138,7 @@ void register_cdp_interface(char *ifname) {
 	/* check if cdp is already enabled on that interface */
 	list_for_each_entry_safe(entry, tmp, &registered_interfaces, lh)
 		if (!strncmp(ifname, entry->name, IFNAMSIZ)) {
-			dbg("CDP already enabled on interface %s.\n", ifname);
+			sys_dbg("CDP already enabled on interface %s.\n", ifname);
 			close(fd);
 			return;
 		}
@@ -183,7 +184,7 @@ void unregister_cdp_interface(char *ifname) {
 	struct cdp_interface *entry, *tmp;
 
 	/* move the entry to the deregistrated_interfaces list */
-	dbg("Disabling cdp on '%s'\n", ifname);
+	sys_dbg("Disabling cdp on '%s'\n", ifname);
 	list_for_each_entry_safe(entry, tmp, &registered_interfaces, lh)
 		if (!strncmp(ifname, entry->name, IFNAMSIZ)) {
 			/* close the switch socket before moving the entry to
@@ -244,7 +245,7 @@ static void do_initial_cfg() {
 }
 
 static inline void print_ipv4_addr(unsigned int addr) {
-	dbg("%d.%d.%d.%d", addr >> 24, (addr >> 16) & 0xFF, (addr >> 8) & 0xFF, addr & 0xFF);
+	sys_dbg("%d.%d.%d.%d", addr >> 24, (addr >> 16) & 0xFF, (addr >> 8) & 0xFF, addr & 0xFF);
 }
 
 /**
@@ -279,13 +280,13 @@ static void decode_address(char *field, unsigned int len, struct cdp_neighbor *n
 		unsigned char protocol_type = field[0];
 		unsigned char length = field[1]; 
 		if (protocol_type != 1 || length != 1) {
-			dbg("\t\t\tUnsupported protocol type.");
+			sys_dbg("\t\t\tUnsupported protocol type.");
 			field += length;
 			continue;
 		}
 		unsigned char pvalue = field[2]; 
 		if (pvalue != PROTO_IP) {
-			dbg("\t\t\tOnly IPv4 supported. got pvalue: 0x%x.\n", pvalue);
+			sys_dbg("\t\t\tOnly IPv4 supported. got pvalue: 0x%x.\n", pvalue);
 			field += length;
 			continue;
 		}
@@ -300,7 +301,7 @@ static void print_capabilities(unsigned char cap) {
 
 	while (device_capabilities[i].description) {
 		if (cap & device_capabilities[i].value) 
-			dbg("\t\t[%s]\n", device_capabilities[i].description);
+			sys_dbg("\t\t[%s]\n", device_capabilities[i].description);
 		i++;
 	}
 }
@@ -326,7 +327,7 @@ static void decode_field(struct cdp_neighbor **ne, int type, int len, char *fiel
 			/* version may have changed */
 			n->cdp_version = neighbor->cdp_version;
 			free(neighbor);
-			dbg("\t\tneighbor %s already registered.\n", field);
+			sys_dbg("\t\tneighbor %s already registered.\n", field);
 			neighbor = n;
 			sem_wait(&nheap_sem);
 			/* update neighbor heap node timestamp */
@@ -338,11 +339,11 @@ static void decode_field(struct cdp_neighbor **ne, int type, int len, char *fiel
 		}
 		else {
 			/* a new neighbor was found */
-			dbg("\t\tnew neighbor: %s.\n", field);
+			sys_dbg("\t\tnew neighbor: %s.\n", field);
 			copy_alpha_field(neighbor->device_id, field, sizeof(neighbor->device_id));
 			sem_wait(&nheap_sem);
 			nheap[++hend].tstamp = neighbor->ttl + time(NULL);	
-			dbg("\t\ttimestamp: %ld\n", nheap[hend].tstamp);
+			sys_dbg("\t\ttimestamp: %ld\n", nheap[hend].tstamp);
 			nheap[hend].n = neighbor;
 			neighbor->hnode = &nheap[hend];
 			/* sift up the added node */
@@ -384,7 +385,7 @@ static void decode_field(struct cdp_neighbor **ne, int type, int len, char *fiel
 		neighbor->native_vlan = ntohs(*((unsigned short *) field));
 		break;
 	default:
-		dbg("\t\twe don't decode [%s].\n", get_description(type, field_types));
+		sys_dbg("\t\twe don't decode [%s].\n", get_description(type, field_types));
 	}
 }
 
@@ -399,19 +400,19 @@ static void dissect_packet(unsigned char *packet, struct cdp_neighbor **neighbor
 	struct cdp_field *field;
 	unsigned int packet_length, consumed, field_type, field_len;
 
-	dbg("Received CDP packet on %s", (*neighbor)->interface->name);
+	sys_dbg("Received CDP packet on %s", (*neighbor)->interface->name);
 
 	hdr = (struct cdp_hdr *) (((unsigned char *)packet) + 22);
-	dbg("\tCDP version: %d, ttl: %d, checksum: %d\n", hdr->version,
+	sys_dbg("\tCDP version: %d, ttl: %d, checksum: %d\n", hdr->version,
 			hdr->time_to_live, hdr->checksum);
 	/* update in stats */
 	if (hdr->version == 1)
 		cdp_stats.v1_in++;
 	else
 		cdp_stats.v2_in++;
-	dbg("header->length: %d\n", ntohs(header->length));
+	sys_dbg("header->length: %d\n", ntohs(header->length));
 	packet_length = (ntohs(header->length) - 8) - sizeof(struct cdp_hdr);
-	dbg("\tpacket length: %d\n", packet_length);
+	sys_dbg("\tpacket length: %d\n", packet_length);
 	field = (struct cdp_field *) ((((unsigned char *)packet) + 22) + sizeof(struct cdp_hdr));
 	(*neighbor)->cdp_version = hdr->version;
 	(*neighbor)->ttl = hdr->time_to_live;
@@ -425,7 +426,7 @@ static void dissect_packet(unsigned char *packet, struct cdp_neighbor **neighbor
 		consumed += field_len;	
 		field = (struct cdp_field *) (((unsigned char *)field) + field_len);
 	}
-	dbg("\n\n");
+	sys_dbg("\n\n");
 }
 
 /**
@@ -433,35 +434,35 @@ static void dissect_packet(unsigned char *packet, struct cdp_neighbor **neighbor
  */
 static void print_cdp_neighbor(struct cdp_neighbor *n) {
 	int i;
-	dbg("CDP neighbor [%p] on %s\n", n, n->interface->name);
-	dbg("--------------------------------------\n");
-	dbg("\t[%s]: '%s'\n", get_description(TYPE_DEVICE_ID, field_types), n->device_id);
-	dbg("\t[%s] (%d):\n", get_description(TYPE_ADDRESS, field_types), n->num_addr);
+	sys_dbg("CDP neighbor [%p] on %s\n", n, n->interface->name);
+	sys_dbg("--------------------------------------\n");
+	sys_dbg("\t[%s]: '%s'\n", get_description(TYPE_DEVICE_ID, field_types), n->device_id);
+	sys_dbg("\t[%s] (%d):\n", get_description(TYPE_ADDRESS, field_types), n->num_addr);
 	for (i=0; i<n->num_addr; i++) {
-		dbg("\t\t\t");
+		sys_dbg("\t\t\t");
 		print_ipv4_addr(n->addr[i]);
-		dbg("\n");
+		sys_dbg("\n");
 	}
-	dbg("\t[%s]: '%s'\n", get_description(TYPE_PORT_ID, field_types), n->port_id);
-	dbg("\t[%s]:\n", get_description(TYPE_CAPABILITIES, field_types));
+	sys_dbg("\t[%s]: '%s'\n", get_description(TYPE_PORT_ID, field_types), n->port_id);
+	sys_dbg("\t[%s]:\n", get_description(TYPE_CAPABILITIES, field_types));
 	print_capabilities(n->cap);
-	dbg("\t[%s]: '%s'\n", get_description(TYPE_IOS_VERSION, field_types), n->software_version);
-	dbg("\t[%s]: '%s'\n", get_description(TYPE_PLATFORM, field_types), n->platform);
-	dbg("\t[%s]: '%s'\n", get_description(TYPE_VTP_MGMT_DOMAIN, field_types), n->vtp_mgmt_domain);
-	dbg("\t[%s]:\n", get_description(TYPE_PROTOCOL_HELLO, field_types));
-	dbg("\t\tOUI: 0x%02X%02X%02X\n", n->p_hello.oui >> 16, (n->p_hello.oui >> 8) & 0xFF,
+	sys_dbg("\t[%s]: '%s'\n", get_description(TYPE_IOS_VERSION, field_types), n->software_version);
+	sys_dbg("\t[%s]: '%s'\n", get_description(TYPE_PLATFORM, field_types), n->platform);
+	sys_dbg("\t[%s]: '%s'\n", get_description(TYPE_VTP_MGMT_DOMAIN, field_types), n->vtp_mgmt_domain);
+	sys_dbg("\t[%s]:\n", get_description(TYPE_PROTOCOL_HELLO, field_types));
+	sys_dbg("\t\tOUI: 0x%02X%02X%02X\n", n->p_hello.oui >> 16, (n->p_hello.oui >> 8) & 0xFF,
 			n->p_hello.oui &0xFF);
-	dbg("\t\tProtocol ID: 0x%02X%02X\n", n->p_hello.protocol_id >> 8, 
+	sys_dbg("\t\tProtocol ID: 0x%02X%02X\n", n->p_hello.protocol_id >> 8,
 			n->p_hello.protocol_id & 0xFF);
-	dbg("\t\tpayload len: %d\n", sizeof(n->p_hello.payload));
-	dbg("\t\tvalue: ");
+	sys_dbg("\t\tpayload len: %d\n", sizeof(n->p_hello.payload));
+	sys_dbg("\t\tvalue: ");
 	for (i=0; i<sizeof(n->p_hello.payload); i++) {
-		dbg("%02X", n->p_hello.payload[i]);
+		sys_dbg("%02X", n->p_hello.payload[i]);
 	}
-	dbg("\n");
-	dbg("\t[%s]: %d\n", get_description(TYPE_DUPLEX, field_types), n->duplex);
-	dbg("\t[%s]: %d\n", get_description(TYPE_NATIVE_VLAN, field_types), n->native_vlan);
-	dbg("\n");
+	sys_dbg("\n");
+	sys_dbg("\t[%s]: %d\n", get_description(TYPE_DUPLEX, field_types), n->duplex);
+	sys_dbg("\t[%s]: %d\n", get_description(TYPE_NATIVE_VLAN, field_types), n->native_vlan);
+	sys_dbg("\n");
 }
 
 static void cdp_recv_loop() {
@@ -472,7 +473,7 @@ static void cdp_recv_loop() {
 
 	/* the loop in which we capture the cdp frames */
 	for (;;) {
-		dbg("[cdp recv loop]\n");
+		sys_dbg("[cdp recv loop]\n");
 		FD_ZERO(&rdfs);
 		maxfd = -1;
 		list_for_each_entry_safe(entry, tmp, &registered_interfaces, lh) {
@@ -491,13 +492,13 @@ static void cdp_recv_loop() {
 		list_for_each_entry_safe(entry, tmp, &registered_interfaces, lh) {
 			if (!FD_ISSET(entry->sw_sock_fd, &rdfs))
 				continue;
-			dbg("data available on %s\n", entry->name);
+			sys_dbg("data available on %s\n", entry->name);
 			if ((len = recv(entry->sw_sock_fd, packet, sizeof(packet), 0)) < 0) {
 				perror("recv");
 				continue;
 			}
 			if (!ccfg.enabled) {
-				dbg("[cdp receiver]: cdp is disabled\n");
+				sys_dbg("[cdp receiver]: cdp is disabled\n");
 			}
 			neighbor = (struct cdp_neighbor *) malloc(sizeof(struct cdp_neighbor));
 			neighbor->interface = entry;
@@ -516,19 +517,26 @@ void *signal_handler(void *ptr) {
 	sigemptyset(&signal_set);
 	sigaddset(&signal_set, SIGINT);
 	sigaddset(&signal_set, SIGTERM);
-	dbg("[signal handler]: Waiting for SIGINT ...\n");
+	sys_dbg("[signal handler]: Waiting for SIGINT ...\n");
 	sigwait(&signal_set, &sig);
-	dbg("[signal handler]: Caught SIGINT ... \n");
-	dbg("[signal handler]: Removing the IPC queue ... \n");
-	dbg("queue_name: '%s'\n", cdp_queue_name);
+	sys_dbg("[signal handler]: Caught SIGINT ... \n");
+	sys_dbg("[signal handler]: Removing the IPC queue ... \n");
+	sys_dbg("queue_name: '%s'\n", cdp_queue_name);
 	mq_unlink(cdp_queue_name);
-	dbg("[signal handler]: Exiting\n");
+	unlink(CDPD_PID_FILE);
+	closelog();
+	sys_dbg("[signal handler]: Exiting\n");
 	exit(0);
 }
 
 int main(int argc, char *argv[]) {
+	FILE *pidfile;
 	int status;
 	sigset_t signal_set;
+
+	/* daemonize */
+	openlog("cdpd", LOG_PID, LOG_DAEMON);
+	daemonize();
 
 	/* mask all signals */
 	sigfillset(&signal_set);
@@ -553,6 +561,15 @@ int main(int argc, char *argv[]) {
 	status = pthread_create(&cleaner_thread, NULL, cdp_clean_loop, (void *)NULL);
 	assert(!status);
 	status = pthread_create(&shutdown_thread, NULL, signal_handler, (void *)NULL);
+
+	/* create pid file */
+	if (!(pidfile = fopen(CDPD_PID_FILE, "w"))) {
+		sys_dbg("Failed to open pidfile. Why, oh why?\n");
+		exit(1);
+	}
+	fprintf(pidfile, "%d", getpid());
+	fclose(pidfile);
+
 
 	/* cdp receiver loop */
 	cdp_recv_loop();

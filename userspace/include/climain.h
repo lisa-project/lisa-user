@@ -39,6 +39,7 @@
 #include "command.h"
 #include "shared.h"
 #include "cdp_ipc.h"
+#include "misc.h"
 
 typedef struct match {
 	char *text;			/* Matched text */
@@ -77,9 +78,6 @@ extern int change_search_scope(char *, char *, char);
 extern sw_match_t *get_matches(int *, char *);
 extern void init_exec_state(sw_execution_state_t *ex);
 extern int lookup_token(char *match, char *rest, char lookahead); 
-extern int cdp_init_ipc(struct cdp_session_info *s);
-extern void cdp_destroy_ipc(struct cdp_session_info *s);
-extern int cdp_ipc_receive(struct cdp_session_info *s);
 
 extern int sock_fd;
 extern int priv;

@@ -17,8 +17,8 @@
  *    MA  02111-1307  USA
  */
 
-#ifndef __SW_NETLINK_H
-#define __SW_NETLINK_H
+#ifndef _SW_NETLINK_H
+#define _SW_NETLINK_H
 
 #include <asm/types.h>
 #include <sys/types.h>
