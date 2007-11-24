@@ -1,0 +1,106 @@
+#!/bin/bash
+#
+# lisa        Starts/stops lisa.
+#
+#
+# chkconfig: 2345 97 11
+# description: LiSA stands for Linux Switch Appliance. 
+#
+
+# Source function library.
+. /etc/init.d/functions
+RETVAL=0
+
+LISA_MODULE="switch"
+LISA_PREFIX="/usr/sbin"
+LISA_CDPD="cdpd"
+LISA_CDPD_PIDFILE="/var/run/cdpd.pid"
+LISA_LOAD_CFG="swcfgload"
+LISA_LOCK="/var/lock/subsys/lisa"
+
+start() {
+	if [ -f $LISA_LOCK ] ; then
+		echo -n "LiSA already running "
+		echo_failure
+		echo
+		exit 1
+	fi
+	echo -n "Loading LiSA kernel module "
+	if ! /sbin/modprobe $LISA_MODULE &> /dev/null; then
+		echo_failure
+		echo
+		exit 1
+	fi
+	echo_success
+	echo
+	echo -n "Starting CDP daemon "
+	if ! $LISA_PREFIX/$LISA_CDPD &> /dev/null ; then
+		echo_failure
+		echo
+		exit 1
+	fi
+	sleep 1
+	PID=`cat $LISA_CDPD_PIDFILE` &>/dev/null
+	if ! ps $PID &>/dev/null ; then
+		echo_failure
+		echo
+		exit 1
+	fi
+	echo_success
+	echo
+	echo -n "Loading switch configuration "
+	if ! $LISA_PREFIX/$LISA_LOAD_CFG ; then
+		echo_failure
+		echo
+		exit 1
+	fi
+	echo_success
+	echo
+	touch $LISA_LOCK
+}
+
+stop() {
+	if ! [ -f $LISA_LOCK ]; then
+		echo -n "$LISA_LOCK not found."
+		echo_failure
+		echo
+		exit 1
+	fi
+	echo -n "Stopping $LISA_CDPD "
+	killall $LISA_CDPD &> /dev/null
+	sleep 1
+	if [ -f $LISA_CDPD_PIDFILE ]; then
+		echo -n "$LISA_CDPD is still alive "
+		echo_failure
+		echo
+		exit 1
+	fi
+	echo_success
+	echo
+	echo -n "Unloading LiSA kernel module "
+	if ! /sbin/rmmod $LISA_MODULE &> /dev/null; then
+		echo_failure
+		echo
+		exit 1
+	fi 
+	echo_success
+	echo
+	rm $LISA_LOCK
+}
+
+case "$1" in
+	start)
+		start
+		;;
+	stop)
+		stop
+		;;
+	restart)
+		stop
+		start
+		;;
+	*)
+		echo "Usage: $prog {start|stop|restart}"
+		exit 1
+esac
+exit $RETVAL
