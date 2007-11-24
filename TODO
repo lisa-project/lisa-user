@@ -39,6 +39,9 @@ Comanda write mem nu merge in cazul in care nu exista /etc/lisa si/sau /etc/lisa
 Normal de altfel, pt ca fopen intoarce eroare. Ar trebui totusi ca functia sa creeze
 directoarele in cazul in care nu exista.
 
+./swcfgload <if_name> <tag_name> [<description>] - Nu adauga si tag-ul (cel putin
+asa se intelege din output-ul lui show run).
+
 
 BUG FIX build userspace
 

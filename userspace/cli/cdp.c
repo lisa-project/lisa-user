@@ -9,7 +9,7 @@ extern char sel_eth[IFNAMSIZ];
 extern int cmd_int_eth_status(FILE *, char *);
 
 static int cdp_is_disabled(FILE *out) {
-	if (!cdp_enabled) {
+	if (!cdp_s.enabled) {
 		fprintf(out, "%% CDP is not enabled");
 		return 1;
 	}
@@ -17,95 +17,84 @@ static int cdp_is_disabled(FILE *out) {
 }
 
 int get_cdp_configuration(struct cdp_configuration *conf) {
-	int s;
-	struct cdp_ipc_message m, r;
-	struct cdp_show_query *q;
-	struct cdp_response *cdpr;
+	struct cdp_request  m;
 
-	m.type = 1;
-	m.query_type = CDP_IPC_SHOW_QUERY;
-	memset(m.buf, 0, sizeof(m.buf));
-	*((pid_t *)m.buf) = my_pid;
+	if (!cdp_s.enabled)
+		return 0;
 
-	q = (struct cdp_show_query *) (m.buf + sizeof(pid_t));
-	q->show_type = CDP_IPC_SHOW_CFG;
-	m.buf[sizeof(m.buf)-1] = '\0';
+	memset(&m, 0, sizeof(m));
+	m.type = CDP_SHOW_QUERY;
+	m.pid  = getpid();
+	m.query.show.type = CDP_SHOW_CFG;
 
-	if ((s = msgsnd(cdp_ipc_qid, &m, CDP_IPC_MSGSIZE, 0)) < 0) {
-		perror("msgsnd");
+	if (mq_send(cdp_s.sq, (const char *)&m, sizeof(m), 0) < 0) {
+		perror("mq_send");
 		return 1;
 	}
 
-	if ((s = msgrcv(cdp_ipc_qid, &r, CDP_IPC_MSGSIZE, my_pid, 0)) < 0) {
-		perror("msgrcv");
-		return 1 ;
-	}
-	cdpr = (struct cdp_response *) r.buf;
-	memcpy(conf, cdpr->data, sizeof(struct cdp_configuration));
+	if (cdp_ipc_receive(&cdp_s))
+		return 1;
+
+	memcpy(conf, cdp_s.cdp_response, sizeof(struct cdp_configuration));
+
 	return 0;
 }
 
-static int get_cdp_neighbors(struct cdp_ipc_message *r, char *interface, char *device_id) {
-	int s;
-	struct cdp_ipc_message m;
-	struct cdp_show_query *q;
+static int get_cdp_neighbors(char *interface, char *device_id) {
+	struct cdp_request m;
 
-	m.type = 1;
-	m.query_type = CDP_IPC_SHOW_QUERY;
-	memset(m.buf, 0, sizeof(m.buf));
-	*((pid_t *)m.buf) = my_pid;
+	if (!cdp_s.enabled)
+		return 0;
 
-	q = (struct cdp_show_query *) (m.buf + sizeof(pid_t));
-	q->show_type = CDP_IPC_SHOW_NEIGHBORS;
+	memset(&m, 0, sizeof(m));
+	m.type = CDP_SHOW_QUERY;
+	m.pid  = getpid();
+	m.query.show.type = CDP_SHOW_NEIGHBORS;
+
 	if (interface) {
-		strncpy(q->interface, interface, strlen(interface));
-		q->interface[strlen(interface)] = '\0';
+		strncpy(m.query.show.interface, interface, strlen(interface));
+		m.query.show.interface[strlen(interface)] = '\0';
 	}
 	if (device_id) {
-		strncpy(q->device_id, device_id, strlen(device_id));
-		q->device_id[strlen(device_id)] = '\0';
+		strncpy(m.query.show.device_id, device_id, strlen(device_id));
+		m.query.show.device_id[strlen(device_id)] = '\0';
 	}
-	m.buf[sizeof(m.buf)-1] = '\0';
 
-	if ((s = msgsnd(cdp_ipc_qid, &m, CDP_IPC_MSGSIZE, 0)) < 0) {
-		perror("msgsnd");
+	if (mq_send(cdp_s.sq, (const char *)&m, sizeof(m), 0) < 0) {
+		perror("mq_send");
 		return 1;
 	}
 
-	if ((s = msgrcv(cdp_ipc_qid, r, CDP_IPC_MSGSIZE, my_pid, 0)) < 0) {
-		perror("msgrcv");
+	if (cdp_ipc_receive(&cdp_s))
 		return 1;
-	}
+
 	return 0;
 }
 
-static int get_cdp_interfaces(struct cdp_ipc_message *r, char *interface) {
-	int s;
-	struct cdp_ipc_message m;
-	struct cdp_show_query *q;
+static int get_cdp_interfaces(char *interface) {
+	struct cdp_request m;
 
-	m.type = 1;
-	m.query_type = CDP_IPC_SHOW_QUERY;
-	memset(m.buf, 0, sizeof(m.buf));
-	*((pid_t *)m.buf) = my_pid;
+	if (!cdp_s.enabled)
+		return 0;
 
-	q = (struct cdp_show_query *) (m.buf + sizeof(pid_t));
-	q->show_type = CDP_IPC_SHOW_INTF;
+	memset(&m, 0, sizeof(m));
+	m.type = CDP_SHOW_QUERY;
+	m.pid  = getpid();
+	m.query.show.type = CDP_SHOW_INTF;
+
 	if (interface) {
-		strncpy(q->interface, interface, strlen(interface));
-		q->interface[strlen(interface)] = '\0';
+		strncpy(m.query.show.interface, interface, strlen(interface));
+		m.query.show.interface[strlen(interface)] = '\0';
 	}
-	m.buf[sizeof(m.buf)-1] = '\0';
 
-	if ((s = msgsnd(cdp_ipc_qid, &m, CDP_IPC_MSGSIZE, 0)) < 0) {
-		perror("msgsnd");
+	if (mq_send(cdp_s.sq, (const char *)&m, sizeof(m), 0) < 0) {
+		perror("mq_send");
 		return 1;
 	}
 
-	if ((s = msgrcv(cdp_ipc_qid, r, CDP_IPC_MSGSIZE, my_pid, 0)) < 0) {
-		perror("msgrcv");
+	if (cdp_ipc_receive(&cdp_s))
 		return 1;
-	}
+
 	return 0;
 }
 
@@ -236,7 +225,6 @@ void cmd_sh_cdp(FILE *out, char **argv) {
 
 void cmd_sh_cdp_int(FILE *out, char **argv) {
 	struct cdp_configuration conf;
-	struct cdp_ipc_message r;
 	char *interface = NULL, *ptr;
 	int i, count;
 
@@ -249,12 +237,12 @@ void cmd_sh_cdp_int(FILE *out, char **argv) {
 	if (argv[0])
 		interface = if_name_eth(argv[0]);
 
-	if (get_cdp_interfaces(&r, interface))
+	if (get_cdp_interfaces(interface))
 		return;
 
-	count = *((int *) r.buf);
+	count = *((int *) cdp_s.cdp_response);
 
-	ptr = r.buf + sizeof(int);
+	ptr = cdp_s.cdp_response + sizeof(int);
 	for (i = 0; i<count; i++) {
 		if (!cmd_int_eth_status(out, ptr))
 			fprintf(out, "\tEncapsulation ARPA\n"
@@ -266,35 +254,29 @@ void cmd_sh_cdp_int(FILE *out, char **argv) {
 }
 
 void cmd_sh_cdp_ne(FILE *out, char **argv) {
-	struct cdp_ipc_message r; 
-
 	if (cdp_is_disabled(out))
 		return;
 
-	if (get_cdp_neighbors(&r, NULL, NULL))
+	if (get_cdp_neighbors(NULL, NULL))
 		return;
 
 	print_sh_neighbors_header(out);
-	print_neighbors_brief(out, r.buf);
-
+	print_neighbors_brief(out, cdp_s.cdp_response);
 }
 
 void cmd_sh_cdp_ne_int(FILE *out, char **argv) {
-	struct cdp_ipc_message r;
-
 	if (cdp_is_disabled(out))
 		return;
 
 	fprintf(out, "show cdp neighbors ethernet %s\n", argv[0]);
-	if (get_cdp_neighbors(&r, if_name_eth(argv[0]), NULL)) 
+	if (get_cdp_neighbors(if_name_eth(argv[0]), NULL)) 
 		return;
 
 	print_sh_neighbors_header(out);
-	print_neighbors_brief(out, r.buf);
+	print_neighbors_brief(out, cdp_s.cdp_response);
 }
 
 void cmd_sh_cdp_ne_detail(FILE *out, char **argv) {
-	struct cdp_ipc_message r; 
 	char *interface;
 
 	if (cdp_is_disabled(out))
@@ -302,14 +284,13 @@ void cmd_sh_cdp_ne_detail(FILE *out, char **argv) {
 
 	interface = argv[0]? if_name_eth(argv[0]) : NULL;
 
-	if (get_cdp_neighbors(&r, interface, NULL))
+	if (get_cdp_neighbors(interface, NULL))
 		return;
 
-	print_neighbors_detail(out, r.buf);
+	print_neighbors_detail(out, cdp_s.cdp_response);
 }
 
 void cmd_sh_cdp_entry(FILE *out, char **argv) {
-	struct cdp_ipc_message r;
 	char proto = 0, version = 0;
 	char *entry = NULL;
 	int i = 0;
@@ -326,12 +307,12 @@ void cmd_sh_cdp_entry(FILE *out, char **argv) {
 			entry = argv[i];
 		i++;
 	}
-	if (get_cdp_neighbors(&r, NULL, entry))
+	if (get_cdp_neighbors(NULL, entry))
 		return;
 	if (!proto && !version)
-		print_neighbors_detail(out, r.buf);
+		print_neighbors_detail(out, cdp_s.cdp_response);
 	else
-		print_entries(out, r.buf, proto, version);
+		print_entries(out, cdp_s.cdp_response, proto, version);
 }
 
 void cmd_sh_cdp_holdtime(FILE *out, char **argv) {
@@ -346,7 +327,7 @@ void cmd_sh_cdp_holdtime(FILE *out, char **argv) {
 }
 
 void cmd_sh_cdp_run(FILE *out, char **argv) {
-	fprintf(out, "CDP is %s\n", cdp_enabled? "enabled" : "disabled");
+	fprintf(out, "CDP is %s\n", cdp_s.enabled? "enabled" : "disabled");
 }
 
 void cmd_sh_cdp_timer(FILE *out, char **argv) {
@@ -360,35 +341,26 @@ void cmd_sh_cdp_timer(FILE *out, char **argv) {
 }
 
 void cmd_sh_cdp_traffic(FILE *out, char **argv) {
-	int s;
-	struct cdp_ipc_message m, r;
-	struct cdp_show_query *q;
-	struct cdp_response *cdpr;
+	struct cdp_request m;
 	struct cdp_traffic_stats *stats;
 
 	if (cdp_is_disabled(out))
 		return;
 
-	m.type = 1;
-	m.query_type = CDP_IPC_SHOW_QUERY;
-	memset(m.buf, 0, sizeof(m.buf));
-	*((pid_t *)m.buf) = my_pid;
+	memset(&m, 0, sizeof(m));
+	m.type = CDP_SHOW_QUERY;
+	m.pid  = getpid();
+	m.query.show.type = CDP_SHOW_STATS;
 
-	q = (struct cdp_show_query *) (m.buf + sizeof(pid_t));
-	q->show_type = CDP_IPC_SHOW_STATS;
-	m.buf[sizeof(m.buf)-1] = '\0';
-
-	if ((s = msgsnd(cdp_ipc_qid, &m, CDP_IPC_MSGSIZE, 0)) < 0) {
-		perror("msgsnd");
+	if (mq_send(cdp_s.sq, (const char *)&m, sizeof(m), 0) < 0) {
+		perror("mq_send");
 		return;
 	}
 
-	if ((s = msgrcv(cdp_ipc_qid, &r, CDP_IPC_MSGSIZE, my_pid, 0)) < 0) {
-		perror("msgrcv");
+	if (cdp_ipc_receive(&cdp_s))
 		return;
-	}
-	cdpr = (struct cdp_response *) r.buf;
-	stats = (struct cdp_traffic_stats *) cdpr->data;
+
+	stats = (struct cdp_traffic_stats *) cdp_s.cdp_response;
 	fprintf(out, "CDP counters:\n"
 			"\tTotal packets output: %u, Input: %u\n"
 			"\tCDP version 1 advertisements output: %u, Input: %u\n"
@@ -398,101 +370,95 @@ void cmd_sh_cdp_traffic(FILE *out, char **argv) {
 }
 
 static int do_configuration_query(int field_id, int value) {
-	struct cdp_ipc_message m, r;
-	struct cdp_conf_query *cf;
-	int s;
+	struct cdp_request  m;
 
-	m.type = 1;
-	m.query_type = CDP_IPC_CONF_QUERY;
-	memset(m.buf, 0, sizeof(m.buf));
-	*((pid_t *)m.buf) = my_pid;
+	if (!cdp_s.enabled)
+		return 0;
 
-	cf = (struct cdp_conf_query *) (m.buf + sizeof(pid_t));
-	cf->field_id = field_id;
-	cf->field_value = value;
-	m.buf[sizeof(m.buf)-1] = '\0';
+	memset(&m, 0, sizeof(m));
+	m.type = CDP_CONF_QUERY;
+	m.pid  = getpid();
+	m.query.conf.field_id = field_id;
+	m.query.conf.field_value = value;
 
-	if ((s = msgsnd(cdp_ipc_qid, &m, CDP_IPC_MSGSIZE, 0)) < 0) {
-		perror("msgsnd");
+	if (mq_send(cdp_s.sq, (const char *)&m, sizeof(m), 0) < 0) {
+		perror("mq_send");
 		return 1;
 	}
 
-	if ((s = msgrcv(cdp_ipc_qid, &r, CDP_IPC_MSGSIZE, my_pid, 0)) < 0) {
-		perror("msgrcv");
+	if (cdp_ipc_receive(&cdp_s))
 		return 1;
-	}
+
 	return 0;
 }
 
-int cdp_adm_query(int query_type, char *interface, struct cdp_ipc_message *r) {
-	struct cdp_ipc_message m;
-	struct cdp_adm_query *adm;
-	int s;
+int cdp_adm_query(int query_type, char *interface) {
+	struct cdp_request  m;
 
-	m.type = 1;
-	m.query_type = CDP_IPC_ADM_QUERY;
-	memset(m.buf, 0, sizeof(m.buf));
-	*((pid_t *)m.buf) = my_pid;
+	if (!cdp_s.enabled)
+		return 0;
 
-	adm = (struct cdp_adm_query *) (m.buf + sizeof(pid_t));
-	adm->type = query_type;
-	strncpy(adm->interface, interface, IFNAMSIZ);
-	adm->interface[IFNAMSIZ-1] = '\0';
-	m.buf[sizeof(m.buf)-1] = '\0';
+	memset(&m, 0, sizeof(m));
+	m.type = CDP_ADM_QUERY;
+	m.pid  = getpid();
+	m.query.adm.type = query_type;
+	strncpy(m.query.adm.interface, interface, IFNAMSIZ);
+	m.query.adm.interface[IFNAMSIZ-1] = '\0';
 
-	if ((s = msgsnd(cdp_ipc_qid, &m, CDP_IPC_MSGSIZE, 0)) < 0) {
-		perror("msgsnd");
+	if (mq_send(cdp_s.sq, (const char *)&m, sizeof(m), 0) < 0) {
+		perror("mq_send");
 		return 1;
 	}
 
-	if ((s = msgrcv(cdp_ipc_qid, r, CDP_IPC_MSGSIZE, my_pid, 0)) < 0) {
-		perror("msgrcv");
+	if (cdp_ipc_receive(&cdp_s))
 		return 1;
-	}
+
 	return 0;
 }
 
 void cmd_cdp_version(FILE *out, char **argv) {
-	do_configuration_query(CDP_IPC_CFG_VERSION, 2);
+	do_configuration_query(CDP_CFG_VERSION, 2);
 }
 
 void cmd_cdp_run(FILE *out, char **argv) {
-	if (! do_configuration_query(CDP_IPC_CFG_ENABLED, 1))
-		cdp_enabled = 1;
+	/* disable / re-enable cdp ipc */
+	cdp_destroy_ipc(&cdp_s);
+	if (cdp_init_ipc(&cdp_s))
+		return;
+	if (!do_configuration_query(CDP_CFG_ENABLED, 1))
+		cdp_s.enabled = 1;
 }
 
 void cmd_cdp_holdtime(FILE *out, char **argv) {
-	do_configuration_query(CDP_IPC_CFG_HOLDTIME, atoi(argv[0]));
+	do_configuration_query(CDP_CFG_HOLDTIME, atoi(argv[0]));
 }
 
 void cmd_cdp_timer(FILE *out, char **argv) {
-	do_configuration_query(CDP_IPC_CFG_TIMER, atoi(argv[0]));
+	do_configuration_query(CDP_CFG_TIMER, atoi(argv[0]));
 }
 
 void cmd_no_cdp_v2(FILE *out, char **argv) {
-	do_configuration_query(CDP_IPC_CFG_VERSION, 1);
+	do_configuration_query(CDP_CFG_VERSION, 1);
 }
 
 void cmd_no_cdp_run(FILE *out, char **argv) {
-	if (!do_configuration_query(CDP_IPC_CFG_ENABLED, 0))
-		cdp_enabled = 0;
+	if (!do_configuration_query(CDP_CFG_ENABLED, 0)) {
+		cdp_destroy_ipc(&cdp_s);
+		cdp_s.enabled = 0;
+	}
 }
 
 void cmd_cdp_if_enable(FILE *out, char **argv) {
-	struct cdp_ipc_message r;
-	cdp_adm_query(CDP_IPC_IF_ENABLE, sel_eth, &r);
+	cdp_adm_query(CDP_IF_ENABLE, sel_eth);
 }
 
 void cmd_cdp_if_disable(FILE *out, char **argv) {
-	struct cdp_ipc_message r;
-	cdp_adm_query(CDP_IPC_IF_DISABLE, sel_eth, &r);
+	cdp_adm_query(CDP_IF_DISABLE, sel_eth);
 }
 
 int cdp_if_is_enabled(char *ifname) {
-	struct cdp_ipc_message r;
-	struct cdp_response *cdpr;
-
-	cdp_adm_query(CDP_IPC_IF_STATUS, ifname, &r);
-	cdpr = (struct cdp_response *) &r.buf;
-	return *((int*) cdpr);
+	if (!cdp_s.enabled)
+		return cdp_s.enabled;
+	cdp_adm_query(CDP_IF_STATUS, ifname);
+	return *((int*) cdp_s.cdp_response);
 }

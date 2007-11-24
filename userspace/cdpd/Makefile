@@ -3,7 +3,7 @@
 CFLAGS +=-Wall -I$(KDIR)/include -I../include -fPIC -D_XOPEN_SOURCE=500
 CFLAGS +=-DDEBUG
 CFLAGS +=-g
-LDFLAGS=-lpthread -lm
+LDFLAGS=-lpthread -lm -lrt
 
 all: cdpd test_sock
 

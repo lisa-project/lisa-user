@@ -1,5 +1,5 @@
 CFLAGS = -g -Wall -I$(KDIR)/include -I ../include -fPIC -D_GNU_SOURCE
-LDFLAGS = -L. -lswcli
+LDFLAGS = -L. -lswcli -lrt
 
 __LOGIN_PATH := \"$(shell pwd)/swlogin\"
 __FILTER_PATH := \"$(shell pwd)/filter\"

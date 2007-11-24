@@ -32,9 +32,9 @@ sw_completion_state_t cmpl_state;
 char eth_range[32]; /* FIXME size */
 char vty_range[32];
 int sock_fd;
-int cdp_ipc_qid;
-int cdp_enabled;
-pid_t my_pid;
+
+/* CDP client session */
+struct cdp_session_info cdp_s;
 
 /* Current privilege level */
 int priv = 1;
@@ -685,15 +685,9 @@ int climain(void) {
 		return 1;
 	}
 
-	my_pid = getpid();
-	dbg("my pid: %d\n", my_pid);
-	if ((cdp_ipc_qid = msgget(CDP_IPC_QUEUE_KEY, 0666)) == -1) {
-		perror("CDP ipc queue doesn't exist. Is cdpd running?");
-		return 1;
-	}
-	dbg("cdp_ipc_qid: %d\n", cdp_ipc_qid);
-	cdp_enabled = 1;
-	
+	/* try to establish communication with cdpd */
+	cdp_init_ipc(&cdp_s);
+
 	do {
 		if (cmd) {
 			free(cmd);
@@ -726,6 +720,7 @@ int climain(void) {
 	} while (cmd);
 	
 	/* cleanup */
+	cdp_destroy_ipc(&cdp_s);
 	close(sock_fd);
 
 	return 0;

@@ -31,9 +31,11 @@ extern sw_command_root_t *cmd_root;
 extern int priv;
 extern sw_execution_state_t exec_state;
 extern sw_completion_state_t cmpl_state;
-int cdp_ipc_qid;
-int cdp_enabled;
-pid_t my_pid;
+
+int cdp_enabled = 0;
+char cdp_queue_name[32], our_queue_name[32];
+mqd_t sq, rq;
+
 FILE *out;
 
 int swcfgload_exec(sw_execution_state_t *exc) {
@@ -199,19 +201,14 @@ int main(int argc, char *argv[]) {
 		return 1;
 	}
 
-	my_pid = getpid();
-	dbg("my pid: %d\n", my_pid);
-	if ((cdp_ipc_qid = msgget(CDP_IPC_QUEUE_KEY, 0666)) == -1) {
-		perror("CDP ipc queue doesn't exist. Is cdpd running?");
-		return 1;
-	}
-	dbg("cdp_ipc_qid: %d\n", cdp_ipc_qid);
-	cdp_enabled = 1;
+	cdp_init_ipc(&cdp_s);
 
 	cmd_root = &command_root_config;
 	ret = argc ? load_tag_config(argc, argv + 1) : load_main_config();
 
 	fclose(out);
+	cdp_destroy_ipc(&cdp_s);
 	close(sock_fd);
+
 	return ret;
 }

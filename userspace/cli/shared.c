@@ -21,7 +21,6 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #include <sys/types.h>
-#include <sys/ipc.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>

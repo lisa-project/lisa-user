@@ -39,7 +39,7 @@ static unsigned char packet[MAX_CDP_FRAME_SIZE];
 extern neighbor_heap_t *nheap; 					/* cdp neighbor heap (cdp neighbor aging mechanism) */
 extern int hend, heap_size;						/* heap end, heap allocated size */ 
 extern sem_t nheap_sem;							/* neighbor heap semaphore */
-extern int qid;									/* the IPC queue id */
+extern char cdp_queue_name[32];					/* the IPC queue id */
 
 extern void *cdp_send_loop(void *);				/* Entry point for the sender thread (cdp_send.c) */
 extern void *cdp_ipc_listen(void *);			/* Entry point for the ipc listener thread (cdp_configuration.c) */
@@ -520,7 +520,8 @@ void *signal_handler(void *ptr) {
 	sigwait(&signal_set, &sig);
 	dbg("[signal handler]: Caught SIGINT ... \n");
 	dbg("[signal handler]: Removing the IPC queue ... \n");
-	msgctl(qid, IPC_RMID, NULL);
+	dbg("queue_name: '%s'\n", cdp_queue_name);
+	mq_unlink(cdp_queue_name);
 	dbg("[signal handler]: Exiting\n");
 	exit(0);
 }

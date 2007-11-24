@@ -22,7 +22,7 @@
 #include "debug.h"
 
 /**
- * Configuration management via a IPC message queueue.
+ * Configuration management via a POSIX message queue.
  */
 extern struct cdp_configuration ccfg;
 extern struct list_head registered_interfaces;
@@ -32,8 +32,7 @@ extern void register_cdp_interface(char *);
 extern void unregister_cdp_interface(char *);
 extern int get_cdp_status(char *);
 
-/* IPC queue id */
-int qid;
+char cdp_queue_name[32];
 
 static void cdp_ipc_add_neighbor(struct cdp_neighbor *n, struct cdp_interface *entry, char *ptr) {
 	struct cdp_ipc_neighbor neighbor;
@@ -48,10 +47,10 @@ static void cdp_ipc_add_neighbor(struct cdp_neighbor *n, struct cdp_interface *e
 /**
  * Fetch cdp registered interfaces into the cdp response
  */
-static int cdp_ipc_get_interfaces(struct cdp_response *cdpr, char *ifname) {
+static int cdp_ipc_get_interfaces(char *cdpr, char *ifname) {
 	struct cdp_interface *entry, *tmp;
 	int count = 0;
-	char *ptr = (char *) cdpr + sizeof(int);
+	char *ptr = cdpr + sizeof(int);
 
 	dbg("requested interface: %s\n", ifname);
 	list_for_each_entry_safe(entry, tmp, &registered_interfaces, lh) {
@@ -73,7 +72,7 @@ static int cdp_ipc_get_interfaces(struct cdp_response *cdpr, char *ifname) {
 /**
  * Fetch all known neighbors into the cdp response.
  */
-static int cdp_ipc_get_neighbors(struct cdp_response *cdpr) {
+static int cdp_ipc_get_neighbors(char *cdpr) {
 	struct cdp_interface *entry, *tmp;
 	struct cdp_neighbor *n, *t;
 	int count = 0;
@@ -86,7 +85,7 @@ static int cdp_ipc_get_neighbors(struct cdp_response *cdpr) {
 			ptr += sizeof(struct cdp_ipc_neighbor);
 			count++;
 			/* not enough memory for another neighbor in cdpr->data  */
-			if (sizeof(cdpr->data)-sizeof(int) < (count+1) * sizeof(struct cdp_ipc_neighbor)) {
+			if (CDP_MAX_RESPONSE_SIZE-sizeof(int) < (count+1) * sizeof(struct cdp_ipc_neighbor)) {
 				sem_post(&entry->n_sem);
 				return count;
 			}
@@ -100,11 +99,11 @@ static int cdp_ipc_get_neighbors(struct cdp_response *cdpr) {
  * Fetch all known neighbors on the specified interface into the
  * cdp response.
  */
-static int cdp_ipc_get_neighbors_intf(struct cdp_response *cdpr, char *interface) {
+static int cdp_ipc_get_neighbors_intf(char *cdpr, char *interface) {
 	struct cdp_interface *entry, *tmp;
 	struct cdp_neighbor *n, *t;
 	int count = 0, found = 0;
-	char *ptr = (char *) cdpr + sizeof(int);
+	char *ptr = cdpr + sizeof(int);
 
 	list_for_each_entry_safe(entry, tmp, &registered_interfaces, lh)
 		if (!strncmp(entry->name, interface, strlen(interface))) {
@@ -121,7 +120,7 @@ static int cdp_ipc_get_neighbors_intf(struct cdp_response *cdpr, char *interface
 		ptr += sizeof(struct cdp_ipc_neighbor);
 		count++;
 		/* not enough memory for another neighbor in cdpr->data  */
-		if (sizeof(cdpr->data)-sizeof(int) < (count+1) * sizeof(struct cdp_ipc_neighbor)) {
+		if (CDP_MAX_RESPONSE_SIZE-sizeof(int) < (count+1) * sizeof(struct cdp_ipc_neighbor)) {
 			sem_post(&entry->n_sem);
 			return count;
 		}
@@ -134,7 +133,7 @@ static int cdp_ipc_get_neighbors_intf(struct cdp_response *cdpr, char *interface
  * Fetch all neighbors with the specified device id into the
  * cdp response.
  */
-static int cdp_ipc_get_neighbors_devid(struct cdp_response *cdpr, char *device_id) {
+static int cdp_ipc_get_neighbors_devid(char *cdpr, char *device_id) {
 	struct cdp_interface *entry, *tmp;
 	struct cdp_neighbor *n, *t;
 	int count = 0;
@@ -154,7 +153,7 @@ static int cdp_ipc_get_neighbors_devid(struct cdp_response *cdpr, char *device_i
 			ptr += sizeof(struct cdp_ipc_neighbor);
 			count++;
 			/* not enough memory for another neighbor in cdpr->data  */
-			if (sizeof(cdpr->data)-sizeof(int) < (count+1) * sizeof(struct cdp_ipc_neighbor)) {
+			if (CDP_MAX_RESPONSE_SIZE-sizeof(int) < (count+1) * sizeof(struct cdp_ipc_neighbor)) {
 				sem_post(&entry->n_sem);
 				return count;
 			}
@@ -165,28 +164,21 @@ static int cdp_ipc_get_neighbors_devid(struct cdp_response *cdpr, char *device_i
 	return count;
 }
 
-static void cdp_ipc_show(struct cdp_ipc_message *m, struct cdp_ipc_message *r) {
-	struct cdp_show_query *sq;
-	struct cdp_response *cdpr;
-
-	/* response type is the sender's pid */
-	sq = (struct cdp_show_query *) (m->buf+sizeof(pid_t));
-	cdpr = (struct cdp_response *) r->buf;
-	memset(cdpr->data, 0, sizeof(cdpr->data));
+static void cdp_ipc_show(struct cdp_show *sq, char *cdpr) {
+	memset(cdpr, 0, CDP_MAX_RESPONSE_SIZE);
 	dbg("[ipc_listener]: ipc show query.\n");
-	dbg("[ipc listener]: response type: %ld\n", r->type);
-	dbg("[ipc listener]: show type: %d\n", sq->show_type);
-	switch (sq->show_type) {
-	case CDP_IPC_SHOW_CFG: 
-		memcpy(cdpr->data, &ccfg, sizeof(ccfg)); 
+	dbg("[ipc listener]: show type: %d\n", sq->type);
+	switch (sq->type) {
+	case CDP_SHOW_CFG:
+		memcpy(cdpr, &ccfg, sizeof(ccfg));
 		break;
-	case CDP_IPC_SHOW_STATS:
-		memcpy(cdpr->data, &cdp_stats, sizeof(cdp_stats));
+	case CDP_SHOW_STATS:
+		memcpy(cdpr, &cdp_stats, sizeof(cdp_stats));
 		break;
-	case CDP_IPC_SHOW_INTF:
+	case CDP_SHOW_INTF:
 		*((int *) cdpr) = cdp_ipc_get_interfaces(cdpr, sq->interface);
 		break;
-	case CDP_IPC_SHOW_NEIGHBORS:
+	case CDP_SHOW_NEIGHBORS:
 		dbg("[ipc listener]: interface: %s, %d\n", sq->interface, strlen(sq->interface));
 		dbg("[ipc listener]: device_id: %s, %d\n", sq->device_id, strlen(sq->device_id));
 		if (strlen(sq->interface))
@@ -199,31 +191,26 @@ static void cdp_ipc_show(struct cdp_ipc_message *m, struct cdp_ipc_message *r) {
 	}
 }
 
-static void cdp_ipc_conf(struct cdp_ipc_message *m, struct cdp_ipc_message *r) {
-	struct cdp_conf_query *cq;
-	struct cdp_response *cdpr;
-
-	cq = (struct cdp_conf_query *) (m->buf + sizeof(pid_t));
-	cdpr = (struct cdp_response *) r->buf;
-	memset(cdpr->data, 0, sizeof(cdpr->data));
+static void cdp_ipc_conf(struct cdp_conf *cq, char *cdpr) {
+	memset(cdpr, 0, CDP_MAX_RESPONSE_SIZE);
 	dbg("[ipc_listener]: ipc conf query.\n");
 	switch (cq->field_id) {
-	case CDP_IPC_CFG_VERSION:
+	case CDP_CFG_VERSION:
 		dbg("[ipc_listener]: cdp advertise-v2 : %d\n", cq->field_value);
 		if (cq->field_value >= 1 && cq->field_value <=2)
 			ccfg.version = cq->field_value;
 		break;
-	case CDP_IPC_CFG_HOLDTIME:
+	case CDP_CFG_HOLDTIME:
 		dbg("[ipc listener]: cdp holdtime %d\n", cq->field_value);
 		if (cq->field_value >= 10)
 			ccfg.holdtime = cq->field_value;
 		break;
-	case CDP_IPC_CFG_TIMER:
+	case CDP_CFG_TIMER:
 		dbg("[ipc listener]: cdp timer %d\n", cq->field_value);
 		if (cq->field_value >= 5 && cq->field_value <= 254)
 			ccfg.timer = cq->field_value;
 		break;
-	case CDP_IPC_CFG_ENABLED:
+	case CDP_CFG_ENABLED:
 		dbg("[ipc listener]: cdp enabled %d\n", cq->field_value);
 		if (cq->field_value <= 1)
 			ccfg.enabled = cq->field_value;
@@ -233,24 +220,19 @@ static void cdp_ipc_conf(struct cdp_ipc_message *m, struct cdp_ipc_message *r) {
 	}
 }
 
-static void cdp_ipc_adm(struct cdp_ipc_message *m, struct cdp_ipc_message *r) {
-	struct cdp_adm_query *aq;
-	struct cdp_response *cdpr;
-
-	aq = (struct cdp_adm_query *) (m->buf + sizeof(pid_t));
-	cdpr = (struct cdp_response *) r->buf;
-	memset(cdpr->data, 0, sizeof(cdpr->data));
+static void cdp_ipc_adm(struct cdp_adm *aq, char *cdpr) {
+	memset(cdpr, 0, CDP_MAX_RESPONSE_SIZE);
 	dbg("[ipc listener]: ipc adm query.\n");
 	switch (aq->type) {
-	case CDP_IPC_IF_ENABLE:
+	case CDP_IF_ENABLE:
 		dbg("[ipc listener]: Enable cdp on interface %s\n", aq->interface);
 		register_cdp_interface(aq->interface);
 		break;
-	case CDP_IPC_IF_DISABLE:
+	case CDP_IF_DISABLE:
 		dbg("[ipc listener]: Disable cdp on interface %s\n", aq->interface);
 		unregister_cdp_interface(aq->interface);
 		break;
-	case CDP_IPC_IF_STATUS:
+	case CDP_IF_STATUS:
 		dbg("[ipc listener]: Get cdp status on interface %s\n", aq->interface);
 		*((int *) cdpr) = get_cdp_status(aq->interface);
 		break;
@@ -259,43 +241,90 @@ static void cdp_ipc_adm(struct cdp_ipc_message *m, struct cdp_ipc_message *r) {
 	}
 }
 
-void *cdp_ipc_listen(void *arg) {
-	int s;
-	struct cdp_ipc_message m, r;
+static void cdp_ipc_send_response(struct cdp_request *m, char *r) {
+	char qname[32];
+	mqd_t sq;
 
-	if ((qid = msgget(CDP_IPC_QUEUE_KEY, IPC_CREAT|0666)) == -1) {
-		perror("msgget");
-		exit(-1);
+	memset(qname, 0, sizeof(qname));
+	snprintf(qname, sizeof(qname), CDP_QUEUE_NAME, m->pid);
+	qname[sizeof(qname)-1] = '\0';
+
+	if ((sq = mq_open(qname, O_WRONLY)) == -1) {
+		dbg("Unable to open queue '%s' for sending response.\n", qname);
+		perror("mq_open");
+		return;
+	}
+
+	if (mq_send(sq, (const char *)r, CDP_MAX_RESPONSE_SIZE, 0) < 0) {
+		perror("mq_send");
+		return;
+	}
+
+	mq_close(sq);
+}
+
+void *cdp_ipc_listen(void *arg) {
+	struct cdp_request *m;
+	char r[CDP_MAX_RESPONSE_SIZE];
+	struct mq_attr attr;
+	char *msg;
+	mqd_t rq;
+
+	memset(cdp_queue_name, 0, sizeof(cdp_queue_name));
+	snprintf(cdp_queue_name, sizeof(cdp_queue_name), CDP_QUEUE_NAME, 0);
+	cdp_queue_name[sizeof(cdp_queue_name)-1] = '\0';
+
+	/* We open the queue with O_EXCL because we need to assure we're the
+	 * only cdpd instance running. */
+	if ((rq = mq_open(cdp_queue_name, O_CREAT|O_EXCL|O_RDONLY, 0666, NULL)) == -1) {
+		perror("mq_open");
+		pthread_exit(NULL);
+	}
+
+	/* set the message size attribute */
+	if (mq_getattr(rq, &attr) < 0) {
+		perror("mq_getattr");
+		pthread_exit(NULL);
+	}
+
+	if (!(msg = malloc(attr.mq_msgsize+1))) {
+		perror("malloc");
+		pthread_exit(NULL);
 	}
 
 	dbg("cdp ipc listen\n");
+	/* loop listening for incoming requests */
 	for (;;) {
+		memset(msg, 0, attr.mq_msgsize+1);
+
 		/* receive a message from the message queue */
-		if ((s = msgrcv(qid, &m, CDP_IPC_MSGSIZE, 1, 0)) < 0) {
-			perror("msgrcv");
-			continue;
+		if (mq_receive(rq, msg, attr.mq_msgsize, NULL) < 0) {
+			perror("mq_receive");
+			pthread_exit(NULL);
 		}
+
+		m = (struct cdp_request *)msg;
+
 		/* interpret & compose response */
-		dbg("[ipc listener]: received message of type: %ld\n", m.type);
-		dbg("[ipc listener]: sender pid is: %d\n", *((pid_t *)m.buf));
-		/* response type is the sender's pid */
-		r.type = *((pid_t *)m.buf);
-		switch (m.query_type) {
-		case CDP_IPC_SHOW_QUERY:
-			cdp_ipc_show(&m, &r);
+		dbg("[ipc listener]: received message of type: %d\n", m->type);
+		dbg("[ipc listener]: sender pid is: %d\n", m->pid);
+
+		switch (m->type) {
+		case CDP_SHOW_QUERY:
+			cdp_ipc_show(&m->query.show, r);
 			break;
-		case CDP_IPC_CONF_QUERY:
-			cdp_ipc_conf(&m, &r);
+		case CDP_CONF_QUERY:
+			cdp_ipc_conf(&m->query.conf, r);
 			break;
-		case CDP_IPC_ADM_QUERY:
-			cdp_ipc_adm(&m, &r);
+		case CDP_ADM_QUERY:
+			cdp_ipc_adm(&m->query.adm, r);
 			break;
 		}
+
 		/* send the response */
-		s = msgsnd(qid, &r, CDP_IPC_MSGSIZE, 0);
-		dbg("sent response, result: %d\n", s);
-		if (s < 0)
-			perror("msgsnd");
+		cdp_ipc_send_response(m, r);
 	}
+
+	free(msg);
 	pthread_exit(NULL);
 }

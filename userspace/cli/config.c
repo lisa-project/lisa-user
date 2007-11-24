@@ -60,7 +60,6 @@ static void cmd_nohostname(FILE *out, char **argv) {
 static void cmd_int_eth(FILE *out, char **argv) {
 	char *arg = *argv;
 	struct net_switch_ioctl_arg ioctl_arg;
-	struct cdp_ipc_message r;
 
 	ioctl_arg.cmd = SWCFG_ADDIF;
 	ioctl_arg.if_name = if_name_eth(arg);
@@ -80,7 +79,7 @@ static void cmd_int_eth(FILE *out, char **argv) {
 		}
 	} else {
 		/* Enable CDP on this interface */
-		cdp_adm_query(CDP_IPC_IF_ENABLE, ioctl_arg.if_name, &r);
+		cdp_adm_query(CDP_IF_ENABLE, ioctl_arg.if_name);
 	}
 
 	cmd_root = &command_root_config_if_eth;
@@ -91,7 +90,6 @@ static void cmd_int_eth(FILE *out, char **argv) {
  */
 static void cmd_int_any(FILE *out, char **argv) {
 	struct net_switch_ioctl_arg ioctl_arg;
-	struct cdp_ipc_message r;
 
 	ioctl_arg.cmd = SWCFG_ADDIF;
 	ioctl_arg.if_name = argv[0];
@@ -119,7 +117,7 @@ static void cmd_int_any(FILE *out, char **argv) {
 		}
 	} else {
 		/* Enable CDP on this interface */
-		cdp_adm_query(CDP_IPC_IF_ENABLE, ioctl_arg.if_name, &r);
+		cdp_adm_query(CDP_IF_ENABLE, ioctl_arg.if_name);
 	}
 
 	cmd_root = &command_root_config_if_eth;
@@ -129,13 +127,12 @@ static void cmd_int_any(FILE *out, char **argv) {
 static void cmd_no_int_eth(FILE *out, char **argv) {
 	char *arg = argv[1]; /* argv[0] is "no" */
 	struct net_switch_ioctl_arg ioctl_arg;
-	struct cdp_ipc_message r;
 	
 	ioctl_arg.cmd = SWCFG_DELIF;
 	ioctl_arg.if_name = if_name_eth(arg);
 
 	/* Disable CDP on this interface */
-	cdp_adm_query(CDP_IPC_IF_DISABLE, ioctl_arg.if_name, &r);
+	cdp_adm_query(CDP_IF_DISABLE, ioctl_arg.if_name);
 	
 	/* FIXME nu avem un race aici? codul de kernel pentru socketzi
 	 * are nevoie ca device-ul sa fie port in switch => nu poate fi
@@ -165,14 +162,13 @@ static void cmd_no_int_vlan(FILE *out, char **argv) {
 
 static void cmd_no_int_any(FILE *out, char **argv) {
 	struct net_switch_ioctl_arg ioctl_arg;
-	struct cdp_ipc_message r;
 	int ret;
 
 	ioctl_arg.cmd = SWCFG_DELIF;
 	ioctl_arg.if_name = argv[1]; /* argv[0] is "no" */
 
 	/* Disable CDP on this interface */
-	cdp_adm_query(CDP_IPC_IF_DISABLE, ioctl_arg.if_name, &r);
+	cdp_adm_query(CDP_IF_DISABLE, ioctl_arg.if_name);
 	
 	/* FIXME FIXME FIXME FIXME
 	 * daca ioctl() de scos interfata esueaza din varii motive,
@@ -180,7 +176,7 @@ static void cmd_no_int_any(FILE *out, char **argv) {
 	 * pe de alta parte, vezi si FIXME din cmd_no_int_eth
 	 */
 
-	if (ret = ioctl(sock_fd, SIOCSWCFG, &ioctl_arg))
+	if ((ret = ioctl(sock_fd, SIOCSWCFG, &ioctl_arg)))
 		perror("ioctl");
 
 	cfg_set_if_tag(argv[1], NULL, NULL);

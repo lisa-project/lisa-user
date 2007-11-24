@@ -231,7 +231,7 @@ void dump_static_macs(FILE *out) {
 void dump_cdp_global_settings(FILE *out) {
 	struct cdp_configuration conf;
 
-	if (!cdp_enabled) {
+	if (!cdp_s.enabled) {
 		fprintf(out, "no cdp run\n");
 		return;
 	}

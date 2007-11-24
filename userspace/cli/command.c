@@ -163,6 +163,7 @@ static void cmd_history(FILE *out, char **argv) {
 }
 
 static void cmd_exit(FILE *out, char **argv) {
+	cdp_destroy_ipc(&cdp_s);
 	pclose(out);
 	exit(0);
 }
@@ -184,6 +185,8 @@ static void cmd_run_eth(FILE *out, char **argv) {
 		 * definitely segfault !!!!
 		 * FIXME FIXME FIXME
 		 */
+		/** FIXME FIXME FIXME  (IoNutZ: parse_eth returns int, while
+		 * build_int_eth expects char *). */
 		status = build_int_eth_config(tmp, parse_eth(arg), 1);
 		if(status)
 			break;
