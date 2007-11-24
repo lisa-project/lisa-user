@@ -1,0 +1,70 @@
+#!/bin/bash
+#============================================================================
+# Xen network start/stop script for lisa integration.
+# Xend calls a network script when it starts.
+# The script name to use is defined in /etc/xen/xend-config.sxp
+# in the network-script field.
+#
+# This script is only a wrapper to lisa init script.
+#
+# Usage:
+#
+# network-lisa (start|stop|status)
+#
+#============================================================================
+
+LISACTL="/etc/init.d/lisa"
+STATEFILE="/var/lock/subsys/lisa"
+
+if [ -x "$LISACTL" ]; then
+    echo "Lisa control script not found" >&2
+    exit 1
+fi
+
+dir=$(dirname "$0")
+. "$dir/xen-script-common.sh"
+
+findCommand "$@"
+
+op_start() {
+    if [ -f "$STATEFILE" ]; then
+        return 0
+    fi
+    $LISACTL start 1>&2
+    return $?
+}
+
+op_stop() {
+    if [ ! -f "$STATEFILE" ]; then
+        return 0
+    fi
+    $LISACTL stop 1>&2
+    return $?
+}
+
+op_status() {
+    if [ -f "$STATEFILE" ]; then
+        echo "Lisa is running"
+    else
+        echo "Lisa is NOT running"
+    fi
+}
+
+case "$command" in
+    start)
+	op_start
+	;;
+    
+    stop)
+	op_stop
+	;;
+
+    status)
+	op_status
+	;;
+
+    *)
+	echo "Unknown command: $command" >&2
+	echo 'Valid commands are: start, stop, status' >&2
+	exit 1
+esac

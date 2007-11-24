@@ -1,0 +1,39 @@
+#!/bin/bash
+#============================================================================
+# /etc/xen/vif-lisa
+#
+# Script for configuring a vif in lisa.
+# The hotplugging system will call this script if it is specified either in
+# the device configuration given to Xend, or the default Xend configuration
+# in /etc/xen/xend-config.sxp.
+#
+# Usage:
+# vif-bridge (add|remove|online|offline)
+#
+# Environment vars:
+# vif         vif interface name (required).
+# XENBUS_PATH path to this device's details in the XenStore (required).
+#
+#============================================================================
+
+dir=$(dirname "$0")
+. "$dir/vif-common.sh"
+
+domname=$(xenstore_read "$XENBUS_PATH"/domain)
+
+case "$command" in
+    online)
+        swctl addtagged "$vif" "$domname"
+        swcfgload "$vif" "$domname"
+        ;;
+
+    offline)
+        swctl del "$vif"
+        ;;
+esac
+
+log debug "Successful vif-lisa $command for $vif."
+if [ "$command" == "online" ]
+then
+  success
+fi
