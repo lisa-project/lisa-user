@@ -134,6 +134,8 @@ int load_tag_config(int argc, char **argv, int silent) {
 	}
 	
 	if ((fp = fopen(path, "r")) == NULL) {
+		if (silent)
+			return 0;
 		fprintf(stderr, "Could not open %s\n", path);
 		return 1;
 	}
