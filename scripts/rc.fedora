@@ -3,7 +3,7 @@
 # lisa        Starts/stops lisa.
 #
 #
-# chkconfig: 2345 97 11
+# chkconfig: 345 11 89
 # description: LiSA stands for Linux Switch Appliance. 
 #
 
@@ -23,13 +23,13 @@ start() {
 		echo -n "LiSA already running "
 		echo_failure
 		echo
-		exit 1
+		return 1
 	fi
 	echo -n "Loading LiSA kernel module "
 	if ! /sbin/modprobe $LISA_MODULE &> /dev/null; then
 		echo_failure
 		echo
-		exit 1
+		return 1
 	fi
 	echo_success
 	echo
@@ -37,14 +37,14 @@ start() {
 	if ! $LISA_PREFIX/$LISA_CDPD &> /dev/null ; then
 		echo_failure
 		echo
-		exit 1
+		return 1
 	fi
 	sleep 1
 	PID=`cat $LISA_CDPD_PIDFILE` &>/dev/null
 	if ! ps $PID &>/dev/null ; then
 		echo_failure
 		echo
-		exit 1
+		return 1
 	fi
 	echo_success
 	echo
@@ -52,7 +52,7 @@ start() {
 	if ! $LISA_PREFIX/$LISA_LOAD_CFG ; then
 		echo_failure
 		echo
-		exit 1
+		return 1
 	fi
 	echo_success
 	echo
@@ -64,7 +64,7 @@ stop() {
 		echo -n "$LISA_LOCK not found."
 		echo_failure
 		echo
-		exit 1
+		return 1
 	fi
 	echo -n "Stopping $LISA_CDPD "
 	killall $LISA_CDPD &> /dev/null
@@ -73,7 +73,7 @@ stop() {
 		echo -n "$LISA_CDPD is still alive "
 		echo_failure
 		echo
-		exit 1
+		return 1
 	fi
 	echo_success
 	echo
@@ -81,23 +81,26 @@ stop() {
 	if ! /sbin/rmmod $LISA_MODULE &> /dev/null; then
 		echo_failure
 		echo
-		exit 1
+		return 1
 	fi 
 	echo_success
 	echo
-	rm $LISA_LOCK
+	rm -f $LISA_LOCK
 }
 
 case "$1" in
 	start)
 		start
+		RETVAL=$?
 		;;
 	stop)
 		stop
+		RETVAL=$?
 		;;
 	restart)
 		stop
 		start
+		RETVAL=$?
 		;;
 	*)
 		echo "Usage: $prog {start|stop|restart}"
