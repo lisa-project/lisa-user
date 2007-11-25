@@ -71,7 +71,7 @@ void usage() {
 		"Command can be any of:\n"
 		"  add iface_name\t\t\tAdds an interface to switch.\n"
 		"  addtagged iface_name tag_name\t\tAdds an interface to switch and assigns tag.\n"
-		"  del iface_name\t\t\tRemoves an iterface from switch\n"
+		"  del [-s] iface_name\t\t\tRemoves an iterface from switch\n"
 		"  addvlan vlan_no vlan_name\t\tAdds a vlan to the vlan database\n"
 		"  delvlan vlan_no\t\t\tDeletes a vlan from the vlan database\n"
 		"  chvlan vlan_no new_vlan_name\t\tRenames vlan_no to new_vlan_name\n"
@@ -155,10 +155,20 @@ int main(int argc, char **argv) {
 	}
 
 	if(!strcmp(argv[1], "del")) {
+		int silent = 0;
 		if (argc < 3) {
 			usage();
 			return 0;
 		}
+
+		do {
+			if (argc < 4)
+				break;
+			if (strcmp(argv[3], "-s"))
+				break;
+			silent = 1;
+		} while(0);
+
 		status = cfg_init();
 		assert(!status);
 		cfg_lock();
@@ -166,11 +176,19 @@ int main(int argc, char **argv) {
 		user_arg.cmd = SWCFG_DELIF;
 		user_arg.if_name = argv[2];
 		status = ioctl(sock, SIOCSWCFG, &user_arg);
-		if (status) {
+		if (status && !silent) {
 			cfg_unlock();
 			perror("del failed");
 			return 1;
 		}
+		/* On silent mode, ignore the ioctl() exit status and delete
+		 * the tag anyway. This is useful for Xen integration: Xen
+		 * first unregisters vifX.0, and then calls the vif-lisa
+		 * script. The netdevice is removed from the switch immediately
+		 * (via netdevice notification handler in switch kernel module,
+		 * but the interface tag must be deleted later, via userspace
+		 * brctl).
+		 */
 		cfg_set_if_tag(argv[2], NULL, NULL);
 		cfg_unlock();
 		return 0;

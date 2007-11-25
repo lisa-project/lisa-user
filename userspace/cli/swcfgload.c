@@ -17,6 +17,9 @@
  *    MA  02111-1307  USA
  */
 
+#include <unistd.h>
+#include <stdlib.h>
+#include <stdio.h>
 #include <linux/limits.h>
 
 #include "climain.h"
@@ -110,7 +113,7 @@ int load_main_config(void) {
 	return 0;
 }
 
-int load_tag_config(int argc, char **argv) {
+int load_tag_config(int argc, char **argv, int silent) {
 	/* argv[0] is if_name;
 	 * argv[1] is tag_name;
 	 * argv[2] is description, if argc > 2.
@@ -171,22 +174,46 @@ int load_tag_config(int argc, char **argv) {
 	return 0;
 }
 
-int main(int argc, char *argv[]) {
-	int status, ret;
+int main(int argc, char **argv) {
+	int status, ret, opt, load_main = 0, silent = 0, out_help = 0;
+	char *myself = argv[0];
 
-	argc--;
-	if ((argc > 0 && argc < 2) || argc > 3) {
+	while ((opt = getopt(argc, argv, "msh")) != -1) {
+		switch (opt) {
+		case 'm':
+			load_main = 1;
+			break;
+		case 's':
+			silent = 1;
+			break;
+		case 'h':
+		default:
+			out_help = 1;
+		}
+	}
+	argc -= optind;
+	argv += optind;
+
+	do {
+		if (out_help || load_main)
+			break;
+		if (argc >= 2 && argc <= 3)
+			break;
+		out_help = 1;
+	} while(0);
+
+	if (out_help) {
 		fprintf(stderr, "Usage:\n"
-				"  %s\n"
+				"  %s -m \n"
 				"    Load main configuration from %s.\n"
-				"  %s <if_name> <tag_name> [<description>]\n"
+				"  %s [-s] <if_name> <tag_name> [<description>]\n"
 				"    Load configuration in %s/<tag_name> into interface\n"
 				"    <if_name> and optionally assign description <description>\n"
 				"    to the interface <if_name>.\n",
-				argv[0], config_file, argv[0], config_tags_path);
+				myself, config_file, myself, config_tags_path);
 		return 1;
 	}
-	
+
 	priv = 15;
 	
 	status = cfg_init();
@@ -204,7 +231,8 @@ int main(int argc, char *argv[]) {
 	cdp_init_ipc(&cdp_s);
 
 	cmd_root = &command_root_config;
-	ret = argc ? load_tag_config(argc, argv + 1) : load_main_config();
+	ret = load_main ? load_main_config() :
+		load_tag_config(argc, argv, silent);
 
 	fclose(out);
 	cdp_destroy_ipc(&cdp_s);

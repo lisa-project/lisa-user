@@ -21,14 +21,17 @@ dir=$(dirname "$0")
 
 domname=$(xenstore_read "$XENBUS_PATH"/domain)
 
+date >> /tmp/qqq
+echo $* >> /tmp/qqq
+
 case "$command" in
     online)
         swctl addtagged "$vif" "$domname"
-        swcfgload "$vif" "$domname"
+        swcfgload -s "$vif" "$domname"
         ;;
 
     offline)
-        swctl del "$vif"
+        swctl del "$vif" -s
         ;;
 esac
 
