@@ -49,7 +49,7 @@ start() {
 	echo_success
 	echo
 	echo -n "Loading switch configuration "
-	if ! $LISA_PREFIX/$LISA_LOAD_CFG ; then
+	if ! $LISA_PREFIX/$LISA_LOAD_CFG -m ; then
 		echo_failure
 		echo
 		return 1

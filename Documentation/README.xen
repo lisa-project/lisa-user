@@ -1,0 +1,34 @@
+1) Creare domeniu / Start domeniu existent (Script: vif-lisa)
+
+1.a) Creare interfata tagged:
+
+ swctl addtagged if_name tag_name
+
+ Aici se creeaza asocierea interfata - tag intr-o zona de shared memory si 
+ se adauga interfata in switch.
+
+1.b) Incarcare configuratie interfata tagged:
+
+ swcfgload if_name tag_name [if_description]
+
+* cfgfile := /etc/lisa/tags/tag_name
+* cfgfile contine numai comenzile de configurare interfata (nu contine 
+comanda interface if_name).
+* daca cfgfile nu exista (domeniu nou) atunci nu se intampla nimic -- normal
+pentru ca daca nu se da wr mem pana la oprirea domeniului, atunci inseamna
+ca nu i s-a salvat configuratia si data viitoare porneste cu configuratie "goala"
+
+2) Salvarea configuratiei (write mem)
+
+Se salveaza totul intr-un fisier global: /etc/lisa/config.text, cu exceptia configuratiei
+interfetelor "tagged" care se salveaza in fisierele /etc/lisa/tags/tag_name.
+
+3) Incarcarea configuratiei globale la startup lisa:
+
+swcfgload
+
+4) Shutdown domeniu (Script: vif-lisa):
+
+swctl del if_name
+
+OBS: se va sterge si asocierea interfetei cu tag-ul din shared memory
