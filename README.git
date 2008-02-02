@@ -1,0 +1,64 @@
+Lisa linux-2.6 repository rules:
+
+|
+o v2.6.x
+|\
+| \_ lisa-v2.6.x
+o      |\
+|      | \_ lisa-devel
+o      |      |
+|      |      o
+o      |      |
+|      |      o
+o      |      |
+|      |      o
+o      |     / \
+|      |    /   \_ xen-v2.6.x
+o      |   /         |
+|      |  /          o
+o      | /
+|      |/
+o      o
+
+1) Lisa pe versiune noua de linux:
+* split branch lisa-v2.6.x din tag v2.6.x
+* rebase branch lisa-devel la lisa-v2.6.x
+* split branch xen-v2.6.x din lisa-devel
+* patch xen pentru 2.6.x pus pe xen-v2.6.x (+commit)
+
+2) Development pe lisa-devel
+* rebase xen-v2.6.x la HEAD-ul lui lisa-devel
+
+3) Development pe xen-v2.6.x
+* ideea este sa nu apara mai mult de 1 commit (cel cu patch xen) pe xen-v2.6.x si
+  pentru modificari sa se faca commit direct in lisa-devel;
+* exemplu de mod de utilizare:
+    * se fac modificari pe xen-v2.6.x
+    * testare
+    * git-stash
+    * git-checkout lisa-devel
+    * git-stash apply
+    * git-commit
+
+4) Release stabil pentru v2.6.x
+* git-checkout lisa-v2.6.x
+* git-merge lisa-devel
+* git-push ssh://user@10.255.131.222/var/lib/git-public/linux-2.6.git lisa-v2.6.x
+
+5) Generare patch lisa pentru 2.6.x
+* git-checkout -b tmp v2.6.x
+* git-merge --squash lisa-v2.6.x
+* remove debugging from Makefile
+* git-commit -a -s
+    * subject: Lisa for linux 2.6.x
+    * mesaj: Applied lisa patch on v2.6.x
+* git-format-patch HEAD~1
+* delete branch tmp
+
+6) Fixes pe versiune de linux pentru care avem deja release
+* fixes se fac pe lisa-devel
+* git-checkout lisa-v2.6.x
+* git-cherry-pick lisa-devel
+* git-commit -a --amend
+* git-push ssh://user@10.255.131.222/var/lib/git-public/linux-2.6.git lisa-v2.6.x
+
