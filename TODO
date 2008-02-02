@@ -53,44 +53,6 @@ pentru debugging
 nimic; ar trebui buildate intai chestiile din lib, apoi restul sa aiba dependente
 
 
---- BUG#? ---
-"mac-address-table static ..." not compatible with interface names
-
-The "mac-address-table static ..." is no longer compatible with the interface
-naming convention. The syntax/parser_config needs to be adjusted to accept an
-arbitrary name for the interface (maybe except for LiSA's own vlanX?), just
-like the "interface ..." command.
-
---- BUG#? ---
-Tagged frames can exceed standard Ethernet mtu of 1500
-
-It is usual for untagged interfaces to receive frames of exactly 1500 (Ethernet
-maximum mtu) bytes data. However, when sent out on a tagged interface, these
-frames will be 1504 long and therefore will exceed the maximum Ethernet mtu.
-
-When setting interfaces to "switchport mode trunk", LiSA should automagically
-set the mtu to 1504 on the device to avoid trouble. Unfortunately, many
-devices don't support "Jumbo Frames" (frames larger than standard Ethernet) in
-hardware and issue an error on set_mtu() if mtu is larger than 1500. In such
-case, LiSA should issue a warning when setting the port to trunk mode and
-perhaps advise the user to change all untagged interfaces mtu to 1496.
-
-Case study: Broadcom Tg3 driver (drivers/net/tg3.c)
-
-...
-
-#define TG3_MAX_MTU(tp) \
-    ((tp->tg3_flags2 & TG3_FLG2_JUMBO_CAPABLE) ? 9000 : 1500)
-
-...
-
-static int tg3_change_mtu(struct net_device *dev, int new_mtu)
-{
-    struct tg3 *tp = netdev_priv(dev);
-    int err;
-
-    if (new_mtu < TG3_MIN_MTU || new_mtu > TG3_MAX_MTU(tp))
-        return -EINVAL;
-
-...
-
+integrare rstplib: http://rstplib.sourceforge.net/
+integrare openvpms: http://vmps.sourceforge.net/
+integrare mpls: http://mpls-linux.sourceforge.net/
