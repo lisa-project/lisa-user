@@ -44,7 +44,12 @@ int sw_vdb_add_vlan(struct net_switch *sw, int vlan, char *name) {
     INIT_LIST_HEAD(&entry->non_trunk_ports);
 	rcu_assign_pointer(sw->vdb[vlan], entry);
 
+	/* Add all switched ports to this vlan, if it is configured
+	 * on them.
+	 */
 	list_for_each_entry(port, &sw->ports, lh) {
+		if(port->flags & SW_PFL_NOSWITCHPORT)
+			continue;
 		if(port->flags & SW_PFL_TRUNK) {
 			if(sw_port_forbidden_vlan(port, vlan))
 				continue;
@@ -83,18 +88,31 @@ int sw_vdb_del_vlan(struct net_switch *sw, int vlan) {
 		return -EINVAL;
 	if(!(entry = sw->vdb[vlan]))
 		return -ENOENT;
+
+	/* Disable all access mode ports that have this vlan set
+	 * as the access vlan */
+#if NET_SWITCH_NOVLANFORIF == 2
 	list_for_each_entry(link, &entry->non_trunk_ports, lh) {
+		if(link->port->flags & SW_PFL_NOSWITCHPORT)
+			continue;
 		sw_disable_port(link->port);
 	}
+#endif
+
+	/* Unlink the entry from the vlan database, then wait
+	 * until all sw_handle_frame() instances see the change.
+	 * Now all sw_handle_frame() instances will drop the
+	 * packets on this vlan during the sanity checks. Thus
+	 * nobody learns macs on this vlan, so we can safely remove
+	 * all entrues from the fdb.
+	 */
 	rcu_assign_pointer(sw->vdb[vlan], NULL);
 	synchronize_sched();
-	/* Now nobody learns macs on this vlan, so we can safely remove
-	   all entrues from the fdb
-	 */
 	fdb_cleanup_vlan(sw, vlan, SW_FDB_ANY);
+
 	/* Subsequent invocations of the forwarding code will "see" this
-	   VLAN as deleted and will not run on this VLAN. So we can safely
-	   free the link structures without further synchronization.
+	 * VLAN as deleted and will not run on this VLAN. So we can safely
+	 * free the link structures without further synchronization.
 	 */
 	list_for_each_entry_safe(link, tmp, &entry->trunk_ports, lh) {
 		kmem_cache_free(sw->vdb_cache, link);

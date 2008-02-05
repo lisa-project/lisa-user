@@ -91,7 +91,7 @@ __dbg_static int sw_handle_frame(struct net_switch_port *port, struct sk_buff **
 	struct sk_buff *skb = *pskb;
 	struct skb_extra skb_e;
 
-	if(port->flags & (SW_PFL_DISABLED | SW_PFL_DROPALL)) {
+	if(port->flags & SW_PFL_DISABLED) {
 		dbg("Received frame on disabled port %s\n", port->dev->name);
 		goto free_skb;
 	}
@@ -106,6 +106,17 @@ __dbg_static int sw_handle_frame(struct net_switch_port *port, struct sk_buff **
 	
 	/* Pass incoming packets through the switch socket filter */
 	if (sw_socket_filter(skb, port))
+		goto free_skb;
+
+	/* SW_PFL_DROPALL and SW_PFL_NOSWITCHPORT must not affect
+	 * switch sockets. SW_PFL_DROPALL is used for synchronization
+	 * during port configuration transitions. CDP packets for
+	 * instance can be passed to userspace while port configuration
+	 * changes. CDP packets must be passed to userspace even when
+	 * port is routed.
+	 */
+
+	if(port->flags & (SW_PFL_DROPALL | SW_PFL_NOSWITCHPORT))
 		goto free_skb;
 
 	/* Perform some sanity checks */

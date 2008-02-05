@@ -1,0 +1,183 @@
+Concluzii:
+* cand se trece din "switchport" in "no switchport" si inapoi, se pastreaza
+  toata configuratia de switching
+* cand se trece din "no switchport" in "switchport" si inapoi, configuratia
+  de rutare (adrese etc.) se pierde
+* in mod "no switchport" apar in meniu toate comenzile de switching, le poti
+  executa, dar raspunsul este "Command rejected: Gi0/11 not a switching port."
+* in mod "switchport" nu apar in mediu comenzile de rutare
+
+Starea interfetelor in "sh int status":
+Gi0/5     NVC-SW             connected    trunk      a-full a-1000 1000BaseLX
+Gi0/6     PEERING EVOLVA     connected    routed     a-full   1000 1000BaseLX
+Gi0/7     TO-ROMANA-SW       connected    trunk      a-full a-1000 1000BaseLX
+
+Exemplu:
+NVC-GBIT#sh run int gi0/11
+Building configuration...
+
+Current configuration : 113 bytes
+!
+interface GigabitEthernet0/11
+ switchport access vlan 807
+ switchport mode access
+ spanning-tree portfast
+end
+
+NVC-GBIT#conf t
+Enter configuration commands, one per line.  End with CNTL/Z.
+NVC-GBIT(config)#int gi0/11
+NVC-GBIT(config-if)#no switchport
+NVC-GBIT(config-if)#^Z
+NVC-GBIT#sh run int gi0/11
+Building configuration...
+
+Current configuration : 91 bytes
+!
+interface GigabitEthernet0/11
+ no switchport
+ no ip address
+ spanning-tree portfast
+end
+
+NVC-GBIT#conf t
+Enter configuration commands, one per line.  End with CNTL/Z.
+NVC-GBIT(config)#int gi0/11
+NVC-GBIT(config-if)#switchport
+NVC-GBIT(config-if)#^Z
+NVC-GBIT#sh run int gi0/11
+Building configuration...
+
+Current configuration : 113 bytes
+!
+interface GigabitEthernet0/11
+ switchport access vlan 807
+ switchport mode access
+ spanning-tree portfast
+end
+
+NVC-GBIT#conf t
+Enter configuration commands, one per line.  End with CNTL/Z.
+NVC-GBIT(config)#int gi0/11
+NVC-GBIT(config-if)#switchport mode trunk
+Command rejected: An interface whose trunk encapsulation is "Auto" can not be configured to "trunk" mode.
+NVC-GBIT(config-if)#switchport trunk encapsulation dot1q
+NVC-GBIT(config-if)#switchport mode trunk
+NVC-GBIT(config-if)#switchport trunk allowed vlan 807,11
+NVC-GBIT(config-if)#^Z
+NVC-GBIT#sh run int gi0/11
+Building configuration...
+
+Current configuration : 188 bytes
+!
+interface GigabitEthernet0/11
+ switchport access vlan 807
+ switchport trunk encapsulation dot1q
+ switchport trunk allowed vlan 11,807
+ switchport mode trunk
+ spanning-tree portfast
+end
+
+NVC-GBIT#conf t
+Enter configuration commands, one per line.  End with CNTL/Z.
+NVC-GBIT(config)#int gi0/11
+NVC-GBIT(config-if)#no switchport
+NVC-GBIT(config-if)#^Z
+NVC-GBIT#sh run int gi0/11
+Building configuration...
+
+Current configuration : 91 bytes
+!
+interface GigabitEthernet0/11
+ no switchport
+ no ip address
+ spanning-tree portfast
+end
+
+NVC-GBIT#conf t
+Enter configuration commands, one per line.  End with CNTL/Z.
+NVC-GBIT(config)#int gi0/11
+NVC-GBIT(config-if)#ip address 192.168.6.1 255.255.255.0
+NVC-GBIT(config-if)#^Z
+NVC-GBIT#sh run int gi0/11
+Building configuration...
+
+Current configuration : 114 bytes
+!
+interface GigabitEthernet0/11
+ no switchport
+ ip address 192.168.6.1 255.255.255.0
+ spanning-tree portfast
+end
+
+NVC-GBIT#conf t
+Enter configuration commands, one per line.  End with CNTL/Z.
+NVC-GBIT(config)#int gi0/11
+NVC-GBIT(config-if)#switchport
+NVC-GBIT(config-if)#^Z
+NVC-GBIT#sh run int gi0/11
+Building configuration...
+
+Current configuration : 188 bytes
+!
+interface GigabitEthernet0/11
+ switchport access vlan 807
+ switchport trunk encapsulation dot1q
+ switchport trunk allowed vlan 11,807
+ switchport mode trunk
+ spanning-tree portfast
+end
+
+NVC-GBIT#conf t
+Enter configuration commands, one per line.  End with CNTL/Z.
+NVC-GBIT(config)#int gi0/11
+NVC-GBIT(config-if)#no switchport
+NVC-GBIT(config-if)#^Z
+NVC-GBIT#sh run int gi0/11
+Building configuration...
+
+Current configuration : 91 bytes
+!
+interface GigabitEthernet0/11
+ no switchport
+ no ip address
+ spanning-tree portfast
+end
+
+NVC-GBIT#conf t
+Enter configuration commands, one per line.  End with CNTL/Z.
+NVC-GBIT(config)#int gi0/11
+NVC-GBIT(config-if)#switchport ?
+  access       Set access mode characteristics of the interface
+  block        Disable forwarding of unknown uni/multi cast addresses
+  broadcast    Set broadcast suppression level on this interface
+  host         Set port host
+  mode         Set trunking mode of the interface
+  multicast    Set multicast suppression level on this interface
+  nonegotiate  Device will not engage in negotiation protocol on this interface
+  priority     Set appliance 802.1p priority
+  protected    Configure an interface to be a protected port
+  trunk        Set trunking characteristics of the interface
+  unicast      Set unicast suppression level on this interface
+  voice        Voice appliance attributes
+  <cr>
+
+NVC-GBIT(config-if)#switchport access vlan 11
+Command rejected: Gi0/11 not a switching port.
+NVC-GBIT(config-if)#switchport
+NVC-GBIT(config-if)#ip ?
+Interface IP configuration subcommands:
+  access-group  Specify access control for packets
+  dhcp          DHCP
+  igmp          IGMP interface commands
+
+NVC-GBIT(config-if)#ip addr ?
+% Unrecognized command
+NVC-GBIT(config-if)#no switchport
+NVC-GBIT(config-if)#ip add?
+address
+
+NVC-GBIT(config-if)#ip address ?
+  A.B.C.D  IP address
+
+NVC-GBIT(config-if)#

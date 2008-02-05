@@ -56,6 +56,7 @@
 #define SW_PFL_TRUNK		0x04
 #define SW_PFL_DROPALL		0x08
 #define SW_PFL_ADMDISABLED	0x10
+#define SW_PFL_NOSWITCHPORT	0x20
 
 #define SW_SPEED_AUTO		0x01
 #define SW_SPEED_10			0x02

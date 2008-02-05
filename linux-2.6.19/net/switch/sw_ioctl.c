@@ -195,6 +195,13 @@ static int sw_set_port_trunk(struct net_switch_port *port, int trunk) {
 #if NET_SWITCH_NOVLANFORIF == 2
 		if(status)
 			sw_disable_port(port);
+		/* FIXME FIXME FIXME
+		 * i think CDP packets should still be received even if this
+		 * happens. maybe we do not need to put the device down, but
+		 * just set a special flag to drop all switched packets.
+		 * this applies to all places where NET_SWITCH_NOVLANFORIF
+		 * is tested
+		 */
 #endif
 		sw_res_port_flag(port, SW_PFL_DROPALL);
 	} else {
@@ -221,6 +228,44 @@ static int sw_set_port_access(struct net_switch_port *port, int access) {
 		sw_set_port_flag(port, SW_PFL_ACCESS);
 	} else {
 		sw_res_port_flag(port, SW_PFL_ACCESS);
+	}
+	return 0;
+}
+
+static int sw_set_switchport(struct net_switch_port *port, int switchport) {
+	int status;
+
+	if (!port)
+		return -EINVAL;
+	if (port->flags & SW_PFL_NOSWITCHPORT) {
+		/* port is routed and we change it to switched */
+		if (!switchport)
+			return -EINVAL;
+		sw_set_port_flag_rcu(port, SW_PFL_DROPALL);
+		if (port->flags & SW_PFL_TRUNK)
+			__sw_add_to_vlans(port);
+		else {
+			status = sw_vdb_add_port(port->vlan, port);
+#if NET_SWITCH_NOVLANFORIF == 2
+			if(status)
+				sw_disable_port(port);
+#endif
+		}
+		sw_res_port_flag(port, SW_PFL_DROPALL);
+	} else {
+		/* port is switched and we change it to routed */
+		if (switchport)
+			return -EINVAL;
+		sw_set_port_flag_rcu(port, SW_PFL_DROPALL);
+		if (port->flags & SW_PFL_TRUNK)
+	        __sw_remove_from_vlans(port);
+		else
+			sw_vdb_del_port(port->vlan, port);
+		fdb_cleanup_port(port, SW_FDB_DYN);
+		sw_set_port_flag(port, SW_PFL_NOSWITCHPORT);
+		/* Make sure it was not disabled by assigning a non-existent vlan */
+		sw_enable_port(port);
+		sw_res_port_flag(port, SW_PFL_DROPALL);
 	}
 	return 0;
 }
