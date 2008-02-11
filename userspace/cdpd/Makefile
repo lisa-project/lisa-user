@@ -1,4 +1,4 @@
-.PHONY: all clean
+.PHONY: all clean dep
 
 CFLAGS +=-Wall -I$(KDIR)/include -I../include -fPIC -D_XOPEN_SOURCE=500
 CFLAGS +=-DDEBUG
@@ -12,3 +12,6 @@ cdpd: cdp_aging.o cdp_configuration.o cdp_send.o cdpd.o
 
 clean:
 	rm -f *.o cdpd test_sock
+
+dep:
+	$(CC) $(CFLAGS) -MM *.c >> $(DEP)

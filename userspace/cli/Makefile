@@ -12,7 +12,7 @@ ifdef USE_EXIT_IN_CONF
 CFLAGS += -DUSE_EXIT_IN_CONF
 endif
 
-.PHONY: all clean
+.PHONY: all clean dep
 
 all: swcli swclid swlogin filter swcon swcfgload reboot
 
@@ -32,6 +32,9 @@ swlogin: swlogin.o libswcli.so
 
 clean:
 	rm -f *.o *~ libswcli.so swcli swclid swlogin filter swcon swcfgload reboot
+
+dep:
+	$(CC) $(CFLAGS) -MM *.c >> $(DEP)
 
 # Things that don't need to be linked against libswcli.so (and thus we
 # explicitly define the build command to avoid using LDFLAGS)

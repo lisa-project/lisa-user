@@ -1,7 +1,7 @@
 CFLAGS = -I$(KDIR)/include -I ../include -Wall -g
 LDFLAGS = -L../cli -lswcli
 
-.PHONY: all clean
+.PHONY: all clean dep
 
 all: swctl
 
@@ -11,3 +11,6 @@ swctl: swctl.o
 
 clean:
 	rm -f *.o *~ swctl
+
+dep:
+	$(CC) $(CFLAGS) -MM *.c >> $(DEP)

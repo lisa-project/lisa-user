@@ -1,18 +1,19 @@
 NAME := lisa
-KVER := 2.6.19
+PWD := $(shell pwd)
+PATCH := $(PWD)/linux-2.6-lisa.patch
+VERSION := $(shell grep '^%define date_version ' lisa.spec | sed 's/^%define date_version \(.*\)$$/\1/')
+RPMDIR := $(shell rpm --eval %{_topdir})
 
-.PHONY: all dist distopt package patch user site
+.PHONY: all dist distopt package patch user
 
 USE_EXIT_IN_CONF=1
 export USE_EXIT_IN_CONF
-
-prune_patch_paths := $(shell for i in linux-$(KVER)/config/*; do echo `basename $$i` | sed 's/^/--exclude /' ; done | xargs)
 
 all:
 	@echo "This makefile accepts the following targets:"
 	@echo "dist		Make a binary distribution"
 	@echo "distopt		Make a binary distribution with optional binaries"
-	@echo "package		Make a source distribution for the whole project"
+	@echo "tarball		Make a source distribution for the whole project"
 	@echo "patch		Make a patch against the original kernel source"
 	@echo "user		Build userspace programs"
 
@@ -32,20 +33,22 @@ else
 	OPT=true ./mkdist.sh $(DST)
 endif
 
-package: patch
+tarball: patch
 	mkdir $(NAME)
-	cp -r userspace dist README.dev README INSTALL LICENSE Makefile $(NAME)
+	./depend.sh | xargs cp -t $(NAME) --parents
+	cp -r userspace scripts dist README* INSTALL LICENSE Makefile *.sh $(NAME)
 	cd $(NAME)/userspace && make clean
-	rm -rf `find $(NAME) -name .svn`
-	mv linux-$(KVER)-lms.patch $(NAME)
+	mv $(PATCH) $(NAME)
 	tar czvf $(NAME).tar.gz $(NAME)
 	rm -rf $(NAME)
 
 patch:
-	diff -Pru --exclude .svn --exclude .config $(prune_patch_paths) linux-$(KVER).orig linux-$(KVER) | grep -v ^Only > linux-$(KVER)-lms.patch
+	./mkpatch.sh $(PATCH)
 
 user:
 	cd userspace && make
 
-site:
-	tar zcvf site.tgz site --exclude site/.svn
+rpm: tarball
+	cp -f $(NAME).spec $(RPMDIR)/SPECS
+	cp -f $(NAME).tar.gz $(RPMDIR)/SOURCES/$(NAME)-$(VERSION).tar.gz
+	rpmbuild -ba $(RPMDIR)/SPECS/$(NAME).spec
