@@ -1,4 +1,4 @@
-%define date_version 2008.02.11
+%define date_version 2008.02.19
 %define kernel_version 2.6.21
 
 Summary: Network Multilayer Switching on Linux
@@ -58,23 +58,22 @@ conflict with standard linux utility packages.
 %setup -n lisa
 
 %build
-pushd userspace
-make
-popd
+make user
 
 %install
 [ "$RPM_BUILD_ROOT" != "/" ] && rm -rf $RPM_BUILD_ROOT
 
-pushd userspace
 make install ROOT=$RPM_BUILD_ROOT
-popd
-
-install -m 755 -D scripts/rc.fedora $RPM_BUILD_ROOT%{_sysconfdir}/rc.d/init.d/lisa
-install -m 755 -D scripts/xen/network-lisa $RPM_BUILD_ROOT%{_sysconfdir}/xen/scripts/network-lisa
-install -m 755 -D scripts/xen/vif-lisa $RPM_BUILD_ROOT%{_sysconfdir}/xen/scripts/vif-lisa
 
 %clean
 rm -rf $RPM_BUILD_ROOT
+
+%post
+chkconfig --add lisa
+
+%preun
+[ -f /var/lock/subsys/lisa ] && service lisa stop
+chkconfig --del lisa
 
 %post -n liblisa -p /sbin/ldconfig
 
@@ -91,6 +90,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_sbindir}/swlogin
 %{_sbindir}/swctl
 %{_sysconfdir}/rc.d/init.d/lisa
+%{_sysconfdir}/lisa
+%config(noreplace) %{_sysconfdir}/lisa/config.text
 
 %files -n liblisa
 %defattr(-,root,root)
@@ -107,5 +108,8 @@ rm -rf $RPM_BUILD_ROOT
 /bin/reboot
 
 %changelog
+* Tue Feb 19 2008 Radu Rendec <radu.rendec@ines.ro> - 2008.02.19_2.6.21-1
+- Fix packaging of lisa config dirs and lisa system service setup
+
 * Mon Feb 11 2008 Radu Rendec <radu.rendec@ines.ro> - 2008.02.11_2.6.21-1
 - Initial Fedora package

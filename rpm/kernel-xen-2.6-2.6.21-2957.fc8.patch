@@ -1,0 +1,39 @@
+--- kernel.spec.orig	2008-02-18 17:55:14.000000000 +0200
++++ kernel.spec	2008-02-18 17:54:23.000000000 +0200
+@@ -15,7 +15,7 @@
+ # that the kernel isn't the stock distribution kernel, for example,
+ # by setting the define to ".local" or ".bz123456"
+ #
+-#% define buildid .local
++%define buildid .lisa2
+ 
+ # fedora_build defines which build revision of this kernel version we're
+ # building. Rather than incrementing forever, as with the prior versioning
+@@ -920,6 +920,9 @@
+ Patch5000: linux-2.6-firewire.patch
+ Patch5001: linux-2.6-firewire-be32-fix.patch
+ 
++# LiSA
++Patch5500: linux-2.6-lisa.patch
++
+ # Security:
+ 
+ # CVE-2008-0600 (bug #432517)
+@@ -1699,6 +1702,9 @@
+ %patch5000 -p1
+ %patch5001 -p1
+ 
++# LiSA
++%patch5500 -p1
++
+ # security:
+ %patch6000 -p1
+ 
+@@ -1740,6 +1746,7 @@
+ for i in *.config
+ do
+   mv $i .config
++  echo "CONFIG_SWITCH=m" >> .config
+   Arch=`head -1 .config | cut -b 3-`
+   make ARCH=$Arch %{oldconfig_target} > /dev/null
+   echo "# $Arch" > configs/$i

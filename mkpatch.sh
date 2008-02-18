@@ -21,6 +21,12 @@ echo "~~~ Creating temporary branch '$tmp_branch'"
 git-checkout -b $tmp_branch v$latest_kver || exit 1
 echo "~~~ Merging lisa branch"
 git-merge --squash lisa-v$latest_kver || exit 1
+echo "~~~ Disabling debugging"
+tmp=`mktemp`
+sed 's/^.*CFGFLAGS.*DDEBUG.*$/CFGFLAGS += -g/' < net/switch/Makefile > $tmp
+cat $tmp > net/switch/Makefile
+rm -f $tmp
+echo "~~~ Committing changes"
 git-commit -a -s -F - << EOF
 Lisa for linux $latest_kver
 
