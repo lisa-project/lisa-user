@@ -41,7 +41,7 @@ tarball: patch
 	rm -rf $(NAME)
 
 patch:
-	./mkpatch.sh $(PATCH)
+	./mkpatch.sh -o $(PATCH)
 
 user:
 	cd userspace && make

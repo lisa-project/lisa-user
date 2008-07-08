@@ -8,14 +8,14 @@
 
 #include "cdp_ipc.h"
 
-/* Forks, closes all file descriptors and redirects
- stdin/stdout to /dev/null */
+/* Forks, closes all file descriptors and redirects stdin/stdout to
+ * /dev/null */
 void daemonize(void) {
-	struct rlimit rl={0};
-	int fd=-1;
+	struct rlimit rl = {0};
+	int fd = -1;
 	int i;
 
-	switch(fork()) {
+	switch (fork()) {
 	case -1:
 		syslog(LOG_ERR, "Prefork stage 1: %m");
 		exit(1);
@@ -25,9 +25,9 @@ void daemonize(void) {
 		exit(0);
 	}
 
-	rl.rlim_max=0;
+	rl.rlim_max = 0;
 	getrlimit(RLIMIT_NOFILE, &rl);
-	switch(rl.rlim_max) {
+	switch (rl.rlim_max) {
 	case -1: /* oops! */
 		syslog(LOG_ERR, "getrlimit");
 		exit(1);
@@ -35,13 +35,13 @@ void daemonize(void) {
 		syslog(LOG_ERR, "Max number of open file descriptors is 0!");
 		exit(1);
 	}
-	for(i=0; i<rl.rlim_max; i++)
+	for (i = 0; i < rl.rlim_max; i++)
 		close(i);
-	if(setsid()==-1) {
+	if (setsid() == -1) {
 		syslog(LOG_ERR, "setsid failed");
 		exit(1);
 	}
-	switch(fork()) {
+	switch (fork()) {
 	case -1:
 		syslog(LOG_ERR, "Prefork stage 2: %m");
 		exit(1);
@@ -53,7 +53,7 @@ void daemonize(void) {
 
 	chdir("/");
 	umask(0);
-	fd=open("/dev/null", O_RDWR);
+	fd = open("/dev/null", O_RDWR);
 	dup(fd);
 	dup(fd);
 }
