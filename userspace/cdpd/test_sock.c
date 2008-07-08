@@ -8,7 +8,7 @@
 #include <linux/net_switch.h>
 #include <linux/socket.h>
 
-#include "switch_socket.h"
+#include "swsock.h"
 
 int main(int argc, char **argv) {
 	int fd, err, len, i;

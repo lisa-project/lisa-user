@@ -29,7 +29,7 @@
 
 #include <assert.h>
 
-#include "switch_socket.h"
+#include "swsock.h"
 #include "shared.h"
 
 #define INITIAL_BUF_SIZE 4096

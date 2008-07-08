@@ -22,7 +22,7 @@
 #include "command.h"
 #include "cdpd.h"
 #include "cdp_ipc.h"
-#include "switch_socket.h"
+#include "swsock.h"
 
 sw_command_root_t *cmd_root = &command_root_main;
 char prompt[MAX_HOSTNAME + 32];

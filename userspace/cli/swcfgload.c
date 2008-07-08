@@ -27,7 +27,7 @@
 #include "config.h"
 #include "cdpd.h"
 #include "cdp_ipc.h"
-#include "switch_socket.h"
+#include "swsock.h"
 
 extern int sock_fd;
 extern sw_command_root_t *cmd_root;

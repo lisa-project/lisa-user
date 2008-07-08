@@ -20,7 +20,7 @@
 #include "cdpd.h"
 #include "cdp_ipc.h"
 #include "debug.h"
-#include "switch_socket.h"
+#include "swsock.h"
 #include "misc.h"
 #include <signal.h>
 

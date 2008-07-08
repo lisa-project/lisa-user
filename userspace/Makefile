@@ -4,18 +4,21 @@ export KDIR
 .PHONY: all clean install dep
 
 all:
+	cd include && make
 	cd cli && make
 	cd login && make
 	cd swctl && make
 	cd cdpd && make
 
 dep:
+	cd include && make
 	cd cli && make dep
 	cd login && make dep
 	cd swctl && make dep
 	cd cdpd && make dep
 
 clean:
+	cd include && make clean
 	cd cli && make clean
 	cd lib && make clean
 	cd login && make clean

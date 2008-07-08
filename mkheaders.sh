@@ -1,3 +1,7 @@
+#!/bin/bash
+
+gpl() {
+cat << EOT
 /*
  *    This file is part of LiSA Command Line Interface.
  *
@@ -17,10 +21,30 @@
  *    MA  02111-1307  USA
  */
 
-#ifndef _SWITCH_SOCKET_H
-#define _SWITCH_SOCKET_H
+EOT
+}
 
-#define AF_SWITCH	33	/* Linux Multilayer Switch	*/
-#define PF_SWITCH	AF_SWITCH
+do_swsock() {
+gpl
 
-#endif
+echo "#ifndef _SWSOCK_H"
+echo "#define _SWSOCK_H"
+echo
+grep "^#define AF_SWITCH" $BASEPATH/linux-2.6/include/linux/socket.h
+grep "^#define PF_SWITCH" $BASEPATH/linux-2.6/include/linux/socket.h
+echo
+echo "#endif"
+
+}
+
+BASEPATH="`dirname $0`"
+
+case "$1" in
+swsock.h)
+	do_swsock
+	;;
+*)
+	echo "Unknown header"
+	exit 1
+	;;
+esac
