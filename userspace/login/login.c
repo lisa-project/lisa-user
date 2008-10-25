@@ -296,7 +296,7 @@ main(int argc, char **argv)
 	if ((pwd = getpwnam(username))) {
 	    salt = pwd->pw_passwd;
 	} else
-	  salt = "xx";
+	  salt = (char *) "xx";
 	
 	if (pwd) {
 	    initgroups(username, pwd->pw_gid);
@@ -370,14 +370,14 @@ main(int argc, char **argv)
     setgid(pwd->pw_gid);
     
     if (*pwd->pw_shell == '\0')
-      pwd->pw_shell = _PATH_BSHELL;
+      pwd->pw_shell = (char *)_PATH_BSHELL;
     
     /* preserve TERM even without -p flag */
     {
 	char *ep;
 	
 	if(!((ep = getenv("TERM")) && (termenv = strdup(ep))))
-	  termenv = "dumb";
+	  termenv = (char *) "dumb";
     }
     
     /* destroy environment unless user has requested preservation */
@@ -461,7 +461,7 @@ main(int argc, char **argv)
 	printf("No directory %s!\n", pwd->pw_dir);
 	if (chdir("/"))
 	  exit(0);
-	pwd->pw_dir = "/";
+	pwd->pw_dir = (char *) "/";
 	printf("Logging in with home = \"/\".\n");
     }
     
@@ -476,9 +476,9 @@ main(int argc, char **argv)
 
 	strcpy(buff, "exec ");
 	strcat(buff, pwd->pw_shell);
-	childArgv[childArgc++] = "/bin/sh";
-	childArgv[childArgc++] = "-sh";
-	childArgv[childArgc++] = "-c";
+	childArgv[childArgc++] = (char *) "/bin/sh";
+	childArgv[childArgc++] = (char *) "-sh";
+	childArgv[childArgc++] = (char *) "-c";
 	childArgv[childArgc++] = buff;
     } else {
 	tbuf[0] = '-';

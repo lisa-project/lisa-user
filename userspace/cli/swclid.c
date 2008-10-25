@@ -44,10 +44,10 @@ int telnet_sockfd;
 int yes = 1;
 LIST_HEAD(telnet_conns);
 
-void daemonize() {
+void daemonize(void) {
 }
 
-void telnet_listen() {
+void telnet_listen(void) {
 	int status;
 	struct sockaddr_in bind_addr;
 
@@ -116,7 +116,7 @@ struct telnet_conn *create_telnet_conn(int fd, struct sockaddr_in *remote_addr) 
 	dup(0);
 
 	do {
-		char * argv[] = {TELNETD_PATH, "-h", "-L", LOGIN_PATH, NULL};
+		char * argv[] = {(char *)TELNETD_PATH, (char *)"-h", (char *)"-L", (char *)LOGIN_PATH, NULL};
 		char * envp[] = {NULL};
 
 		syslog(LOG_INFO, "New telnet session from %s",
@@ -155,7 +155,7 @@ void sgh_child(int sig) {
 	}
 }
 
-void main_loop() {
+void main_loop(void) {
 	int status;
 	fd_set readfds;
 	struct telnet_conn *c;

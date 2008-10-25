@@ -221,7 +221,7 @@ static struct cdp_neighbor *find_by_device_id(struct cdp_interface *entry, char 
 }
 
 /* Default CDP configuration */
-static void do_initial_cfg() {
+static void do_initial_cfg(void) {
 	struct utsname u_name;
 
 	ccfg.enabled = 1;						/* CDP is enabled by default */
@@ -465,7 +465,7 @@ static void print_cdp_neighbor(struct cdp_neighbor *n) {
 	sys_dbg("\n");
 }
 
-static void cdp_recv_loop() {
+static void cdp_recv_loop(void) {
 	struct cdp_interface *entry, *tmp;
 	struct cdp_neighbor *neighbor;
 	int fd, maxfd, status, len;

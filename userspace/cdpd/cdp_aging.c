@@ -118,4 +118,6 @@ void *cdp_clean_loop(void *arg) {
 			sem_post(&nheap_sem);
 		}
 	}
+
+	return NULL;
 }

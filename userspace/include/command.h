@@ -58,17 +58,17 @@ typedef void (*sw_command_handler)(FILE *, char **);
 typedef int (*sw_validation_func)(char *, char);
 
 typedef struct cmd {
-	char *name;					/* User printable name of the function */
-    int priv;               	/* Minimum privilege level to execute this */
+	const char *name;					/* User printable name of the function */
+	int priv;               	/* Minimum privilege level to execute this */
 	sw_validation_func valid;	/* Function to validate pattern-matching args */
 	sw_command_handler func;	/* Function call to do the job */
 	int state;					/* Node state (runnable / incomplete) */
-	char *doc;					/* Documentation for this function */
+	const char *doc;					/* Documentation for this function */
 	struct cmd *subcmd;			/* Sub-commands */
 } sw_command_t;
 
 typedef struct root {
-    char *prompt;
+    const char *prompt;
     sw_command_t *cmd;
 } sw_command_root_t;
 
@@ -90,7 +90,7 @@ extern char *if_name_vlan(char *);
 extern int parse_vlan(char *);
 extern int valid_mac(char *, char);
 extern int parse_mac(char *, unsigned char *);
-extern int get_mac_age();
+extern int get_mac_age(void);
 extern char *default_vlan_name(int);
 
 extern sw_command_root_t command_root_main;

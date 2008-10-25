@@ -42,7 +42,7 @@
 #include "misc.h"
 
 typedef struct match {
-	char *text;			/* Matched text */
+	const char *text;		/* Matched text */
 	int pwidth;			/* Printing width */
 } sw_match_t;
 
@@ -59,7 +59,7 @@ typedef struct execution {
 typedef struct completion {
 	sw_command_t *search_set;	/* Current command tree search set */
 	sw_validation_func valid;	/* Validation function associated */
-	char *cmd_full_name;
+	const char *cmd_full_name;
 	int runnable;				/* runnable state */
 	char *start;
 	int offset;
@@ -83,7 +83,7 @@ extern int sock_fd;
 extern int priv;
 extern char prompt[];
 extern struct cdp_session_info cdp_s;
-extern FILE *mk_tmp_stream(char *, char *);
+extern FILE *mk_tmp_stream(char *, const char *);
 extern void copy_data(FILE *, FILE *);
 
 #define is_digit(arg) ((arg) >= '0' && (arg) <= '9')

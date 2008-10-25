@@ -37,7 +37,6 @@
 #include "cdp.h"
 
 #include <errno.h>
-extern int errno;
 char hostname_default[] = "Switch\0";
 int vlan_no; /* selected vlan when entering (config-vlan) mode */
 

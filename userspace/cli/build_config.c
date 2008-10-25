@@ -26,7 +26,6 @@
 #include <linux/sockios.h>
 #include <stdio.h>
 #include <errno.h>
-extern int errno;
 #include <assert.h>
 #include <unistd.h>
 
@@ -146,7 +145,7 @@ int build_int_eth_config(FILE *out, char *if_name, int put_if_cmd) {
 		fprintf(out, " switchport mode trunk\n");
 	/* speed */
 	if(ioctl_arg.ext.cfg.speed != SW_SPEED_AUTO) {
-		char *speed = NULL;
+		const char *speed = NULL;
 		switch(ioctl_arg.ext.cfg.speed) {
 		case SW_SPEED_10:
 			speed = "10";
@@ -162,7 +161,7 @@ int build_int_eth_config(FILE *out, char *if_name, int put_if_cmd) {
 	}
 	/* duplex */
 	if(ioctl_arg.ext.cfg.duplex != SW_DUPLEX_AUTO) {
-		char *duplex = NULL;
+		const char *duplex = NULL;
 		switch(ioctl_arg.ext.cfg.duplex) {
 		case SW_DUPLEX_HALF:
 			duplex = "half";

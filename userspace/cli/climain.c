@@ -43,13 +43,13 @@ int priv = 1;
  then we totally fuck up completion when we have the following
  characters: \'`@$><=;|&{(, getting some weird behavior for completion.
  So, we set blank to be the only word separator */
-char *swcli_completion_word_break() {
+char *swcli_completion_word_break(void) {
 	rl_completer_word_break_characters = strdup(" ");
 	return NULL;
 }
 
 /* Error reporting & stuff */
-void swcli_invalid_cmd() {
+void swcli_invalid_cmd(void) {
 	printf("%% Unrecognized command\n");
 }
 
@@ -72,7 +72,7 @@ void swcli_extra_input(int off) {
 	printf("%% Invalid input detected at '^' marker.\n\n");
 }
 
-void swcli_go_ahead() {
+void swcli_go_ahead(void) {
 	printf("  <cr>\n");
 }
 
@@ -141,7 +141,8 @@ void dump_completion_state(sw_completion_state_t *cm) {
  */
 int list_current_options(int something, int key) {
 	int i = 0, count = 0, ret = 0, c;
-	char *cmd, *lasttok;
+	const char *cmd;
+	char *lasttok;
 	char *spec = strdup("%%-%ds ");
 	char aspec[8];
 	FILE *pipe;
@@ -255,7 +256,7 @@ void cancel_command(int sig) {
 }
 
 /* Override some readline defaults */
-int swcli_init_readline() {
+int swcli_init_readline(void) {
 
 	dbg("Init readline\n");
 	/* Allow conditional parsing of ~/.inputrc file */
@@ -284,7 +285,8 @@ int swcli_init_readline() {
  */
 int change_search_scope(char *match, char *rest, char lookahead)  {
 	int i=0, count = 0;
-	char *name, *arg;
+	const char *name;
+	char *arg;
 	struct cmd *set = NULL;
 	int offset = match - cmpl_state.start;
 	int pcount = 0;
@@ -350,7 +352,8 @@ int change_search_scope(char *match, char *rest, char lookahead)  {
   Used by the execution mechanism.
  */
 int lookup_token(char *match, char *rest, char lookahead) {
-	char *name, *arg;
+	const char *name;
+	char *arg;
 	struct cmd *set = NULL;
 	int i=0, count = 0, j;
 	int offset = match - cmpl_state.start;
@@ -513,7 +516,7 @@ char ** swcli_completion(const char *text, int start, int end) {
  * (i.e. state == 0), then we start at the top of the list. */
 char *swcli_generator(const char *text, int state) {
 	static int list_index, len;
-	char *name;
+	const char *name;
 
 	dbg("generator: search_set at 0x%p\n", cmpl_state.search_set);
 	
@@ -546,7 +549,7 @@ char *swcli_generator(const char *text, int state) {
 
 sw_match_t *get_matches(int *matched, char *token) {
 	int i=0, count = 0, j, num;
-	char *cmd;
+	const char *cmd;
 	sw_match_t *matches;
 
 	matches = (sw_match_t *) malloc(MATCHES_PER_ROW * sizeof(sw_match_t));
@@ -730,7 +733,7 @@ int climain(void) {
 	return 0;
 }
 
-FILE *mk_tmp_stream(char *name, char *mode) {
+FILE *mk_tmp_stream(char *name, const char *mode) {
 	char tmp_name[] = "/tmp/swcli.XXXXXX\0";
 	int tmp_fd;
 

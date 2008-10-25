@@ -24,7 +24,7 @@ LIST_HEAD(interfaces);
 #define IFNUM_BASE 32
 
 const struct {
-    char	*name;
+    const char	*name;
     unsigned short	value;
 } media[] = {
     /* The order through 100baseT4 matches bits in the BMSR */
@@ -41,7 +41,7 @@ const struct {
 /* Table of known MII's */
 static struct {
     unsigned short id1, id2;
-    char	*name;
+    const char	*name;
 } mii_id[] = {
     { 0x0022, 0x5610, "AdHoc AH101LF" },
     { 0x0022, 0x5520, "Altimata AC101LF" },
@@ -93,7 +93,7 @@ static struct user_net_device *add_interface(char *ifname) {
 	return netdev;
 }
 
-static void get_kern_comm() {
+static void get_kern_comm(void) {
 	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (sockfd < 0) {
 		perror("socket");
@@ -101,7 +101,7 @@ static void get_kern_comm() {
 	}
 }
 
-static void end_kern_comm() {
+static void end_kern_comm(void) {
 	close(sockfd);
 }
 
@@ -202,7 +202,7 @@ static void get_dev_xstats(char *pos, struct user_net_device *iface) {
 	       &iface->xstats.tx_compressed);
 }
 
-static int get_virtual_interfaces() {
+static int get_virtual_interfaces(void) {
 	FILE *fh;
 	char buf[128];
 
@@ -263,7 +263,7 @@ static int get_interfaces_proc(void) {
 }
 
 static int mdio_read(struct ifreq *ifr, int location) {
-    struct mii_data *mii = (struct mii_data *)&ifr->ifr_data;
+    struct mii_data *mii = (struct mii_data *)ifr->ifr_data;
 
     mii->reg_num = location;
 	if (ioctl(sockfd, SIOCGMIIREG, ifr) < 0) {
@@ -296,7 +296,7 @@ static int get_basic_mii(struct ifreq *ifr, struct user_net_device *iface) {
 
 static void get_mii_props(struct user_net_device *iface) {
 	struct ifreq ifr;
-	struct mii_data *mii = (struct mii_data *)&ifr.ifr_data;
+	struct mii_data *mii = (struct mii_data *)ifr.ifr_data;
 
 	strncpy(ifr.ifr_name, iface->name, IFNAMSIZ);
 	if ((ioctl(sockfd, SIOCGMIIPHY, &ifr) < 0))
@@ -383,7 +383,7 @@ static char *media_list(int mask, int best) {
 }
 
 void sh_iface_print_status(FILE *out, struct user_net_device *entry, int *virtual, int *line_proto_down) {
-	int bmcr, bmsr, advert, lkpar;
+	int bmcr = 0, bmsr = 0, advert = 0, lkpar = 0;
 
 	*virtual = 0;
 	*line_proto_down = 1;
@@ -414,7 +414,7 @@ void sh_iface_print_status(FILE *out, struct user_net_device *entry, int *virtua
 }
 
 void sh_iface_print(FILE *out, struct user_net_device *entry) {
-	int bmcr, bmsr, advert, lkpar;
+	int bmcr = 0, bmsr = 0, advert = 0, lkpar = 0;
 	int virtual, line_proto_down, i;
 
 	virtual = 0;
@@ -548,7 +548,7 @@ void sh_iface_print(FILE *out, struct user_net_device *entry) {
 			entry->xstats.tx_carrier_errors, entry->xstats.tx_compressed);
 }
 
-static void do_cleanup_ifaces() {
+static void do_cleanup_ifaces(void) {
 	struct user_net_device *entry, *tmp;
 
 	list_for_each_entry_safe(entry, tmp, &interfaces, lh) {
@@ -557,11 +557,11 @@ static void do_cleanup_ifaces() {
 	}
 }
 
-static void do_get_ifaces() {
+static void do_get_ifaces(void) {
 	do_cleanup_ifaces();
 	INIT_LIST_HEAD(&interfaces);
 	get_kern_comm();
-    get_virtual_interfaces();
+	get_virtual_interfaces();
 	get_interfaces_proc();
 	end_kern_comm();
 }

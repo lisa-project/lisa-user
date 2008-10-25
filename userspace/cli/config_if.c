@@ -505,7 +505,7 @@ static void cmd_noethdesc(FILE *out, char **argv) {
 
 	ioctl_arg.cmd = SWCFG_SETIFDESC;
 	ioctl_arg.if_name = sel_eth;
-	ioctl_arg.ext.iface_desc = "";
+	ioctl_arg.ext.iface_desc = (char *)"";
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 

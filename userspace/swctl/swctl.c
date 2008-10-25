@@ -66,7 +66,7 @@ unsigned char *parse_hw_addr(char *mac) {
 	return buf;
 }
 
-void usage() {
+void usage(void) {
 	printf("Usage: swctl [command] [args]\n\n"
 		"Command can be any of:\n"
 		"  add iface_name\t\t\tAdds an interface to switch.\n"
