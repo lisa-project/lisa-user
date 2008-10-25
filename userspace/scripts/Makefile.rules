@@ -1,0 +1,8 @@
+$(DEPS): %.d : %.c
+	$(QUIET_CC)$(CC) $(CFLAGS) $(addprefix -I, $(INC)) $(addprefix -D, $(DEF)) -MD -o $*.o -c $<
+
+$(OBJS): %.o : %.c
+	$(QUIET_CC)$(CC) $(CFLAGS) $(addprefix -I, $(INC)) $(addprefix -D, $(DEF)) -c $<
+
+clean:
+	$(Q)$(RM) $(DEPS) $(OBJS) $(TARGETS) *~

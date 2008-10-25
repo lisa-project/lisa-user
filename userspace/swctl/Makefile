@@ -1,16 +1,20 @@
-CFLAGS = -I$(KDIR)/include -I ../include -Wall -g
+TOP_DIR = ../
+KDIR    = $(TOP_DIR)/../linux-2.6
+
+CFLAGS  = -g
 LDFLAGS = -L../cli -lswcli
 
-.PHONY: all clean dep
+INC = $(KDIR)/include \
+      $(TOP_DIR)/include
+
+SRCS    = swctl.c
+TARGETS = swctl
 
 all: swctl
 
-swctl: swctl.o
-	cd ../lib && make
-	$(CC) $(LDFLAGS) -o swctl $^ ../lib/misc.o
+include $(TOP_DIR)/scripts/Makefile.variables
+include $(TOP_DIR)/scripts/Makefile.rules
 
-clean:
-	rm -f *.o *~ swctl
-
-dep:
-	$(CC) $(CFLAGS) -MM *.c >> $(DEP)
+swctl: $(OBJS)
+	$(Q) $(MAKE) -C $(TOP_DIR)/lib
+	$(QUIET_LD)$(CC) $(LDFLAGS) -o $@ $^ ../lib/misc.o

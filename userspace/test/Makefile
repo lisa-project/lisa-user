@@ -1,8 +1,16 @@
-.PHONY: all clean
+TOP_DIR = ..
 
-CFLAGS = -Wall -g
+CGLAGS	= -g
+INC	= $(TOP_DIR)/../linux-2.6/include \
+	  $(TOP_DIR)/include
 
-all: pktgen pktrecv
+SRCS	= pktgen.c pktrecv.c test_sock.c
+TARGETS	= $(SRCS:.c=)
 
-clean:
-	rm -f pktgen pktrecv
+all: $(TARGETS)
+
+include $(TOP_DIR)/scripts/Makefile.variables
+include $(TOP_DIR)/scripts/Makefile.rules
+
+$(TARGETS): % : %.o
+	$(QUIET_LD)$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^

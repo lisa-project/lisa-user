@@ -273,7 +273,7 @@ void build_list_ip_addr(FILE *out, char *dev) {
 	fh = fopen(PROCNETSWITCH_PATH, "r");
 	if (!fh) {
 		perror("fopen");
-		exit(-1);
+		return;
 	}
 	while (fgets(buf, sizeof(buf), fh)) {
 		buf[strlen(buf)-1] = '\0';

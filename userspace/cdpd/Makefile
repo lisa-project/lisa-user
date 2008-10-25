@@ -1,17 +1,21 @@
-.PHONY: all clean dep
+TOP_DIR = ..
 
-CFLAGS +=-Wall -I$(KDIR)/include -I../include -fPIC -D_XOPEN_SOURCE=500
-CFLAGS +=-DDEBUG
-CFLAGS +=-g
-LDFLAGS=-lpthread -lm -lrt -L../cli/ -lswcli
+CFLAGS  = -fPIC
+LDFLAGS = -lpthread -lm -lrt
 
-all: cdpd test_sock
+INC 	= $(TOP_DIR)/../linux-2.6/include \
+	  $(TOP_DIR)/include
+DEF	= _XOPEN_SOURCE=500 \
+	  DEBUG
 
-cdpd: cdp_aging.o cdp_configuration.o cdp_send.o cdpd.o
-	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+SRCS	= cdpd.c cdp_aging.c cdp_configuration.c cdp_send.c
+TARGETS = cdpd
 
-clean:
-	rm -f *.o cdpd test_sock
+all: $(TARGETS)
 
-dep:
-	$(CC) $(CFLAGS) -MM *.c >> $(DEP)
+include $(TOP_DIR)/scripts/Makefile.variables
+include $(TOP_DIR)/scripts/Makefile.rules
+
+cdpd: $(OBJS)
+	$(Q)$(MAKE) -C $(TOP_DIR)/lib
+	$(QUIET_LD)$(CC) $(LDFLAGS) -o $@ $^ ../lib/misc.o

@@ -1,35 +1,31 @@
-KDIR := $(shell readlink -f ../linux-2.6)
-export KDIR
+TOP_DIR = .
 
-.PHONY: all clean install dep
+include $(TOP_DIR)/scripts/Makefile.variables
+
+SUBDIRS = $(TOP_DIR)/include \
+	  $(TOP_DIR)/cli     \
+	  $(TOP_DIR)/login   \
+	  $(TOP_DIR)/swctl   \
+	  $(TOP_DIR)/cdpd    \
+	  $(TOP_DIR)/test
 
 all:
-	cd include && make
-	cd cli && make
-	cd login && make
-	cd swctl && make
-	cd cdpd && make
-
-dep:
-	cd include && make
-	cd cli && make dep
-	cd login && make dep
-	cd swctl && make dep
-	cd cdpd && make dep
+	$(Q) for subdir in $(SUBDIRS) ; \
+	do \
+		make -C $${subdir}; \
+	done
 
 clean:
-	cd include && make clean
-	cd cli && make clean
-	cd lib && make clean
-	cd login && make clean
-	cd swctl && make clean
-	cd cdpd && make clean
+	$(Q) for subdir in $(SUBDIRS) ; \
+	do \
+		make -C $${subdir} $@ ; \
+	done
 
 install: all
 	install -m 755 -D cdpd/cdpd $(ROOT)/usr/sbin/cdpd
 	install -m 755 -D cli/filter $(ROOT)/bin/filter
 ifneq ($(ROOT),)
-	install -m 755 -D cli/filter $(ROOT)/bin/reboot
+	install -m 755 -D cli/reboot $(ROOT)/bin/reboot
 endif
 	install -m 755 -D cli/swcfgload $(ROOT)/usr/sbin/swcfgload
 	install -m 755 -D cli/swcli $(ROOT)/usr/sbin/swcli

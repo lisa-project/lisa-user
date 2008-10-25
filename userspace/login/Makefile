@@ -1,11 +1,14 @@
-.PHONY: all clean dep
+TOP_DIR = ../
 
 LDFLAGS = -lcrypt
 
+SRCS    = login.c
+TARGETS	= login
+
 all: login
 
-clean:
-	rm -f *~ *.o login
+include $(TOP_DIR)/scripts/Makefile.variables
+include $(TOP_DIR)/scripts/Makefile.rules
 
-dep:
-	$(CC) $(CFLAGS) -MM *.c >> $(DEP)
+login: $(OBJS)
+	$(QUIET_LD)$(CC) $(LDFLAGS) -o $@ $^

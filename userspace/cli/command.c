@@ -515,7 +515,7 @@ static void show_ip(FILE *out, char *dev) {
 	fh = fopen(PROCNETSWITCH_PATH, "r");
 	if (!fh) {
 		perror("fopen");
-		exit(-1);
+		return;
 	}
 	while (fgets(buf, sizeof(buf), fh)) {
 		/* make sure buf is null-terminated */
@@ -556,7 +556,7 @@ static void cmd_show_vlan(FILE *out, char **argv) {
 	fprintf(out, "\n");
 	if ((in = fopen(VLAN_FILE_PATH, "r")) == NULL) {
 		perror("fopen");
-		exit(-1);
+		return;
 	}
 	
 	while (fgets(buf, sizeof(buf), in)) {

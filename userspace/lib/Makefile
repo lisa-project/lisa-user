@@ -1,6 +1,13 @@
-CFLAGS = -I$(KDIR)/include -fPIC -Wall -I../include -g
+TOP_DIR = ..
 
-all: misc.o mm.o
+CFLAGS  = -fPIC -g
+INC	= $(TOP_DIR)/../linux-2.6/include \
+	  $(TOP_DIR)/include
 
-clean:
-	rm -f *~ *.o
+SRCS	= mm.c misc.c
+
+include $(TOP_DIR)/scripts/Makefile.variables
+include $(TOP_DIR)/scripts/Makefile.rules
+
+.DEFAULT_GOAL = all
+all: $(OBJS)

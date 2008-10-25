@@ -1,11 +1,11 @@
-TARGETS := swsock.h
+TOP_DIR = ..
+
+TARGETS = swsock.h
 
 all: $(TARGETS)
 
-.PHONY: all clean
+include $(TOP_DIR)/scripts/Makefile.variables
+include $(TOP_DIR)/scripts/Makefile.rules
 
-swsock.h: ../../linux-2.6/include/linux/socket.h
-	../../mkheaders.sh swsock.h > swsock.h
-
-clean:
-	rm -f $(TARGETS)
+swsock.h: $(TOP_DIR)/../linux-2.6/include/linux/socket.h
+	$(Q)../../mkheaders.sh swsock.h > swsock.h

@@ -679,11 +679,13 @@ int climain(void) {
 	assert(!status);
 	swcli_init_readline();
 
+#ifndef CONFIG_CLI_TESTING
 	sock_fd = socket(PF_SWITCH, SOCK_RAW, 0);
 	if(sock_fd == -1) {
 		perror("socket");
 		return 1;
 	}
+#endif
 
 	/* try to establish communication with cdpd */
 	cdp_init_ipc(&cdp_s);
@@ -721,7 +723,9 @@ int climain(void) {
 	
 	/* cleanup */
 	cdp_destroy_ipc(&cdp_s);
+#ifndef CONFIG_CLI_TESTING
 	close(sock_fd);
+#endif
 
 	return 0;
 }

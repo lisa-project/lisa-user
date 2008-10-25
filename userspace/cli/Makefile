@@ -1,46 +1,59 @@
-CFLAGS = -g -Wall -I$(KDIR)/include -I ../include -fPIC -D_GNU_SOURCE
-LDFLAGS = -L. -lswcli -lrt
-
-__LOGIN_PATH := \"$(shell pwd)/swlogin\"
-__FILTER_PATH := \"$(shell pwd)/filter\"
+TOP_DIR		= ..
+CFLAGS		= -fPIC -g
+LDFLAGS		= -L. -lswcli -lrt
+INC		= $(TOP_DIR)/../linux-2.6/include \
+		  $(TOP_DIR)/include
+DEF		= _GNU_SOURCE #CONFIG_CLI_TESTING
 
 ifndef DIST
-CFLAGS += -DLOGIN_PATH=$(__LOGIN_PATH) -DFILTER_PATH=$(__FILTER_PATH)
+LOGIN_PATH	:= \"$(shell pwd)/swlogin\"
+FILTER_PATH	:= \"$(shell pwd)/filter\"
+DEF		+= LOGIN_PATH=$(LOGIN_PATH) FILTER_PATH=$(FILTER_PATH)
 endif
 
 ifdef USE_EXIT_IN_CONF
-CFLAGS += -DUSE_EXIT_IN_CONF
+DEF		+= USE_EXIT_IN_CONF
 endif
 
-.PHONY: all clean dep
+LIBSWCLI_SRCS = build_config.c \
+		cdp.c          \
+		climain.c      \
+		command.c      \
+		config.c       \
+		config_if.c    \
+		config_line.c  \
+		if.c           \
+		ip.c           \
+		netlink.c      \
+		shared.c
+SRCS          = $(LIBSWCLI_SRCS) \
+		filter.c       \
+		reboot.c       \
+		swcfgload.c    \
+		swcli.c        \
+		swclid.c       \
+		swcon.c        \
+		swlogin.c
+LIBSWCLI_OBJS = $(LIBSWCLI_SRCS:.c=.o)
 
-all: swcli swclid swlogin filter swcon swcfgload reboot
+# Targets linked with libswcli
+LIBSWCLI_TARGETS = swcli swclid swcon swlogin
+# Simple targets, not linked with libswcli
+SIMPLE_TARGETS	 = filter reboot
+# All targets
+TARGETS	= libswcli.so $(LIBSWCLI_TARGETS) $(SIMPLE_TARGETS)
 
-libswcli.so: climain.o command.o config.o config_if.o config_line.o build_config.o if.o shared.o netlink.o ip.o cdp.o
-	cd ../lib && make
-	$(CC) $(CFLAGS) -shared -Wl,-soname,libswcli.so -o $@ -lreadline -lcurses -lutil -lcrypt -lrt $^ ../lib/misc.o ../lib/mm.o
+all: $(TARGETS)
 
-swcli: swcli.o libswcli.so
+include $(TOP_DIR)/scripts/Makefile.variables
+include $(TOP_DIR)/scripts/Makefile.rules
 
-swclid: swclid.o libswcli.so
+libswcli.so: $(LIBSWCLI_OBJS)
+	$(Q)$(MAKE) -C $(TOP_DIR)/lib
+	$(QUIET_LD)$(CC) $(CFLAGS) -shared -Wl,-soname,$@ -o $@ -lreadline -lcurses -lutil -lcrypt -lrt $^ ../lib/misc.o ../lib/mm.o
 
-swcon: swcon.o libswcli.so
+$(SIMPLE_TARGETS): % : %.o
+	$(QUIET_LD)$(CC) $(CFLAGS) -o $@ $^
 
-swcfgload: swcfgload.o libswcli.so
-
-swlogin: swlogin.o libswcli.so
-
-clean:
-	rm -f *.o *~ libswcli.so swcli swclid swlogin filter swcon swcfgload reboot
-
-dep:
-	$(CC) $(CFLAGS) -MM *.c >> $(DEP)
-
-# Things that don't need to be linked against libswcli.so (and thus we
-# explicitly define the build command to avoid using LDFLAGS)
-
-filter: filter.o
-	$(CC) $(CFLAGS) -o $@ $^
-
-reboot: reboot.o
-	$(CC) $(CFLAGS) -o $@ $^
+$(LIBSWCLI_TARGETS): % : %.o libswcli.so
+	$(QUIET_LD)$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
