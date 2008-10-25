@@ -253,7 +253,7 @@ static int get_interfaces_proc(void) {
 			continue;
 		memset(iface->desc, 0, SW_MAX_PORT_DESC);
 		if (!ret) {
-			if (desc && strlen(desc))
+			if (strlen(desc))
 				strncpy(iface->desc, desc, SW_MAX_PORT_DESC);
 		}	
 		get_dev_xstats(s, iface);

@@ -521,7 +521,7 @@ static void show_ip(FILE *out, char *dev) {
 		/* make sure buf is null-terminated */
 		buf[sizeof(buf)-1] = '\0';
 		/* strip the newline at the end of buf */
-		if (buf && strlen(buf))
+		if (strlen(buf))
 			buf[strlen(buf)-1] = '\0'; 
 		/* compare to the interface name we're searching for */
 		if (dev && strcmp(dev, buf))
