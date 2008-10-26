@@ -1,0 +1,110 @@
+1. LiSA Cli Components
+
++------------+    +--------------+    +------+    +----------+
+|            |    |   Readline   |    | LiSA |    |   LiSA   |
+| CLI Parser |<-->|      CLI     |<-->| Menu |<-->| Command  |
+|            |    |  Abstraction |    | Tree |    | Handlers |
++------------+    +--------------+    +------+    +----------+
+      ^                   |              |             ^
+      |                   `..............+.............'
+      `..................................'
+
+1.1. CLI Parser - API for parsing Cisco-like commands; provides basic
+tokenizing functions and validation against menu tree structures.
+
+1.2. Readline CLI abstraction - Integrates the CLI Parser with readline
+library, providing Cisco-like CLI behavior.
+
+1.3. LiSA Menu Tree - Data structures for all LiSA CLI commands.
+
+1.4. LiSA Command Handlers - Functions that actually execute the CLI
+commands.
+
+
+2. CLI Parser Implementation Details
+
+    (rest of)              menu node array
+    command to          to lookup subnodes in
+      parse                  (context)
+       |                         |
+       | const char *buf         | struct menu_node *tree
+       |                         |
+      \|/                       \|/
++-----------------------------------------------------------+
+|                                                           |
+|                   Tokenizer Function                      |
+|                                                           |
++-----------------------------------------------------------+
+   |             |                |            | (struct      
+   | int         | int            | int        | menu_node *)
+   | <retval>    | out->offset    | out->len   | out->matches
+   |             |                |            |
+  \|/           \|/              \|/          \|/
+ status        token            token      matching
+               offset           length   subnodes array
+
+The tokenizing function is initially called with the whole command as
+input and the root menu tree node as context. As it extracts the first
+token from the input, it is iteratively called on the remaindering
+input (buffer). For each extracted token, the context (subnodes list)
+descends in the menu tree.
+
+The tokenizing function skips initial whitespace and returns the offset
+of the actual token within the given buffer, and the token length.
+Therefore, it is appropriate to increase the buffer by the sum of
+out->offset and out->len prior to the next call.
+
+2.1 Command help examples
+
+In the following table, size means the number of (non-null) components
+in the matching subnodes array (by convention, the list ends at the
+first null component).
+
+Command              Output on Cisco CLI             size  status
+-----------------------------------------------------------------
+"is a?"              access-group  address           2     OK  (0)
+"is a ?"             % Ambiguous command:  "ip a "   2     BAD (1)
+"ip addr 192.168?"   A.B.C.D                         1     BAD (1)
+"ip addr 192.168 ?"  % Unrecognized command          0     BAD (1)
+"sh ver?"            version                         1     OK  (0)
+"sh ver ?"           <cr>                            1     OK  (0)
+"sh jjj"             % Unrecognized command          0     OK  (0)
+
+For size, there are 3 possible cases:
+0                 No match (syntax error)
+1                 Correct or unfinished (but correct) command
+larger than 1     Ambiguity
+
+For statis, there are only 2 possible cases:
+0                 Command is correct and it could be executed
+1                 Command has a syntax error
+
+The actual case is determined by both size and status. The logic to
+iteratively call the tokenizer and determine the case is implemented at
+the next layer (CLI Abstraction).
+
+Parsing patterns (such as ip addresses in the example above) is
+accomplished through custom tokenizing functions (that do more than
+just looking up the token in the subnodes array).
+
+There are 2 more possible conditions:
+
+Condition                                            size  status
+-----------------------------------------------------------------
+Empty buffer (or only whitespace in buffer)          0     OK  (0)
+Trailing whitespace at end of buffer                 0     OK  (0)
+
+Distinguishing between the two conditions is done in the next layer
+logic, by counting the tokens: the first happens when there is no
+previous token, the second happens when there is at least one
+previous token.
+
+The second condition happens because the tokenizing function skips
+whitespace at the beginning of the buffer and stops at the first
+whitespace character after the token. Therefore, a subsequent call
+to the function will happen after getting the last token.
+
+To distinguish between a non-existing command (such as "sh jjj") and
+the two whitespace condition (both return size = 0, status = 0), the
+next layer must look at out->len, which is 0 for whitespace and
+non-zero for erroneous commands.
