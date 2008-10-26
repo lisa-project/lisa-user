@@ -1,5 +1,5 @@
-%define date_version 2008.02.19
-%define kernel_version 2.6.21
+%define date_version 2008.07.14
+%define kernel_version 2.6.25
 
 Summary: Network Multilayer Switching on Linux
 Name: lisa
@@ -58,7 +58,7 @@ conflict with standard linux utility packages.
 %setup -n lisa
 
 %build
-make user
+make user DIST=1
 
 %install
 [ "$RPM_BUILD_ROOT" != "/" ] && rm -rf $RPM_BUILD_ROOT

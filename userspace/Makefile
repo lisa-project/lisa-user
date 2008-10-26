@@ -33,9 +33,9 @@ ifneq ($(ROOT),)
 endif
 	install -m 755 -D cli/swcfgload $(ROOT)/usr/sbin/swcfgload
 	install -m 755 -D cli/swcli $(ROOT)/usr/sbin/swcli
-	install -m 755 -D cli/swcli $(ROOT)/usr/sbin/swclid
-	install -m 755 -D cli/swcli $(ROOT)/usr/sbin/swcon
-	install -m 755 -D cli/swcli $(ROOT)/usr/sbin/swlogin
+	install -m 755 -D cli/swclid $(ROOT)/usr/sbin/swclid
+	install -m 755 -D cli/swcon $(ROOT)/usr/sbin/swcon
+	install -m 755 -D cli/swlogin $(ROOT)/usr/sbin/swlogin
 	install -m 755 -D cli/libswcli.so $(ROOT)/usr/lib/libswcli.so
 ifneq ($(ROOT),)
 	install -m 755 -D login/login $(ROOT)/bin/login
