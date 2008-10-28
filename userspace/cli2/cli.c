@@ -1,4 +1,7 @@
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
+
 #include <string.h>
 
 #include "cli.h"
@@ -25,7 +28,7 @@ int cli_next_token(const char *buf, struct tokenize_out *out)
 	return 0;
 }
 
-int cli_tokenize(const char *buf, struct menu_node *tree, struct tokenize_out *out)
+int cli_tokenize(struct cli_context *ctx, const char *buf, struct menu_node *tree, struct tokenize_out *out)
 {
 	char *token, c;
 	int i, j;
@@ -40,6 +43,10 @@ int cli_tokenize(const char *buf, struct menu_node *tree, struct tokenize_out *o
 
 	/* lookup token in tree */
 	for (i=0, j=0; tree[i].name && j < TOKENIZE_MAX_MATCHES; i++) {
+		/* apply filter */
+		if ((tree[i].mask & ctx->filter) != tree[i].mask)
+			continue;
+
 		/* register matches */
 		if (!(strncmp(token, tree[i].name, out->len)))
 			out->matches[j++] = &tree[i];
@@ -49,4 +56,9 @@ int cli_tokenize(const char *buf, struct menu_node *tree, struct tokenize_out *o
 	/* Bad state when we have a whitespace after the token
 	 * and multiple matches. */
 	return (whitespace(c) && (j > 1));
+}
+
+int cli_exec(struct cli_context *ctx, char *cmd)
+{
+	return 0;
 }
