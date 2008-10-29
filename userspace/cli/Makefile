@@ -33,7 +33,8 @@ SRCS          = $(LIBSWCLI_SRCS) \
 		swcli.c        \
 		swclid.c       \
 		swcon.c        \
-		swlogin.c
+		swlogin.c      \
+		cli2dump.c
 LIBSWCLI_OBJS = $(LIBSWCLI_SRCS:.c=.o)
 
 # Targets linked with libswcli
@@ -56,4 +57,7 @@ $(SIMPLE_TARGETS): % : %.o
 	$(QUIET_LD)$(CC) $(CFLAGS) -o $@ $^
 
 $(LIBSWCLI_TARGETS): % : %.o libswcli.so
+	$(QUIET_LD)$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
+
+cli2dump: cli2dump.o $(LIBSWCLI_OBJS)
 	$(QUIET_LD)$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
