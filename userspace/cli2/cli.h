@@ -55,7 +55,7 @@ struct menu_node {
 #define NULL_MENU_NODE {\
 	.name		= NULL,\
 	.help		= NULL,\
-	.priv		= 0,\
+	.mask		= 0,\
 	.tokenize	= NULL,\
 	.run		= NULL,\
 	.subtree	= NULL\

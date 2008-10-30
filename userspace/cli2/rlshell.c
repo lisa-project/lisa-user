@@ -133,8 +133,10 @@ int rlshell_main(struct rlshell_context *ctx) {
 		cmd = readline(prompt);
 		free(prompt);
 
-		if (cmd == NULL)
+		if (cmd == NULL) {
+			printf("\n");
 			continue;
+		}
 
 		if (cmd[0] == '\0')
 			continue;

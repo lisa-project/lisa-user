@@ -14,14 +14,30 @@ int hdlr = 0;
 
 char *argv0;
 
+void hdlr_add(char *sym) {
+	int i;
+
+	if (sym == NULL)
+		return;
+
+	for (i = 0; i < hdlr; i++)
+		if (!strcmp(hdlrs[i], sym))
+			return;
+
+	hdlrs[hdlr++] = strdup(sym);
+}
+
 char *guess_ptr(void *p, const char *self) {
 	char buf[1024];
 	int pipefd[2];
 	FILE *f;
+	char *ret = NULL;
+	pid_t cpid;
+	int status;
 
 	pipe(pipefd);
 
-	if (!fork()) {
+	if (!(cpid = fork())) {
 		const char * argv[] = {
 			"/usr/bin/objdump",
 			"-t",
@@ -34,21 +50,31 @@ char *guess_ptr(void *p, const char *self) {
 	}
 
 	close(pipefd[1]);
+
+	if (cpid == -1) {
+		close(pipefd[0]);
+		return NULL;
+	}
+
 	f = fdopen(pipefd[0], "r");
 	while (fgets(buf, sizeof(buf), f)) {
 		void *lp;
 		char ln[256];
+
+		if (ret != NULL)
+			continue;
 
 		// 08048645 g     F .text      00000050              main
 		if (sscanf(buf, "%p%*c%*c%*c%*c%*c%*c%*c%*c %*s %*s %s", &lp, ln) < 2)
 			continue;
 		
 		if (lp == p)
-			return strdup(ln);
+			ret = strdup(ln);
 	}
 	fclose(f);
+	waitpid(cpid, &status, 0);
 
-	return NULL;
+	return ret;
 }
 
 void rec(sw_command_t *cmd, int indent, const char *cmdline) {
@@ -65,6 +91,8 @@ void rec(sw_command_t *cmd, int indent, const char *cmdline) {
 
 		if (cmd->func)
 			run = guess_ptr(cmd->func, argv0);
+
+		hdlr_add(run);
 
 		sprintf(path, "%s%s ", cmdline, cmd->name);
 
@@ -122,20 +150,20 @@ int main(int argc, char **argv) {
 
 	printf(
 			"#include \"cli.h\"\n"
-			"#include \"swcli.h\"\n"
+			"#include \"swcli_common.h\"\n"
 			"\n"
 		  );
 
 	rec(command_root_main.cmd, 2, "#");
 
 	for (i = 0; i < hdlr; i++)
-		printf("int (*%s)(struct cli_context *, int, char **, struct menu_node **);\n",
+		printf("int %s(struct cli_context *, int, char **, struct menu_node **);\n",
 				hdlrs[i]);
 
 	printf(
 			"\nstruct menu_node menu_main = {\n"
 			"\t/* Root node, .name is used as prompt */\n"
-			"\t.name\t\t\t= \"\",\n"
+			"\t.name\t\t\t= NULL,\n"
 			"\t.subtree\t= (struct menu_node[]) {\n"
 			"%s\n"
 			"\t}\n"

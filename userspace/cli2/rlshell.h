@@ -23,9 +23,11 @@ struct rlshell_context {
 	char *(*prompt)(struct rlshell_context *ctx);
 
 	/* Exit condition from the shell main loop. Must be initialized to
-	 * 1 and set to 0 to break the shell loop.
+	 * 0 and set to 1 to break the shell loop.
 	 */
 	int exit;
 };
+
+int rlshell_main(struct rlshell_context *ctx);
 
 #endif

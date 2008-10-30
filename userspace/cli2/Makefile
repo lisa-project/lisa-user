@@ -15,8 +15,21 @@ ifdef USE_EXIT_IN_CONF
 DEF		+= USE_EXIT_IN_CONF
 endif
 
-LIBSWCLI_SRCS = cli.c \
-				rlshell.c
+# CLI Parser
+LIBSWCLI_SRCS = cli.c
+
+# Readline CLI Abstraction
+LIBSWCLI_SRCS += rlshell.c
+
+# LiSA Menu Tree
+LIBSWCLI_SRCS += menu_main.c
+
+# LiSA Command Handlers
+LIBSWCLI_SRCS += cmd_main.c
+
+# Common swcli stuff that does not fit in the 4 layers
+LIBSWCLI_SRCS += swcli_common.c
+
 SRCS          = $(LIBSWCLI_SRCS) \
 				swcli.c \
 				test.c
