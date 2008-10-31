@@ -58,26 +58,28 @@ out->offset and out->len prior to the next call.
 
 In the following table, size means the number of (non-null) components
 in the matching subnodes array (by convention, the list ends at the
-first null component).
+first null component) and status is the return value of the tokenizer.
 
 Command              Output on Cisco CLI             size  status
 -----------------------------------------------------------------
-"is a?"              access-group  address           2     OK  (0)
-"is a ?"             % Ambiguous command:  "ip a "   2     BAD (1)
-"ip addr 192.168?"   A.B.C.D                         1     BAD (1)
-"ip addr 192.168 ?"  % Unrecognized command          0     BAD (1)
-"sh ver?"            version                         1     OK  (0)
-"sh ver ?"           <cr>                            1     OK  (0)
-"sh jjj"             % Unrecognized command          0     OK  (0)
+"is a?"              access-group  address           2     0
+"is a ?"             % Ambiguous command:  "ip a "   2     1
+"ip addr 192.168?"   A.B.C.D                         1     0
+"ip addr 192.168 ?"  % Unrecognized command          0     1
+"sh ver?"            version                         1     0
+"sh ver ?"           <cr>                            1     1
+"sh jjj"             % Unrecognized command          0     0
+"sh jjj "            % Unrecognized command          0     1
 
 For size, there are 3 possible cases:
 0                 No match (syntax error)
-1                 Correct or unfinished (but correct) command
+1                 Correct or unfinished command
 larger than 1     Ambiguity
 
-For statis, there are only 2 possible cases:
-0                 Command is correct and it could be executed
-1                 Command has a syntax error
+For status, there are only 2 possible cases:
+0                 Buffer ends with this token and there is nothing
+                  more to parse
+1                 There is more input to parse
 
 The actual case is determined by both size and status. The logic to
 iteratively call the tokenizer and determine the case is implemented at
@@ -91,8 +93,8 @@ There are 2 more possible conditions:
 
 Condition                                            size  status
 -----------------------------------------------------------------
-Empty buffer (or only whitespace in buffer)          0     OK  (0)
-Trailing whitespace at end of buffer                 0     OK  (0)
+Empty buffer (or only whitespace in buffer)          0     0
+Trailing whitespace at end of buffer                 0     0
 
 Distinguishing between the two conditions is done in the next layer
 logic, by counting the tokens: the first happens when there is no

@@ -1,0 +1,29 @@
+INES-ETAJ-4>sh?
+show  
+
+INES-ETAJ-4>sh ?
+  mac                MAC configuration
+  mac-address-table  MAC forwarding table
+
+INES-ETAJ-4>sh m?
+mac  mac-address-table  
+
+INES-ETAJ-4>sh m ?
+% Ambiguous command:  "sh m "
+
+INES-ETAJ-4>sh m qqq?
+% Ambiguous command:  "sh m qqq"
+
+INES-ETAJ-4>sh ver?    
+version  
+
+INES-ETAJ-4>sh ver ?
+  |  Output modifiers
+  <cr>
+
+INES-ETAJ-4>sh ver qqq?
+% Unrecognized command
+
+INES-ETAJ-4>sh ver qqq ?
+% Unrecognized command
+

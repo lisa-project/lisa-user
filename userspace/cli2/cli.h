@@ -17,9 +17,14 @@ struct tokenize_out {
 	int offset;
 	/* Length of the current token */
 	int len;
+	/* Length of the initial token substring that would produce at least
+	 * one match */
+	int ok_len;
 	/* Array of matching menu nodes */
 	struct menu_node *matches[TOKENIZE_MAX_MATCHES+1];
 };
+
+#define MATCHES(out) ((out)->matches[0] == NULL ? 0 : ((out)->matches[1] == NULL ? 1 : 2))
 
 struct cli_context {
 	int filter;

@@ -2,9 +2,43 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #include <signal.h>
+#include <stdlib.h>
 
 #include "rlshell.h"
 #include "debug.h"
+
+/* Since readline is based on global variables rather than pass-back
+ * pointers, we have no way to pass back the context pointer to our
+ * readline handlers. Instead, we make a global variable and we
+ * initialize it with the current context before calling readline()
+ */
+static struct rlshell_context *currctx;
+
+
+/* Error reporting & stuff */
+void rlshell_invalid_cmd(void) {
+	printf("%% Unrecognized command\n");
+}
+
+void rlshell_ambiguous_cmd(char *cmd) {
+	printf("%% Ambiguous command: \"%s\"\n", cmd);
+}
+
+void rlshell_incomplete_cmd(char *cmd) {
+	printf("%% Incomplete command.\n");
+}
+
+void rlshell_extra_input(int off) {
+	char fmt[10];
+	
+	snprintf(fmt, sizeof(fmt), "%%%dc^\n", off - 1);
+	printf(fmt, ' ');
+	printf("%% Invalid input detected at '^' marker.\n\n");
+}
+
+void rlshell_go_ahead(void) {
+	printf("  <cr>\n");
+}
 
 /* If we use the default rl_completer_word_break_characters
  then we totally fuck up completion when we have the following
@@ -79,8 +113,103 @@ char **rlshell_completion(const char *text, int start, int end) {
 	return matches;
 }
 
+void list_matches_brief(struct tokenize_out *out) {
+	int i;
+
+	for (i = 0; out->matches[i] != NULL; i++) {
+		if (i)
+			fputs("  ", stdout);
+
+		fputs(out->matches[i]->name, stdout);
+	}
+
+	fputs("\n", stdout);
+}
+
+void list_subtree(struct menu_node *node) {
+	int len = 0;
+	struct menu_node *sub;
+	char fmt[20];
+
+	/* If node->subtree is NULL, then last token matched the deepest
+	 * node in the tree, and we only list <cr> as possible completion. */
+	if (node->subtree == NULL) {
+		rlshell_go_ahead();
+		printf("\n");
+		return;
+	}
+
+	/* Determine maximum length of command name for nice paging */
+	for (sub = node->subtree; sub->name != NULL; sub++) {
+		int mylen = strlen(sub->name);
+		len = mylen > len ? mylen : len;
+	}
+
+	snprintf(fmt, sizeof(fmt), "  %%-%ds  %%s\n", len);
+
+	for (sub = node->subtree; sub->name != NULL; sub++)
+		printf(fmt, sub->name, sub->help);
+
+	if (node->run != NULL)
+		rlshell_go_ahead();
+
+	printf("\n");
+}
+
 /* Help function called when the user pressed '?' in the command line. */
 int list_current_options(int something, int key) {
+	struct tokenize_out out;
+	int status, size;
+	struct menu_node *menu = currctx->cc.root;
+	char *cmd = rl_line_buffer;
+
+	printf("%c\n", key);
+
+	for (;;) {
+
+		status = menu->tokenize == NULL ?
+			cli_tokenize(&currctx->cc, cmd, menu->subtree, &out) :
+			menu->tokenize(&currctx->cc, cmd, menu->subtree, &out);
+		size = MATCHES(&out);
+
+		/* Phase A: 2 or more matches */
+		if (size > 1 && status) {
+			rlshell_ambiguous_cmd(rl_line_buffer);
+			break;
+		}
+
+		if (size > 1) {
+			list_matches_brief(&out);
+			break;
+		}
+
+		/* Phase B: exactly 1 match */
+		if (size == 1 && !status) {
+			list_matches_brief(&out);
+			break;
+		}
+
+		if (size == 1) {
+			menu = out.matches[0];
+			cmd += out.offset + out.len;
+			continue;
+		}
+
+		/* Phase C: no matches */
+		if (out.len) {
+			rlshell_invalid_cmd();
+			break;
+		}
+
+		/* If control reaches this point, we have no matches and a token
+		 * consisting of whitespace only */
+
+		list_subtree(menu);
+		break;
+	}
+
+	rl_forced_update_display();
+	return 0;
 }
 
 /* Hanlder that can be installed on a key sequence */
@@ -125,13 +254,18 @@ int rlshell_main(struct rlshell_context *ctx) {
 
 	while (!ctx->exit) {
 		int hist_append = 1;
-		char *prompt = ctx->prompt == NULL ? "#" : ctx->prompt(ctx);
+		char *prompt = NULL;
+		
+		if (ctx->prompt != NULL)
+			prompt = ctx->prompt(ctx);
 
 		if (cmd != NULL)
 			free(cmd);
 
-		cmd = readline(prompt);
-		free(prompt);
+		currctx = ctx;
+		cmd = readline(prompt == NULL ? "#" : prompt);
+		if (prompt != NULL)
+			free(prompt);
 
 		if (cmd == NULL) {
 			printf("\n");
@@ -151,4 +285,6 @@ int rlshell_main(struct rlshell_context *ctx) {
 
 		cli_exec(&ctx->cc, cmd);
 	}
+
+	return 0;
 }
