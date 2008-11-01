@@ -26,8 +26,14 @@ struct rlshell_context {
 	 * 0 and set to 1 to break the shell loop.
 	 */
 	int exit;
+
+	/* Prompt length; used to correctly compute the offset to display
+	 * the '^' marker on invalid commands. */
+	int plen;
 };
 
 int rlshell_main(struct rlshell_context *ctx);
+
+#define MAX_MENU_DEPTH 64
 
 #endif

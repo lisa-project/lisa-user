@@ -43,6 +43,7 @@ int cli_tokenize(struct cli_context *ctx, const char *buf, struct menu_node *tre
 	 * junk after a token that matches the deepest subtree node */
 	if (tree == NULL) {
 		out->matches[0] = NULL;
+		out->ok_len = 0;
 		return whitespace(c);
 	}
 

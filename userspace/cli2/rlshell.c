@@ -3,6 +3,7 @@
 #include <readline/history.h>
 #include <signal.h>
 #include <stdlib.h>
+#include <assert.h>
 
 #include "rlshell.h"
 #include "debug.h"
@@ -31,7 +32,7 @@ void rlshell_incomplete_cmd(char *cmd) {
 void rlshell_extra_input(int off) {
 	char fmt[10];
 	
-	snprintf(fmt, sizeof(fmt), "%%%dc^\n", off - 1);
+	snprintf(fmt, sizeof(fmt), "%%%dc^\n", off);
 	printf(fmt, ' ');
 	printf("%% Invalid input detected at '^' marker.\n\n");
 }
@@ -212,6 +213,75 @@ int list_current_options(int something, int key) {
 	return 0;
 }
 
+int rlshell_exec(struct rlshell_context *ctx, char *buf) {
+	struct tokenize_out out;
+	int status, size;
+	struct menu_node *menu = currctx->cc.root;
+	char *cmd = buf;
+	int argc = 0;
+	char *tokv[MAX_MENU_DEPTH];
+	struct menu_node *nodev[MAX_MENU_DEPTH];
+
+	for (;;) {
+		assert(argc < MAX_MENU_DEPTH);
+
+		status = menu->tokenize == NULL ?
+			cli_tokenize(&currctx->cc, cmd, menu->subtree, &out) :
+			menu->tokenize(&currctx->cc, cmd, menu->subtree, &out);
+		size = MATCHES(&out);
+
+		/* Phase A: 2 or more matches */
+		if (size > 1) {
+			rlshell_ambiguous_cmd(buf);
+			return 0;
+		}
+
+		/* Phase B: exactly 1 match */
+		if (size == 1 && !status) {
+			tokv[argc] = strndupa(cmd + out.offset, out.len);
+			nodev[argc] = out.matches[0];
+			argc++;
+			menu = out.matches[0];
+			break;
+		}
+
+		if (size == 1) {
+			tokv[argc] = strndupa(cmd + out.offset, out.len);
+			nodev[argc] = out.matches[0];
+			argc++;
+			menu = out.matches[0];
+			cmd += out.offset + out.len;
+			continue;
+		}
+
+		/* Phase C: no matches */
+		if (out.len) {
+			//printf("plen=%d, cmd-buf=%d, offset=%d, ok_len=%d\n",
+			//		ctx->plen, cmd-buf, out.offset, out.ok_len);
+			rlshell_extra_input(ctx->plen + (cmd - buf) + out.offset + out.ok_len);
+			return 0;
+		}
+
+		/* If control reaches this point, we have no matches and a token
+		 * consisting of whitespace only */
+
+		if (menu == currctx->cc.root)
+			return 0;
+
+		break;
+	}
+
+	/* If control reaches this point, we must run the command. */
+
+	if (menu->run == NULL) {
+		rlshell_incomplete_cmd(buf);
+		return 0;
+	}
+
+	menu->run(&ctx->cc, argc, tokv, nodev);
+	return 0;
+}
+
 /* Hanlder that can be installed on a key sequence */
 int rlshell_ignore_keyseq(int i, int j) {
 	return 0;
@@ -263,6 +333,7 @@ int rlshell_main(struct rlshell_context *ctx) {
 			free(cmd);
 
 		currctx = ctx;
+		ctx->plen = prompt == NULL ? 1 : strlen(prompt);
 		cmd = readline(prompt == NULL ? "#" : prompt);
 		if (prompt != NULL)
 			free(prompt);
@@ -283,7 +354,7 @@ int rlshell_main(struct rlshell_context *ctx) {
 		if (hist_append)
 			add_history(cmd);
 
-		cli_exec(&ctx->cc, cmd);
+		rlshell_exec(ctx, cmd);
 	}
 
 	return 0;

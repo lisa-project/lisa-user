@@ -8,7 +8,7 @@ int cmd_clr_mac_vl(struct cli_context *, int, char **, struct menu_node **);
 int cmd_conf_t(struct cli_context *, int, char **, struct menu_node **);
 int cmd_disable(struct cli_context *, int, char **, struct menu_node **);
 int cmd_enable(struct cli_context *, int, char **, struct menu_node **);
-int cmd_exit(struct cli_context *, int, char **, struct menu_node **);
+int cmd_quit(struct cli_context *, int, char **, struct menu_node **);
 int cmd_help(struct cli_context *, int, char **, struct menu_node **);
 int cmd_ping(struct cli_context *, int, char **, struct menu_node **);
 int cmd_reload(struct cli_context *, int, char **, struct menu_node **);
@@ -319,7 +319,7 @@ struct menu_node menu_main = {
 			.help			= "Exit from the EXEC",
 			.mask			= PRIV(1),
 			.tokenize	= NULL,
-			.run			= cmd_exit,
+			.run			= cmd_quit,
 			.subtree	= NULL
 		},
 
@@ -337,7 +337,7 @@ struct menu_node menu_main = {
 			.help			= "Exit from the EXEC",
 			.mask			= PRIV(1),
 			.tokenize	= NULL,
-			.run			= cmd_exit,
+			.run			= cmd_quit,
 			.subtree	= NULL
 		},
 
@@ -361,21 +361,21 @@ struct menu_node menu_main = {
 			} /*}}}*/
 		},
 
+		{ /* #quit */
+			.name			= "quit",
+			.help			= "Exit from the EXEC",
+			.mask			= PRIV(1),
+			.tokenize	= NULL,
+			.run			= cmd_quit,
+			.subtree	= NULL
+		},
+
 		{ /* #reload */
 			.name			= "reload",
 			.help			= "Halt and perform a cold restart",
 			.mask			= PRIV(1),
 			.tokenize	= NULL,
 			.run			= cmd_reload,
-			.subtree	= NULL
-		},
-
-		{ /* #quit */
-			.name			= "quit",
-			.help			= "Exit from the EXEC",
-			.mask			= PRIV(1),
-			.tokenize	= NULL,
-			.run			= cmd_exit,
 			.subtree	= NULL
 		},
 
