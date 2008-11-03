@@ -35,6 +35,9 @@ int cli_tokenize(struct cli_context *ctx, const char *buf, struct menu_node *tre
 	char *token, c;
 	int i, j, emc;
 
+	/* always reset ok_len to 0 */
+	out->ok_len = 0;
+
 	/* get next token */
 	if (cli_next_token(buf, out))
 		return 0;
@@ -45,7 +48,6 @@ int cli_tokenize(struct cli_context *ctx, const char *buf, struct menu_node *tre
 	 * junk after a token that matches the deepest subtree node */
 	if (tree == NULL) {
 		out->matches[0] = NULL;
-		out->ok_len = 0;
 		return whitespace(c);
 	}
 
@@ -133,7 +135,11 @@ int cli_exec(struct cli_context *ctx, char *buf)
 			break;
 		}
 
-		/* Case C: no matches */
+		/* Case C: no matches, trailing whitespace. try to run the command  */
+		if (!out.len)
+			break;
+
+		/* Case D: no matches, extra garbage at the end of the line */
 		return (((cmd - buf) + out.offset + out.ok_len)  << CLI_EX_STAT_BITS)
 			| CLI_EX_INVALID;
 	}
