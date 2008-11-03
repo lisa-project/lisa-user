@@ -185,7 +185,7 @@ int rlshell_help(int unused, int key)
 			break;
 		}
 
-		/* Case B: 2 or more matches and no trailing whitespace */
+		/* Case B: 1 or more matches and no trailing whitespace */
 		if (size >= 1 && !trailing_whitespace) {
 			rlshell_list_matches_brief(&out);
 			break;

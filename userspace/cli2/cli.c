@@ -31,8 +31,9 @@ int cli_next_token(const char *buf, struct tokenize_out *out)
 
 int cli_tokenize(struct cli_context *ctx, const char *buf, struct menu_node *tree, struct tokenize_out *out)
 {
+	struct menu_node *exact_match = NULL;
 	char *token, c;
-	int i, j;
+	int i, j, emc;
 
 	/* get next token */
 	if (cli_next_token(buf, out))
@@ -52,10 +53,16 @@ int cli_tokenize(struct cli_context *ctx, const char *buf, struct menu_node *tre
 	token[out->len] = '\0';
 
 	/* lookup token in tree */
-	for (i=0, j=0; tree[i].name && j < TOKENIZE_MAX_MATCHES; i++) {
+	for (i=0, j=0, emc=0; tree[i].name && j < TOKENIZE_MAX_MATCHES; i++) {
 		/* apply filter */
 		if ((tree[i].mask & ctx->filter) != tree[i].mask)
 			continue;
+
+		/* count exact matches */
+		if (!strncmp(token, tree[i].name, strlen(tree[i].name))) {
+			exact_match = &tree[i];
+			emc++;
+		}
 
 		/* register matches */
 		if (!(strncmp(token, tree[i].name, out->len)))
@@ -76,6 +83,13 @@ int cli_tokenize(struct cli_context *ctx, const char *buf, struct menu_node *tre
 			j = 1;
 			break;
 		}
+	}
+
+	/* A single exact match will have priority over other
+	 * partial matches. */
+	if (emc == 1 && whitespace(c)) {
+		out->matches[0] = exact_match;
+		out->matches[1] = NULL;
 	}
 
 	/* Bad state when we have a whitespace after the token
