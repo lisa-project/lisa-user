@@ -2,6 +2,7 @@
 #define _GNU_SOURCE
 #endif
 
+#include <assert.h>
 #include <string.h>
 
 #include "cli.h"
@@ -61,8 +62,6 @@ int cli_tokenize(struct cli_context *ctx, const char *buf, struct menu_node *tre
 			out->matches[j++] = &tree[i];
 	}
 	out->matches[j] = NULL;
-	/* Bad state when we have a whitespace after the token
-	 * and multiple matches. */
 
 	/* If no matches found, determine ok_len. At first iteration, j is used
 	 * as match count (no iteration if we have any matches); at subsequent
@@ -79,10 +78,52 @@ int cli_tokenize(struct cli_context *ctx, const char *buf, struct menu_node *tre
 		}
 	}
 
+	/* Bad state when we have a whitespace after the token
+	 * and multiple matches. */
 	return whitespace(c);
 }
 
-int cli_exec(struct cli_context *ctx, char *cmd)
+int cli_exec(struct cli_context *ctx, char *buf)
 {
-	return 0;
+	struct tokenize_out out;
+	int size, trailing_whitespace;
+	struct menu_node *menu = ctx->root;
+	char *cmd = buf;
+	int argc = 0;
+	char *tokv[MAX_MENU_DEPTH];
+	struct menu_node *nodev[MAX_MENU_DEPTH];
+
+	for (;;) {
+		assert(argc < MAX_MENU_DEPTH);
+
+		trailing_whitespace = menu->tokenize == NULL ?
+			cli_tokenize(ctx, cmd, menu->subtree, &out) :
+			menu->tokenize(ctx, cmd, menu->subtree, &out);
+		size = MATCHES(&out);
+
+		/* Case A: 2 or more matches */
+		if (size > 1)
+			return CLI_EX_AMBIGUOUS;
+
+		/* Case B: exactly 1 match */
+		if (size == 1) {
+			tokv[argc] = strndupa(cmd + out.offset, out.len);
+			nodev[argc] = out.matches[0];
+			argc++;
+			menu = out.matches[0];
+			/* continue parsing if we have a whitespace after the token */
+			if (trailing_whitespace) {
+				cmd += out.offset + out.len;
+				continue;
+			}
+			break;
+		}
+
+		/* Case C: no matches */
+		return (((cmd - buf) + out.offset + out.ok_len)  << CLI_EX_STAT_BITS)
+			| CLI_EX_INVALID;
+	}
+
+	/* If control reaches this point, we must run the command. */
+	return menu->run? menu->run(ctx, argc, tokv, nodev) : CLI_EX_INCOMPLETE;
 }

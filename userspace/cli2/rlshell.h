@@ -34,6 +34,4 @@ struct rlshell_context {
 
 int rlshell_main(struct rlshell_context *ctx);
 
-#define MAX_MENU_DEPTH 64
-
 #endif
