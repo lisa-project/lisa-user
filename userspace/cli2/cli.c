@@ -31,12 +31,12 @@ int cli_next_token(const char *buf, struct tokenize_out *out)
 
 int cli_tokenize(struct cli_context *ctx, const char *buf, struct menu_node *tree, struct tokenize_out *out)
 {
-	struct menu_node *exact_match = NULL;
 	char *token, c;
-	int i, j, emc;
+	int i, j;
 
 	/* always reset ok_len to 0 */
 	out->ok_len = 0;
+	out->exact_match = NULL;
 
 	/* get next token */
 	if (cli_next_token(buf, out))
@@ -55,20 +55,20 @@ int cli_tokenize(struct cli_context *ctx, const char *buf, struct menu_node *tre
 	token[out->len] = '\0';
 
 	/* lookup token in tree */
-	for (i=0, j=0, emc=0; tree[i].name && j < TOKENIZE_MAX_MATCHES; i++) {
+	for (i=0, j=0; tree[i].name && j < TOKENIZE_MAX_MATCHES; i++) {
 		/* apply filter */
 		if ((tree[i].mask & ctx->filter) != tree[i].mask)
 			continue;
 
-		/* count exact matches */
-		if (!strncmp(token, tree[i].name, strlen(tree[i].name))) {
-			exact_match = &tree[i];
-			emc++;
-		}
+		if (strncmp(token, tree[i].name, out->len))
+			continue;
 
-		/* register matches */
-		if (!(strncmp(token, tree[i].name, out->len)))
-			out->matches[j++] = &tree[i];
+		/* register match */
+		out->matches[j++] = &tree[i];
+
+		/* check for exact match */
+		if (out->len == strlen(tree[i].name))
+			out->exact_match = &tree[i];
 	}
 	out->matches[j] = NULL;
 
@@ -85,13 +85,6 @@ int cli_tokenize(struct cli_context *ctx, const char *buf, struct menu_node *tre
 			j = 1;
 			break;
 		}
-	}
-
-	/* A single exact match will have priority over other
-	 * partial matches. */
-	if (emc == 1 && whitespace(c)) {
-		out->matches[0] = exact_match;
-		out->matches[1] = NULL;
 	}
 
 	/* Bad state when we have a whitespace after the token
@@ -115,6 +108,13 @@ int cli_exec(struct cli_context *ctx, char *buf)
 		trailing_whitespace = menu->tokenize == NULL ?
 			cli_tokenize(ctx, cmd, menu->subtree, &out) :
 			menu->tokenize(ctx, cmd, menu->subtree, &out);
+
+		/* A single exact match will have priority over other
+		 * partial matches. */
+		if (out.exact_match != NULL) {
+			out.matches[0] = out.exact_match;
+			out.matches[1] = NULL;
+		}
 		size = MATCHES(&out);
 
 		/* Case A: 2 or more matches */

@@ -177,6 +177,13 @@ int rlshell_help(int unused, int key)
 		trailing_whitespace = menu->tokenize == NULL ?
 			cli_tokenize(&currctx->cc, cmd, menu->subtree, &out) :
 			menu->tokenize(&currctx->cc, cmd, menu->subtree, &out);
+
+		/* A single exact match will have priority over other
+		 * partial matches. */
+		if (out.exact_match != NULL && trailing_whitespace) {
+			out.matches[0] = out.exact_match;
+			out.matches[1] = NULL;
+		}
 		size = MATCHES(&out);
 
 		/* Case A: 2 or more matches and trailing whitespace */

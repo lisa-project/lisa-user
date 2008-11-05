@@ -23,6 +23,8 @@ struct tokenize_out {
 	int ok_len;
 	/* Array of matching menu nodes */
 	struct menu_node *matches[TOKENIZE_MAX_MATCHES+1];
+	/* Exact match (token length == node name length) if any */
+	struct menu_node *exact_match;
 };
 
 #define MATCHES(out) ((out)->matches[0] == NULL ? 0 : ((out)->matches[1] == NULL ? 1 : 2))
