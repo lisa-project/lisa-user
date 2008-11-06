@@ -46,19 +46,9 @@ void rlshell_go_ahead(void)
 	printf("  <cr>\n");
 }
 
-/* Override default readline behavior of printing the list of matches
- * on completion (if there is more than one match). We just go to the
- * next line and do a redisplay of the command line.
- */
-void rlshell_forced_update_display(char **matches, int i, int j)
-{
-	printf("\n");
-	rl_forced_update_display();
-}
-
 /* Attempt to complete on the contents of text. start and end
  * bound the region of rl_line_buffer that contains the word to
- * complete. TEXT is the word to complete. We can use the entire
+ * complete. text is the word to complete. We can use the entire
  * contents of rl_line_buffer in case we want to do some simple
  * parsing. Return the array of matches, or NULL if there aren't any */
 char **rlshell_completion(const char *text, int start, int end)
@@ -70,7 +60,6 @@ char **rlshell_completion(const char *text, int start, int end)
 	char **match_list = NULL;
 
 	rl_attempted_completion_over = 1;
-	rl_completion_display_matches_hook = rlshell_forced_update_display;
 
 	/* Reserve space for just one match. 0 or multiple matches are
 	 * handled inside this function, not by readline. */
@@ -82,6 +71,13 @@ char **rlshell_completion(const char *text, int start, int end)
 		trailing_whitespace = menu->tokenize == NULL ?
 			cli_tokenize(&currctx->cc, cmd, menu->subtree, &out) :
 			menu->tokenize(&currctx->cc, cmd, menu->subtree, &out);
+
+		/* A single exact match will have priority over other
+		 * partial matches. */
+		if (out.exact_match != NULL) {
+			out.matches[0] = out.exact_match;
+			out.matches[1] = NULL;
+		}
 		size = MATCHES(&out);
 
 		/* Case A: more than one match */
@@ -114,7 +110,8 @@ char **rlshell_completion(const char *text, int start, int end)
 	free(match_list);
 	match_list = NULL;
 out_return:
-	rlshell_forced_update_display(match_list, start, end);
+	printf("\n");
+	rl_forced_update_display();
 	return match_list;
 }
 
