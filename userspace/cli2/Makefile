@@ -36,7 +36,7 @@ SRCS          = $(LIBSWCLI_SRCS) \
 LIBSWCLI_OBJS = $(LIBSWCLI_SRCS:.c=.o)
 
 # Targets linked with libswcli
-LIBSWCLI_TARGETS = swcli
+LIBSWCLI_TARGETS = swcli test
 # Simple targets, not linked with libswcli
 SIMPLE_TARGETS	 = 
 # All targets

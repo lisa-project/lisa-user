@@ -1,6 +1,7 @@
 #include "cli.h"
+#include "swcli_common.h"
 
-int addr_tokenize(const char *buf, struct menu_node *tree, struct tokenize_out *out) {
+int addr_tokenize(struct cli_context *cc, const char *buf, struct menu_node *tree, struct tokenize_out *out) {
 	int i = 0;
 
 	if (cli_next_token(buf, out))
@@ -65,17 +66,17 @@ char * test[] = {
 	NULL
 };
 
-void test_cmd(char *cmd) {
+void test_cmd(struct cli_context *ctx, char *cmd) {
 	struct tokenize_out out;
 	int status, size, step = 0;
 	struct menu_node *menu = root;
-	int (*tokenize)(const char *buf, struct menu_node *tree, struct tokenize_out *out) = cli_tokenize;
+	int (*tokenize)(struct cli_context *ctx, const char *buf, struct menu_node *tree, struct tokenize_out *out) = cli_tokenize;
 
 	printf("Command: '%s'\n", cmd);
 
 	do {
 		step++;
-		status = tokenize(cmd, menu, &out);
+		status = tokenize(ctx, cmd, menu, &out);
 		if (out.matches[0]) {
 			menu = out.matches[0]->subtree;
 			tokenize = out.matches[0]->tokenize ? out.matches[0]->tokenize : cli_tokenize;
@@ -89,6 +90,7 @@ void test_cmd(char *cmd) {
 }
 
 int main(int argc, char **argv) {
+	struct cli_context cc;
 	char **cmd;
 
 	/*
@@ -97,7 +99,11 @@ int main(int argc, char **argv) {
 	printf("%s\n", root[0].subtree[1].name);
 	printf("%s\n", root[1].subtree[0].name);
 	*/
+	cc.filter = PRIV_FILTER(15);
+	cc.root = &root[0];
 
 	for (cmd = test; *cmd; cmd++)
-		test_cmd(*cmd);
+		test_cmd(&cc, *cmd);
+
+	return 0;
 }
