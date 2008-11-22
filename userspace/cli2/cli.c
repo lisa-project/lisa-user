@@ -29,7 +29,7 @@ int cli_next_token(const char *buf, struct tokenize_out *out)
 	return 0;
 }
 
-int cli_tokenize(struct cli_context *ctx, const char *buf, struct menu_node *tree, struct tokenize_out *out)
+int cli_tokenize(struct cli_context *ctx, const char *buf, struct menu_node **tree, struct tokenize_out *out)
 {
 	char *token, c;
 	int i, j;
@@ -55,20 +55,20 @@ int cli_tokenize(struct cli_context *ctx, const char *buf, struct menu_node *tre
 	token[out->len] = '\0';
 
 	/* lookup token in tree */
-	for (i=0, j=0; tree[i].name && j < TOKENIZE_MAX_MATCHES; i++) {
+	for (i=0, j=0; tree[i] && j < TOKENIZE_MAX_MATCHES; i++) {
 		/* apply filter */
-		if ((tree[i].mask & ctx->filter) != tree[i].mask)
+		if ((tree[i]->mask & ctx->filter) != tree[i]->mask)
 			continue;
 
-		if (strncmp(token, tree[i].name, out->len))
+		if (strncmp(token, tree[i]->name, out->len))
 			continue;
 
 		/* register match */
-		out->matches[j++] = &tree[i];
+		out->matches[j++] = tree[i];
 
 		/* check for exact match */
-		if (out->len == strlen(tree[i].name))
-			out->exact_match = &tree[i];
+		if (out->len == strlen(tree[i]->name))
+			out->exact_match = tree[i];
 	}
 	out->matches[j] = NULL;
 
@@ -79,8 +79,8 @@ int cli_tokenize(struct cli_context *ctx, const char *buf, struct menu_node *tre
 		token[--(out->ok_len)] = '\0';
 		if (!out->ok_len)
 			break;
-		for (i = 0; tree[i].name; i++) {
-			if (strncmp(token, tree[i].name, out->ok_len))
+		for (i = 0; tree[i]; i++) {
+			if (strncmp(token, tree[i]->name, out->ok_len))
 				continue;
 			j = 1;
 			break;

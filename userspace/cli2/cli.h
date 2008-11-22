@@ -46,7 +46,7 @@ struct menu_node {
 	int mask;
 
 	/* Custom tokenize function for the node */
-	int (*tokenize)(struct cli_context *ctx, const char *buf, struct menu_node *tree, struct tokenize_out *out);
+	int (*tokenize)(struct cli_context *ctx, const char *buf, struct menu_node **tree, struct tokenize_out *out);
 
 	/* Command handler for runnable nodes; ctx is a passed-back pointer,
 	 * initially sent as argument to cli_exec(); argc is the number of
@@ -57,7 +57,7 @@ struct menu_node {
 	int (*run)(struct cli_context *ctx, int argc, char **tokv, struct menu_node **nodev);
 
 	/* Points to the sub menu of the node */
-	struct menu_node *subtree;
+	struct menu_node **subtree;
 };
 
 #define NULL_MENU_NODE {\
@@ -88,7 +88,7 @@ enum {
 #define CLI_EX_STAT_MASK	((1 << CLI_EX_STAT_BITS) - 1)
 
 int cli_next_token(const char *buf, struct tokenize_out *out);
-int cli_tokenize(struct cli_context *ctx, const char *buf, struct menu_node *tree, struct tokenize_out *out);
+int cli_tokenize(struct cli_context *ctx, const char *buf, struct menu_node **tree, struct tokenize_out *out);
 int cli_exec(struct cli_context *ctx, char *cmd);
 
 #endif

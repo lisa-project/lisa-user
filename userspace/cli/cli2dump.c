@@ -103,7 +103,8 @@ void rec(sw_command_t *cmd, int indent, const char *cmdline) {
 		*/
 
 		pad[indent] = '\0';
-		bufp += sprintf(bufp, "%s{ /* %s*/\n", pad, path);
+		bufp += sprintf(bufp, "%s/* %s*/\n", pad, path);
+		bufp += sprintf(bufp, "%s& (struct menu_node){\n", pad);
 
 		pad[indent] = '\t';
 		bufp += sprintf(bufp,
@@ -123,7 +124,7 @@ void rec(sw_command_t *cmd, int indent, const char *cmdline) {
 				);
 
 		if (cmd->subcmd) {
-			bufp += sprintf(bufp, "(struct menu_node[]) { /*{{{*/\n");
+			bufp += sprintf(bufp, "(struct menu_node *[]) { /*{{{*/\n");
 			rec(cmd->subcmd, indent + 2, path);
 			bufp += sprintf(bufp, "\n%s} /*}}}*/\n", pad);
 		} else {
@@ -140,7 +141,7 @@ void rec(sw_command_t *cmd, int indent, const char *cmdline) {
 		cmd++;
 	}
 
-	bufp += sprintf(bufp, "%sNULL_MENU_NODE", pad);
+	bufp += sprintf(bufp, "%sNULL", pad);
 }
 
 int main(int argc, char **argv) {
@@ -164,7 +165,7 @@ int main(int argc, char **argv) {
 			"\nstruct menu_node menu_main = {\n"
 			"\t/* Root node, .name is used as prompt */\n"
 			"\t.name\t\t\t= NULL,\n"
-			"\t.subtree\t= (struct menu_node[]) {\n"
+			"\t.subtree\t= (struct menu_node *[]) {\n"
 			"%s\n"
 			"\t}\n"
 			"};\n"

@@ -132,7 +132,7 @@ void rlshell_list_matches_brief(struct tokenize_out *out)
 void rlshell_list_subtree(struct menu_node *node)
 {
 	int len = 0;
-	struct menu_node *sub;
+	struct menu_node **sub;
 	char fmt[20];
 
 	/* If node->subtree is NULL, then last token matched the deepest
@@ -144,15 +144,15 @@ void rlshell_list_subtree(struct menu_node *node)
 	}
 
 	/* Determine maximum length of command name for nice paging */
-	for (sub = node->subtree; sub->name != NULL; sub++) {
-		int mylen = strlen(sub->name);
+	for (sub = node->subtree; *sub != NULL; sub++) {
+		int mylen = strlen((*sub)->name);
 		len = mylen > len ? mylen : len;
 	}
 
 	snprintf(fmt, sizeof(fmt), "  %%-%ds  %%s\n", len);
 
-	for (sub = node->subtree; sub->name != NULL; sub++)
-		printf(fmt, sub->name, sub->help);
+	for (sub = node->subtree; *sub != NULL; sub++)
+		printf(fmt, (*sub)->name, (*sub)->help);
 
 	if (node->run != NULL)
 		rlshell_go_ahead();

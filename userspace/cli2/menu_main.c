@@ -27,7 +27,6 @@ int cmd_sh_int(struct cli_context *, int, char **, struct menu_node **);
 int cmd_int_eth(struct cli_context *, int, char **, struct menu_node **);
 int cmd_int_vlan(struct cli_context *, int, char **, struct menu_node **);
 int cmd_sh_ip(struct cli_context *, int, char **, struct menu_node **);
-int cmd_show_mac(struct cli_context *, int, char **, struct menu_node **);
 int cmd_sh_addr(struct cli_context *, int, char **, struct menu_node **);
 int cmd_sh_mac_age(struct cli_context *, int, char **, struct menu_node **);
 int cmd_sh_mac_eth(struct cli_context *, int, char **, struct menu_node **);
@@ -42,46 +41,124 @@ int cmd_show_vlan(struct cli_context *, int, char **, struct menu_node **);
 int cmd_trace(struct cli_context *, int, char **, struct menu_node **);
 int cmd_wrme(struct cli_context *, int, char **, struct menu_node **);
 
+int cmd_sh_mac_addr_t(struct cli_context *, int, char **, struct menu_node **);
+extern struct menu_node *show_mac_addr_t[];
+
+static struct menu_node output_modifiers_line = {
+	.name			= "LINE",
+	.help			= "Regular Expression",
+	.mask			= PRIV(1),
+	.tokenize	= NULL,
+	.run			= NULL,
+	.subtree	= NULL
+};
+
+struct menu_node output_modifiers = {
+	.name			= "|",
+	.help			= "Output modifiers",
+	.mask			= PRIV(1),
+	.tokenize	= NULL,
+	.run			= NULL,
+	.subtree	= (struct menu_node *[]) { /*{{{*/
+		& (struct menu_node){
+			.name			= "begin",
+			.help			= "Begin with the line that matches",
+			.mask			= PRIV(1),
+			.tokenize	= NULL,
+			.run			= NULL,
+			.subtree	= (struct menu_node *[]) {
+				&output_modifiers_line,
+				NULL
+			}
+		},
+
+		& (struct menu_node){
+			.name			= "exclude",
+			.help			= "Exclude lines that match",
+			.mask			= PRIV(1),
+			.tokenize	= NULL,
+			.run			= NULL,
+			.subtree	= (struct menu_node *[]) {
+				&output_modifiers_line,
+				NULL
+			}
+		},
+
+		& (struct menu_node){
+			.name			= "include",
+			.help			= "Include lines that match",
+			.mask			= PRIV(1),
+			.tokenize	= NULL,
+			.run			= NULL,
+			.subtree	= (struct menu_node *[]) {
+				&output_modifiers_line,
+				NULL
+			}
+		},
+
+		/* #show cdp entry * protocol | grep */
+		& (struct menu_node){
+			.name			= "grep",
+			.help			= "Linux grep functionality",
+			.mask			= PRIV(1),
+			.tokenize	= NULL,
+			.run			= NULL,
+			.subtree	= (struct menu_node *[]) {
+				&output_modifiers_line,
+				NULL
+			}
+		},
+
+		NULL
+	} /*}}}*/
+};
+
 struct menu_node menu_main = {
 	/* Root node, .name is used as prompt */
 	.name			= NULL,
-	.subtree	= (struct menu_node[]) {
-		{ /* #clear */
+	.subtree	= (struct menu_node *[]) {
+		/* #clear */
+		& (struct menu_node){
 			.name			= "clear",
 			.help			= "Reset functions",
 			.mask			= PRIV(2),
 			.tokenize	= NULL,
 			.run			= NULL,
-			.subtree	= (struct menu_node[]) { /*{{{*/
-				{ /* #clear mac */
+			.subtree	= (struct menu_node *[]) { /*{{{*/
+				/* #clear mac */
+				& (struct menu_node){
 					.name			= "mac",
 					.help			= "MAC forwarding table",
 					.mask			= PRIV(2),
 					.tokenize	= NULL,
 					.run			= NULL,
-					.subtree	= (struct menu_node[]) { /*{{{*/
-						{ /* #clear mac address-table */
+					.subtree	= (struct menu_node *[]) { /*{{{*/
+						/* #clear mac address-table */
+						& (struct menu_node){
 							.name			= "address-table",
 							.help			= "MAC forwarding table",
 							.mask			= PRIV(2),
 							.tokenize	= NULL,
 							.run			= NULL,
-							.subtree	= (struct menu_node[]) { /*{{{*/
-								{ /* #clear mac address-table dynamic */
+							.subtree	= (struct menu_node *[]) { /*{{{*/
+								/* #clear mac address-table dynamic */
+								& (struct menu_node){
 									.name			= "dynamic",
 									.help			= "dynamic entry type",
 									.mask			= PRIV(2),
 									.tokenize	= NULL,
 									.run			= cmd_clr_mac,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #clear mac address-table dynamic address */
+									.subtree	= (struct menu_node *[]) { /*{{{*/
+										/* #clear mac address-table dynamic address */
+										& (struct menu_node){
 											.name			= "address",
 											.help			= "address keyword",
 											.mask			= PRIV(2),
 											.tokenize	= NULL,
 											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #clear mac address-table dynamic address H.H.H */
+											.subtree	= (struct menu_node *[]) { /*{{{*/
+												/* #clear mac address-table dynamic address H.H.H */
+												& (struct menu_node){
 													.name			= "H.H.H",
 													.help			= "48 bit mac address",
 													.mask			= PRIV(2),
@@ -90,25 +167,28 @@ struct menu_node menu_main = {
 													.subtree	= NULL
 												},
 
-												NULL_MENU_NODE
+												NULL
 											} /*}}}*/
 										},
 
-										{ /* #clear mac address-table dynamic interface */
+										/* #clear mac address-table dynamic interface */
+										& (struct menu_node){
 											.name			= "interface",
 											.help			= "interface keyword",
 											.mask			= PRIV(2),
 											.tokenize	= NULL,
 											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #clear mac address-table dynamic interface ethernet */
+											.subtree	= (struct menu_node *[]) { /*{{{*/
+												/* #clear mac address-table dynamic interface ethernet */
+												& (struct menu_node){
 													.name			= "ethernet",
 													.help			= "Ethernet IEEE 802.3",
 													.mask			= PRIV(2),
 													.tokenize	= NULL,
 													.run			= NULL,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #clear mac address-table dynamic interface ethernet  */
+													.subtree	= (struct menu_node *[]) { /*{{{*/
+														/* #clear mac address-table dynamic interface ethernet  */
+														& (struct menu_node){
 															.name			= "",
 															.help			= "Ethernet interface number",
 															.mask			= PRIV(2),
@@ -117,22 +197,24 @@ struct menu_node menu_main = {
 															.subtree	= NULL
 														},
 
-														NULL_MENU_NODE
+														NULL
 													} /*}}}*/
 												},
 
-												NULL_MENU_NODE
+												NULL
 											} /*}}}*/
 										},
 
-										{ /* #clear mac address-table dynamic vlan */
+										/* #clear mac address-table dynamic vlan */
+										& (struct menu_node){
 											.name			= "vlan",
 											.help			= "vlan keyword",
 											.mask			= PRIV(2),
 											.tokenize	= NULL,
 											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #clear mac address-table dynamic vlan <1-1094> */
+											.subtree	= (struct menu_node *[]) { /*{{{*/
+												/* #clear mac address-table dynamic vlan <1-1094> */
+												& (struct menu_node){
 													.name			= "<1-1094>",
 													.help			= "Vlan interface number",
 													.mask			= PRIV(2),
@@ -141,44 +223,48 @@ struct menu_node menu_main = {
 													.subtree	= NULL
 												},
 
-												NULL_MENU_NODE
+												NULL
 											} /*}}}*/
 										},
 
-										NULL_MENU_NODE
+										NULL
 									} /*}}}*/
 								},
 
-								NULL_MENU_NODE
+								NULL
 							} /*}}}*/
 						},
 
-						NULL_MENU_NODE
+						NULL
 					} /*}}}*/
 				},
 
-				{ /* #clear mac-address-table */
+				/* #clear mac-address-table */
+				& (struct menu_node){
 					.name			= "mac-address-table",
 					.help			= "MAC forwarding table",
 					.mask			= PRIV(2),
 					.tokenize	= NULL,
 					.run			= NULL,
-					.subtree	= (struct menu_node[]) { /*{{{*/
-						{ /* #clear mac-address-table dynamic */
+					.subtree	= (struct menu_node *[]) { /*{{{*/
+						/* #clear mac-address-table dynamic */
+						& (struct menu_node){
 							.name			= "dynamic",
 							.help			= "dynamic entry type",
 							.mask			= PRIV(2),
 							.tokenize	= NULL,
 							.run			= cmd_clr_mac,
-							.subtree	= (struct menu_node[]) { /*{{{*/
-								{ /* #clear mac-address-table dynamic address */
+							.subtree	= (struct menu_node *[]) { /*{{{*/
+								/* #clear mac-address-table dynamic address */
+								& (struct menu_node){
 									.name			= "address",
 									.help			= "address keyword",
 									.mask			= PRIV(2),
 									.tokenize	= NULL,
 									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #clear mac-address-table dynamic address H.H.H */
+									.subtree	= (struct menu_node *[]) { /*{{{*/
+										/* #clear mac-address-table dynamic address H.H.H */
+										& (struct menu_node){
 											.name			= "H.H.H",
 											.help			= "48 bit mac address",
 											.mask			= PRIV(2),
@@ -187,25 +273,28 @@ struct menu_node menu_main = {
 											.subtree	= NULL
 										},
 
-										NULL_MENU_NODE
+										NULL
 									} /*}}}*/
 								},
 
-								{ /* #clear mac-address-table dynamic interface */
+								/* #clear mac-address-table dynamic interface */
+								& (struct menu_node){
 									.name			= "interface",
 									.help			= "interface keyword",
 									.mask			= PRIV(2),
 									.tokenize	= NULL,
 									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #clear mac-address-table dynamic interface ethernet */
+									.subtree	= (struct menu_node *[]) { /*{{{*/
+										/* #clear mac-address-table dynamic interface ethernet */
+										& (struct menu_node){
 											.name			= "ethernet",
 											.help			= "Ethernet IEEE 802.3",
 											.mask			= PRIV(2),
 											.tokenize	= NULL,
 											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #clear mac-address-table dynamic interface ethernet  */
+											.subtree	= (struct menu_node *[]) { /*{{{*/
+												/* #clear mac-address-table dynamic interface ethernet  */
+												& (struct menu_node){
 													.name			= "",
 													.help			= "Ethernet interface number",
 													.mask			= PRIV(2),
@@ -214,22 +303,24 @@ struct menu_node menu_main = {
 													.subtree	= NULL
 												},
 
-												NULL_MENU_NODE
+												NULL
 											} /*}}}*/
 										},
 
-										NULL_MENU_NODE
+										NULL
 									} /*}}}*/
 								},
 
-								{ /* #clear mac-address-table dynamic vlan */
+								/* #clear mac-address-table dynamic vlan */
+								& (struct menu_node){
 									.name			= "vlan",
 									.help			= "vlan keyword",
 									.mask			= PRIV(2),
 									.tokenize	= NULL,
 									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #clear mac-address-table dynamic vlan <1-1094> */
+									.subtree	= (struct menu_node *[]) { /*{{{*/
+										/* #clear mac-address-table dynamic vlan <1-1094> */
+										& (struct menu_node){
 											.name			= "<1-1094>",
 											.help			= "Vlan interface number",
 											.mask			= PRIV(2),
@@ -238,30 +329,32 @@ struct menu_node menu_main = {
 											.subtree	= NULL
 										},
 
-										NULL_MENU_NODE
+										NULL
 									} /*}}}*/
 								},
 
-								NULL_MENU_NODE
+								NULL
 							} /*}}}*/
 						},
 
-						NULL_MENU_NODE
+						NULL
 					} /*}}}*/
 				},
 
-				NULL_MENU_NODE
+				NULL
 			} /*}}}*/
 		},
 
-		{ /* #configure */
+		/* #configure */
+		& (struct menu_node){
 			.name			= "configure",
 			.help			= "Enter configuration mode",
 			.mask			= PRIV(15),
 			.tokenize	= NULL,
 			.run			= NULL,
-			.subtree	= (struct menu_node[]) { /*{{{*/
-				{ /* #configure terminal */
+			.subtree	= (struct menu_node *[]) { /*{{{*/
+				/* #configure terminal */
+				& (struct menu_node){
 					.name			= "terminal",
 					.help			= "Configure from the terminal",
 					.mask			= PRIV(2),
@@ -270,18 +363,20 @@ struct menu_node menu_main = {
 					.subtree	= NULL
 				},
 
-				NULL_MENU_NODE
+				NULL
 			} /*}}}*/
 		},
 
-		{ /* #disable */
+		/* #disable */
+		& (struct menu_node){
 			.name			= "disable",
 			.help			= "Turn off privileged commands",
 			.mask			= PRIV(2),
 			.tokenize	= NULL,
 			.run			= cmd_disable,
-			.subtree	= (struct menu_node[]) { /*{{{*/
-				{ /* #disable <1-15> */
+			.subtree	= (struct menu_node *[]) { /*{{{*/
+				/* #disable <1-15> */
+				& (struct menu_node){
 					.name			= "<1-15>",
 					.help			= "Privilege level to go to",
 					.mask			= PRIV(1),
@@ -290,18 +385,20 @@ struct menu_node menu_main = {
 					.subtree	= NULL
 				},
 
-				NULL_MENU_NODE
+				NULL
 			} /*}}}*/
 		},
 
-		{ /* #enable */
+		/* #enable */
+		& (struct menu_node){
 			.name			= "enable",
 			.help			= "Turn on privileged commands",
 			.mask			= PRIV(1),
 			.tokenize	= NULL,
 			.run			= cmd_enable,
-			.subtree	= (struct menu_node[]) { /*{{{*/
-				{ /* #enable <1-15> */
+			.subtree	= (struct menu_node *[]) { /*{{{*/
+				/* #enable <1-15> */
+				& (struct menu_node){
 					.name			= "<1-15>",
 					.help			= "Enable level",
 					.mask			= PRIV(1),
@@ -310,11 +407,12 @@ struct menu_node menu_main = {
 					.subtree	= NULL
 				},
 
-				NULL_MENU_NODE
+				NULL
 			} /*}}}*/
 		},
 
-		{ /* #exit */
+		/* #exit */
+		& (struct menu_node){
 			.name			= "exit",
 			.help			= "Exit from the EXEC",
 			.mask			= PRIV(1),
@@ -323,7 +421,8 @@ struct menu_node menu_main = {
 			.subtree	= NULL
 		},
 
-		{ /* #help */
+		/* #help */
+		& (struct menu_node){
 			.name			= "help",
 			.help			= "Description of the interactive help system",
 			.mask			= PRIV(1),
@@ -332,7 +431,8 @@ struct menu_node menu_main = {
 			.subtree	= NULL
 		},
 
-		{ /* #logout */
+		/* #logout */
+		& (struct menu_node){
 			.name			= "logout",
 			.help			= "Exit from the EXEC",
 			.mask			= PRIV(1),
@@ -341,14 +441,16 @@ struct menu_node menu_main = {
 			.subtree	= NULL
 		},
 
-		{ /* #ping */
+		/* #ping */
+		& (struct menu_node){
 			.name			= "ping",
 			.help			= "Send echo messages",
 			.mask			= PRIV(1),
 			.tokenize	= NULL,
 			.run			= NULL,
-			.subtree	= (struct menu_node[]) { /*{{{*/
-				{ /* #ping WORD */
+			.subtree	= (struct menu_node *[]) { /*{{{*/
+				/* #ping WORD */
+				& (struct menu_node){
 					.name			= "WORD",
 					.help			= "Ping destination address or hostname",
 					.mask			= PRIV(1),
@@ -357,20 +459,12 @@ struct menu_node menu_main = {
 					.subtree	= NULL
 				},
 
-				NULL_MENU_NODE
+				NULL
 			} /*}}}*/
 		},
 
-		{ /* #quit */
-			.name			= "quit",
-			.help			= "Exit from the EXEC",
-			.mask			= PRIV(1),
-			.tokenize	= NULL,
-			.run			= cmd_quit,
-			.subtree	= NULL
-		},
-
-		{ /* #reload */
+		/* #reload */
+		& (struct menu_node){
 			.name			= "reload",
 			.help			= "Halt and perform a cold restart",
 			.mask			= PRIV(1),
@@ -379,14 +473,26 @@ struct menu_node menu_main = {
 			.subtree	= NULL
 		},
 
-		{ /* #show */
+		/* #quit */
+		& (struct menu_node){
+			.name			= "quit",
+			.help			= "Exit from the EXEC",
+			.mask			= PRIV(1),
+			.tokenize	= NULL,
+			.run			= cmd_quit,
+			.subtree	= NULL
+		},
+
+		/* #show */
+		& (struct menu_node){
 			.name			= "show",
 			.help			= "Show running system information",
 			.mask			= PRIV(1),
 			.tokenize	= NULL,
 			.run			= NULL,
-			.subtree	= (struct menu_node[]) { /*{{{*/
-				{ /* #show arp */
+			.subtree	= (struct menu_node *[]) { /*{{{*/
+				/* #show arp */
+				& (struct menu_node){
 					.name			= "arp",
 					.help			= "ARP table",
 					.mask			= PRIV(1),
@@ -395,7 +501,8 @@ struct menu_node menu_main = {
 					.subtree	= NULL
 				},
 
-				{ /* #show clock */
+				/* #show clock */
+				& (struct menu_node){
 					.name			= "clock",
 					.help			= "Display the system clock",
 					.mask			= PRIV(1),
@@ -404,158 +511,77 @@ struct menu_node menu_main = {
 					.subtree	= NULL
 				},
 
-				{ /* #show cdp */
+				/* #show cdp */
+				& (struct menu_node){
 					.name			= "cdp",
 					.help			= "CDP Information",
 					.mask			= PRIV(1),
 					.tokenize	= NULL,
 					.run			= cmd_sh_cdp,
-					.subtree	= (struct menu_node[]) { /*{{{*/
-						{ /* #show cdp entry */
+					.subtree	= (struct menu_node *[]) { /*{{{*/
+						/* #show cdp entry */
+						& (struct menu_node){
 							.name			= "entry",
 							.help			= "Information for specific neighbor entry",
 							.mask			= PRIV(1),
 							.tokenize	= NULL,
 							.run			= NULL,
-							.subtree	= (struct menu_node[]) { /*{{{*/
-								{ /* #show cdp entry * */
+							.subtree	= (struct menu_node *[]) { /*{{{*/
+								/* #show cdp entry * */
+								& (struct menu_node){
 									.name			= "*",
 									.help			= "all CDP neighbor entries",
 									.mask			= PRIV(1),
 									.tokenize	= NULL,
 									.run			= cmd_sh_cdp_entry,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show cdp entry * protocol */
+									.subtree	= (struct menu_node *[]) { /*{{{*/
+										/* #show cdp entry * protocol */
+										& (struct menu_node){
 											.name			= "protocol",
 											.help			= "Protocol information",
 											.mask			= PRIV(1),
 											.tokenize	= NULL,
 											.run			= cmd_sh_cdp_entry,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show cdp entry * protocol | */
-													.name			= "|",
-													.help			= "Output modifiers",
-													.mask			= PRIV(1),
-													.tokenize	= NULL,
-													.run			= NULL,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #show cdp entry * protocol | begin */
-															.name			= "begin",
-															.help			= "Begin with the line that matches",
-															.mask			= PRIV(1),
-															.tokenize	= NULL,
-															.run			= NULL,
-															.subtree	= (struct menu_node[]) { /*{{{*/
-																{ /* #show cdp entry * protocol | begin LINE */
-																	.name			= "LINE",
-																	.help			= "Regular Expression",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= NULL,
-																	.subtree	= NULL
-																},
-
-																NULL_MENU_NODE
-															} /*}}}*/
-														},
-
-														{ /* #show cdp entry * protocol | exclude */
-															.name			= "exclude",
-															.help			= "Exclude lines that match",
-															.mask			= PRIV(1),
-															.tokenize	= NULL,
-															.run			= NULL,
-															.subtree	= (struct menu_node[]) { /*{{{*/
-																{ /* #show cdp entry * protocol | exclude LINE */
-																	.name			= "LINE",
-																	.help			= "Regular Expression",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= NULL,
-																	.subtree	= NULL
-																},
-
-																NULL_MENU_NODE
-															} /*}}}*/
-														},
-
-														{ /* #show cdp entry * protocol | include */
-															.name			= "include",
-															.help			= "Include lines that match",
-															.mask			= PRIV(1),
-															.tokenize	= NULL,
-															.run			= NULL,
-															.subtree	= (struct menu_node[]) { /*{{{*/
-																{ /* #show cdp entry * protocol | include LINE */
-																	.name			= "LINE",
-																	.help			= "Regular Expression",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= NULL,
-																	.subtree	= NULL
-																},
-
-																NULL_MENU_NODE
-															} /*}}}*/
-														},
-
-														{ /* #show cdp entry * protocol | grep */
-															.name			= "grep",
-															.help			= "Linux grep functionality",
-															.mask			= PRIV(1),
-															.tokenize	= NULL,
-															.run			= NULL,
-															.subtree	= (struct menu_node[]) { /*{{{*/
-																{ /* #show cdp entry * protocol | grep LINE */
-																	.name			= "LINE",
-																	.help			= "Regular Expression",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= NULL,
-																	.subtree	= NULL
-																},
-
-																NULL_MENU_NODE
-															} /*}}}*/
-														},
-
-														NULL_MENU_NODE
-													} /*}}}*/
-												},
-
-												NULL_MENU_NODE
-											} /*}}}*/
+											.subtree	= (struct menu_node *[]) {
+												&output_modifiers,
+												NULL
+											}
 										},
 
-										{ /* #show cdp entry * version */
+										/* #show cdp entry * version */
+										& (struct menu_node){
 											.name			= "version",
 											.help			= "Version information",
 											.mask			= PRIV(1),
 											.tokenize	= NULL,
 											.run			= cmd_sh_cdp_entry,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show cdp entry * version protocol */
+											.subtree	= (struct menu_node *[]) { /*{{{*/
+												/* #show cdp entry * version protocol */
+												& (struct menu_node){
 													.name			= "protocol",
 													.help			= "Protocol information",
 													.mask			= PRIV(1),
 													.tokenize	= NULL,
 													.run			= cmd_sh_cdp_entry,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #show cdp entry * version protocol | */
+													.subtree	= (struct menu_node *[]) { /*{{{*/
+														/* #show cdp entry * version protocol | */
+														& (struct menu_node){
 															.name			= "|",
 															.help			= "Output modifiers",
 															.mask			= PRIV(1),
 															.tokenize	= NULL,
 															.run			= NULL,
-															.subtree	= (struct menu_node[]) { /*{{{*/
-																{ /* #show cdp entry * version protocol | begin */
+															.subtree	= (struct menu_node *[]) { /*{{{*/
+																/* #show cdp entry * version protocol | begin */
+																& (struct menu_node){
 																	.name			= "begin",
 																	.help			= "Begin with the line that matches",
 																	.mask			= PRIV(1),
 																	.tokenize	= NULL,
 																	.run			= NULL,
-																	.subtree	= (struct menu_node[]) { /*{{{*/
-																		{ /* #show cdp entry * version protocol | begin LINE */
+																	.subtree	= (struct menu_node *[]) { /*{{{*/
+																		/* #show cdp entry * version protocol | begin LINE */
+																		& (struct menu_node){
 																			.name			= "LINE",
 																			.help			= "Regular Expression",
 																			.mask			= PRIV(1),
@@ -564,18 +590,20 @@ struct menu_node menu_main = {
 																			.subtree	= NULL
 																		},
 
-																		NULL_MENU_NODE
+																		NULL
 																	} /*}}}*/
 																},
 
-																{ /* #show cdp entry * version protocol | exclude */
+																/* #show cdp entry * version protocol | exclude */
+																& (struct menu_node){
 																	.name			= "exclude",
 																	.help			= "Exclude lines that match",
 																	.mask			= PRIV(1),
 																	.tokenize	= NULL,
 																	.run			= NULL,
-																	.subtree	= (struct menu_node[]) { /*{{{*/
-																		{ /* #show cdp entry * version protocol | exclude LINE */
+																	.subtree	= (struct menu_node *[]) { /*{{{*/
+																		/* #show cdp entry * version protocol | exclude LINE */
+																		& (struct menu_node){
 																			.name			= "LINE",
 																			.help			= "Regular Expression",
 																			.mask			= PRIV(1),
@@ -584,18 +612,20 @@ struct menu_node menu_main = {
 																			.subtree	= NULL
 																		},
 
-																		NULL_MENU_NODE
+																		NULL
 																	} /*}}}*/
 																},
 
-																{ /* #show cdp entry * version protocol | include */
+																/* #show cdp entry * version protocol | include */
+																& (struct menu_node){
 																	.name			= "include",
 																	.help			= "Include lines that match",
 																	.mask			= PRIV(1),
 																	.tokenize	= NULL,
 																	.run			= NULL,
-																	.subtree	= (struct menu_node[]) { /*{{{*/
-																		{ /* #show cdp entry * version protocol | include LINE */
+																	.subtree	= (struct menu_node *[]) { /*{{{*/
+																		/* #show cdp entry * version protocol | include LINE */
+																		& (struct menu_node){
 																			.name			= "LINE",
 																			.help			= "Regular Expression",
 																			.mask			= PRIV(1),
@@ -604,18 +634,20 @@ struct menu_node menu_main = {
 																			.subtree	= NULL
 																		},
 
-																		NULL_MENU_NODE
+																		NULL
 																	} /*}}}*/
 																},
 
-																{ /* #show cdp entry * version protocol | grep */
+																/* #show cdp entry * version protocol | grep */
+																& (struct menu_node){
 																	.name			= "grep",
 																	.help			= "Linux grep functionality",
 																	.mask			= PRIV(1),
 																	.tokenize	= NULL,
 																	.run			= NULL,
-																	.subtree	= (struct menu_node[]) { /*{{{*/
-																		{ /* #show cdp entry * version protocol | grep LINE */
+																	.subtree	= (struct menu_node *[]) { /*{{{*/
+																		/* #show cdp entry * version protocol | grep LINE */
+																		& (struct menu_node){
 																			.name			= "LINE",
 																			.help			= "Regular Expression",
 																			.mask			= PRIV(1),
@@ -624,33 +656,36 @@ struct menu_node menu_main = {
 																			.subtree	= NULL
 																		},
 
-																		NULL_MENU_NODE
+																		NULL
 																	} /*}}}*/
 																},
 
-																NULL_MENU_NODE
+																NULL
 															} /*}}}*/
 														},
 
-														NULL_MENU_NODE
+														NULL
 													} /*}}}*/
 												},
 
-												{ /* #show cdp entry * version | */
+												/* #show cdp entry * version | */
+												& (struct menu_node){
 													.name			= "|",
 													.help			= "Output modifiers",
 													.mask			= PRIV(1),
 													.tokenize	= NULL,
 													.run			= NULL,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #show cdp entry * version | begin */
+													.subtree	= (struct menu_node *[]) { /*{{{*/
+														/* #show cdp entry * version | begin */
+														& (struct menu_node){
 															.name			= "begin",
 															.help			= "Begin with the line that matches",
 															.mask			= PRIV(1),
 															.tokenize	= NULL,
 															.run			= NULL,
-															.subtree	= (struct menu_node[]) { /*{{{*/
-																{ /* #show cdp entry * version | begin LINE */
+															.subtree	= (struct menu_node *[]) { /*{{{*/
+																/* #show cdp entry * version | begin LINE */
+																& (struct menu_node){
 																	.name			= "LINE",
 																	.help			= "Regular Expression",
 																	.mask			= PRIV(1),
@@ -659,18 +694,20 @@ struct menu_node menu_main = {
 																	.subtree	= NULL
 																},
 
-																NULL_MENU_NODE
+																NULL
 															} /*}}}*/
 														},
 
-														{ /* #show cdp entry * version | exclude */
+														/* #show cdp entry * version | exclude */
+														& (struct menu_node){
 															.name			= "exclude",
 															.help			= "Exclude lines that match",
 															.mask			= PRIV(1),
 															.tokenize	= NULL,
 															.run			= NULL,
-															.subtree	= (struct menu_node[]) { /*{{{*/
-																{ /* #show cdp entry * version | exclude LINE */
+															.subtree	= (struct menu_node *[]) { /*{{{*/
+																/* #show cdp entry * version | exclude LINE */
+																& (struct menu_node){
 																	.name			= "LINE",
 																	.help			= "Regular Expression",
 																	.mask			= PRIV(1),
@@ -679,18 +716,20 @@ struct menu_node menu_main = {
 																	.subtree	= NULL
 																},
 
-																NULL_MENU_NODE
+																NULL
 															} /*}}}*/
 														},
 
-														{ /* #show cdp entry * version | include */
+														/* #show cdp entry * version | include */
+														& (struct menu_node){
 															.name			= "include",
 															.help			= "Include lines that match",
 															.mask			= PRIV(1),
 															.tokenize	= NULL,
 															.run			= NULL,
-															.subtree	= (struct menu_node[]) { /*{{{*/
-																{ /* #show cdp entry * version | include LINE */
+															.subtree	= (struct menu_node *[]) { /*{{{*/
+																/* #show cdp entry * version | include LINE */
+																& (struct menu_node){
 																	.name			= "LINE",
 																	.help			= "Regular Expression",
 																	.mask			= PRIV(1),
@@ -699,18 +738,20 @@ struct menu_node menu_main = {
 																	.subtree	= NULL
 																},
 
-																NULL_MENU_NODE
+																NULL
 															} /*}}}*/
 														},
 
-														{ /* #show cdp entry * version | grep */
+														/* #show cdp entry * version | grep */
+														& (struct menu_node){
 															.name			= "grep",
 															.help			= "Linux grep functionality",
 															.mask			= PRIV(1),
 															.tokenize	= NULL,
 															.run			= NULL,
-															.subtree	= (struct menu_node[]) { /*{{{*/
-																{ /* #show cdp entry * version | grep LINE */
+															.subtree	= (struct menu_node *[]) { /*{{{*/
+																/* #show cdp entry * version | grep LINE */
+																& (struct menu_node){
 																	.name			= "LINE",
 																	.help			= "Regular Expression",
 																	.mask			= PRIV(1),
@@ -719,33 +760,36 @@ struct menu_node menu_main = {
 																	.subtree	= NULL
 																},
 
-																NULL_MENU_NODE
+																NULL
 															} /*}}}*/
 														},
 
-														NULL_MENU_NODE
+														NULL
 													} /*}}}*/
 												},
 
-												NULL_MENU_NODE
+												NULL
 											} /*}}}*/
 										},
 
-										{ /* #show cdp entry * | */
+										/* #show cdp entry * | */
+										& (struct menu_node){
 											.name			= "|",
 											.help			= "Output modifiers",
 											.mask			= PRIV(1),
 											.tokenize	= NULL,
 											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show cdp entry * | begin */
+											.subtree	= (struct menu_node *[]) { /*{{{*/
+												/* #show cdp entry * | begin */
+												& (struct menu_node){
 													.name			= "begin",
 													.help			= "Begin with the line that matches",
 													.mask			= PRIV(1),
 													.tokenize	= NULL,
 													.run			= NULL,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #show cdp entry * | begin LINE */
+													.subtree	= (struct menu_node *[]) { /*{{{*/
+														/* #show cdp entry * | begin LINE */
+														& (struct menu_node){
 															.name			= "LINE",
 															.help			= "Regular Expression",
 															.mask			= PRIV(1),
@@ -754,18 +798,20 @@ struct menu_node menu_main = {
 															.subtree	= NULL
 														},
 
-														NULL_MENU_NODE
+														NULL
 													} /*}}}*/
 												},
 
-												{ /* #show cdp entry * | exclude */
+												/* #show cdp entry * | exclude */
+												& (struct menu_node){
 													.name			= "exclude",
 													.help			= "Exclude lines that match",
 													.mask			= PRIV(1),
 													.tokenize	= NULL,
 													.run			= NULL,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #show cdp entry * | exclude LINE */
+													.subtree	= (struct menu_node *[]) { /*{{{*/
+														/* #show cdp entry * | exclude LINE */
+														& (struct menu_node){
 															.name			= "LINE",
 															.help			= "Regular Expression",
 															.mask			= PRIV(1),
@@ -774,18 +820,20 @@ struct menu_node menu_main = {
 															.subtree	= NULL
 														},
 
-														NULL_MENU_NODE
+														NULL
 													} /*}}}*/
 												},
 
-												{ /* #show cdp entry * | include */
+												/* #show cdp entry * | include */
+												& (struct menu_node){
 													.name			= "include",
 													.help			= "Include lines that match",
 													.mask			= PRIV(1),
 													.tokenize	= NULL,
 													.run			= NULL,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #show cdp entry * | include LINE */
+													.subtree	= (struct menu_node *[]) { /*{{{*/
+														/* #show cdp entry * | include LINE */
+														& (struct menu_node){
 															.name			= "LINE",
 															.help			= "Regular Expression",
 															.mask			= PRIV(1),
@@ -794,18 +842,20 @@ struct menu_node menu_main = {
 															.subtree	= NULL
 														},
 
-														NULL_MENU_NODE
+														NULL
 													} /*}}}*/
 												},
 
-												{ /* #show cdp entry * | grep */
+												/* #show cdp entry * | grep */
+												& (struct menu_node){
 													.name			= "grep",
 													.help			= "Linux grep functionality",
 													.mask			= PRIV(1),
 													.tokenize	= NULL,
 													.run			= NULL,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #show cdp entry * | grep LINE */
+													.subtree	= (struct menu_node *[]) { /*{{{*/
+														/* #show cdp entry * | grep LINE */
+														& (struct menu_node){
 															.name			= "LINE",
 															.help			= "Regular Expression",
 															.mask			= PRIV(1),
@@ -814,47 +864,52 @@ struct menu_node menu_main = {
 															.subtree	= NULL
 														},
 
-														NULL_MENU_NODE
+														NULL
 													} /*}}}*/
 												},
 
-												NULL_MENU_NODE
+												NULL
 											} /*}}}*/
 										},
 
-										NULL_MENU_NODE
+										NULL
 									} /*}}}*/
 								},
 
-								{ /* #show cdp entry WORD */
+								/* #show cdp entry WORD */
+								& (struct menu_node){
 									.name			= "WORD",
 									.help			= "Name of CDP neighbor entry",
 									.mask			= PRIV(1),
 									.tokenize	= NULL,
 									.run			= cmd_sh_cdp_entry,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show cdp entry WORD protocol */
+									.subtree	= (struct menu_node *[]) { /*{{{*/
+										/* #show cdp entry WORD protocol */
+										& (struct menu_node){
 											.name			= "protocol",
 											.help			= "Protocol information",
 											.mask			= PRIV(1),
 											.tokenize	= NULL,
 											.run			= cmd_sh_cdp_entry,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show cdp entry WORD protocol | */
+											.subtree	= (struct menu_node *[]) { /*{{{*/
+												/* #show cdp entry WORD protocol | */
+												& (struct menu_node){
 													.name			= "|",
 													.help			= "Output modifiers",
 													.mask			= PRIV(1),
 													.tokenize	= NULL,
 													.run			= NULL,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #show cdp entry WORD protocol | begin */
+													.subtree	= (struct menu_node *[]) { /*{{{*/
+														/* #show cdp entry WORD protocol | begin */
+														& (struct menu_node){
 															.name			= "begin",
 															.help			= "Begin with the line that matches",
 															.mask			= PRIV(1),
 															.tokenize	= NULL,
 															.run			= NULL,
-															.subtree	= (struct menu_node[]) { /*{{{*/
-																{ /* #show cdp entry WORD protocol | begin LINE */
+															.subtree	= (struct menu_node *[]) { /*{{{*/
+																/* #show cdp entry WORD protocol | begin LINE */
+																& (struct menu_node){
 																	.name			= "LINE",
 																	.help			= "Regular Expression",
 																	.mask			= PRIV(1),
@@ -863,18 +918,20 @@ struct menu_node menu_main = {
 																	.subtree	= NULL
 																},
 
-																NULL_MENU_NODE
+																NULL
 															} /*}}}*/
 														},
 
-														{ /* #show cdp entry WORD protocol | exclude */
+														/* #show cdp entry WORD protocol | exclude */
+														& (struct menu_node){
 															.name			= "exclude",
 															.help			= "Exclude lines that match",
 															.mask			= PRIV(1),
 															.tokenize	= NULL,
 															.run			= NULL,
-															.subtree	= (struct menu_node[]) { /*{{{*/
-																{ /* #show cdp entry WORD protocol | exclude LINE */
+															.subtree	= (struct menu_node *[]) { /*{{{*/
+																/* #show cdp entry WORD protocol | exclude LINE */
+																& (struct menu_node){
 																	.name			= "LINE",
 																	.help			= "Regular Expression",
 																	.mask			= PRIV(1),
@@ -883,18 +940,20 @@ struct menu_node menu_main = {
 																	.subtree	= NULL
 																},
 
-																NULL_MENU_NODE
+																NULL
 															} /*}}}*/
 														},
 
-														{ /* #show cdp entry WORD protocol | include */
+														/* #show cdp entry WORD protocol | include */
+														& (struct menu_node){
 															.name			= "include",
 															.help			= "Include lines that match",
 															.mask			= PRIV(1),
 															.tokenize	= NULL,
 															.run			= NULL,
-															.subtree	= (struct menu_node[]) { /*{{{*/
-																{ /* #show cdp entry WORD protocol | include LINE */
+															.subtree	= (struct menu_node *[]) { /*{{{*/
+																/* #show cdp entry WORD protocol | include LINE */
+																& (struct menu_node){
 																	.name			= "LINE",
 																	.help			= "Regular Expression",
 																	.mask			= PRIV(1),
@@ -903,18 +962,20 @@ struct menu_node menu_main = {
 																	.subtree	= NULL
 																},
 
-																NULL_MENU_NODE
+																NULL
 															} /*}}}*/
 														},
 
-														{ /* #show cdp entry WORD protocol | grep */
+														/* #show cdp entry WORD protocol | grep */
+														& (struct menu_node){
 															.name			= "grep",
 															.help			= "Linux grep functionality",
 															.mask			= PRIV(1),
 															.tokenize	= NULL,
 															.run			= NULL,
-															.subtree	= (struct menu_node[]) { /*{{{*/
-																{ /* #show cdp entry WORD protocol | grep LINE */
+															.subtree	= (struct menu_node *[]) { /*{{{*/
+																/* #show cdp entry WORD protocol | grep LINE */
+																& (struct menu_node){
 																	.name			= "LINE",
 																	.help			= "Regular Expression",
 																	.mask			= PRIV(1),
@@ -923,47 +984,52 @@ struct menu_node menu_main = {
 																	.subtree	= NULL
 																},
 
-																NULL_MENU_NODE
+																NULL
 															} /*}}}*/
 														},
 
-														NULL_MENU_NODE
+														NULL
 													} /*}}}*/
 												},
 
-												NULL_MENU_NODE
+												NULL
 											} /*}}}*/
 										},
 
-										{ /* #show cdp entry WORD version */
+										/* #show cdp entry WORD version */
+										& (struct menu_node){
 											.name			= "version",
 											.help			= "Version information",
 											.mask			= PRIV(1),
 											.tokenize	= NULL,
 											.run			= cmd_sh_cdp_entry,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show cdp entry WORD version protocol */
+											.subtree	= (struct menu_node *[]) { /*{{{*/
+												/* #show cdp entry WORD version protocol */
+												& (struct menu_node){
 													.name			= "protocol",
 													.help			= "Protocol information",
 													.mask			= PRIV(1),
 													.tokenize	= NULL,
 													.run			= cmd_sh_cdp_entry,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #show cdp entry WORD version protocol | */
+													.subtree	= (struct menu_node *[]) { /*{{{*/
+														/* #show cdp entry WORD version protocol | */
+														& (struct menu_node){
 															.name			= "|",
 															.help			= "Output modifiers",
 															.mask			= PRIV(1),
 															.tokenize	= NULL,
 															.run			= NULL,
-															.subtree	= (struct menu_node[]) { /*{{{*/
-																{ /* #show cdp entry WORD version protocol | begin */
+															.subtree	= (struct menu_node *[]) { /*{{{*/
+																/* #show cdp entry WORD version protocol | begin */
+																& (struct menu_node){
 																	.name			= "begin",
 																	.help			= "Begin with the line that matches",
 																	.mask			= PRIV(1),
 																	.tokenize	= NULL,
 																	.run			= NULL,
-																	.subtree	= (struct menu_node[]) { /*{{{*/
-																		{ /* #show cdp entry WORD version protocol | begin LINE */
+																	.subtree	= (struct menu_node *[]) { /*{{{*/
+																		/* #show cdp entry WORD version protocol | begin LINE */
+																		& (struct menu_node){
 																			.name			= "LINE",
 																			.help			= "Regular Expression",
 																			.mask			= PRIV(1),
@@ -972,18 +1038,20 @@ struct menu_node menu_main = {
 																			.subtree	= NULL
 																		},
 
-																		NULL_MENU_NODE
+																		NULL
 																	} /*}}}*/
 																},
 
-																{ /* #show cdp entry WORD version protocol | exclude */
+																/* #show cdp entry WORD version protocol | exclude */
+																& (struct menu_node){
 																	.name			= "exclude",
 																	.help			= "Exclude lines that match",
 																	.mask			= PRIV(1),
 																	.tokenize	= NULL,
 																	.run			= NULL,
-																	.subtree	= (struct menu_node[]) { /*{{{*/
-																		{ /* #show cdp entry WORD version protocol | exclude LINE */
+																	.subtree	= (struct menu_node *[]) { /*{{{*/
+																		/* #show cdp entry WORD version protocol | exclude LINE */
+																		& (struct menu_node){
 																			.name			= "LINE",
 																			.help			= "Regular Expression",
 																			.mask			= PRIV(1),
@@ -992,18 +1060,20 @@ struct menu_node menu_main = {
 																			.subtree	= NULL
 																		},
 
-																		NULL_MENU_NODE
+																		NULL
 																	} /*}}}*/
 																},
 
-																{ /* #show cdp entry WORD version protocol | include */
+																/* #show cdp entry WORD version protocol | include */
+																& (struct menu_node){
 																	.name			= "include",
 																	.help			= "Include lines that match",
 																	.mask			= PRIV(1),
 																	.tokenize	= NULL,
 																	.run			= NULL,
-																	.subtree	= (struct menu_node[]) { /*{{{*/
-																		{ /* #show cdp entry WORD version protocol | include LINE */
+																	.subtree	= (struct menu_node *[]) { /*{{{*/
+																		/* #show cdp entry WORD version protocol | include LINE */
+																		& (struct menu_node){
 																			.name			= "LINE",
 																			.help			= "Regular Expression",
 																			.mask			= PRIV(1),
@@ -1012,18 +1082,20 @@ struct menu_node menu_main = {
 																			.subtree	= NULL
 																		},
 
-																		NULL_MENU_NODE
+																		NULL
 																	} /*}}}*/
 																},
 
-																{ /* #show cdp entry WORD version protocol | grep */
+																/* #show cdp entry WORD version protocol | grep */
+																& (struct menu_node){
 																	.name			= "grep",
 																	.help			= "Linux grep functionality",
 																	.mask			= PRIV(1),
 																	.tokenize	= NULL,
 																	.run			= NULL,
-																	.subtree	= (struct menu_node[]) { /*{{{*/
-																		{ /* #show cdp entry WORD version protocol | grep LINE */
+																	.subtree	= (struct menu_node *[]) { /*{{{*/
+																		/* #show cdp entry WORD version protocol | grep LINE */
+																		& (struct menu_node){
 																			.name			= "LINE",
 																			.help			= "Regular Expression",
 																			.mask			= PRIV(1),
@@ -1032,33 +1104,36 @@ struct menu_node menu_main = {
 																			.subtree	= NULL
 																		},
 
-																		NULL_MENU_NODE
+																		NULL
 																	} /*}}}*/
 																},
 
-																NULL_MENU_NODE
+																NULL
 															} /*}}}*/
 														},
 
-														NULL_MENU_NODE
+														NULL
 													} /*}}}*/
 												},
 
-												{ /* #show cdp entry WORD version | */
+												/* #show cdp entry WORD version | */
+												& (struct menu_node){
 													.name			= "|",
 													.help			= "Output modifiers",
 													.mask			= PRIV(1),
 													.tokenize	= NULL,
 													.run			= NULL,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #show cdp entry WORD version | begin */
+													.subtree	= (struct menu_node *[]) { /*{{{*/
+														/* #show cdp entry WORD version | begin */
+														& (struct menu_node){
 															.name			= "begin",
 															.help			= "Begin with the line that matches",
 															.mask			= PRIV(1),
 															.tokenize	= NULL,
 															.run			= NULL,
-															.subtree	= (struct menu_node[]) { /*{{{*/
-																{ /* #show cdp entry WORD version | begin LINE */
+															.subtree	= (struct menu_node *[]) { /*{{{*/
+																/* #show cdp entry WORD version | begin LINE */
+																& (struct menu_node){
 																	.name			= "LINE",
 																	.help			= "Regular Expression",
 																	.mask			= PRIV(1),
@@ -1067,18 +1142,20 @@ struct menu_node menu_main = {
 																	.subtree	= NULL
 																},
 
-																NULL_MENU_NODE
+																NULL
 															} /*}}}*/
 														},
 
-														{ /* #show cdp entry WORD version | exclude */
+														/* #show cdp entry WORD version | exclude */
+														& (struct menu_node){
 															.name			= "exclude",
 															.help			= "Exclude lines that match",
 															.mask			= PRIV(1),
 															.tokenize	= NULL,
 															.run			= NULL,
-															.subtree	= (struct menu_node[]) { /*{{{*/
-																{ /* #show cdp entry WORD version | exclude LINE */
+															.subtree	= (struct menu_node *[]) { /*{{{*/
+																/* #show cdp entry WORD version | exclude LINE */
+																& (struct menu_node){
 																	.name			= "LINE",
 																	.help			= "Regular Expression",
 																	.mask			= PRIV(1),
@@ -1087,18 +1164,20 @@ struct menu_node menu_main = {
 																	.subtree	= NULL
 																},
 
-																NULL_MENU_NODE
+																NULL
 															} /*}}}*/
 														},
 
-														{ /* #show cdp entry WORD version | include */
+														/* #show cdp entry WORD version | include */
+														& (struct menu_node){
 															.name			= "include",
 															.help			= "Include lines that match",
 															.mask			= PRIV(1),
 															.tokenize	= NULL,
 															.run			= NULL,
-															.subtree	= (struct menu_node[]) { /*{{{*/
-																{ /* #show cdp entry WORD version | include LINE */
+															.subtree	= (struct menu_node *[]) { /*{{{*/
+																/* #show cdp entry WORD version | include LINE */
+																& (struct menu_node){
 																	.name			= "LINE",
 																	.help			= "Regular Expression",
 																	.mask			= PRIV(1),
@@ -1107,18 +1186,20 @@ struct menu_node menu_main = {
 																	.subtree	= NULL
 																},
 
-																NULL_MENU_NODE
+																NULL
 															} /*}}}*/
 														},
 
-														{ /* #show cdp entry WORD version | grep */
+														/* #show cdp entry WORD version | grep */
+														& (struct menu_node){
 															.name			= "grep",
 															.help			= "Linux grep functionality",
 															.mask			= PRIV(1),
 															.tokenize	= NULL,
 															.run			= NULL,
-															.subtree	= (struct menu_node[]) { /*{{{*/
-																{ /* #show cdp entry WORD version | grep LINE */
+															.subtree	= (struct menu_node *[]) { /*{{{*/
+																/* #show cdp entry WORD version | grep LINE */
+																& (struct menu_node){
 																	.name			= "LINE",
 																	.help			= "Regular Expression",
 																	.mask			= PRIV(1),
@@ -1127,33 +1208,36 @@ struct menu_node menu_main = {
 																	.subtree	= NULL
 																},
 
-																NULL_MENU_NODE
+																NULL
 															} /*}}}*/
 														},
 
-														NULL_MENU_NODE
+														NULL
 													} /*}}}*/
 												},
 
-												NULL_MENU_NODE
+												NULL
 											} /*}}}*/
 										},
 
-										{ /* #show cdp entry WORD | */
+										/* #show cdp entry WORD | */
+										& (struct menu_node){
 											.name			= "|",
 											.help			= "Output modifiers",
 											.mask			= PRIV(1),
 											.tokenize	= NULL,
 											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show cdp entry WORD | begin */
+											.subtree	= (struct menu_node *[]) { /*{{{*/
+												/* #show cdp entry WORD | begin */
+												& (struct menu_node){
 													.name			= "begin",
 													.help			= "Begin with the line that matches",
 													.mask			= PRIV(1),
 													.tokenize	= NULL,
 													.run			= NULL,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #show cdp entry WORD | begin LINE */
+													.subtree	= (struct menu_node *[]) { /*{{{*/
+														/* #show cdp entry WORD | begin LINE */
+														& (struct menu_node){
 															.name			= "LINE",
 															.help			= "Regular Expression",
 															.mask			= PRIV(1),
@@ -1162,18 +1246,20 @@ struct menu_node menu_main = {
 															.subtree	= NULL
 														},
 
-														NULL_MENU_NODE
+														NULL
 													} /*}}}*/
 												},
 
-												{ /* #show cdp entry WORD | exclude */
+												/* #show cdp entry WORD | exclude */
+												& (struct menu_node){
 													.name			= "exclude",
 													.help			= "Exclude lines that match",
 													.mask			= PRIV(1),
 													.tokenize	= NULL,
 													.run			= NULL,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #show cdp entry WORD | exclude LINE */
+													.subtree	= (struct menu_node *[]) { /*{{{*/
+														/* #show cdp entry WORD | exclude LINE */
+														& (struct menu_node){
 															.name			= "LINE",
 															.help			= "Regular Expression",
 															.mask			= PRIV(1),
@@ -1182,18 +1268,20 @@ struct menu_node menu_main = {
 															.subtree	= NULL
 														},
 
-														NULL_MENU_NODE
+														NULL
 													} /*}}}*/
 												},
 
-												{ /* #show cdp entry WORD | include */
+												/* #show cdp entry WORD | include */
+												& (struct menu_node){
 													.name			= "include",
 													.help			= "Include lines that match",
 													.mask			= PRIV(1),
 													.tokenize	= NULL,
 													.run			= NULL,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #show cdp entry WORD | include LINE */
+													.subtree	= (struct menu_node *[]) { /*{{{*/
+														/* #show cdp entry WORD | include LINE */
+														& (struct menu_node){
 															.name			= "LINE",
 															.help			= "Regular Expression",
 															.mask			= PRIV(1),
@@ -1202,18 +1290,20 @@ struct menu_node menu_main = {
 															.subtree	= NULL
 														},
 
-														NULL_MENU_NODE
+														NULL
 													} /*}}}*/
 												},
 
-												{ /* #show cdp entry WORD | grep */
+												/* #show cdp entry WORD | grep */
+												& (struct menu_node){
 													.name			= "grep",
 													.help			= "Linux grep functionality",
 													.mask			= PRIV(1),
 													.tokenize	= NULL,
 													.run			= NULL,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #show cdp entry WORD | grep LINE */
+													.subtree	= (struct menu_node *[]) { /*{{{*/
+														/* #show cdp entry WORD | grep LINE */
+														& (struct menu_node){
 															.name			= "LINE",
 															.help			= "Regular Expression",
 															.mask			= PRIV(1),
@@ -1222,44 +1312,48 @@ struct menu_node menu_main = {
 															.subtree	= NULL
 														},
 
-														NULL_MENU_NODE
+														NULL
 													} /*}}}*/
 												},
 
-												NULL_MENU_NODE
+												NULL
 											} /*}}}*/
 										},
 
-										NULL_MENU_NODE
+										NULL
 									} /*}}}*/
 								},
 
-								NULL_MENU_NODE
+								NULL
 							} /*}}}*/
 						},
 
-						{ /* #show cdp holdtime */
+						/* #show cdp holdtime */
+						& (struct menu_node){
 							.name			= "holdtime",
 							.help			= "Time CDP info kept by neighbors",
 							.mask			= PRIV(1),
 							.tokenize	= NULL,
 							.run			= cmd_sh_cdp_holdtime,
-							.subtree	= (struct menu_node[]) { /*{{{*/
-								{ /* #show cdp holdtime | */
+							.subtree	= (struct menu_node *[]) { /*{{{*/
+								/* #show cdp holdtime | */
+								& (struct menu_node){
 									.name			= "|",
 									.help			= "Output modifiers",
 									.mask			= PRIV(1),
 									.tokenize	= NULL,
 									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show cdp holdtime | begin */
+									.subtree	= (struct menu_node *[]) { /*{{{*/
+										/* #show cdp holdtime | begin */
+										& (struct menu_node){
 											.name			= "begin",
 											.help			= "Begin with the line that matches",
 											.mask			= PRIV(1),
 											.tokenize	= NULL,
 											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show cdp holdtime | begin LINE */
+											.subtree	= (struct menu_node *[]) { /*{{{*/
+												/* #show cdp holdtime | begin LINE */
+												& (struct menu_node){
 													.name			= "LINE",
 													.help			= "Regular Expression",
 													.mask			= PRIV(1),
@@ -1268,18 +1362,20 @@ struct menu_node menu_main = {
 													.subtree	= NULL
 												},
 
-												NULL_MENU_NODE
+												NULL
 											} /*}}}*/
 										},
 
-										{ /* #show cdp holdtime | exclude */
+										/* #show cdp holdtime | exclude */
+										& (struct menu_node){
 											.name			= "exclude",
 											.help			= "Exclude lines that match",
 											.mask			= PRIV(1),
 											.tokenize	= NULL,
 											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show cdp holdtime | exclude LINE */
+											.subtree	= (struct menu_node *[]) { /*{{{*/
+												/* #show cdp holdtime | exclude LINE */
+												& (struct menu_node){
 													.name			= "LINE",
 													.help			= "Regular Expression",
 													.mask			= PRIV(1),
@@ -1288,18 +1384,20 @@ struct menu_node menu_main = {
 													.subtree	= NULL
 												},
 
-												NULL_MENU_NODE
+												NULL
 											} /*}}}*/
 										},
 
-										{ /* #show cdp holdtime | include */
+										/* #show cdp holdtime | include */
+										& (struct menu_node){
 											.name			= "include",
 											.help			= "Include lines that match",
 											.mask			= PRIV(1),
 											.tokenize	= NULL,
 											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show cdp holdtime | include LINE */
+											.subtree	= (struct menu_node *[]) { /*{{{*/
+												/* #show cdp holdtime | include LINE */
+												& (struct menu_node){
 													.name			= "LINE",
 													.help			= "Regular Expression",
 													.mask			= PRIV(1),
@@ -1308,18 +1406,20 @@ struct menu_node menu_main = {
 													.subtree	= NULL
 												},
 
-												NULL_MENU_NODE
+												NULL
 											} /*}}}*/
 										},
 
-										{ /* #show cdp holdtime | grep */
+										/* #show cdp holdtime | grep */
+										& (struct menu_node){
 											.name			= "grep",
 											.help			= "Linux grep functionality",
 											.mask			= PRIV(1),
 											.tokenize	= NULL,
 											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show cdp holdtime | grep LINE */
+											.subtree	= (struct menu_node *[]) { /*{{{*/
+												/* #show cdp holdtime | grep LINE */
+												& (struct menu_node){
 													.name			= "LINE",
 													.help			= "Regular Expression",
 													.mask			= PRIV(1),
@@ -1328,33 +1428,36 @@ struct menu_node menu_main = {
 													.subtree	= NULL
 												},
 
-												NULL_MENU_NODE
+												NULL
 											} /*}}}*/
 										},
 
-										NULL_MENU_NODE
+										NULL
 									} /*}}}*/
 								},
 
-								NULL_MENU_NODE
+								NULL
 							} /*}}}*/
 						},
 
-						{ /* #show cdp interface */
+						/* #show cdp interface */
+						& (struct menu_node){
 							.name			= "interface",
 							.help			= "CDP interface status and configuration",
 							.mask			= PRIV(1),
 							.tokenize	= NULL,
 							.run			= cmd_sh_cdp_int,
-							.subtree	= (struct menu_node[]) { /*{{{*/
-								{ /* #show cdp interface ethernet */
+							.subtree	= (struct menu_node *[]) { /*{{{*/
+								/* #show cdp interface ethernet */
+								& (struct menu_node){
 									.name			= "ethernet",
 									.help			= "Ethernet IEEE 802.3",
 									.mask			= PRIV(1),
 									.tokenize	= NULL,
 									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show cdp interface ethernet  */
+									.subtree	= (struct menu_node *[]) { /*{{{*/
+										/* #show cdp interface ethernet  */
+										& (struct menu_node){
 											.name			= "",
 											.help			= "Ethernet interface number",
 											.mask			= PRIV(1),
@@ -1363,25 +1466,28 @@ struct menu_node menu_main = {
 											.subtree	= NULL
 										},
 
-										NULL_MENU_NODE
+										NULL
 									} /*}}}*/
 								},
 
-								{ /* #show cdp interface | */
+								/* #show cdp interface | */
+								& (struct menu_node){
 									.name			= "|",
 									.help			= "Output modifiers",
 									.mask			= PRIV(1),
 									.tokenize	= NULL,
 									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show cdp interface | begin */
+									.subtree	= (struct menu_node *[]) { /*{{{*/
+										/* #show cdp interface | begin */
+										& (struct menu_node){
 											.name			= "begin",
 											.help			= "Begin with the line that matches",
 											.mask			= PRIV(1),
 											.tokenize	= NULL,
 											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show cdp interface | begin LINE */
+											.subtree	= (struct menu_node *[]) { /*{{{*/
+												/* #show cdp interface | begin LINE */
+												& (struct menu_node){
 													.name			= "LINE",
 													.help			= "Regular Expression",
 													.mask			= PRIV(1),
@@ -1390,18 +1496,20 @@ struct menu_node menu_main = {
 													.subtree	= NULL
 												},
 
-												NULL_MENU_NODE
+												NULL
 											} /*}}}*/
 										},
 
-										{ /* #show cdp interface | exclude */
+										/* #show cdp interface | exclude */
+										& (struct menu_node){
 											.name			= "exclude",
 											.help			= "Exclude lines that match",
 											.mask			= PRIV(1),
 											.tokenize	= NULL,
 											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show cdp interface | exclude LINE */
+											.subtree	= (struct menu_node *[]) { /*{{{*/
+												/* #show cdp interface | exclude LINE */
+												& (struct menu_node){
 													.name			= "LINE",
 													.help			= "Regular Expression",
 													.mask			= PRIV(1),
@@ -1410,18 +1518,20 @@ struct menu_node menu_main = {
 													.subtree	= NULL
 												},
 
-												NULL_MENU_NODE
+												NULL
 											} /*}}}*/
 										},
 
-										{ /* #show cdp interface | include */
+										/* #show cdp interface | include */
+										& (struct menu_node){
 											.name			= "include",
 											.help			= "Include lines that match",
 											.mask			= PRIV(1),
 											.tokenize	= NULL,
 											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show cdp interface | include LINE */
+											.subtree	= (struct menu_node *[]) { /*{{{*/
+												/* #show cdp interface | include LINE */
+												& (struct menu_node){
 													.name			= "LINE",
 													.help			= "Regular Expression",
 													.mask			= PRIV(1),
@@ -1430,18 +1540,20 @@ struct menu_node menu_main = {
 													.subtree	= NULL
 												},
 
-												NULL_MENU_NODE
+												NULL
 											} /*}}}*/
 										},
 
-										{ /* #show cdp interface | grep */
+										/* #show cdp interface | grep */
+										& (struct menu_node){
 											.name			= "grep",
 											.help			= "Linux grep functionality",
 											.mask			= PRIV(1),
 											.tokenize	= NULL,
 											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show cdp interface | grep LINE */
+											.subtree	= (struct menu_node *[]) { /*{{{*/
+												/* #show cdp interface | grep LINE */
+												& (struct menu_node){
 													.name			= "LINE",
 													.help			= "Regular Expression",
 													.mask			= PRIV(1),
@@ -1450,61 +1562,68 @@ struct menu_node menu_main = {
 													.subtree	= NULL
 												},
 
-												NULL_MENU_NODE
+												NULL
 											} /*}}}*/
 										},
 
-										NULL_MENU_NODE
+										NULL
 									} /*}}}*/
 								},
 
-								NULL_MENU_NODE
+								NULL
 							} /*}}}*/
 						},
 
-						{ /* #show cdp neighbors */
+						/* #show cdp neighbors */
+						& (struct menu_node){
 							.name			= "neighbors",
 							.help			= "CDP neighbor entries",
 							.mask			= PRIV(1),
 							.tokenize	= NULL,
 							.run			= cmd_sh_cdp_ne,
-							.subtree	= (struct menu_node[]) { /*{{{*/
-								{ /* #show cdp neighbors ethernet */
+							.subtree	= (struct menu_node *[]) { /*{{{*/
+								/* #show cdp neighbors ethernet */
+								& (struct menu_node){
 									.name			= "ethernet",
 									.help			= "Ethernet IEEE 802.3",
 									.mask			= PRIV(1),
 									.tokenize	= NULL,
 									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show cdp neighbors ethernet  */
+									.subtree	= (struct menu_node *[]) { /*{{{*/
+										/* #show cdp neighbors ethernet  */
+										& (struct menu_node){
 											.name			= "",
 											.help			= "Ethernet interface number",
 											.mask			= PRIV(1),
 											.tokenize	= NULL,
 											.run			= cmd_sh_cdp_ne_int,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show cdp neighbors ethernet  detail */
+											.subtree	= (struct menu_node *[]) { /*{{{*/
+												/* #show cdp neighbors ethernet  detail */
+												& (struct menu_node){
 													.name			= "detail",
 													.help			= "Show detailed information",
 													.mask			= PRIV(1),
 													.tokenize	= NULL,
 													.run			= cmd_sh_cdp_ne_detail,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #show cdp neighbors ethernet  detail | */
+													.subtree	= (struct menu_node *[]) { /*{{{*/
+														/* #show cdp neighbors ethernet  detail | */
+														& (struct menu_node){
 															.name			= "|",
 															.help			= "Output modifiers",
 															.mask			= PRIV(1),
 															.tokenize	= NULL,
 															.run			= NULL,
-															.subtree	= (struct menu_node[]) { /*{{{*/
-																{ /* #show cdp neighbors ethernet  detail | begin */
+															.subtree	= (struct menu_node *[]) { /*{{{*/
+																/* #show cdp neighbors ethernet  detail | begin */
+																& (struct menu_node){
 																	.name			= "begin",
 																	.help			= "Begin with the line that matches",
 																	.mask			= PRIV(1),
 																	.tokenize	= NULL,
 																	.run			= NULL,
-																	.subtree	= (struct menu_node[]) { /*{{{*/
-																		{ /* #show cdp neighbors ethernet  detail | begin LINE */
+																	.subtree	= (struct menu_node *[]) { /*{{{*/
+																		/* #show cdp neighbors ethernet  detail | begin LINE */
+																		& (struct menu_node){
 																			.name			= "LINE",
 																			.help			= "Regular Expression",
 																			.mask			= PRIV(1),
@@ -1513,18 +1632,20 @@ struct menu_node menu_main = {
 																			.subtree	= NULL
 																		},
 
-																		NULL_MENU_NODE
+																		NULL
 																	} /*}}}*/
 																},
 
-																{ /* #show cdp neighbors ethernet  detail | exclude */
+																/* #show cdp neighbors ethernet  detail | exclude */
+																& (struct menu_node){
 																	.name			= "exclude",
 																	.help			= "Exclude lines that match",
 																	.mask			= PRIV(1),
 																	.tokenize	= NULL,
 																	.run			= NULL,
-																	.subtree	= (struct menu_node[]) { /*{{{*/
-																		{ /* #show cdp neighbors ethernet  detail | exclude LINE */
+																	.subtree	= (struct menu_node *[]) { /*{{{*/
+																		/* #show cdp neighbors ethernet  detail | exclude LINE */
+																		& (struct menu_node){
 																			.name			= "LINE",
 																			.help			= "Regular Expression",
 																			.mask			= PRIV(1),
@@ -1533,18 +1654,20 @@ struct menu_node menu_main = {
 																			.subtree	= NULL
 																		},
 
-																		NULL_MENU_NODE
+																		NULL
 																	} /*}}}*/
 																},
 
-																{ /* #show cdp neighbors ethernet  detail | include */
+																/* #show cdp neighbors ethernet  detail | include */
+																& (struct menu_node){
 																	.name			= "include",
 																	.help			= "Include lines that match",
 																	.mask			= PRIV(1),
 																	.tokenize	= NULL,
 																	.run			= NULL,
-																	.subtree	= (struct menu_node[]) { /*{{{*/
-																		{ /* #show cdp neighbors ethernet  detail | include LINE */
+																	.subtree	= (struct menu_node *[]) { /*{{{*/
+																		/* #show cdp neighbors ethernet  detail | include LINE */
+																		& (struct menu_node){
 																			.name			= "LINE",
 																			.help			= "Regular Expression",
 																			.mask			= PRIV(1),
@@ -1553,18 +1676,20 @@ struct menu_node menu_main = {
 																			.subtree	= NULL
 																		},
 
-																		NULL_MENU_NODE
+																		NULL
 																	} /*}}}*/
 																},
 
-																{ /* #show cdp neighbors ethernet  detail | grep */
+																/* #show cdp neighbors ethernet  detail | grep */
+																& (struct menu_node){
 																	.name			= "grep",
 																	.help			= "Linux grep functionality",
 																	.mask			= PRIV(1),
 																	.tokenize	= NULL,
 																	.run			= NULL,
-																	.subtree	= (struct menu_node[]) { /*{{{*/
-																		{ /* #show cdp neighbors ethernet  detail | grep LINE */
+																	.subtree	= (struct menu_node *[]) { /*{{{*/
+																		/* #show cdp neighbors ethernet  detail | grep LINE */
+																		& (struct menu_node){
 																			.name			= "LINE",
 																			.help			= "Regular Expression",
 																			.mask			= PRIV(1),
@@ -1573,48 +1698,52 @@ struct menu_node menu_main = {
 																			.subtree	= NULL
 																		},
 
-																		NULL_MENU_NODE
+																		NULL
 																	} /*}}}*/
 																},
 
-																NULL_MENU_NODE
+																NULL
 															} /*}}}*/
 														},
 
-														NULL_MENU_NODE
+														NULL
 													} /*}}}*/
 												},
 
-												NULL_MENU_NODE
+												NULL
 											} /*}}}*/
 										},
 
-										NULL_MENU_NODE
+										NULL
 									} /*}}}*/
 								},
 
-								{ /* #show cdp neighbors detail */
+								/* #show cdp neighbors detail */
+								& (struct menu_node){
 									.name			= "detail",
 									.help			= "Show detailed information",
 									.mask			= PRIV(1),
 									.tokenize	= NULL,
 									.run			= cmd_sh_cdp_ne_detail,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show cdp neighbors detail | */
+									.subtree	= (struct menu_node *[]) { /*{{{*/
+										/* #show cdp neighbors detail | */
+										& (struct menu_node){
 											.name			= "|",
 											.help			= "Output modifiers",
 											.mask			= PRIV(1),
 											.tokenize	= NULL,
 											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show cdp neighbors detail | begin */
+											.subtree	= (struct menu_node *[]) { /*{{{*/
+												/* #show cdp neighbors detail | begin */
+												& (struct menu_node){
 													.name			= "begin",
 													.help			= "Begin with the line that matches",
 													.mask			= PRIV(1),
 													.tokenize	= NULL,
 													.run			= NULL,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #show cdp neighbors detail | begin LINE */
+													.subtree	= (struct menu_node *[]) { /*{{{*/
+														/* #show cdp neighbors detail | begin LINE */
+														& (struct menu_node){
 															.name			= "LINE",
 															.help			= "Regular Expression",
 															.mask			= PRIV(1),
@@ -1623,18 +1752,20 @@ struct menu_node menu_main = {
 															.subtree	= NULL
 														},
 
-														NULL_MENU_NODE
+														NULL
 													} /*}}}*/
 												},
 
-												{ /* #show cdp neighbors detail | exclude */
+												/* #show cdp neighbors detail | exclude */
+												& (struct menu_node){
 													.name			= "exclude",
 													.help			= "Exclude lines that match",
 													.mask			= PRIV(1),
 													.tokenize	= NULL,
 													.run			= NULL,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #show cdp neighbors detail | exclude LINE */
+													.subtree	= (struct menu_node *[]) { /*{{{*/
+														/* #show cdp neighbors detail | exclude LINE */
+														& (struct menu_node){
 															.name			= "LINE",
 															.help			= "Regular Expression",
 															.mask			= PRIV(1),
@@ -1643,18 +1774,20 @@ struct menu_node menu_main = {
 															.subtree	= NULL
 														},
 
-														NULL_MENU_NODE
+														NULL
 													} /*}}}*/
 												},
 
-												{ /* #show cdp neighbors detail | include */
+												/* #show cdp neighbors detail | include */
+												& (struct menu_node){
 													.name			= "include",
 													.help			= "Include lines that match",
 													.mask			= PRIV(1),
 													.tokenize	= NULL,
 													.run			= NULL,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #show cdp neighbors detail | include LINE */
+													.subtree	= (struct menu_node *[]) { /*{{{*/
+														/* #show cdp neighbors detail | include LINE */
+														& (struct menu_node){
 															.name			= "LINE",
 															.help			= "Regular Expression",
 															.mask			= PRIV(1),
@@ -1663,18 +1796,20 @@ struct menu_node menu_main = {
 															.subtree	= NULL
 														},
 
-														NULL_MENU_NODE
+														NULL
 													} /*}}}*/
 												},
 
-												{ /* #show cdp neighbors detail | grep */
+												/* #show cdp neighbors detail | grep */
+												& (struct menu_node){
 													.name			= "grep",
 													.help			= "Linux grep functionality",
 													.mask			= PRIV(1),
 													.tokenize	= NULL,
 													.run			= NULL,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #show cdp neighbors detail | grep LINE */
+													.subtree	= (struct menu_node *[]) { /*{{{*/
+														/* #show cdp neighbors detail | grep LINE */
+														& (struct menu_node){
 															.name			= "LINE",
 															.help			= "Regular Expression",
 															.mask			= PRIV(1),
@@ -1683,33 +1818,36 @@ struct menu_node menu_main = {
 															.subtree	= NULL
 														},
 
-														NULL_MENU_NODE
+														NULL
 													} /*}}}*/
 												},
 
-												NULL_MENU_NODE
+												NULL
 											} /*}}}*/
 										},
 
-										NULL_MENU_NODE
+										NULL
 									} /*}}}*/
 								},
 
-								{ /* #show cdp neighbors | */
+								/* #show cdp neighbors | */
+								& (struct menu_node){
 									.name			= "|",
 									.help			= "Output modifiers",
 									.mask			= PRIV(1),
 									.tokenize	= NULL,
 									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show cdp neighbors | begin */
+									.subtree	= (struct menu_node *[]) { /*{{{*/
+										/* #show cdp neighbors | begin */
+										& (struct menu_node){
 											.name			= "begin",
 											.help			= "Begin with the line that matches",
 											.mask			= PRIV(1),
 											.tokenize	= NULL,
 											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show cdp neighbors | begin LINE */
+											.subtree	= (struct menu_node *[]) { /*{{{*/
+												/* #show cdp neighbors | begin LINE */
+												& (struct menu_node){
 													.name			= "LINE",
 													.help			= "Regular Expression",
 													.mask			= PRIV(1),
@@ -1718,18 +1856,20 @@ struct menu_node menu_main = {
 													.subtree	= NULL
 												},
 
-												NULL_MENU_NODE
+												NULL
 											} /*}}}*/
 										},
 
-										{ /* #show cdp neighbors | exclude */
+										/* #show cdp neighbors | exclude */
+										& (struct menu_node){
 											.name			= "exclude",
 											.help			= "Exclude lines that match",
 											.mask			= PRIV(1),
 											.tokenize	= NULL,
 											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show cdp neighbors | exclude LINE */
+											.subtree	= (struct menu_node *[]) { /*{{{*/
+												/* #show cdp neighbors | exclude LINE */
+												& (struct menu_node){
 													.name			= "LINE",
 													.help			= "Regular Expression",
 													.mask			= PRIV(1),
@@ -1738,18 +1878,20 @@ struct menu_node menu_main = {
 													.subtree	= NULL
 												},
 
-												NULL_MENU_NODE
+												NULL
 											} /*}}}*/
 										},
 
-										{ /* #show cdp neighbors | include */
+										/* #show cdp neighbors | include */
+										& (struct menu_node){
 											.name			= "include",
 											.help			= "Include lines that match",
 											.mask			= PRIV(1),
 											.tokenize	= NULL,
 											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show cdp neighbors | include LINE */
+											.subtree	= (struct menu_node *[]) { /*{{{*/
+												/* #show cdp neighbors | include LINE */
+												& (struct menu_node){
 													.name			= "LINE",
 													.help			= "Regular Expression",
 													.mask			= PRIV(1),
@@ -1758,18 +1900,20 @@ struct menu_node menu_main = {
 													.subtree	= NULL
 												},
 
-												NULL_MENU_NODE
+												NULL
 											} /*}}}*/
 										},
 
-										{ /* #show cdp neighbors | grep */
+										/* #show cdp neighbors | grep */
+										& (struct menu_node){
 											.name			= "grep",
 											.help			= "Linux grep functionality",
 											.mask			= PRIV(1),
 											.tokenize	= NULL,
 											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show cdp neighbors | grep LINE */
+											.subtree	= (struct menu_node *[]) { /*{{{*/
+												/* #show cdp neighbors | grep LINE */
+												& (struct menu_node){
 													.name			= "LINE",
 													.help			= "Regular Expression",
 													.mask			= PRIV(1),
@@ -1778,40 +1922,44 @@ struct menu_node menu_main = {
 													.subtree	= NULL
 												},
 
-												NULL_MENU_NODE
+												NULL
 											} /*}}}*/
 										},
 
-										NULL_MENU_NODE
+										NULL
 									} /*}}}*/
 								},
 
-								NULL_MENU_NODE
+								NULL
 							} /*}}}*/
 						},
 
-						{ /* #show cdp run */
+						/* #show cdp run */
+						& (struct menu_node){
 							.name			= "run",
 							.help			= "CDP process running",
 							.mask			= PRIV(1),
 							.tokenize	= NULL,
 							.run			= cmd_sh_cdp_run,
-							.subtree	= (struct menu_node[]) { /*{{{*/
-								{ /* #show cdp run | */
+							.subtree	= (struct menu_node *[]) { /*{{{*/
+								/* #show cdp run | */
+								& (struct menu_node){
 									.name			= "|",
 									.help			= "Output modifiers",
 									.mask			= PRIV(1),
 									.tokenize	= NULL,
 									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show cdp run | begin */
+									.subtree	= (struct menu_node *[]) { /*{{{*/
+										/* #show cdp run | begin */
+										& (struct menu_node){
 											.name			= "begin",
 											.help			= "Begin with the line that matches",
 											.mask			= PRIV(1),
 											.tokenize	= NULL,
 											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show cdp run | begin LINE */
+											.subtree	= (struct menu_node *[]) { /*{{{*/
+												/* #show cdp run | begin LINE */
+												& (struct menu_node){
 													.name			= "LINE",
 													.help			= "Regular Expression",
 													.mask			= PRIV(1),
@@ -1820,18 +1968,20 @@ struct menu_node menu_main = {
 													.subtree	= NULL
 												},
 
-												NULL_MENU_NODE
+												NULL
 											} /*}}}*/
 										},
 
-										{ /* #show cdp run | exclude */
+										/* #show cdp run | exclude */
+										& (struct menu_node){
 											.name			= "exclude",
 											.help			= "Exclude lines that match",
 											.mask			= PRIV(1),
 											.tokenize	= NULL,
 											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show cdp run | exclude LINE */
+											.subtree	= (struct menu_node *[]) { /*{{{*/
+												/* #show cdp run | exclude LINE */
+												& (struct menu_node){
 													.name			= "LINE",
 													.help			= "Regular Expression",
 													.mask			= PRIV(1),
@@ -1840,18 +1990,20 @@ struct menu_node menu_main = {
 													.subtree	= NULL
 												},
 
-												NULL_MENU_NODE
+												NULL
 											} /*}}}*/
 										},
 
-										{ /* #show cdp run | include */
+										/* #show cdp run | include */
+										& (struct menu_node){
 											.name			= "include",
 											.help			= "Include lines that match",
 											.mask			= PRIV(1),
 											.tokenize	= NULL,
 											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show cdp run | include LINE */
+											.subtree	= (struct menu_node *[]) { /*{{{*/
+												/* #show cdp run | include LINE */
+												& (struct menu_node){
 													.name			= "LINE",
 													.help			= "Regular Expression",
 													.mask			= PRIV(1),
@@ -1860,18 +2012,20 @@ struct menu_node menu_main = {
 													.subtree	= NULL
 												},
 
-												NULL_MENU_NODE
+												NULL
 											} /*}}}*/
 										},
 
-										{ /* #show cdp run | grep */
+										/* #show cdp run | grep */
+										& (struct menu_node){
 											.name			= "grep",
 											.help			= "Linux grep functionality",
 											.mask			= PRIV(1),
 											.tokenize	= NULL,
 											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show cdp run | grep LINE */
+											.subtree	= (struct menu_node *[]) { /*{{{*/
+												/* #show cdp run | grep LINE */
+												& (struct menu_node){
 													.name			= "LINE",
 													.help			= "Regular Expression",
 													.mask			= PRIV(1),
@@ -1880,40 +2034,44 @@ struct menu_node menu_main = {
 													.subtree	= NULL
 												},
 
-												NULL_MENU_NODE
+												NULL
 											} /*}}}*/
 										},
 
-										NULL_MENU_NODE
+										NULL
 									} /*}}}*/
 								},
 
-								NULL_MENU_NODE
+								NULL
 							} /*}}}*/
 						},
 
-						{ /* #show cdp timer */
+						/* #show cdp timer */
+						& (struct menu_node){
 							.name			= "timer",
 							.help			= "Time CDP info is resent to neighbors",
 							.mask			= PRIV(1),
 							.tokenize	= NULL,
 							.run			= cmd_sh_cdp_timer,
-							.subtree	= (struct menu_node[]) { /*{{{*/
-								{ /* #show cdp timer | */
+							.subtree	= (struct menu_node *[]) { /*{{{*/
+								/* #show cdp timer | */
+								& (struct menu_node){
 									.name			= "|",
 									.help			= "Output modifiers",
 									.mask			= PRIV(1),
 									.tokenize	= NULL,
 									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show cdp timer | begin */
+									.subtree	= (struct menu_node *[]) { /*{{{*/
+										/* #show cdp timer | begin */
+										& (struct menu_node){
 											.name			= "begin",
 											.help			= "Begin with the line that matches",
 											.mask			= PRIV(1),
 											.tokenize	= NULL,
 											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show cdp timer | begin LINE */
+											.subtree	= (struct menu_node *[]) { /*{{{*/
+												/* #show cdp timer | begin LINE */
+												& (struct menu_node){
 													.name			= "LINE",
 													.help			= "Regular Expression",
 													.mask			= PRIV(1),
@@ -1922,18 +2080,20 @@ struct menu_node menu_main = {
 													.subtree	= NULL
 												},
 
-												NULL_MENU_NODE
+												NULL
 											} /*}}}*/
 										},
 
-										{ /* #show cdp timer | exclude */
+										/* #show cdp timer | exclude */
+										& (struct menu_node){
 											.name			= "exclude",
 											.help			= "Exclude lines that match",
 											.mask			= PRIV(1),
 											.tokenize	= NULL,
 											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show cdp timer | exclude LINE */
+											.subtree	= (struct menu_node *[]) { /*{{{*/
+												/* #show cdp timer | exclude LINE */
+												& (struct menu_node){
 													.name			= "LINE",
 													.help			= "Regular Expression",
 													.mask			= PRIV(1),
@@ -1942,18 +2102,20 @@ struct menu_node menu_main = {
 													.subtree	= NULL
 												},
 
-												NULL_MENU_NODE
+												NULL
 											} /*}}}*/
 										},
 
-										{ /* #show cdp timer | include */
+										/* #show cdp timer | include */
+										& (struct menu_node){
 											.name			= "include",
 											.help			= "Include lines that match",
 											.mask			= PRIV(1),
 											.tokenize	= NULL,
 											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show cdp timer | include LINE */
+											.subtree	= (struct menu_node *[]) { /*{{{*/
+												/* #show cdp timer | include LINE */
+												& (struct menu_node){
 													.name			= "LINE",
 													.help			= "Regular Expression",
 													.mask			= PRIV(1),
@@ -1962,18 +2124,20 @@ struct menu_node menu_main = {
 													.subtree	= NULL
 												},
 
-												NULL_MENU_NODE
+												NULL
 											} /*}}}*/
 										},
 
-										{ /* #show cdp timer | grep */
+										/* #show cdp timer | grep */
+										& (struct menu_node){
 											.name			= "grep",
 											.help			= "Linux grep functionality",
 											.mask			= PRIV(1),
 											.tokenize	= NULL,
 											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show cdp timer | grep LINE */
+											.subtree	= (struct menu_node *[]) { /*{{{*/
+												/* #show cdp timer | grep LINE */
+												& (struct menu_node){
 													.name			= "LINE",
 													.help			= "Regular Expression",
 													.mask			= PRIV(1),
@@ -1982,40 +2146,44 @@ struct menu_node menu_main = {
 													.subtree	= NULL
 												},
 
-												NULL_MENU_NODE
+												NULL
 											} /*}}}*/
 										},
 
-										NULL_MENU_NODE
+										NULL
 									} /*}}}*/
 								},
 
-								NULL_MENU_NODE
+								NULL
 							} /*}}}*/
 						},
 
-						{ /* #show cdp traffic */
+						/* #show cdp traffic */
+						& (struct menu_node){
 							.name			= "traffic",
 							.help			= "CDP statistics",
 							.mask			= PRIV(1),
 							.tokenize	= NULL,
 							.run			= cmd_sh_cdp_traffic,
-							.subtree	= (struct menu_node[]) { /*{{{*/
-								{ /* #show cdp traffic | */
+							.subtree	= (struct menu_node *[]) { /*{{{*/
+								/* #show cdp traffic | */
+								& (struct menu_node){
 									.name			= "|",
 									.help			= "Output modifiers",
 									.mask			= PRIV(1),
 									.tokenize	= NULL,
 									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show cdp traffic | begin */
+									.subtree	= (struct menu_node *[]) { /*{{{*/
+										/* #show cdp traffic | begin */
+										& (struct menu_node){
 											.name			= "begin",
 											.help			= "Begin with the line that matches",
 											.mask			= PRIV(1),
 											.tokenize	= NULL,
 											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show cdp traffic | begin LINE */
+											.subtree	= (struct menu_node *[]) { /*{{{*/
+												/* #show cdp traffic | begin LINE */
+												& (struct menu_node){
 													.name			= "LINE",
 													.help			= "Regular Expression",
 													.mask			= PRIV(1),
@@ -2024,18 +2192,20 @@ struct menu_node menu_main = {
 													.subtree	= NULL
 												},
 
-												NULL_MENU_NODE
+												NULL
 											} /*}}}*/
 										},
 
-										{ /* #show cdp traffic | exclude */
+										/* #show cdp traffic | exclude */
+										& (struct menu_node){
 											.name			= "exclude",
 											.help			= "Exclude lines that match",
 											.mask			= PRIV(1),
 											.tokenize	= NULL,
 											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show cdp traffic | exclude LINE */
+											.subtree	= (struct menu_node *[]) { /*{{{*/
+												/* #show cdp traffic | exclude LINE */
+												& (struct menu_node){
 													.name			= "LINE",
 													.help			= "Regular Expression",
 													.mask			= PRIV(1),
@@ -2044,18 +2214,20 @@ struct menu_node menu_main = {
 													.subtree	= NULL
 												},
 
-												NULL_MENU_NODE
+												NULL
 											} /*}}}*/
 										},
 
-										{ /* #show cdp traffic | include */
+										/* #show cdp traffic | include */
+										& (struct menu_node){
 											.name			= "include",
 											.help			= "Include lines that match",
 											.mask			= PRIV(1),
 											.tokenize	= NULL,
 											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show cdp traffic | include LINE */
+											.subtree	= (struct menu_node *[]) { /*{{{*/
+												/* #show cdp traffic | include LINE */
+												& (struct menu_node){
 													.name			= "LINE",
 													.help			= "Regular Expression",
 													.mask			= PRIV(1),
@@ -2064,18 +2236,20 @@ struct menu_node menu_main = {
 													.subtree	= NULL
 												},
 
-												NULL_MENU_NODE
+												NULL
 											} /*}}}*/
 										},
 
-										{ /* #show cdp traffic | grep */
+										/* #show cdp traffic | grep */
+										& (struct menu_node){
 											.name			= "grep",
 											.help			= "Linux grep functionality",
 											.mask			= PRIV(1),
 											.tokenize	= NULL,
 											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show cdp traffic | grep LINE */
+											.subtree	= (struct menu_node *[]) { /*{{{*/
+												/* #show cdp traffic | grep LINE */
+												& (struct menu_node){
 													.name			= "LINE",
 													.help			= "Regular Expression",
 													.mask			= PRIV(1),
@@ -2084,33 +2258,36 @@ struct menu_node menu_main = {
 													.subtree	= NULL
 												},
 
-												NULL_MENU_NODE
+												NULL
 											} /*}}}*/
 										},
 
-										NULL_MENU_NODE
+										NULL
 									} /*}}}*/
 								},
 
-								NULL_MENU_NODE
+								NULL
 							} /*}}}*/
 						},
 
-						{ /* #show cdp | */
+						/* #show cdp | */
+						& (struct menu_node){
 							.name			= "|",
 							.help			= "Output modifiers",
 							.mask			= PRIV(1),
 							.tokenize	= NULL,
 							.run			= NULL,
-							.subtree	= (struct menu_node[]) { /*{{{*/
-								{ /* #show cdp | begin */
+							.subtree	= (struct menu_node *[]) { /*{{{*/
+								/* #show cdp | begin */
+								& (struct menu_node){
 									.name			= "begin",
 									.help			= "Begin with the line that matches",
 									.mask			= PRIV(1),
 									.tokenize	= NULL,
 									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show cdp | begin LINE */
+									.subtree	= (struct menu_node *[]) { /*{{{*/
+										/* #show cdp | begin LINE */
+										& (struct menu_node){
 											.name			= "LINE",
 											.help			= "Regular Expression",
 											.mask			= PRIV(1),
@@ -2119,18 +2296,20 @@ struct menu_node menu_main = {
 											.subtree	= NULL
 										},
 
-										NULL_MENU_NODE
+										NULL
 									} /*}}}*/
 								},
 
-								{ /* #show cdp | exclude */
+								/* #show cdp | exclude */
+								& (struct menu_node){
 									.name			= "exclude",
 									.help			= "Exclude lines that match",
 									.mask			= PRIV(1),
 									.tokenize	= NULL,
 									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show cdp | exclude LINE */
+									.subtree	= (struct menu_node *[]) { /*{{{*/
+										/* #show cdp | exclude LINE */
+										& (struct menu_node){
 											.name			= "LINE",
 											.help			= "Regular Expression",
 											.mask			= PRIV(1),
@@ -2139,18 +2318,20 @@ struct menu_node menu_main = {
 											.subtree	= NULL
 										},
 
-										NULL_MENU_NODE
+										NULL
 									} /*}}}*/
 								},
 
-								{ /* #show cdp | include */
+								/* #show cdp | include */
+								& (struct menu_node){
 									.name			= "include",
 									.help			= "Include lines that match",
 									.mask			= PRIV(1),
 									.tokenize	= NULL,
 									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show cdp | include LINE */
+									.subtree	= (struct menu_node *[]) { /*{{{*/
+										/* #show cdp | include LINE */
+										& (struct menu_node){
 											.name			= "LINE",
 											.help			= "Regular Expression",
 											.mask			= PRIV(1),
@@ -2159,18 +2340,20 @@ struct menu_node menu_main = {
 											.subtree	= NULL
 										},
 
-										NULL_MENU_NODE
+										NULL
 									} /*}}}*/
 								},
 
-								{ /* #show cdp | grep */
+								/* #show cdp | grep */
+								& (struct menu_node){
 									.name			= "grep",
 									.help			= "Linux grep functionality",
 									.mask			= PRIV(1),
 									.tokenize	= NULL,
 									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show cdp | grep LINE */
+									.subtree	= (struct menu_node *[]) { /*{{{*/
+										/* #show cdp | grep LINE */
+										& (struct menu_node){
 											.name			= "LINE",
 											.help			= "Regular Expression",
 											.mask			= PRIV(1),
@@ -2179,40 +2362,44 @@ struct menu_node menu_main = {
 											.subtree	= NULL
 										},
 
-										NULL_MENU_NODE
+										NULL
 									} /*}}}*/
 								},
 
-								NULL_MENU_NODE
+								NULL
 							} /*}}}*/
 						},
 
-						NULL_MENU_NODE
+						NULL
 					} /*}}}*/
 				},
 
-				{ /* #show history */
+				/* #show history */
+				& (struct menu_node){
 					.name			= "history",
 					.help			= "Display the session command history",
 					.mask			= PRIV(1),
 					.tokenize	= NULL,
 					.run			= cmd_history,
-					.subtree	= (struct menu_node[]) { /*{{{*/
-						{ /* #show history | */
+					.subtree	= (struct menu_node *[]) { /*{{{*/
+						/* #show history | */
+						& (struct menu_node){
 							.name			= "|",
 							.help			= "Output modifiers",
 							.mask			= PRIV(1),
 							.tokenize	= NULL,
 							.run			= NULL,
-							.subtree	= (struct menu_node[]) { /*{{{*/
-								{ /* #show history | begin */
+							.subtree	= (struct menu_node *[]) { /*{{{*/
+								/* #show history | begin */
+								& (struct menu_node){
 									.name			= "begin",
 									.help			= "Begin with the line that matches",
 									.mask			= PRIV(1),
 									.tokenize	= NULL,
 									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show history | begin LINE */
+									.subtree	= (struct menu_node *[]) { /*{{{*/
+										/* #show history | begin LINE */
+										& (struct menu_node){
 											.name			= "LINE",
 											.help			= "Regular Expression",
 											.mask			= PRIV(1),
@@ -2221,18 +2408,20 @@ struct menu_node menu_main = {
 											.subtree	= NULL
 										},
 
-										NULL_MENU_NODE
+										NULL
 									} /*}}}*/
 								},
 
-								{ /* #show history | exclude */
+								/* #show history | exclude */
+								& (struct menu_node){
 									.name			= "exclude",
 									.help			= "Exclude lines that match",
 									.mask			= PRIV(1),
 									.tokenize	= NULL,
 									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show history | exclude LINE */
+									.subtree	= (struct menu_node *[]) { /*{{{*/
+										/* #show history | exclude LINE */
+										& (struct menu_node){
 											.name			= "LINE",
 											.help			= "Regular Expression",
 											.mask			= PRIV(1),
@@ -2241,18 +2430,20 @@ struct menu_node menu_main = {
 											.subtree	= NULL
 										},
 
-										NULL_MENU_NODE
+										NULL
 									} /*}}}*/
 								},
 
-								{ /* #show history | include */
+								/* #show history | include */
+								& (struct menu_node){
 									.name			= "include",
 									.help			= "Include lines that match",
 									.mask			= PRIV(1),
 									.tokenize	= NULL,
 									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show history | include LINE */
+									.subtree	= (struct menu_node *[]) { /*{{{*/
+										/* #show history | include LINE */
+										& (struct menu_node){
 											.name			= "LINE",
 											.help			= "Regular Expression",
 											.mask			= PRIV(1),
@@ -2261,18 +2452,20 @@ struct menu_node menu_main = {
 											.subtree	= NULL
 										},
 
-										NULL_MENU_NODE
+										NULL
 									} /*}}}*/
 								},
 
-								{ /* #show history | grep */
+								/* #show history | grep */
+								& (struct menu_node){
 									.name			= "grep",
 									.help			= "Linux grep functionality",
 									.mask			= PRIV(1),
 									.tokenize	= NULL,
 									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show history | grep LINE */
+									.subtree	= (struct menu_node *[]) { /*{{{*/
+										/* #show history | grep LINE */
+										& (struct menu_node){
 											.name			= "LINE",
 											.help			= "Regular Expression",
 											.mask			= PRIV(1),
@@ -2281,33 +2474,36 @@ struct menu_node menu_main = {
 											.subtree	= NULL
 										},
 
-										NULL_MENU_NODE
+										NULL
 									} /*}}}*/
 								},
 
-								NULL_MENU_NODE
+								NULL
 							} /*}}}*/
 						},
 
-						NULL_MENU_NODE
+						NULL
 					} /*}}}*/
 				},
 
-				{ /* #show interfaces */
+				/* #show interfaces */
+				& (struct menu_node){
 					.name			= "interfaces",
 					.help			= "Interface status and configuration",
 					.mask			= PRIV(1),
 					.tokenize	= NULL,
 					.run			= cmd_sh_int,
-					.subtree	= (struct menu_node[]) { /*{{{*/
-						{ /* #show interfaces ethernet */
+					.subtree	= (struct menu_node *[]) { /*{{{*/
+						/* #show interfaces ethernet */
+						& (struct menu_node){
 							.name			= "ethernet",
 							.help			= "Ethernet IEEE 802.3",
 							.mask			= PRIV(1),
 							.tokenize	= NULL,
 							.run			= NULL,
-							.subtree	= (struct menu_node[]) { /*{{{*/
-								{ /* #show interfaces ethernet  */
+							.subtree	= (struct menu_node *[]) { /*{{{*/
+								/* #show interfaces ethernet  */
+								& (struct menu_node){
 									.name			= "",
 									.help			= "Ethernet interface number",
 									.mask			= PRIV(1),
@@ -2316,18 +2512,20 @@ struct menu_node menu_main = {
 									.subtree	= NULL
 								},
 
-								NULL_MENU_NODE
+								NULL
 							} /*}}}*/
 						},
 
-						{ /* #show interfaces vlan */
+						/* #show interfaces vlan */
+						& (struct menu_node){
 							.name			= "vlan",
 							.help			= "LMS Vlans",
 							.mask			= PRIV(1),
 							.tokenize	= NULL,
 							.run			= NULL,
-							.subtree	= (struct menu_node[]) { /*{{{*/
-								{ /* #show interfaces vlan <1-1094> */
+							.subtree	= (struct menu_node *[]) { /*{{{*/
+								/* #show interfaces vlan <1-1094> */
+								& (struct menu_node){
 									.name			= "<1-1094>",
 									.help			= "Vlan interface number",
 									.mask			= PRIV(1),
@@ -2336,15 +2534,16 @@ struct menu_node menu_main = {
 									.subtree	= NULL
 								},
 
-								NULL_MENU_NODE
+								NULL
 							} /*}}}*/
 						},
 
-						NULL_MENU_NODE
+						NULL
 					} /*}}}*/
 				},
 
-				{ /* #show ip */
+				/* #show ip */
+				& (struct menu_node){
 					.name			= "ip",
 					.help			= "IP information",
 					.mask			= PRIV(1),
@@ -2353,3054 +2552,40 @@ struct menu_node menu_main = {
 					.subtree	= NULL
 				},
 
-				{ /* #show mac */
+				/* #show mac */
+				& (struct menu_node){
 					.name			= "mac",
 					.help			= "MAC configuration",
 					.mask			= PRIV(1),
 					.tokenize	= NULL,
 					.run			= NULL,
-					.subtree	= (struct menu_node[]) { /*{{{*/
-						{ /* #show mac address-table */
+					.subtree	= (struct menu_node *[]) { /*{{{*/
+						/* #show mac address-table */
+						& (struct menu_node){
 							.name			= "address-table",
 							.help			= "MAC forwarding table",
 							.mask			= PRIV(1),
 							.tokenize	= NULL,
-							.run			= cmd_show_mac,
-							.subtree	= (struct menu_node[]) { /*{{{*/
-								{ /* #show mac address-table address */
-									.name			= "address",
-									.help			= "address keyword",
-									.mask			= PRIV(1),
-									.tokenize	= NULL,
-									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show mac address-table address H.H.H */
-											.name			= "H.H.H",
-											.help			= "48 bit mac address",
-											.mask			= PRIV(1),
-											.tokenize	= NULL,
-											.run			= cmd_sh_addr,
-											.subtree	= NULL
-										},
-
-										NULL_MENU_NODE
-									} /*}}}*/
-								},
-
-								{ /* #show mac address-table aging-time */
-									.name			= "aging-time",
-									.help			= "aging-time keyword",
-									.mask			= PRIV(1),
-									.tokenize	= NULL,
-									.run			= cmd_sh_mac_age,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show mac address-table aging-time | */
-											.name			= "|",
-											.help			= "Output modifiers",
-											.mask			= PRIV(1),
-											.tokenize	= NULL,
-											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show mac address-table aging-time | begin */
-													.name			= "begin",
-													.help			= "Begin with the line that matches",
-													.mask			= PRIV(1),
-													.tokenize	= NULL,
-													.run			= NULL,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #show mac address-table aging-time | begin LINE */
-															.name			= "LINE",
-															.help			= "Regular Expression",
-															.mask			= PRIV(1),
-															.tokenize	= NULL,
-															.run			= NULL,
-															.subtree	= NULL
-														},
-
-														NULL_MENU_NODE
-													} /*}}}*/
-												},
-
-												{ /* #show mac address-table aging-time | exclude */
-													.name			= "exclude",
-													.help			= "Exclude lines that match",
-													.mask			= PRIV(1),
-													.tokenize	= NULL,
-													.run			= NULL,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #show mac address-table aging-time | exclude LINE */
-															.name			= "LINE",
-															.help			= "Regular Expression",
-															.mask			= PRIV(1),
-															.tokenize	= NULL,
-															.run			= NULL,
-															.subtree	= NULL
-														},
-
-														NULL_MENU_NODE
-													} /*}}}*/
-												},
-
-												{ /* #show mac address-table aging-time | include */
-													.name			= "include",
-													.help			= "Include lines that match",
-													.mask			= PRIV(1),
-													.tokenize	= NULL,
-													.run			= NULL,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #show mac address-table aging-time | include LINE */
-															.name			= "LINE",
-															.help			= "Regular Expression",
-															.mask			= PRIV(1),
-															.tokenize	= NULL,
-															.run			= NULL,
-															.subtree	= NULL
-														},
-
-														NULL_MENU_NODE
-													} /*}}}*/
-												},
-
-												{ /* #show mac address-table aging-time | grep */
-													.name			= "grep",
-													.help			= "Linux grep functionality",
-													.mask			= PRIV(1),
-													.tokenize	= NULL,
-													.run			= NULL,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #show mac address-table aging-time | grep LINE */
-															.name			= "LINE",
-															.help			= "Regular Expression",
-															.mask			= PRIV(1),
-															.tokenize	= NULL,
-															.run			= NULL,
-															.subtree	= NULL
-														},
-
-														NULL_MENU_NODE
-													} /*}}}*/
-												},
-
-												NULL_MENU_NODE
-											} /*}}}*/
-										},
-
-										NULL_MENU_NODE
-									} /*}}}*/
-								},
-
-								{ /* #show mac address-table dynamic */
-									.name			= "dynamic",
-									.help			= "dynamic entry type",
-									.mask			= PRIV(1),
-									.tokenize	= NULL,
-									.run			= cmd_show_mac,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show mac address-table dynamic address */
-											.name			= "address",
-											.help			= "address keyword",
-											.mask			= PRIV(1),
-											.tokenize	= NULL,
-											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show mac address-table dynamic address H.H.H */
-													.name			= "H.H.H",
-													.help			= "48 bit mac address",
-													.mask			= PRIV(1),
-													.tokenize	= NULL,
-													.run			= cmd_sh_addr,
-													.subtree	= NULL
-												},
-
-												NULL_MENU_NODE
-											} /*}}}*/
-										},
-
-										{ /* #show mac address-table dynamic interface */
-											.name			= "interface",
-											.help			= "interface keyword",
-											.mask			= PRIV(1),
-											.tokenize	= NULL,
-											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show mac address-table dynamic interface ethernet */
-													.name			= "ethernet",
-													.help			= "Ethernet IEEE 802.3",
-													.mask			= PRIV(1),
-													.tokenize	= NULL,
-													.run			= NULL,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #show mac address-table dynamic interface ethernet  */
-															.name			= "",
-															.help			= "Ethernet interface number",
-															.mask			= PRIV(0),
-															.tokenize	= NULL,
-															.run			= cmd_sh_mac_eth,
-															.subtree	= (struct menu_node[]) { /*{{{*/
-																{ /* #show mac address-table dynamic interface ethernet  vlan */
-																	.name			= "vlan",
-																	.help			= "VLAN keyword",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= NULL,
-																	.subtree	= (struct menu_node[]) { /*{{{*/
-																		{ /* #show mac address-table dynamic interface ethernet  vlan <1-1094> */
-																			.name			= "<1-1094>",
-																			.help			= "Vlan interface number",
-																			.mask			= PRIV(1),
-																			.tokenize	= NULL,
-																			.run			= cmd_sh_mac_vlan,
-																			.subtree	= (struct menu_node[]) { /*{{{*/
-																				{ /* #show mac address-table dynamic interface ethernet  vlan <1-1094> | */
-																					.name			= "|",
-																					.help			= "Output modifiers",
-																					.mask			= PRIV(1),
-																					.tokenize	= NULL,
-																					.run			= NULL,
-																					.subtree	= (struct menu_node[]) { /*{{{*/
-																						{ /* #show mac address-table dynamic interface ethernet  vlan <1-1094> | begin */
-																							.name			= "begin",
-																							.help			= "Begin with the line that matches",
-																							.mask			= PRIV(1),
-																							.tokenize	= NULL,
-																							.run			= NULL,
-																							.subtree	= (struct menu_node[]) { /*{{{*/
-																								{ /* #show mac address-table dynamic interface ethernet  vlan <1-1094> | begin LINE */
-																									.name			= "LINE",
-																									.help			= "Regular Expression",
-																									.mask			= PRIV(1),
-																									.tokenize	= NULL,
-																									.run			= NULL,
-																									.subtree	= NULL
-																								},
-
-																								NULL_MENU_NODE
-																							} /*}}}*/
-																						},
-
-																						{ /* #show mac address-table dynamic interface ethernet  vlan <1-1094> | exclude */
-																							.name			= "exclude",
-																							.help			= "Exclude lines that match",
-																							.mask			= PRIV(1),
-																							.tokenize	= NULL,
-																							.run			= NULL,
-																							.subtree	= (struct menu_node[]) { /*{{{*/
-																								{ /* #show mac address-table dynamic interface ethernet  vlan <1-1094> | exclude LINE */
-																									.name			= "LINE",
-																									.help			= "Regular Expression",
-																									.mask			= PRIV(1),
-																									.tokenize	= NULL,
-																									.run			= NULL,
-																									.subtree	= NULL
-																								},
-
-																								NULL_MENU_NODE
-																							} /*}}}*/
-																						},
-
-																						{ /* #show mac address-table dynamic interface ethernet  vlan <1-1094> | include */
-																							.name			= "include",
-																							.help			= "Include lines that match",
-																							.mask			= PRIV(1),
-																							.tokenize	= NULL,
-																							.run			= NULL,
-																							.subtree	= (struct menu_node[]) { /*{{{*/
-																								{ /* #show mac address-table dynamic interface ethernet  vlan <1-1094> | include LINE */
-																									.name			= "LINE",
-																									.help			= "Regular Expression",
-																									.mask			= PRIV(1),
-																									.tokenize	= NULL,
-																									.run			= NULL,
-																									.subtree	= NULL
-																								},
-
-																								NULL_MENU_NODE
-																							} /*}}}*/
-																						},
-
-																						{ /* #show mac address-table dynamic interface ethernet  vlan <1-1094> | grep */
-																							.name			= "grep",
-																							.help			= "Linux grep functionality",
-																							.mask			= PRIV(1),
-																							.tokenize	= NULL,
-																							.run			= NULL,
-																							.subtree	= (struct menu_node[]) { /*{{{*/
-																								{ /* #show mac address-table dynamic interface ethernet  vlan <1-1094> | grep LINE */
-																									.name			= "LINE",
-																									.help			= "Regular Expression",
-																									.mask			= PRIV(1),
-																									.tokenize	= NULL,
-																									.run			= NULL,
-																									.subtree	= NULL
-																								},
-
-																								NULL_MENU_NODE
-																							} /*}}}*/
-																						},
-
-																						NULL_MENU_NODE
-																					} /*}}}*/
-																				},
-
-																				NULL_MENU_NODE
-																			} /*}}}*/
-																		},
-
-																		NULL_MENU_NODE
-																	} /*}}}*/
-																},
-
-																{ /* #show mac address-table dynamic interface ethernet  | */
-																	.name			= "|",
-																	.help			= "Output modifiers",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= NULL,
-																	.subtree	= (struct menu_node[]) { /*{{{*/
-																		{ /* #show mac address-table dynamic interface ethernet  | begin */
-																			.name			= "begin",
-																			.help			= "Begin with the line that matches",
-																			.mask			= PRIV(1),
-																			.tokenize	= NULL,
-																			.run			= NULL,
-																			.subtree	= (struct menu_node[]) { /*{{{*/
-																				{ /* #show mac address-table dynamic interface ethernet  | begin LINE */
-																					.name			= "LINE",
-																					.help			= "Regular Expression",
-																					.mask			= PRIV(1),
-																					.tokenize	= NULL,
-																					.run			= NULL,
-																					.subtree	= NULL
-																				},
-
-																				NULL_MENU_NODE
-																			} /*}}}*/
-																		},
-
-																		{ /* #show mac address-table dynamic interface ethernet  | exclude */
-																			.name			= "exclude",
-																			.help			= "Exclude lines that match",
-																			.mask			= PRIV(1),
-																			.tokenize	= NULL,
-																			.run			= NULL,
-																			.subtree	= (struct menu_node[]) { /*{{{*/
-																				{ /* #show mac address-table dynamic interface ethernet  | exclude LINE */
-																					.name			= "LINE",
-																					.help			= "Regular Expression",
-																					.mask			= PRIV(1),
-																					.tokenize	= NULL,
-																					.run			= NULL,
-																					.subtree	= NULL
-																				},
-
-																				NULL_MENU_NODE
-																			} /*}}}*/
-																		},
-
-																		{ /* #show mac address-table dynamic interface ethernet  | include */
-																			.name			= "include",
-																			.help			= "Include lines that match",
-																			.mask			= PRIV(1),
-																			.tokenize	= NULL,
-																			.run			= NULL,
-																			.subtree	= (struct menu_node[]) { /*{{{*/
-																				{ /* #show mac address-table dynamic interface ethernet  | include LINE */
-																					.name			= "LINE",
-																					.help			= "Regular Expression",
-																					.mask			= PRIV(1),
-																					.tokenize	= NULL,
-																					.run			= NULL,
-																					.subtree	= NULL
-																				},
-
-																				NULL_MENU_NODE
-																			} /*}}}*/
-																		},
-
-																		{ /* #show mac address-table dynamic interface ethernet  | grep */
-																			.name			= "grep",
-																			.help			= "Linux grep functionality",
-																			.mask			= PRIV(1),
-																			.tokenize	= NULL,
-																			.run			= NULL,
-																			.subtree	= (struct menu_node[]) { /*{{{*/
-																				{ /* #show mac address-table dynamic interface ethernet  | grep LINE */
-																					.name			= "LINE",
-																					.help			= "Regular Expression",
-																					.mask			= PRIV(1),
-																					.tokenize	= NULL,
-																					.run			= NULL,
-																					.subtree	= NULL
-																				},
-
-																				NULL_MENU_NODE
-																			} /*}}}*/
-																		},
-
-																		NULL_MENU_NODE
-																	} /*}}}*/
-																},
-
-																NULL_MENU_NODE
-															} /*}}}*/
-														},
-
-														NULL_MENU_NODE
-													} /*}}}*/
-												},
-
-												NULL_MENU_NODE
-											} /*}}}*/
-										},
-
-										{ /* #show mac address-table dynamic vlan */
-											.name			= "vlan",
-											.help			= "VLAN keyword",
-											.mask			= PRIV(1),
-											.tokenize	= NULL,
-											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show mac address-table dynamic vlan <1-1094> */
-													.name			= "<1-1094>",
-													.help			= "Vlan interface number",
-													.mask			= PRIV(1),
-													.tokenize	= NULL,
-													.run			= cmd_sh_mac_vlan,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #show mac address-table dynamic vlan <1-1094> | */
-															.name			= "|",
-															.help			= "Output modifiers",
-															.mask			= PRIV(1),
-															.tokenize	= NULL,
-															.run			= NULL,
-															.subtree	= (struct menu_node[]) { /*{{{*/
-																{ /* #show mac address-table dynamic vlan <1-1094> | begin */
-																	.name			= "begin",
-																	.help			= "Begin with the line that matches",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= NULL,
-																	.subtree	= (struct menu_node[]) { /*{{{*/
-																		{ /* #show mac address-table dynamic vlan <1-1094> | begin LINE */
-																			.name			= "LINE",
-																			.help			= "Regular Expression",
-																			.mask			= PRIV(1),
-																			.tokenize	= NULL,
-																			.run			= NULL,
-																			.subtree	= NULL
-																		},
-
-																		NULL_MENU_NODE
-																	} /*}}}*/
-																},
-
-																{ /* #show mac address-table dynamic vlan <1-1094> | exclude */
-																	.name			= "exclude",
-																	.help			= "Exclude lines that match",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= NULL,
-																	.subtree	= (struct menu_node[]) { /*{{{*/
-																		{ /* #show mac address-table dynamic vlan <1-1094> | exclude LINE */
-																			.name			= "LINE",
-																			.help			= "Regular Expression",
-																			.mask			= PRIV(1),
-																			.tokenize	= NULL,
-																			.run			= NULL,
-																			.subtree	= NULL
-																		},
-
-																		NULL_MENU_NODE
-																	} /*}}}*/
-																},
-
-																{ /* #show mac address-table dynamic vlan <1-1094> | include */
-																	.name			= "include",
-																	.help			= "Include lines that match",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= NULL,
-																	.subtree	= (struct menu_node[]) { /*{{{*/
-																		{ /* #show mac address-table dynamic vlan <1-1094> | include LINE */
-																			.name			= "LINE",
-																			.help			= "Regular Expression",
-																			.mask			= PRIV(1),
-																			.tokenize	= NULL,
-																			.run			= NULL,
-																			.subtree	= NULL
-																		},
-
-																		NULL_MENU_NODE
-																	} /*}}}*/
-																},
-
-																{ /* #show mac address-table dynamic vlan <1-1094> | grep */
-																	.name			= "grep",
-																	.help			= "Linux grep functionality",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= NULL,
-																	.subtree	= (struct menu_node[]) { /*{{{*/
-																		{ /* #show mac address-table dynamic vlan <1-1094> | grep LINE */
-																			.name			= "LINE",
-																			.help			= "Regular Expression",
-																			.mask			= PRIV(1),
-																			.tokenize	= NULL,
-																			.run			= NULL,
-																			.subtree	= NULL
-																		},
-
-																		NULL_MENU_NODE
-																	} /*}}}*/
-																},
-
-																NULL_MENU_NODE
-															} /*}}}*/
-														},
-
-														NULL_MENU_NODE
-													} /*}}}*/
-												},
-
-												NULL_MENU_NODE
-											} /*}}}*/
-										},
-
-										{ /* #show mac address-table dynamic | */
-											.name			= "|",
-											.help			= "Output modifiers",
-											.mask			= PRIV(1),
-											.tokenize	= NULL,
-											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show mac address-table dynamic | begin */
-													.name			= "begin",
-													.help			= "Begin with the line that matches",
-													.mask			= PRIV(1),
-													.tokenize	= NULL,
-													.run			= NULL,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #show mac address-table dynamic | begin LINE */
-															.name			= "LINE",
-															.help			= "Regular Expression",
-															.mask			= PRIV(1),
-															.tokenize	= NULL,
-															.run			= NULL,
-															.subtree	= NULL
-														},
-
-														NULL_MENU_NODE
-													} /*}}}*/
-												},
-
-												{ /* #show mac address-table dynamic | exclude */
-													.name			= "exclude",
-													.help			= "Exclude lines that match",
-													.mask			= PRIV(1),
-													.tokenize	= NULL,
-													.run			= NULL,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #show mac address-table dynamic | exclude LINE */
-															.name			= "LINE",
-															.help			= "Regular Expression",
-															.mask			= PRIV(1),
-															.tokenize	= NULL,
-															.run			= NULL,
-															.subtree	= NULL
-														},
-
-														NULL_MENU_NODE
-													} /*}}}*/
-												},
-
-												{ /* #show mac address-table dynamic | include */
-													.name			= "include",
-													.help			= "Include lines that match",
-													.mask			= PRIV(1),
-													.tokenize	= NULL,
-													.run			= NULL,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #show mac address-table dynamic | include LINE */
-															.name			= "LINE",
-															.help			= "Regular Expression",
-															.mask			= PRIV(1),
-															.tokenize	= NULL,
-															.run			= NULL,
-															.subtree	= NULL
-														},
-
-														NULL_MENU_NODE
-													} /*}}}*/
-												},
-
-												{ /* #show mac address-table dynamic | grep */
-													.name			= "grep",
-													.help			= "Linux grep functionality",
-													.mask			= PRIV(1),
-													.tokenize	= NULL,
-													.run			= NULL,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #show mac address-table dynamic | grep LINE */
-															.name			= "LINE",
-															.help			= "Regular Expression",
-															.mask			= PRIV(1),
-															.tokenize	= NULL,
-															.run			= NULL,
-															.subtree	= NULL
-														},
-
-														NULL_MENU_NODE
-													} /*}}}*/
-												},
-
-												NULL_MENU_NODE
-											} /*}}}*/
-										},
-
-										NULL_MENU_NODE
-									} /*}}}*/
-								},
-
-								{ /* #show mac address-table interface */
-									.name			= "interface",
-									.help			= "interface keyword",
-									.mask			= PRIV(1),
-									.tokenize	= NULL,
-									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show mac address-table interface ethernet */
-											.name			= "ethernet",
-											.help			= "Ethernet IEEE 802.3",
-											.mask			= PRIV(1),
-											.tokenize	= NULL,
-											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show mac address-table interface ethernet  */
-													.name			= "",
-													.help			= "Ethernet interface number",
-													.mask			= PRIV(0),
-													.tokenize	= NULL,
-													.run			= cmd_sh_mac_eth,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #show mac address-table interface ethernet  vlan */
-															.name			= "vlan",
-															.help			= "VLAN keyword",
-															.mask			= PRIV(1),
-															.tokenize	= NULL,
-															.run			= NULL,
-															.subtree	= (struct menu_node[]) { /*{{{*/
-																{ /* #show mac address-table interface ethernet  vlan <1-1094> */
-																	.name			= "<1-1094>",
-																	.help			= "Vlan interface number",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= cmd_sh_mac_vlan,
-																	.subtree	= (struct menu_node[]) { /*{{{*/
-																		{ /* #show mac address-table interface ethernet  vlan <1-1094> | */
-																			.name			= "|",
-																			.help			= "Output modifiers",
-																			.mask			= PRIV(1),
-																			.tokenize	= NULL,
-																			.run			= NULL,
-																			.subtree	= (struct menu_node[]) { /*{{{*/
-																				{ /* #show mac address-table interface ethernet  vlan <1-1094> | begin */
-																					.name			= "begin",
-																					.help			= "Begin with the line that matches",
-																					.mask			= PRIV(1),
-																					.tokenize	= NULL,
-																					.run			= NULL,
-																					.subtree	= (struct menu_node[]) { /*{{{*/
-																						{ /* #show mac address-table interface ethernet  vlan <1-1094> | begin LINE */
-																							.name			= "LINE",
-																							.help			= "Regular Expression",
-																							.mask			= PRIV(1),
-																							.tokenize	= NULL,
-																							.run			= NULL,
-																							.subtree	= NULL
-																						},
-
-																						NULL_MENU_NODE
-																					} /*}}}*/
-																				},
-
-																				{ /* #show mac address-table interface ethernet  vlan <1-1094> | exclude */
-																					.name			= "exclude",
-																					.help			= "Exclude lines that match",
-																					.mask			= PRIV(1),
-																					.tokenize	= NULL,
-																					.run			= NULL,
-																					.subtree	= (struct menu_node[]) { /*{{{*/
-																						{ /* #show mac address-table interface ethernet  vlan <1-1094> | exclude LINE */
-																							.name			= "LINE",
-																							.help			= "Regular Expression",
-																							.mask			= PRIV(1),
-																							.tokenize	= NULL,
-																							.run			= NULL,
-																							.subtree	= NULL
-																						},
-
-																						NULL_MENU_NODE
-																					} /*}}}*/
-																				},
-
-																				{ /* #show mac address-table interface ethernet  vlan <1-1094> | include */
-																					.name			= "include",
-																					.help			= "Include lines that match",
-																					.mask			= PRIV(1),
-																					.tokenize	= NULL,
-																					.run			= NULL,
-																					.subtree	= (struct menu_node[]) { /*{{{*/
-																						{ /* #show mac address-table interface ethernet  vlan <1-1094> | include LINE */
-																							.name			= "LINE",
-																							.help			= "Regular Expression",
-																							.mask			= PRIV(1),
-																							.tokenize	= NULL,
-																							.run			= NULL,
-																							.subtree	= NULL
-																						},
-
-																						NULL_MENU_NODE
-																					} /*}}}*/
-																				},
-
-																				{ /* #show mac address-table interface ethernet  vlan <1-1094> | grep */
-																					.name			= "grep",
-																					.help			= "Linux grep functionality",
-																					.mask			= PRIV(1),
-																					.tokenize	= NULL,
-																					.run			= NULL,
-																					.subtree	= (struct menu_node[]) { /*{{{*/
-																						{ /* #show mac address-table interface ethernet  vlan <1-1094> | grep LINE */
-																							.name			= "LINE",
-																							.help			= "Regular Expression",
-																							.mask			= PRIV(1),
-																							.tokenize	= NULL,
-																							.run			= NULL,
-																							.subtree	= NULL
-																						},
-
-																						NULL_MENU_NODE
-																					} /*}}}*/
-																				},
-
-																				NULL_MENU_NODE
-																			} /*}}}*/
-																		},
-
-																		NULL_MENU_NODE
-																	} /*}}}*/
-																},
-
-																NULL_MENU_NODE
-															} /*}}}*/
-														},
-
-														{ /* #show mac address-table interface ethernet  | */
-															.name			= "|",
-															.help			= "Output modifiers",
-															.mask			= PRIV(1),
-															.tokenize	= NULL,
-															.run			= NULL,
-															.subtree	= (struct menu_node[]) { /*{{{*/
-																{ /* #show mac address-table interface ethernet  | begin */
-																	.name			= "begin",
-																	.help			= "Begin with the line that matches",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= NULL,
-																	.subtree	= (struct menu_node[]) { /*{{{*/
-																		{ /* #show mac address-table interface ethernet  | begin LINE */
-																			.name			= "LINE",
-																			.help			= "Regular Expression",
-																			.mask			= PRIV(1),
-																			.tokenize	= NULL,
-																			.run			= NULL,
-																			.subtree	= NULL
-																		},
-
-																		NULL_MENU_NODE
-																	} /*}}}*/
-																},
-
-																{ /* #show mac address-table interface ethernet  | exclude */
-																	.name			= "exclude",
-																	.help			= "Exclude lines that match",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= NULL,
-																	.subtree	= (struct menu_node[]) { /*{{{*/
-																		{ /* #show mac address-table interface ethernet  | exclude LINE */
-																			.name			= "LINE",
-																			.help			= "Regular Expression",
-																			.mask			= PRIV(1),
-																			.tokenize	= NULL,
-																			.run			= NULL,
-																			.subtree	= NULL
-																		},
-
-																		NULL_MENU_NODE
-																	} /*}}}*/
-																},
-
-																{ /* #show mac address-table interface ethernet  | include */
-																	.name			= "include",
-																	.help			= "Include lines that match",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= NULL,
-																	.subtree	= (struct menu_node[]) { /*{{{*/
-																		{ /* #show mac address-table interface ethernet  | include LINE */
-																			.name			= "LINE",
-																			.help			= "Regular Expression",
-																			.mask			= PRIV(1),
-																			.tokenize	= NULL,
-																			.run			= NULL,
-																			.subtree	= NULL
-																		},
-
-																		NULL_MENU_NODE
-																	} /*}}}*/
-																},
-
-																{ /* #show mac address-table interface ethernet  | grep */
-																	.name			= "grep",
-																	.help			= "Linux grep functionality",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= NULL,
-																	.subtree	= (struct menu_node[]) { /*{{{*/
-																		{ /* #show mac address-table interface ethernet  | grep LINE */
-																			.name			= "LINE",
-																			.help			= "Regular Expression",
-																			.mask			= PRIV(1),
-																			.tokenize	= NULL,
-																			.run			= NULL,
-																			.subtree	= NULL
-																		},
-
-																		NULL_MENU_NODE
-																	} /*}}}*/
-																},
-
-																NULL_MENU_NODE
-															} /*}}}*/
-														},
-
-														NULL_MENU_NODE
-													} /*}}}*/
-												},
-
-												NULL_MENU_NODE
-											} /*}}}*/
-										},
-
-										NULL_MENU_NODE
-									} /*}}}*/
-								},
-
-								{ /* #show mac address-table static */
-									.name			= "static",
-									.help			= "static entry type",
-									.mask			= PRIV(1),
-									.tokenize	= NULL,
-									.run			= cmd_show_mac,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show mac address-table static address */
-											.name			= "address",
-											.help			= "address keyword",
-											.mask			= PRIV(1),
-											.tokenize	= NULL,
-											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show mac address-table static address H.H.H */
-													.name			= "H.H.H",
-													.help			= "48 bit mac address",
-													.mask			= PRIV(1),
-													.tokenize	= NULL,
-													.run			= cmd_sh_addr,
-													.subtree	= NULL
-												},
-
-												NULL_MENU_NODE
-											} /*}}}*/
-										},
-
-										{ /* #show mac address-table static interface */
-											.name			= "interface",
-											.help			= "interface keyword",
-											.mask			= PRIV(1),
-											.tokenize	= NULL,
-											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show mac address-table static interface ethernet */
-													.name			= "ethernet",
-													.help			= "Ethernet IEEE 802.3",
-													.mask			= PRIV(1),
-													.tokenize	= NULL,
-													.run			= NULL,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #show mac address-table static interface ethernet  */
-															.name			= "",
-															.help			= "Ethernet interface number",
-															.mask			= PRIV(0),
-															.tokenize	= NULL,
-															.run			= cmd_sh_mac_eth,
-															.subtree	= (struct menu_node[]) { /*{{{*/
-																{ /* #show mac address-table static interface ethernet  vlan */
-																	.name			= "vlan",
-																	.help			= "VLAN keyword",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= NULL,
-																	.subtree	= (struct menu_node[]) { /*{{{*/
-																		{ /* #show mac address-table static interface ethernet  vlan <1-1094> */
-																			.name			= "<1-1094>",
-																			.help			= "Vlan interface number",
-																			.mask			= PRIV(1),
-																			.tokenize	= NULL,
-																			.run			= cmd_sh_mac_vlan,
-																			.subtree	= (struct menu_node[]) { /*{{{*/
-																				{ /* #show mac address-table static interface ethernet  vlan <1-1094> | */
-																					.name			= "|",
-																					.help			= "Output modifiers",
-																					.mask			= PRIV(1),
-																					.tokenize	= NULL,
-																					.run			= NULL,
-																					.subtree	= (struct menu_node[]) { /*{{{*/
-																						{ /* #show mac address-table static interface ethernet  vlan <1-1094> | begin */
-																							.name			= "begin",
-																							.help			= "Begin with the line that matches",
-																							.mask			= PRIV(1),
-																							.tokenize	= NULL,
-																							.run			= NULL,
-																							.subtree	= (struct menu_node[]) { /*{{{*/
-																								{ /* #show mac address-table static interface ethernet  vlan <1-1094> | begin LINE */
-																									.name			= "LINE",
-																									.help			= "Regular Expression",
-																									.mask			= PRIV(1),
-																									.tokenize	= NULL,
-																									.run			= NULL,
-																									.subtree	= NULL
-																								},
-
-																								NULL_MENU_NODE
-																							} /*}}}*/
-																						},
-
-																						{ /* #show mac address-table static interface ethernet  vlan <1-1094> | exclude */
-																							.name			= "exclude",
-																							.help			= "Exclude lines that match",
-																							.mask			= PRIV(1),
-																							.tokenize	= NULL,
-																							.run			= NULL,
-																							.subtree	= (struct menu_node[]) { /*{{{*/
-																								{ /* #show mac address-table static interface ethernet  vlan <1-1094> | exclude LINE */
-																									.name			= "LINE",
-																									.help			= "Regular Expression",
-																									.mask			= PRIV(1),
-																									.tokenize	= NULL,
-																									.run			= NULL,
-																									.subtree	= NULL
-																								},
-
-																								NULL_MENU_NODE
-																							} /*}}}*/
-																						},
-
-																						{ /* #show mac address-table static interface ethernet  vlan <1-1094> | include */
-																							.name			= "include",
-																							.help			= "Include lines that match",
-																							.mask			= PRIV(1),
-																							.tokenize	= NULL,
-																							.run			= NULL,
-																							.subtree	= (struct menu_node[]) { /*{{{*/
-																								{ /* #show mac address-table static interface ethernet  vlan <1-1094> | include LINE */
-																									.name			= "LINE",
-																									.help			= "Regular Expression",
-																									.mask			= PRIV(1),
-																									.tokenize	= NULL,
-																									.run			= NULL,
-																									.subtree	= NULL
-																								},
-
-																								NULL_MENU_NODE
-																							} /*}}}*/
-																						},
-
-																						{ /* #show mac address-table static interface ethernet  vlan <1-1094> | grep */
-																							.name			= "grep",
-																							.help			= "Linux grep functionality",
-																							.mask			= PRIV(1),
-																							.tokenize	= NULL,
-																							.run			= NULL,
-																							.subtree	= (struct menu_node[]) { /*{{{*/
-																								{ /* #show mac address-table static interface ethernet  vlan <1-1094> | grep LINE */
-																									.name			= "LINE",
-																									.help			= "Regular Expression",
-																									.mask			= PRIV(1),
-																									.tokenize	= NULL,
-																									.run			= NULL,
-																									.subtree	= NULL
-																								},
-
-																								NULL_MENU_NODE
-																							} /*}}}*/
-																						},
-
-																						NULL_MENU_NODE
-																					} /*}}}*/
-																				},
-
-																				NULL_MENU_NODE
-																			} /*}}}*/
-																		},
-
-																		NULL_MENU_NODE
-																	} /*}}}*/
-																},
-
-																{ /* #show mac address-table static interface ethernet  | */
-																	.name			= "|",
-																	.help			= "Output modifiers",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= NULL,
-																	.subtree	= (struct menu_node[]) { /*{{{*/
-																		{ /* #show mac address-table static interface ethernet  | begin */
-																			.name			= "begin",
-																			.help			= "Begin with the line that matches",
-																			.mask			= PRIV(1),
-																			.tokenize	= NULL,
-																			.run			= NULL,
-																			.subtree	= (struct menu_node[]) { /*{{{*/
-																				{ /* #show mac address-table static interface ethernet  | begin LINE */
-																					.name			= "LINE",
-																					.help			= "Regular Expression",
-																					.mask			= PRIV(1),
-																					.tokenize	= NULL,
-																					.run			= NULL,
-																					.subtree	= NULL
-																				},
-
-																				NULL_MENU_NODE
-																			} /*}}}*/
-																		},
-
-																		{ /* #show mac address-table static interface ethernet  | exclude */
-																			.name			= "exclude",
-																			.help			= "Exclude lines that match",
-																			.mask			= PRIV(1),
-																			.tokenize	= NULL,
-																			.run			= NULL,
-																			.subtree	= (struct menu_node[]) { /*{{{*/
-																				{ /* #show mac address-table static interface ethernet  | exclude LINE */
-																					.name			= "LINE",
-																					.help			= "Regular Expression",
-																					.mask			= PRIV(1),
-																					.tokenize	= NULL,
-																					.run			= NULL,
-																					.subtree	= NULL
-																				},
-
-																				NULL_MENU_NODE
-																			} /*}}}*/
-																		},
-
-																		{ /* #show mac address-table static interface ethernet  | include */
-																			.name			= "include",
-																			.help			= "Include lines that match",
-																			.mask			= PRIV(1),
-																			.tokenize	= NULL,
-																			.run			= NULL,
-																			.subtree	= (struct menu_node[]) { /*{{{*/
-																				{ /* #show mac address-table static interface ethernet  | include LINE */
-																					.name			= "LINE",
-																					.help			= "Regular Expression",
-																					.mask			= PRIV(1),
-																					.tokenize	= NULL,
-																					.run			= NULL,
-																					.subtree	= NULL
-																				},
-
-																				NULL_MENU_NODE
-																			} /*}}}*/
-																		},
-
-																		{ /* #show mac address-table static interface ethernet  | grep */
-																			.name			= "grep",
-																			.help			= "Linux grep functionality",
-																			.mask			= PRIV(1),
-																			.tokenize	= NULL,
-																			.run			= NULL,
-																			.subtree	= (struct menu_node[]) { /*{{{*/
-																				{ /* #show mac address-table static interface ethernet  | grep LINE */
-																					.name			= "LINE",
-																					.help			= "Regular Expression",
-																					.mask			= PRIV(1),
-																					.tokenize	= NULL,
-																					.run			= NULL,
-																					.subtree	= NULL
-																				},
-
-																				NULL_MENU_NODE
-																			} /*}}}*/
-																		},
-
-																		NULL_MENU_NODE
-																	} /*}}}*/
-																},
-
-																NULL_MENU_NODE
-															} /*}}}*/
-														},
-
-														NULL_MENU_NODE
-													} /*}}}*/
-												},
-
-												NULL_MENU_NODE
-											} /*}}}*/
-										},
-
-										{ /* #show mac address-table static vlan */
-											.name			= "vlan",
-											.help			= "VLAN keyword",
-											.mask			= PRIV(1),
-											.tokenize	= NULL,
-											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show mac address-table static vlan <1-1094> */
-													.name			= "<1-1094>",
-													.help			= "Vlan interface number",
-													.mask			= PRIV(1),
-													.tokenize	= NULL,
-													.run			= cmd_sh_mac_vlan,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #show mac address-table static vlan <1-1094> | */
-															.name			= "|",
-															.help			= "Output modifiers",
-															.mask			= PRIV(1),
-															.tokenize	= NULL,
-															.run			= NULL,
-															.subtree	= (struct menu_node[]) { /*{{{*/
-																{ /* #show mac address-table static vlan <1-1094> | begin */
-																	.name			= "begin",
-																	.help			= "Begin with the line that matches",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= NULL,
-																	.subtree	= (struct menu_node[]) { /*{{{*/
-																		{ /* #show mac address-table static vlan <1-1094> | begin LINE */
-																			.name			= "LINE",
-																			.help			= "Regular Expression",
-																			.mask			= PRIV(1),
-																			.tokenize	= NULL,
-																			.run			= NULL,
-																			.subtree	= NULL
-																		},
-
-																		NULL_MENU_NODE
-																	} /*}}}*/
-																},
-
-																{ /* #show mac address-table static vlan <1-1094> | exclude */
-																	.name			= "exclude",
-																	.help			= "Exclude lines that match",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= NULL,
-																	.subtree	= (struct menu_node[]) { /*{{{*/
-																		{ /* #show mac address-table static vlan <1-1094> | exclude LINE */
-																			.name			= "LINE",
-																			.help			= "Regular Expression",
-																			.mask			= PRIV(1),
-																			.tokenize	= NULL,
-																			.run			= NULL,
-																			.subtree	= NULL
-																		},
-
-																		NULL_MENU_NODE
-																	} /*}}}*/
-																},
-
-																{ /* #show mac address-table static vlan <1-1094> | include */
-																	.name			= "include",
-																	.help			= "Include lines that match",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= NULL,
-																	.subtree	= (struct menu_node[]) { /*{{{*/
-																		{ /* #show mac address-table static vlan <1-1094> | include LINE */
-																			.name			= "LINE",
-																			.help			= "Regular Expression",
-																			.mask			= PRIV(1),
-																			.tokenize	= NULL,
-																			.run			= NULL,
-																			.subtree	= NULL
-																		},
-
-																		NULL_MENU_NODE
-																	} /*}}}*/
-																},
-
-																{ /* #show mac address-table static vlan <1-1094> | grep */
-																	.name			= "grep",
-																	.help			= "Linux grep functionality",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= NULL,
-																	.subtree	= (struct menu_node[]) { /*{{{*/
-																		{ /* #show mac address-table static vlan <1-1094> | grep LINE */
-																			.name			= "LINE",
-																			.help			= "Regular Expression",
-																			.mask			= PRIV(1),
-																			.tokenize	= NULL,
-																			.run			= NULL,
-																			.subtree	= NULL
-																		},
-
-																		NULL_MENU_NODE
-																	} /*}}}*/
-																},
-
-																NULL_MENU_NODE
-															} /*}}}*/
-														},
-
-														NULL_MENU_NODE
-													} /*}}}*/
-												},
-
-												NULL_MENU_NODE
-											} /*}}}*/
-										},
-
-										{ /* #show mac address-table static | */
-											.name			= "|",
-											.help			= "Output modifiers",
-											.mask			= PRIV(1),
-											.tokenize	= NULL,
-											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show mac address-table static | begin */
-													.name			= "begin",
-													.help			= "Begin with the line that matches",
-													.mask			= PRIV(1),
-													.tokenize	= NULL,
-													.run			= NULL,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #show mac address-table static | begin LINE */
-															.name			= "LINE",
-															.help			= "Regular Expression",
-															.mask			= PRIV(1),
-															.tokenize	= NULL,
-															.run			= NULL,
-															.subtree	= NULL
-														},
-
-														NULL_MENU_NODE
-													} /*}}}*/
-												},
-
-												{ /* #show mac address-table static | exclude */
-													.name			= "exclude",
-													.help			= "Exclude lines that match",
-													.mask			= PRIV(1),
-													.tokenize	= NULL,
-													.run			= NULL,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #show mac address-table static | exclude LINE */
-															.name			= "LINE",
-															.help			= "Regular Expression",
-															.mask			= PRIV(1),
-															.tokenize	= NULL,
-															.run			= NULL,
-															.subtree	= NULL
-														},
-
-														NULL_MENU_NODE
-													} /*}}}*/
-												},
-
-												{ /* #show mac address-table static | include */
-													.name			= "include",
-													.help			= "Include lines that match",
-													.mask			= PRIV(1),
-													.tokenize	= NULL,
-													.run			= NULL,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #show mac address-table static | include LINE */
-															.name			= "LINE",
-															.help			= "Regular Expression",
-															.mask			= PRIV(1),
-															.tokenize	= NULL,
-															.run			= NULL,
-															.subtree	= NULL
-														},
-
-														NULL_MENU_NODE
-													} /*}}}*/
-												},
-
-												{ /* #show mac address-table static | grep */
-													.name			= "grep",
-													.help			= "Linux grep functionality",
-													.mask			= PRIV(1),
-													.tokenize	= NULL,
-													.run			= NULL,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #show mac address-table static | grep LINE */
-															.name			= "LINE",
-															.help			= "Regular Expression",
-															.mask			= PRIV(1),
-															.tokenize	= NULL,
-															.run			= NULL,
-															.subtree	= NULL
-														},
-
-														NULL_MENU_NODE
-													} /*}}}*/
-												},
-
-												NULL_MENU_NODE
-											} /*}}}*/
-										},
-
-										NULL_MENU_NODE
-									} /*}}}*/
-								},
-
-								{ /* #show mac address-table vlan */
-									.name			= "vlan",
-									.help			= "VLAN keyword",
-									.mask			= PRIV(1),
-									.tokenize	= NULL,
-									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show mac address-table vlan <1-1094> */
-											.name			= "<1-1094>",
-											.help			= "Vlan interface number",
-											.mask			= PRIV(1),
-											.tokenize	= NULL,
-											.run			= cmd_sh_mac_vlan,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show mac address-table vlan <1-1094> | */
-													.name			= "|",
-													.help			= "Output modifiers",
-													.mask			= PRIV(1),
-													.tokenize	= NULL,
-													.run			= NULL,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #show mac address-table vlan <1-1094> | begin */
-															.name			= "begin",
-															.help			= "Begin with the line that matches",
-															.mask			= PRIV(1),
-															.tokenize	= NULL,
-															.run			= NULL,
-															.subtree	= (struct menu_node[]) { /*{{{*/
-																{ /* #show mac address-table vlan <1-1094> | begin LINE */
-																	.name			= "LINE",
-																	.help			= "Regular Expression",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= NULL,
-																	.subtree	= NULL
-																},
-
-																NULL_MENU_NODE
-															} /*}}}*/
-														},
-
-														{ /* #show mac address-table vlan <1-1094> | exclude */
-															.name			= "exclude",
-															.help			= "Exclude lines that match",
-															.mask			= PRIV(1),
-															.tokenize	= NULL,
-															.run			= NULL,
-															.subtree	= (struct menu_node[]) { /*{{{*/
-																{ /* #show mac address-table vlan <1-1094> | exclude LINE */
-																	.name			= "LINE",
-																	.help			= "Regular Expression",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= NULL,
-																	.subtree	= NULL
-																},
-
-																NULL_MENU_NODE
-															} /*}}}*/
-														},
-
-														{ /* #show mac address-table vlan <1-1094> | include */
-															.name			= "include",
-															.help			= "Include lines that match",
-															.mask			= PRIV(1),
-															.tokenize	= NULL,
-															.run			= NULL,
-															.subtree	= (struct menu_node[]) { /*{{{*/
-																{ /* #show mac address-table vlan <1-1094> | include LINE */
-																	.name			= "LINE",
-																	.help			= "Regular Expression",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= NULL,
-																	.subtree	= NULL
-																},
-
-																NULL_MENU_NODE
-															} /*}}}*/
-														},
-
-														{ /* #show mac address-table vlan <1-1094> | grep */
-															.name			= "grep",
-															.help			= "Linux grep functionality",
-															.mask			= PRIV(1),
-															.tokenize	= NULL,
-															.run			= NULL,
-															.subtree	= (struct menu_node[]) { /*{{{*/
-																{ /* #show mac address-table vlan <1-1094> | grep LINE */
-																	.name			= "LINE",
-																	.help			= "Regular Expression",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= NULL,
-																	.subtree	= NULL
-																},
-
-																NULL_MENU_NODE
-															} /*}}}*/
-														},
-
-														NULL_MENU_NODE
-													} /*}}}*/
-												},
-
-												NULL_MENU_NODE
-											} /*}}}*/
-										},
-
-										NULL_MENU_NODE
-									} /*}}}*/
-								},
-
-								{ /* #show mac address-table | */
-									.name			= "|",
-									.help			= "Output modifiers",
-									.mask			= PRIV(1),
-									.tokenize	= NULL,
-									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show mac address-table | begin */
-											.name			= "begin",
-											.help			= "Begin with the line that matches",
-											.mask			= PRIV(1),
-											.tokenize	= NULL,
-											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show mac address-table | begin LINE */
-													.name			= "LINE",
-													.help			= "Regular Expression",
-													.mask			= PRIV(1),
-													.tokenize	= NULL,
-													.run			= NULL,
-													.subtree	= NULL
-												},
-
-												NULL_MENU_NODE
-											} /*}}}*/
-										},
-
-										{ /* #show mac address-table | exclude */
-											.name			= "exclude",
-											.help			= "Exclude lines that match",
-											.mask			= PRIV(1),
-											.tokenize	= NULL,
-											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show mac address-table | exclude LINE */
-													.name			= "LINE",
-													.help			= "Regular Expression",
-													.mask			= PRIV(1),
-													.tokenize	= NULL,
-													.run			= NULL,
-													.subtree	= NULL
-												},
-
-												NULL_MENU_NODE
-											} /*}}}*/
-										},
-
-										{ /* #show mac address-table | include */
-											.name			= "include",
-											.help			= "Include lines that match",
-											.mask			= PRIV(1),
-											.tokenize	= NULL,
-											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show mac address-table | include LINE */
-													.name			= "LINE",
-													.help			= "Regular Expression",
-													.mask			= PRIV(1),
-													.tokenize	= NULL,
-													.run			= NULL,
-													.subtree	= NULL
-												},
-
-												NULL_MENU_NODE
-											} /*}}}*/
-										},
-
-										{ /* #show mac address-table | grep */
-											.name			= "grep",
-											.help			= "Linux grep functionality",
-											.mask			= PRIV(1),
-											.tokenize	= NULL,
-											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show mac address-table | grep LINE */
-													.name			= "LINE",
-													.help			= "Regular Expression",
-													.mask			= PRIV(1),
-													.tokenize	= NULL,
-													.run			= NULL,
-													.subtree	= NULL
-												},
-
-												NULL_MENU_NODE
-											} /*}}}*/
-										},
-
-										NULL_MENU_NODE
-									} /*}}}*/
-								},
-
-								NULL_MENU_NODE
-							} /*}}}*/
+							.run			= cmd_sh_mac_addr_t,
+							.subtree	= show_mac_addr_t
 						},
 
-						NULL_MENU_NODE
+						NULL
 					} /*}}}*/
 				},
 
-				{ /* #show mac-address-table */
+				/* #show mac-address-table */
+				& (struct menu_node){
 					.name			= "mac-address-table",
 					.help			= "MAC forwarding table",
 					.mask			= PRIV(1),
 					.tokenize	= NULL,
-					.run			= cmd_show_mac,
-					.subtree	= (struct menu_node[]) { /*{{{*/
-						{ /* #show mac-address-table address */
-							.name			= "address",
-							.help			= "address keyword",
-							.mask			= PRIV(1),
-							.tokenize	= NULL,
-							.run			= NULL,
-							.subtree	= (struct menu_node[]) { /*{{{*/
-								{ /* #show mac-address-table address H.H.H */
-									.name			= "H.H.H",
-									.help			= "48 bit mac address",
-									.mask			= PRIV(1),
-									.tokenize	= NULL,
-									.run			= cmd_sh_addr,
-									.subtree	= NULL
-								},
-
-								NULL_MENU_NODE
-							} /*}}}*/
-						},
-
-						{ /* #show mac-address-table aging-time */
-							.name			= "aging-time",
-							.help			= "aging-time keyword",
-							.mask			= PRIV(1),
-							.tokenize	= NULL,
-							.run			= cmd_sh_mac_age,
-							.subtree	= (struct menu_node[]) { /*{{{*/
-								{ /* #show mac-address-table aging-time | */
-									.name			= "|",
-									.help			= "Output modifiers",
-									.mask			= PRIV(1),
-									.tokenize	= NULL,
-									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show mac-address-table aging-time | begin */
-											.name			= "begin",
-											.help			= "Begin with the line that matches",
-											.mask			= PRIV(1),
-											.tokenize	= NULL,
-											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show mac-address-table aging-time | begin LINE */
-													.name			= "LINE",
-													.help			= "Regular Expression",
-													.mask			= PRIV(1),
-													.tokenize	= NULL,
-													.run			= NULL,
-													.subtree	= NULL
-												},
-
-												NULL_MENU_NODE
-											} /*}}}*/
-										},
-
-										{ /* #show mac-address-table aging-time | exclude */
-											.name			= "exclude",
-											.help			= "Exclude lines that match",
-											.mask			= PRIV(1),
-											.tokenize	= NULL,
-											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show mac-address-table aging-time | exclude LINE */
-													.name			= "LINE",
-													.help			= "Regular Expression",
-													.mask			= PRIV(1),
-													.tokenize	= NULL,
-													.run			= NULL,
-													.subtree	= NULL
-												},
-
-												NULL_MENU_NODE
-											} /*}}}*/
-										},
-
-										{ /* #show mac-address-table aging-time | include */
-											.name			= "include",
-											.help			= "Include lines that match",
-											.mask			= PRIV(1),
-											.tokenize	= NULL,
-											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show mac-address-table aging-time | include LINE */
-													.name			= "LINE",
-													.help			= "Regular Expression",
-													.mask			= PRIV(1),
-													.tokenize	= NULL,
-													.run			= NULL,
-													.subtree	= NULL
-												},
-
-												NULL_MENU_NODE
-											} /*}}}*/
-										},
-
-										{ /* #show mac-address-table aging-time | grep */
-											.name			= "grep",
-											.help			= "Linux grep functionality",
-											.mask			= PRIV(1),
-											.tokenize	= NULL,
-											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show mac-address-table aging-time | grep LINE */
-													.name			= "LINE",
-													.help			= "Regular Expression",
-													.mask			= PRIV(1),
-													.tokenize	= NULL,
-													.run			= NULL,
-													.subtree	= NULL
-												},
-
-												NULL_MENU_NODE
-											} /*}}}*/
-										},
-
-										NULL_MENU_NODE
-									} /*}}}*/
-								},
-
-								NULL_MENU_NODE
-							} /*}}}*/
-						},
-
-						{ /* #show mac-address-table dynamic */
-							.name			= "dynamic",
-							.help			= "dynamic entry type",
-							.mask			= PRIV(1),
-							.tokenize	= NULL,
-							.run			= cmd_show_mac,
-							.subtree	= (struct menu_node[]) { /*{{{*/
-								{ /* #show mac-address-table dynamic address */
-									.name			= "address",
-									.help			= "address keyword",
-									.mask			= PRIV(1),
-									.tokenize	= NULL,
-									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show mac-address-table dynamic address H.H.H */
-											.name			= "H.H.H",
-											.help			= "48 bit mac address",
-											.mask			= PRIV(1),
-											.tokenize	= NULL,
-											.run			= cmd_sh_addr,
-											.subtree	= NULL
-										},
-
-										NULL_MENU_NODE
-									} /*}}}*/
-								},
-
-								{ /* #show mac-address-table dynamic interface */
-									.name			= "interface",
-									.help			= "interface keyword",
-									.mask			= PRIV(1),
-									.tokenize	= NULL,
-									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show mac-address-table dynamic interface ethernet */
-											.name			= "ethernet",
-											.help			= "Ethernet IEEE 802.3",
-											.mask			= PRIV(1),
-											.tokenize	= NULL,
-											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show mac-address-table dynamic interface ethernet  */
-													.name			= "",
-													.help			= "Ethernet interface number",
-													.mask			= PRIV(0),
-													.tokenize	= NULL,
-													.run			= cmd_sh_mac_eth,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #show mac-address-table dynamic interface ethernet  vlan */
-															.name			= "vlan",
-															.help			= "VLAN keyword",
-															.mask			= PRIV(1),
-															.tokenize	= NULL,
-															.run			= NULL,
-															.subtree	= (struct menu_node[]) { /*{{{*/
-																{ /* #show mac-address-table dynamic interface ethernet  vlan <1-1094> */
-																	.name			= "<1-1094>",
-																	.help			= "Vlan interface number",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= cmd_sh_mac_vlan,
-																	.subtree	= (struct menu_node[]) { /*{{{*/
-																		{ /* #show mac-address-table dynamic interface ethernet  vlan <1-1094> | */
-																			.name			= "|",
-																			.help			= "Output modifiers",
-																			.mask			= PRIV(1),
-																			.tokenize	= NULL,
-																			.run			= NULL,
-																			.subtree	= (struct menu_node[]) { /*{{{*/
-																				{ /* #show mac-address-table dynamic interface ethernet  vlan <1-1094> | begin */
-																					.name			= "begin",
-																					.help			= "Begin with the line that matches",
-																					.mask			= PRIV(1),
-																					.tokenize	= NULL,
-																					.run			= NULL,
-																					.subtree	= (struct menu_node[]) { /*{{{*/
-																						{ /* #show mac-address-table dynamic interface ethernet  vlan <1-1094> | begin LINE */
-																							.name			= "LINE",
-																							.help			= "Regular Expression",
-																							.mask			= PRIV(1),
-																							.tokenize	= NULL,
-																							.run			= NULL,
-																							.subtree	= NULL
-																						},
-
-																						NULL_MENU_NODE
-																					} /*}}}*/
-																				},
-
-																				{ /* #show mac-address-table dynamic interface ethernet  vlan <1-1094> | exclude */
-																					.name			= "exclude",
-																					.help			= "Exclude lines that match",
-																					.mask			= PRIV(1),
-																					.tokenize	= NULL,
-																					.run			= NULL,
-																					.subtree	= (struct menu_node[]) { /*{{{*/
-																						{ /* #show mac-address-table dynamic interface ethernet  vlan <1-1094> | exclude LINE */
-																							.name			= "LINE",
-																							.help			= "Regular Expression",
-																							.mask			= PRIV(1),
-																							.tokenize	= NULL,
-																							.run			= NULL,
-																							.subtree	= NULL
-																						},
-
-																						NULL_MENU_NODE
-																					} /*}}}*/
-																				},
-
-																				{ /* #show mac-address-table dynamic interface ethernet  vlan <1-1094> | include */
-																					.name			= "include",
-																					.help			= "Include lines that match",
-																					.mask			= PRIV(1),
-																					.tokenize	= NULL,
-																					.run			= NULL,
-																					.subtree	= (struct menu_node[]) { /*{{{*/
-																						{ /* #show mac-address-table dynamic interface ethernet  vlan <1-1094> | include LINE */
-																							.name			= "LINE",
-																							.help			= "Regular Expression",
-																							.mask			= PRIV(1),
-																							.tokenize	= NULL,
-																							.run			= NULL,
-																							.subtree	= NULL
-																						},
-
-																						NULL_MENU_NODE
-																					} /*}}}*/
-																				},
-
-																				{ /* #show mac-address-table dynamic interface ethernet  vlan <1-1094> | grep */
-																					.name			= "grep",
-																					.help			= "Linux grep functionality",
-																					.mask			= PRIV(1),
-																					.tokenize	= NULL,
-																					.run			= NULL,
-																					.subtree	= (struct menu_node[]) { /*{{{*/
-																						{ /* #show mac-address-table dynamic interface ethernet  vlan <1-1094> | grep LINE */
-																							.name			= "LINE",
-																							.help			= "Regular Expression",
-																							.mask			= PRIV(1),
-																							.tokenize	= NULL,
-																							.run			= NULL,
-																							.subtree	= NULL
-																						},
-
-																						NULL_MENU_NODE
-																					} /*}}}*/
-																				},
-
-																				NULL_MENU_NODE
-																			} /*}}}*/
-																		},
-
-																		NULL_MENU_NODE
-																	} /*}}}*/
-																},
-
-																NULL_MENU_NODE
-															} /*}}}*/
-														},
-
-														{ /* #show mac-address-table dynamic interface ethernet  | */
-															.name			= "|",
-															.help			= "Output modifiers",
-															.mask			= PRIV(1),
-															.tokenize	= NULL,
-															.run			= NULL,
-															.subtree	= (struct menu_node[]) { /*{{{*/
-																{ /* #show mac-address-table dynamic interface ethernet  | begin */
-																	.name			= "begin",
-																	.help			= "Begin with the line that matches",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= NULL,
-																	.subtree	= (struct menu_node[]) { /*{{{*/
-																		{ /* #show mac-address-table dynamic interface ethernet  | begin LINE */
-																			.name			= "LINE",
-																			.help			= "Regular Expression",
-																			.mask			= PRIV(1),
-																			.tokenize	= NULL,
-																			.run			= NULL,
-																			.subtree	= NULL
-																		},
-
-																		NULL_MENU_NODE
-																	} /*}}}*/
-																},
-
-																{ /* #show mac-address-table dynamic interface ethernet  | exclude */
-																	.name			= "exclude",
-																	.help			= "Exclude lines that match",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= NULL,
-																	.subtree	= (struct menu_node[]) { /*{{{*/
-																		{ /* #show mac-address-table dynamic interface ethernet  | exclude LINE */
-																			.name			= "LINE",
-																			.help			= "Regular Expression",
-																			.mask			= PRIV(1),
-																			.tokenize	= NULL,
-																			.run			= NULL,
-																			.subtree	= NULL
-																		},
-
-																		NULL_MENU_NODE
-																	} /*}}}*/
-																},
-
-																{ /* #show mac-address-table dynamic interface ethernet  | include */
-																	.name			= "include",
-																	.help			= "Include lines that match",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= NULL,
-																	.subtree	= (struct menu_node[]) { /*{{{*/
-																		{ /* #show mac-address-table dynamic interface ethernet  | include LINE */
-																			.name			= "LINE",
-																			.help			= "Regular Expression",
-																			.mask			= PRIV(1),
-																			.tokenize	= NULL,
-																			.run			= NULL,
-																			.subtree	= NULL
-																		},
-
-																		NULL_MENU_NODE
-																	} /*}}}*/
-																},
-
-																{ /* #show mac-address-table dynamic interface ethernet  | grep */
-																	.name			= "grep",
-																	.help			= "Linux grep functionality",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= NULL,
-																	.subtree	= (struct menu_node[]) { /*{{{*/
-																		{ /* #show mac-address-table dynamic interface ethernet  | grep LINE */
-																			.name			= "LINE",
-																			.help			= "Regular Expression",
-																			.mask			= PRIV(1),
-																			.tokenize	= NULL,
-																			.run			= NULL,
-																			.subtree	= NULL
-																		},
-
-																		NULL_MENU_NODE
-																	} /*}}}*/
-																},
-
-																NULL_MENU_NODE
-															} /*}}}*/
-														},
-
-														NULL_MENU_NODE
-													} /*}}}*/
-												},
-
-												NULL_MENU_NODE
-											} /*}}}*/
-										},
-
-										NULL_MENU_NODE
-									} /*}}}*/
-								},
-
-								{ /* #show mac-address-table dynamic vlan */
-									.name			= "vlan",
-									.help			= "VLAN keyword",
-									.mask			= PRIV(1),
-									.tokenize	= NULL,
-									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show mac-address-table dynamic vlan <1-1094> */
-											.name			= "<1-1094>",
-											.help			= "Vlan interface number",
-											.mask			= PRIV(1),
-											.tokenize	= NULL,
-											.run			= cmd_sh_mac_vlan,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show mac-address-table dynamic vlan <1-1094> | */
-													.name			= "|",
-													.help			= "Output modifiers",
-													.mask			= PRIV(1),
-													.tokenize	= NULL,
-													.run			= NULL,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #show mac-address-table dynamic vlan <1-1094> | begin */
-															.name			= "begin",
-															.help			= "Begin with the line that matches",
-															.mask			= PRIV(1),
-															.tokenize	= NULL,
-															.run			= NULL,
-															.subtree	= (struct menu_node[]) { /*{{{*/
-																{ /* #show mac-address-table dynamic vlan <1-1094> | begin LINE */
-																	.name			= "LINE",
-																	.help			= "Regular Expression",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= NULL,
-																	.subtree	= NULL
-																},
-
-																NULL_MENU_NODE
-															} /*}}}*/
-														},
-
-														{ /* #show mac-address-table dynamic vlan <1-1094> | exclude */
-															.name			= "exclude",
-															.help			= "Exclude lines that match",
-															.mask			= PRIV(1),
-															.tokenize	= NULL,
-															.run			= NULL,
-															.subtree	= (struct menu_node[]) { /*{{{*/
-																{ /* #show mac-address-table dynamic vlan <1-1094> | exclude LINE */
-																	.name			= "LINE",
-																	.help			= "Regular Expression",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= NULL,
-																	.subtree	= NULL
-																},
-
-																NULL_MENU_NODE
-															} /*}}}*/
-														},
-
-														{ /* #show mac-address-table dynamic vlan <1-1094> | include */
-															.name			= "include",
-															.help			= "Include lines that match",
-															.mask			= PRIV(1),
-															.tokenize	= NULL,
-															.run			= NULL,
-															.subtree	= (struct menu_node[]) { /*{{{*/
-																{ /* #show mac-address-table dynamic vlan <1-1094> | include LINE */
-																	.name			= "LINE",
-																	.help			= "Regular Expression",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= NULL,
-																	.subtree	= NULL
-																},
-
-																NULL_MENU_NODE
-															} /*}}}*/
-														},
-
-														{ /* #show mac-address-table dynamic vlan <1-1094> | grep */
-															.name			= "grep",
-															.help			= "Linux grep functionality",
-															.mask			= PRIV(1),
-															.tokenize	= NULL,
-															.run			= NULL,
-															.subtree	= (struct menu_node[]) { /*{{{*/
-																{ /* #show mac-address-table dynamic vlan <1-1094> | grep LINE */
-																	.name			= "LINE",
-																	.help			= "Regular Expression",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= NULL,
-																	.subtree	= NULL
-																},
-
-																NULL_MENU_NODE
-															} /*}}}*/
-														},
-
-														NULL_MENU_NODE
-													} /*}}}*/
-												},
-
-												NULL_MENU_NODE
-											} /*}}}*/
-										},
-
-										NULL_MENU_NODE
-									} /*}}}*/
-								},
-
-								{ /* #show mac-address-table dynamic | */
-									.name			= "|",
-									.help			= "Output modifiers",
-									.mask			= PRIV(1),
-									.tokenize	= NULL,
-									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show mac-address-table dynamic | begin */
-											.name			= "begin",
-											.help			= "Begin with the line that matches",
-											.mask			= PRIV(1),
-											.tokenize	= NULL,
-											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show mac-address-table dynamic | begin LINE */
-													.name			= "LINE",
-													.help			= "Regular Expression",
-													.mask			= PRIV(1),
-													.tokenize	= NULL,
-													.run			= NULL,
-													.subtree	= NULL
-												},
-
-												NULL_MENU_NODE
-											} /*}}}*/
-										},
-
-										{ /* #show mac-address-table dynamic | exclude */
-											.name			= "exclude",
-											.help			= "Exclude lines that match",
-											.mask			= PRIV(1),
-											.tokenize	= NULL,
-											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show mac-address-table dynamic | exclude LINE */
-													.name			= "LINE",
-													.help			= "Regular Expression",
-													.mask			= PRIV(1),
-													.tokenize	= NULL,
-													.run			= NULL,
-													.subtree	= NULL
-												},
-
-												NULL_MENU_NODE
-											} /*}}}*/
-										},
-
-										{ /* #show mac-address-table dynamic | include */
-											.name			= "include",
-											.help			= "Include lines that match",
-											.mask			= PRIV(1),
-											.tokenize	= NULL,
-											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show mac-address-table dynamic | include LINE */
-													.name			= "LINE",
-													.help			= "Regular Expression",
-													.mask			= PRIV(1),
-													.tokenize	= NULL,
-													.run			= NULL,
-													.subtree	= NULL
-												},
-
-												NULL_MENU_NODE
-											} /*}}}*/
-										},
-
-										{ /* #show mac-address-table dynamic | grep */
-											.name			= "grep",
-											.help			= "Linux grep functionality",
-											.mask			= PRIV(1),
-											.tokenize	= NULL,
-											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show mac-address-table dynamic | grep LINE */
-													.name			= "LINE",
-													.help			= "Regular Expression",
-													.mask			= PRIV(1),
-													.tokenize	= NULL,
-													.run			= NULL,
-													.subtree	= NULL
-												},
-
-												NULL_MENU_NODE
-											} /*}}}*/
-										},
-
-										NULL_MENU_NODE
-									} /*}}}*/
-								},
-
-								NULL_MENU_NODE
-							} /*}}}*/
-						},
-
-						{ /* #show mac-address-table interface */
-							.name			= "interface",
-							.help			= "interface keyword",
-							.mask			= PRIV(1),
-							.tokenize	= NULL,
-							.run			= NULL,
-							.subtree	= (struct menu_node[]) { /*{{{*/
-								{ /* #show mac-address-table interface ethernet */
-									.name			= "ethernet",
-									.help			= "Ethernet IEEE 802.3",
-									.mask			= PRIV(1),
-									.tokenize	= NULL,
-									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show mac-address-table interface ethernet  */
-											.name			= "",
-											.help			= "Ethernet interface number",
-											.mask			= PRIV(0),
-											.tokenize	= NULL,
-											.run			= cmd_sh_mac_eth,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show mac-address-table interface ethernet  vlan */
-													.name			= "vlan",
-													.help			= "VLAN keyword",
-													.mask			= PRIV(1),
-													.tokenize	= NULL,
-													.run			= NULL,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #show mac-address-table interface ethernet  vlan <1-1094> */
-															.name			= "<1-1094>",
-															.help			= "Vlan interface number",
-															.mask			= PRIV(1),
-															.tokenize	= NULL,
-															.run			= cmd_sh_mac_vlan,
-															.subtree	= (struct menu_node[]) { /*{{{*/
-																{ /* #show mac-address-table interface ethernet  vlan <1-1094> | */
-																	.name			= "|",
-																	.help			= "Output modifiers",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= NULL,
-																	.subtree	= (struct menu_node[]) { /*{{{*/
-																		{ /* #show mac-address-table interface ethernet  vlan <1-1094> | begin */
-																			.name			= "begin",
-																			.help			= "Begin with the line that matches",
-																			.mask			= PRIV(1),
-																			.tokenize	= NULL,
-																			.run			= NULL,
-																			.subtree	= (struct menu_node[]) { /*{{{*/
-																				{ /* #show mac-address-table interface ethernet  vlan <1-1094> | begin LINE */
-																					.name			= "LINE",
-																					.help			= "Regular Expression",
-																					.mask			= PRIV(1),
-																					.tokenize	= NULL,
-																					.run			= NULL,
-																					.subtree	= NULL
-																				},
-
-																				NULL_MENU_NODE
-																			} /*}}}*/
-																		},
-
-																		{ /* #show mac-address-table interface ethernet  vlan <1-1094> | exclude */
-																			.name			= "exclude",
-																			.help			= "Exclude lines that match",
-																			.mask			= PRIV(1),
-																			.tokenize	= NULL,
-																			.run			= NULL,
-																			.subtree	= (struct menu_node[]) { /*{{{*/
-																				{ /* #show mac-address-table interface ethernet  vlan <1-1094> | exclude LINE */
-																					.name			= "LINE",
-																					.help			= "Regular Expression",
-																					.mask			= PRIV(1),
-																					.tokenize	= NULL,
-																					.run			= NULL,
-																					.subtree	= NULL
-																				},
-
-																				NULL_MENU_NODE
-																			} /*}}}*/
-																		},
-
-																		{ /* #show mac-address-table interface ethernet  vlan <1-1094> | include */
-																			.name			= "include",
-																			.help			= "Include lines that match",
-																			.mask			= PRIV(1),
-																			.tokenize	= NULL,
-																			.run			= NULL,
-																			.subtree	= (struct menu_node[]) { /*{{{*/
-																				{ /* #show mac-address-table interface ethernet  vlan <1-1094> | include LINE */
-																					.name			= "LINE",
-																					.help			= "Regular Expression",
-																					.mask			= PRIV(1),
-																					.tokenize	= NULL,
-																					.run			= NULL,
-																					.subtree	= NULL
-																				},
-
-																				NULL_MENU_NODE
-																			} /*}}}*/
-																		},
-
-																		{ /* #show mac-address-table interface ethernet  vlan <1-1094> | grep */
-																			.name			= "grep",
-																			.help			= "Linux grep functionality",
-																			.mask			= PRIV(1),
-																			.tokenize	= NULL,
-																			.run			= NULL,
-																			.subtree	= (struct menu_node[]) { /*{{{*/
-																				{ /* #show mac-address-table interface ethernet  vlan <1-1094> | grep LINE */
-																					.name			= "LINE",
-																					.help			= "Regular Expression",
-																					.mask			= PRIV(1),
-																					.tokenize	= NULL,
-																					.run			= NULL,
-																					.subtree	= NULL
-																				},
-
-																				NULL_MENU_NODE
-																			} /*}}}*/
-																		},
-
-																		NULL_MENU_NODE
-																	} /*}}}*/
-																},
-
-																NULL_MENU_NODE
-															} /*}}}*/
-														},
-
-														NULL_MENU_NODE
-													} /*}}}*/
-												},
-
-												{ /* #show mac-address-table interface ethernet  | */
-													.name			= "|",
-													.help			= "Output modifiers",
-													.mask			= PRIV(1),
-													.tokenize	= NULL,
-													.run			= NULL,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #show mac-address-table interface ethernet  | begin */
-															.name			= "begin",
-															.help			= "Begin with the line that matches",
-															.mask			= PRIV(1),
-															.tokenize	= NULL,
-															.run			= NULL,
-															.subtree	= (struct menu_node[]) { /*{{{*/
-																{ /* #show mac-address-table interface ethernet  | begin LINE */
-																	.name			= "LINE",
-																	.help			= "Regular Expression",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= NULL,
-																	.subtree	= NULL
-																},
-
-																NULL_MENU_NODE
-															} /*}}}*/
-														},
-
-														{ /* #show mac-address-table interface ethernet  | exclude */
-															.name			= "exclude",
-															.help			= "Exclude lines that match",
-															.mask			= PRIV(1),
-															.tokenize	= NULL,
-															.run			= NULL,
-															.subtree	= (struct menu_node[]) { /*{{{*/
-																{ /* #show mac-address-table interface ethernet  | exclude LINE */
-																	.name			= "LINE",
-																	.help			= "Regular Expression",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= NULL,
-																	.subtree	= NULL
-																},
-
-																NULL_MENU_NODE
-															} /*}}}*/
-														},
-
-														{ /* #show mac-address-table interface ethernet  | include */
-															.name			= "include",
-															.help			= "Include lines that match",
-															.mask			= PRIV(1),
-															.tokenize	= NULL,
-															.run			= NULL,
-															.subtree	= (struct menu_node[]) { /*{{{*/
-																{ /* #show mac-address-table interface ethernet  | include LINE */
-																	.name			= "LINE",
-																	.help			= "Regular Expression",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= NULL,
-																	.subtree	= NULL
-																},
-
-																NULL_MENU_NODE
-															} /*}}}*/
-														},
-
-														{ /* #show mac-address-table interface ethernet  | grep */
-															.name			= "grep",
-															.help			= "Linux grep functionality",
-															.mask			= PRIV(1),
-															.tokenize	= NULL,
-															.run			= NULL,
-															.subtree	= (struct menu_node[]) { /*{{{*/
-																{ /* #show mac-address-table interface ethernet  | grep LINE */
-																	.name			= "LINE",
-																	.help			= "Regular Expression",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= NULL,
-																	.subtree	= NULL
-																},
-
-																NULL_MENU_NODE
-															} /*}}}*/
-														},
-
-														NULL_MENU_NODE
-													} /*}}}*/
-												},
-
-												NULL_MENU_NODE
-											} /*}}}*/
-										},
-
-										NULL_MENU_NODE
-									} /*}}}*/
-								},
-
-								NULL_MENU_NODE
-							} /*}}}*/
-						},
-
-						{ /* #show mac-address-table static */
-							.name			= "static",
-							.help			= "static entry type",
-							.mask			= PRIV(1),
-							.tokenize	= NULL,
-							.run			= cmd_show_mac,
-							.subtree	= (struct menu_node[]) { /*{{{*/
-								{ /* #show mac-address-table static address */
-									.name			= "address",
-									.help			= "address keyword",
-									.mask			= PRIV(1),
-									.tokenize	= NULL,
-									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show mac-address-table static address H.H.H */
-											.name			= "H.H.H",
-											.help			= "48 bit mac address",
-											.mask			= PRIV(1),
-											.tokenize	= NULL,
-											.run			= cmd_sh_addr,
-											.subtree	= NULL
-										},
-
-										NULL_MENU_NODE
-									} /*}}}*/
-								},
-
-								{ /* #show mac-address-table static interface */
-									.name			= "interface",
-									.help			= "interface keyword",
-									.mask			= PRIV(1),
-									.tokenize	= NULL,
-									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show mac-address-table static interface ethernet */
-											.name			= "ethernet",
-											.help			= "Ethernet IEEE 802.3",
-											.mask			= PRIV(1),
-											.tokenize	= NULL,
-											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show mac-address-table static interface ethernet  */
-													.name			= "",
-													.help			= "Ethernet interface number",
-													.mask			= PRIV(0),
-													.tokenize	= NULL,
-													.run			= cmd_sh_mac_eth,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #show mac-address-table static interface ethernet  vlan */
-															.name			= "vlan",
-															.help			= "VLAN keyword",
-															.mask			= PRIV(1),
-															.tokenize	= NULL,
-															.run			= NULL,
-															.subtree	= (struct menu_node[]) { /*{{{*/
-																{ /* #show mac-address-table static interface ethernet  vlan <1-1094> */
-																	.name			= "<1-1094>",
-																	.help			= "Vlan interface number",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= cmd_sh_mac_vlan,
-																	.subtree	= (struct menu_node[]) { /*{{{*/
-																		{ /* #show mac-address-table static interface ethernet  vlan <1-1094> | */
-																			.name			= "|",
-																			.help			= "Output modifiers",
-																			.mask			= PRIV(1),
-																			.tokenize	= NULL,
-																			.run			= NULL,
-																			.subtree	= (struct menu_node[]) { /*{{{*/
-																				{ /* #show mac-address-table static interface ethernet  vlan <1-1094> | begin */
-																					.name			= "begin",
-																					.help			= "Begin with the line that matches",
-																					.mask			= PRIV(1),
-																					.tokenize	= NULL,
-																					.run			= NULL,
-																					.subtree	= (struct menu_node[]) { /*{{{*/
-																						{ /* #show mac-address-table static interface ethernet  vlan <1-1094> | begin LINE */
-																							.name			= "LINE",
-																							.help			= "Regular Expression",
-																							.mask			= PRIV(1),
-																							.tokenize	= NULL,
-																							.run			= NULL,
-																							.subtree	= NULL
-																						},
-
-																						NULL_MENU_NODE
-																					} /*}}}*/
-																				},
-
-																				{ /* #show mac-address-table static interface ethernet  vlan <1-1094> | exclude */
-																					.name			= "exclude",
-																					.help			= "Exclude lines that match",
-																					.mask			= PRIV(1),
-																					.tokenize	= NULL,
-																					.run			= NULL,
-																					.subtree	= (struct menu_node[]) { /*{{{*/
-																						{ /* #show mac-address-table static interface ethernet  vlan <1-1094> | exclude LINE */
-																							.name			= "LINE",
-																							.help			= "Regular Expression",
-																							.mask			= PRIV(1),
-																							.tokenize	= NULL,
-																							.run			= NULL,
-																							.subtree	= NULL
-																						},
-
-																						NULL_MENU_NODE
-																					} /*}}}*/
-																				},
-
-																				{ /* #show mac-address-table static interface ethernet  vlan <1-1094> | include */
-																					.name			= "include",
-																					.help			= "Include lines that match",
-																					.mask			= PRIV(1),
-																					.tokenize	= NULL,
-																					.run			= NULL,
-																					.subtree	= (struct menu_node[]) { /*{{{*/
-																						{ /* #show mac-address-table static interface ethernet  vlan <1-1094> | include LINE */
-																							.name			= "LINE",
-																							.help			= "Regular Expression",
-																							.mask			= PRIV(1),
-																							.tokenize	= NULL,
-																							.run			= NULL,
-																							.subtree	= NULL
-																						},
-
-																						NULL_MENU_NODE
-																					} /*}}}*/
-																				},
-
-																				{ /* #show mac-address-table static interface ethernet  vlan <1-1094> | grep */
-																					.name			= "grep",
-																					.help			= "Linux grep functionality",
-																					.mask			= PRIV(1),
-																					.tokenize	= NULL,
-																					.run			= NULL,
-																					.subtree	= (struct menu_node[]) { /*{{{*/
-																						{ /* #show mac-address-table static interface ethernet  vlan <1-1094> | grep LINE */
-																							.name			= "LINE",
-																							.help			= "Regular Expression",
-																							.mask			= PRIV(1),
-																							.tokenize	= NULL,
-																							.run			= NULL,
-																							.subtree	= NULL
-																						},
-
-																						NULL_MENU_NODE
-																					} /*}}}*/
-																				},
-
-																				NULL_MENU_NODE
-																			} /*}}}*/
-																		},
-
-																		NULL_MENU_NODE
-																	} /*}}}*/
-																},
-
-																NULL_MENU_NODE
-															} /*}}}*/
-														},
-
-														{ /* #show mac-address-table static interface ethernet  | */
-															.name			= "|",
-															.help			= "Output modifiers",
-															.mask			= PRIV(1),
-															.tokenize	= NULL,
-															.run			= NULL,
-															.subtree	= (struct menu_node[]) { /*{{{*/
-																{ /* #show mac-address-table static interface ethernet  | begin */
-																	.name			= "begin",
-																	.help			= "Begin with the line that matches",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= NULL,
-																	.subtree	= (struct menu_node[]) { /*{{{*/
-																		{ /* #show mac-address-table static interface ethernet  | begin LINE */
-																			.name			= "LINE",
-																			.help			= "Regular Expression",
-																			.mask			= PRIV(1),
-																			.tokenize	= NULL,
-																			.run			= NULL,
-																			.subtree	= NULL
-																		},
-
-																		NULL_MENU_NODE
-																	} /*}}}*/
-																},
-
-																{ /* #show mac-address-table static interface ethernet  | exclude */
-																	.name			= "exclude",
-																	.help			= "Exclude lines that match",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= NULL,
-																	.subtree	= (struct menu_node[]) { /*{{{*/
-																		{ /* #show mac-address-table static interface ethernet  | exclude LINE */
-																			.name			= "LINE",
-																			.help			= "Regular Expression",
-																			.mask			= PRIV(1),
-																			.tokenize	= NULL,
-																			.run			= NULL,
-																			.subtree	= NULL
-																		},
-
-																		NULL_MENU_NODE
-																	} /*}}}*/
-																},
-
-																{ /* #show mac-address-table static interface ethernet  | include */
-																	.name			= "include",
-																	.help			= "Include lines that match",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= NULL,
-																	.subtree	= (struct menu_node[]) { /*{{{*/
-																		{ /* #show mac-address-table static interface ethernet  | include LINE */
-																			.name			= "LINE",
-																			.help			= "Regular Expression",
-																			.mask			= PRIV(1),
-																			.tokenize	= NULL,
-																			.run			= NULL,
-																			.subtree	= NULL
-																		},
-
-																		NULL_MENU_NODE
-																	} /*}}}*/
-																},
-
-																{ /* #show mac-address-table static interface ethernet  | grep */
-																	.name			= "grep",
-																	.help			= "Linux grep functionality",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= NULL,
-																	.subtree	= (struct menu_node[]) { /*{{{*/
-																		{ /* #show mac-address-table static interface ethernet  | grep LINE */
-																			.name			= "LINE",
-																			.help			= "Regular Expression",
-																			.mask			= PRIV(1),
-																			.tokenize	= NULL,
-																			.run			= NULL,
-																			.subtree	= NULL
-																		},
-
-																		NULL_MENU_NODE
-																	} /*}}}*/
-																},
-
-																NULL_MENU_NODE
-															} /*}}}*/
-														},
-
-														NULL_MENU_NODE
-													} /*}}}*/
-												},
-
-												NULL_MENU_NODE
-											} /*}}}*/
-										},
-
-										NULL_MENU_NODE
-									} /*}}}*/
-								},
-
-								{ /* #show mac-address-table static vlan */
-									.name			= "vlan",
-									.help			= "VLAN keyword",
-									.mask			= PRIV(1),
-									.tokenize	= NULL,
-									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show mac-address-table static vlan <1-1094> */
-											.name			= "<1-1094>",
-											.help			= "Vlan interface number",
-											.mask			= PRIV(1),
-											.tokenize	= NULL,
-											.run			= cmd_sh_mac_vlan,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show mac-address-table static vlan <1-1094> | */
-													.name			= "|",
-													.help			= "Output modifiers",
-													.mask			= PRIV(1),
-													.tokenize	= NULL,
-													.run			= NULL,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #show mac-address-table static vlan <1-1094> | begin */
-															.name			= "begin",
-															.help			= "Begin with the line that matches",
-															.mask			= PRIV(1),
-															.tokenize	= NULL,
-															.run			= NULL,
-															.subtree	= (struct menu_node[]) { /*{{{*/
-																{ /* #show mac-address-table static vlan <1-1094> | begin LINE */
-																	.name			= "LINE",
-																	.help			= "Regular Expression",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= NULL,
-																	.subtree	= NULL
-																},
-
-																NULL_MENU_NODE
-															} /*}}}*/
-														},
-
-														{ /* #show mac-address-table static vlan <1-1094> | exclude */
-															.name			= "exclude",
-															.help			= "Exclude lines that match",
-															.mask			= PRIV(1),
-															.tokenize	= NULL,
-															.run			= NULL,
-															.subtree	= (struct menu_node[]) { /*{{{*/
-																{ /* #show mac-address-table static vlan <1-1094> | exclude LINE */
-																	.name			= "LINE",
-																	.help			= "Regular Expression",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= NULL,
-																	.subtree	= NULL
-																},
-
-																NULL_MENU_NODE
-															} /*}}}*/
-														},
-
-														{ /* #show mac-address-table static vlan <1-1094> | include */
-															.name			= "include",
-															.help			= "Include lines that match",
-															.mask			= PRIV(1),
-															.tokenize	= NULL,
-															.run			= NULL,
-															.subtree	= (struct menu_node[]) { /*{{{*/
-																{ /* #show mac-address-table static vlan <1-1094> | include LINE */
-																	.name			= "LINE",
-																	.help			= "Regular Expression",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= NULL,
-																	.subtree	= NULL
-																},
-
-																NULL_MENU_NODE
-															} /*}}}*/
-														},
-
-														{ /* #show mac-address-table static vlan <1-1094> | grep */
-															.name			= "grep",
-															.help			= "Linux grep functionality",
-															.mask			= PRIV(1),
-															.tokenize	= NULL,
-															.run			= NULL,
-															.subtree	= (struct menu_node[]) { /*{{{*/
-																{ /* #show mac-address-table static vlan <1-1094> | grep LINE */
-																	.name			= "LINE",
-																	.help			= "Regular Expression",
-																	.mask			= PRIV(1),
-																	.tokenize	= NULL,
-																	.run			= NULL,
-																	.subtree	= NULL
-																},
-
-																NULL_MENU_NODE
-															} /*}}}*/
-														},
-
-														NULL_MENU_NODE
-													} /*}}}*/
-												},
-
-												NULL_MENU_NODE
-											} /*}}}*/
-										},
-
-										NULL_MENU_NODE
-									} /*}}}*/
-								},
-
-								{ /* #show mac-address-table static | */
-									.name			= "|",
-									.help			= "Output modifiers",
-									.mask			= PRIV(1),
-									.tokenize	= NULL,
-									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show mac-address-table static | begin */
-											.name			= "begin",
-											.help			= "Begin with the line that matches",
-											.mask			= PRIV(1),
-											.tokenize	= NULL,
-											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show mac-address-table static | begin LINE */
-													.name			= "LINE",
-													.help			= "Regular Expression",
-													.mask			= PRIV(1),
-													.tokenize	= NULL,
-													.run			= NULL,
-													.subtree	= NULL
-												},
-
-												NULL_MENU_NODE
-											} /*}}}*/
-										},
-
-										{ /* #show mac-address-table static | exclude */
-											.name			= "exclude",
-											.help			= "Exclude lines that match",
-											.mask			= PRIV(1),
-											.tokenize	= NULL,
-											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show mac-address-table static | exclude LINE */
-													.name			= "LINE",
-													.help			= "Regular Expression",
-													.mask			= PRIV(1),
-													.tokenize	= NULL,
-													.run			= NULL,
-													.subtree	= NULL
-												},
-
-												NULL_MENU_NODE
-											} /*}}}*/
-										},
-
-										{ /* #show mac-address-table static | include */
-											.name			= "include",
-											.help			= "Include lines that match",
-											.mask			= PRIV(1),
-											.tokenize	= NULL,
-											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show mac-address-table static | include LINE */
-													.name			= "LINE",
-													.help			= "Regular Expression",
-													.mask			= PRIV(1),
-													.tokenize	= NULL,
-													.run			= NULL,
-													.subtree	= NULL
-												},
-
-												NULL_MENU_NODE
-											} /*}}}*/
-										},
-
-										{ /* #show mac-address-table static | grep */
-											.name			= "grep",
-											.help			= "Linux grep functionality",
-											.mask			= PRIV(1),
-											.tokenize	= NULL,
-											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show mac-address-table static | grep LINE */
-													.name			= "LINE",
-													.help			= "Regular Expression",
-													.mask			= PRIV(1),
-													.tokenize	= NULL,
-													.run			= NULL,
-													.subtree	= NULL
-												},
-
-												NULL_MENU_NODE
-											} /*}}}*/
-										},
-
-										NULL_MENU_NODE
-									} /*}}}*/
-								},
-
-								NULL_MENU_NODE
-							} /*}}}*/
-						},
-
-						{ /* #show mac-address-table vlan */
-							.name			= "vlan",
-							.help			= "VLAN keyword",
-							.mask			= PRIV(1),
-							.tokenize	= NULL,
-							.run			= NULL,
-							.subtree	= (struct menu_node[]) { /*{{{*/
-								{ /* #show mac-address-table vlan <1-1094> */
-									.name			= "<1-1094>",
-									.help			= "Vlan interface number",
-									.mask			= PRIV(1),
-									.tokenize	= NULL,
-									.run			= cmd_sh_mac_vlan,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show mac-address-table vlan <1-1094> | */
-											.name			= "|",
-											.help			= "Output modifiers",
-											.mask			= PRIV(1),
-											.tokenize	= NULL,
-											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show mac-address-table vlan <1-1094> | begin */
-													.name			= "begin",
-													.help			= "Begin with the line that matches",
-													.mask			= PRIV(1),
-													.tokenize	= NULL,
-													.run			= NULL,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #show mac-address-table vlan <1-1094> | begin LINE */
-															.name			= "LINE",
-															.help			= "Regular Expression",
-															.mask			= PRIV(1),
-															.tokenize	= NULL,
-															.run			= NULL,
-															.subtree	= NULL
-														},
-
-														NULL_MENU_NODE
-													} /*}}}*/
-												},
-
-												{ /* #show mac-address-table vlan <1-1094> | exclude */
-													.name			= "exclude",
-													.help			= "Exclude lines that match",
-													.mask			= PRIV(1),
-													.tokenize	= NULL,
-													.run			= NULL,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #show mac-address-table vlan <1-1094> | exclude LINE */
-															.name			= "LINE",
-															.help			= "Regular Expression",
-															.mask			= PRIV(1),
-															.tokenize	= NULL,
-															.run			= NULL,
-															.subtree	= NULL
-														},
-
-														NULL_MENU_NODE
-													} /*}}}*/
-												},
-
-												{ /* #show mac-address-table vlan <1-1094> | include */
-													.name			= "include",
-													.help			= "Include lines that match",
-													.mask			= PRIV(1),
-													.tokenize	= NULL,
-													.run			= NULL,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #show mac-address-table vlan <1-1094> | include LINE */
-															.name			= "LINE",
-															.help			= "Regular Expression",
-															.mask			= PRIV(1),
-															.tokenize	= NULL,
-															.run			= NULL,
-															.subtree	= NULL
-														},
-
-														NULL_MENU_NODE
-													} /*}}}*/
-												},
-
-												{ /* #show mac-address-table vlan <1-1094> | grep */
-													.name			= "grep",
-													.help			= "Linux grep functionality",
-													.mask			= PRIV(1),
-													.tokenize	= NULL,
-													.run			= NULL,
-													.subtree	= (struct menu_node[]) { /*{{{*/
-														{ /* #show mac-address-table vlan <1-1094> | grep LINE */
-															.name			= "LINE",
-															.help			= "Regular Expression",
-															.mask			= PRIV(1),
-															.tokenize	= NULL,
-															.run			= NULL,
-															.subtree	= NULL
-														},
-
-														NULL_MENU_NODE
-													} /*}}}*/
-												},
-
-												NULL_MENU_NODE
-											} /*}}}*/
-										},
-
-										NULL_MENU_NODE
-									} /*}}}*/
-								},
-
-								NULL_MENU_NODE
-							} /*}}}*/
-						},
-
-						{ /* #show mac-address-table | */
-							.name			= "|",
-							.help			= "Output modifiers",
-							.mask			= PRIV(1),
-							.tokenize	= NULL,
-							.run			= NULL,
-							.subtree	= (struct menu_node[]) { /*{{{*/
-								{ /* #show mac-address-table | begin */
-									.name			= "begin",
-									.help			= "Begin with the line that matches",
-									.mask			= PRIV(1),
-									.tokenize	= NULL,
-									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show mac-address-table | begin LINE */
-											.name			= "LINE",
-											.help			= "Regular Expression",
-											.mask			= PRIV(1),
-											.tokenize	= NULL,
-											.run			= NULL,
-											.subtree	= NULL
-										},
-
-										NULL_MENU_NODE
-									} /*}}}*/
-								},
-
-								{ /* #show mac-address-table | exclude */
-									.name			= "exclude",
-									.help			= "Exclude lines that match",
-									.mask			= PRIV(1),
-									.tokenize	= NULL,
-									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show mac-address-table | exclude LINE */
-											.name			= "LINE",
-											.help			= "Regular Expression",
-											.mask			= PRIV(1),
-											.tokenize	= NULL,
-											.run			= NULL,
-											.subtree	= NULL
-										},
-
-										NULL_MENU_NODE
-									} /*}}}*/
-								},
-
-								{ /* #show mac-address-table | include */
-									.name			= "include",
-									.help			= "Include lines that match",
-									.mask			= PRIV(1),
-									.tokenize	= NULL,
-									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show mac-address-table | include LINE */
-											.name			= "LINE",
-											.help			= "Regular Expression",
-											.mask			= PRIV(1),
-											.tokenize	= NULL,
-											.run			= NULL,
-											.subtree	= NULL
-										},
-
-										NULL_MENU_NODE
-									} /*}}}*/
-								},
-
-								{ /* #show mac-address-table | grep */
-									.name			= "grep",
-									.help			= "Linux grep functionality",
-									.mask			= PRIV(1),
-									.tokenize	= NULL,
-									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show mac-address-table | grep LINE */
-											.name			= "LINE",
-											.help			= "Regular Expression",
-											.mask			= PRIV(1),
-											.tokenize	= NULL,
-											.run			= NULL,
-											.subtree	= NULL
-										},
-
-										NULL_MENU_NODE
-									} /*}}}*/
-								},
-
-								NULL_MENU_NODE
-							} /*}}}*/
-						},
-
-						NULL_MENU_NODE
-					} /*}}}*/
+					.run			= cmd_sh_mac_addr_t,
+					.subtree	= show_mac_addr_t
 				},
 
-				{ /* #show privilege */
+				/* #show privilege */
+				& (struct menu_node){
 					.name			= "privilege",
 					.help			= "Show current privilege level",
 					.mask			= PRIV(2),
@@ -5409,28 +2594,32 @@ struct menu_node menu_main = {
 					.subtree	= NULL
 				},
 
-				{ /* #show running-config */
+				/* #show running-config */
+				& (struct menu_node){
 					.name			= "running-config",
 					.help			= "Current operating configuration",
 					.mask			= PRIV(2),
 					.tokenize	= NULL,
 					.run			= cmd_show_run,
-					.subtree	= (struct menu_node[]) { /*{{{*/
-						{ /* #show running-config interface */
+					.subtree	= (struct menu_node *[]) { /*{{{*/
+						/* #show running-config interface */
+						& (struct menu_node){
 							.name			= "interface",
 							.help			= "Show interface configuration",
 							.mask			= PRIV(1),
 							.tokenize	= NULL,
 							.run			= NULL,
-							.subtree	= (struct menu_node[]) { /*{{{*/
-								{ /* #show running-config interface ethernet */
+							.subtree	= (struct menu_node *[]) { /*{{{*/
+								/* #show running-config interface ethernet */
+								& (struct menu_node){
 									.name			= "ethernet",
 									.help			= "Ethernet IEEE 802.3",
 									.mask			= PRIV(2),
 									.tokenize	= NULL,
 									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show running-config interface ethernet  */
+									.subtree	= (struct menu_node *[]) { /*{{{*/
+										/* #show running-config interface ethernet  */
+										& (struct menu_node){
 											.name			= "",
 											.help			= "Ethernet interface number",
 											.mask			= PRIV(2),
@@ -5439,18 +2628,20 @@ struct menu_node menu_main = {
 											.subtree	= NULL
 										},
 
-										NULL_MENU_NODE
+										NULL
 									} /*}}}*/
 								},
 
-								{ /* #show running-config interface vlan */
+								/* #show running-config interface vlan */
+								& (struct menu_node){
 									.name			= "vlan",
 									.help			= "LMS Vlans",
 									.mask			= PRIV(2),
 									.tokenize	= NULL,
 									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show running-config interface vlan <1-1094> */
+									.subtree	= (struct menu_node *[]) { /*{{{*/
+										/* #show running-config interface vlan <1-1094> */
+										& (struct menu_node){
 											.name			= "<1-1094>",
 											.help			= "Vlan interface number",
 											.mask			= PRIV(2),
@@ -5459,29 +2650,32 @@ struct menu_node menu_main = {
 											.subtree	= NULL
 										},
 
-										NULL_MENU_NODE
+										NULL
 									} /*}}}*/
 								},
 
-								NULL_MENU_NODE
+								NULL
 							} /*}}}*/
 						},
 
-						{ /* #show running-config | */
+						/* #show running-config | */
+						& (struct menu_node){
 							.name			= "|",
 							.help			= "Output modifiers",
 							.mask			= PRIV(1),
 							.tokenize	= NULL,
 							.run			= NULL,
-							.subtree	= (struct menu_node[]) { /*{{{*/
-								{ /* #show running-config | begin */
+							.subtree	= (struct menu_node *[]) { /*{{{*/
+								/* #show running-config | begin */
+								& (struct menu_node){
 									.name			= "begin",
 									.help			= "Begin with the line that matches",
 									.mask			= PRIV(1),
 									.tokenize	= NULL,
 									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show running-config | begin LINE */
+									.subtree	= (struct menu_node *[]) { /*{{{*/
+										/* #show running-config | begin LINE */
+										& (struct menu_node){
 											.name			= "LINE",
 											.help			= "Regular Expression",
 											.mask			= PRIV(1),
@@ -5490,18 +2684,20 @@ struct menu_node menu_main = {
 											.subtree	= NULL
 										},
 
-										NULL_MENU_NODE
+										NULL
 									} /*}}}*/
 								},
 
-								{ /* #show running-config | exclude */
+								/* #show running-config | exclude */
+								& (struct menu_node){
 									.name			= "exclude",
 									.help			= "Exclude lines that match",
 									.mask			= PRIV(1),
 									.tokenize	= NULL,
 									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show running-config | exclude LINE */
+									.subtree	= (struct menu_node *[]) { /*{{{*/
+										/* #show running-config | exclude LINE */
+										& (struct menu_node){
 											.name			= "LINE",
 											.help			= "Regular Expression",
 											.mask			= PRIV(1),
@@ -5510,18 +2706,20 @@ struct menu_node menu_main = {
 											.subtree	= NULL
 										},
 
-										NULL_MENU_NODE
+										NULL
 									} /*}}}*/
 								},
 
-								{ /* #show running-config | include */
+								/* #show running-config | include */
+								& (struct menu_node){
 									.name			= "include",
 									.help			= "Include lines that match",
 									.mask			= PRIV(1),
 									.tokenize	= NULL,
 									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show running-config | include LINE */
+									.subtree	= (struct menu_node *[]) { /*{{{*/
+										/* #show running-config | include LINE */
+										& (struct menu_node){
 											.name			= "LINE",
 											.help			= "Regular Expression",
 											.mask			= PRIV(1),
@@ -5530,18 +2728,20 @@ struct menu_node menu_main = {
 											.subtree	= NULL
 										},
 
-										NULL_MENU_NODE
+										NULL
 									} /*}}}*/
 								},
 
-								{ /* #show running-config | grep */
+								/* #show running-config | grep */
+								& (struct menu_node){
 									.name			= "grep",
 									.help			= "Linux grep functionality",
 									.mask			= PRIV(1),
 									.tokenize	= NULL,
 									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show running-config | grep LINE */
+									.subtree	= (struct menu_node *[]) { /*{{{*/
+										/* #show running-config | grep LINE */
+										& (struct menu_node){
 											.name			= "LINE",
 											.help			= "Regular Expression",
 											.mask			= PRIV(1),
@@ -5550,19 +2750,20 @@ struct menu_node menu_main = {
 											.subtree	= NULL
 										},
 
-										NULL_MENU_NODE
+										NULL
 									} /*}}}*/
 								},
 
-								NULL_MENU_NODE
+								NULL
 							} /*}}}*/
 						},
 
-						NULL_MENU_NODE
+						NULL
 					} /*}}}*/
 				},
 
-				{ /* #show sessions */
+				/* #show sessions */
+				& (struct menu_node){
 					.name			= "sessions",
 					.help			= "Information about Telnet connections",
 					.mask			= PRIV(1),
@@ -5571,7 +2772,8 @@ struct menu_node menu_main = {
 					.subtree	= NULL
 				},
 
-				{ /* #show startup-config */
+				/* #show startup-config */
+				& (struct menu_node){
 					.name			= "startup-config",
 					.help			= "Contents of startup configuration",
 					.mask			= PRIV(1),
@@ -5580,7 +2782,8 @@ struct menu_node menu_main = {
 					.subtree	= NULL
 				},
 
-				{ /* #show users */
+				/* #show users */
+				& (struct menu_node){
 					.name			= "users",
 					.help			= "Display information about terminal lines",
 					.mask			= PRIV(1),
@@ -5589,7 +2792,8 @@ struct menu_node menu_main = {
 					.subtree	= NULL
 				},
 
-				{ /* #show version */
+				/* #show version */
+				& (struct menu_node){
 					.name			= "version",
 					.help			= "System hardware and software status",
 					.mask			= PRIV(1),
@@ -5598,35 +2802,40 @@ struct menu_node menu_main = {
 					.subtree	= NULL
 				},
 
-				{ /* #show vlan */
+				/* #show vlan */
+				& (struct menu_node){
 					.name			= "vlan",
 					.help			= "VTP VLAN status",
 					.mask			= PRIV(1),
 					.tokenize	= NULL,
 					.run			= cmd_show_vlan,
-					.subtree	= (struct menu_node[]) { /*{{{*/
-						{ /* #show vlan brief */
+					.subtree	= (struct menu_node *[]) { /*{{{*/
+						/* #show vlan brief */
+						& (struct menu_node){
 							.name			= "brief",
 							.help			= "VTP all VLAN status in brief",
 							.mask			= PRIV(1),
 							.tokenize	= NULL,
 							.run			= cmd_show_vlan,
-							.subtree	= (struct menu_node[]) { /*{{{*/
-								{ /* #show vlan brief | */
+							.subtree	= (struct menu_node *[]) { /*{{{*/
+								/* #show vlan brief | */
+								& (struct menu_node){
 									.name			= "|",
 									.help			= "Output modifiers",
 									.mask			= PRIV(1),
 									.tokenize	= NULL,
 									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show vlan brief | begin */
+									.subtree	= (struct menu_node *[]) { /*{{{*/
+										/* #show vlan brief | begin */
+										& (struct menu_node){
 											.name			= "begin",
 											.help			= "Begin with the line that matches",
 											.mask			= PRIV(1),
 											.tokenize	= NULL,
 											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show vlan brief | begin LINE */
+											.subtree	= (struct menu_node *[]) { /*{{{*/
+												/* #show vlan brief | begin LINE */
+												& (struct menu_node){
 													.name			= "LINE",
 													.help			= "Regular Expression",
 													.mask			= PRIV(1),
@@ -5635,18 +2844,20 @@ struct menu_node menu_main = {
 													.subtree	= NULL
 												},
 
-												NULL_MENU_NODE
+												NULL
 											} /*}}}*/
 										},
 
-										{ /* #show vlan brief | exclude */
+										/* #show vlan brief | exclude */
+										& (struct menu_node){
 											.name			= "exclude",
 											.help			= "Exclude lines that match",
 											.mask			= PRIV(1),
 											.tokenize	= NULL,
 											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show vlan brief | exclude LINE */
+											.subtree	= (struct menu_node *[]) { /*{{{*/
+												/* #show vlan brief | exclude LINE */
+												& (struct menu_node){
 													.name			= "LINE",
 													.help			= "Regular Expression",
 													.mask			= PRIV(1),
@@ -5655,18 +2866,20 @@ struct menu_node menu_main = {
 													.subtree	= NULL
 												},
 
-												NULL_MENU_NODE
+												NULL
 											} /*}}}*/
 										},
 
-										{ /* #show vlan brief | include */
+										/* #show vlan brief | include */
+										& (struct menu_node){
 											.name			= "include",
 											.help			= "Include lines that match",
 											.mask			= PRIV(1),
 											.tokenize	= NULL,
 											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show vlan brief | include LINE */
+											.subtree	= (struct menu_node *[]) { /*{{{*/
+												/* #show vlan brief | include LINE */
+												& (struct menu_node){
 													.name			= "LINE",
 													.help			= "Regular Expression",
 													.mask			= PRIV(1),
@@ -5675,18 +2888,20 @@ struct menu_node menu_main = {
 													.subtree	= NULL
 												},
 
-												NULL_MENU_NODE
+												NULL
 											} /*}}}*/
 										},
 
-										{ /* #show vlan brief | grep */
+										/* #show vlan brief | grep */
+										& (struct menu_node){
 											.name			= "grep",
 											.help			= "Linux grep functionality",
 											.mask			= PRIV(1),
 											.tokenize	= NULL,
 											.run			= NULL,
-											.subtree	= (struct menu_node[]) { /*{{{*/
-												{ /* #show vlan brief | grep LINE */
+											.subtree	= (struct menu_node *[]) { /*{{{*/
+												/* #show vlan brief | grep LINE */
+												& (struct menu_node){
 													.name			= "LINE",
 													.help			= "Regular Expression",
 													.mask			= PRIV(1),
@@ -5695,33 +2910,36 @@ struct menu_node menu_main = {
 													.subtree	= NULL
 												},
 
-												NULL_MENU_NODE
+												NULL
 											} /*}}}*/
 										},
 
-										NULL_MENU_NODE
+										NULL
 									} /*}}}*/
 								},
 
-								NULL_MENU_NODE
+								NULL
 							} /*}}}*/
 						},
 
-						{ /* #show vlan | */
+						/* #show vlan | */
+						& (struct menu_node){
 							.name			= "|",
 							.help			= "Output modifiers",
 							.mask			= PRIV(1),
 							.tokenize	= NULL,
 							.run			= NULL,
-							.subtree	= (struct menu_node[]) { /*{{{*/
-								{ /* #show vlan | begin */
+							.subtree	= (struct menu_node *[]) { /*{{{*/
+								/* #show vlan | begin */
+								& (struct menu_node){
 									.name			= "begin",
 									.help			= "Begin with the line that matches",
 									.mask			= PRIV(1),
 									.tokenize	= NULL,
 									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show vlan | begin LINE */
+									.subtree	= (struct menu_node *[]) { /*{{{*/
+										/* #show vlan | begin LINE */
+										& (struct menu_node){
 											.name			= "LINE",
 											.help			= "Regular Expression",
 											.mask			= PRIV(1),
@@ -5730,18 +2948,20 @@ struct menu_node menu_main = {
 											.subtree	= NULL
 										},
 
-										NULL_MENU_NODE
+										NULL
 									} /*}}}*/
 								},
 
-								{ /* #show vlan | exclude */
+								/* #show vlan | exclude */
+								& (struct menu_node){
 									.name			= "exclude",
 									.help			= "Exclude lines that match",
 									.mask			= PRIV(1),
 									.tokenize	= NULL,
 									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show vlan | exclude LINE */
+									.subtree	= (struct menu_node *[]) { /*{{{*/
+										/* #show vlan | exclude LINE */
+										& (struct menu_node){
 											.name			= "LINE",
 											.help			= "Regular Expression",
 											.mask			= PRIV(1),
@@ -5750,18 +2970,20 @@ struct menu_node menu_main = {
 											.subtree	= NULL
 										},
 
-										NULL_MENU_NODE
+										NULL
 									} /*}}}*/
 								},
 
-								{ /* #show vlan | include */
+								/* #show vlan | include */
+								& (struct menu_node){
 									.name			= "include",
 									.help			= "Include lines that match",
 									.mask			= PRIV(1),
 									.tokenize	= NULL,
 									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show vlan | include LINE */
+									.subtree	= (struct menu_node *[]) { /*{{{*/
+										/* #show vlan | include LINE */
+										& (struct menu_node){
 											.name			= "LINE",
 											.help			= "Regular Expression",
 											.mask			= PRIV(1),
@@ -5770,18 +2992,20 @@ struct menu_node menu_main = {
 											.subtree	= NULL
 										},
 
-										NULL_MENU_NODE
+										NULL
 									} /*}}}*/
 								},
 
-								{ /* #show vlan | grep */
+								/* #show vlan | grep */
+								& (struct menu_node){
 									.name			= "grep",
 									.help			= "Linux grep functionality",
 									.mask			= PRIV(1),
 									.tokenize	= NULL,
 									.run			= NULL,
-									.subtree	= (struct menu_node[]) { /*{{{*/
-										{ /* #show vlan | grep LINE */
+									.subtree	= (struct menu_node *[]) { /*{{{*/
+										/* #show vlan | grep LINE */
+										& (struct menu_node){
 											.name			= "LINE",
 											.help			= "Regular Expression",
 											.mask			= PRIV(1),
@@ -5790,30 +3014,32 @@ struct menu_node menu_main = {
 											.subtree	= NULL
 										},
 
-										NULL_MENU_NODE
+										NULL
 									} /*}}}*/
 								},
 
-								NULL_MENU_NODE
+								NULL
 							} /*}}}*/
 						},
 
-						NULL_MENU_NODE
+						NULL
 					} /*}}}*/
 				},
 
-				NULL_MENU_NODE
+				NULL
 			} /*}}}*/
 		},
 
-		{ /* #traceroute */
+		/* #traceroute */
+		& (struct menu_node){
 			.name			= "traceroute",
 			.help			= "Trace route to destination",
 			.mask			= PRIV(1),
 			.tokenize	= NULL,
 			.run			= NULL,
-			.subtree	= (struct menu_node[]) { /*{{{*/
-				{ /* #traceroute WORD */
+			.subtree	= (struct menu_node *[]) { /*{{{*/
+				/* #traceroute WORD */
+				& (struct menu_node){
 					.name			= "WORD",
 					.help			= "Ping destination address or hostname",
 					.mask			= PRIV(1),
@@ -5822,11 +3048,12 @@ struct menu_node menu_main = {
 					.subtree	= NULL
 				},
 
-				NULL_MENU_NODE
+				NULL
 			} /*}}}*/
 		},
 
-		{ /* #where */
+		/* #where */
+		& (struct menu_node){
 			.name			= "where",
 			.help			= "List active connections",
 			.mask			= PRIV(1),
@@ -5835,14 +3062,16 @@ struct menu_node menu_main = {
 			.subtree	= NULL
 		},
 
-		{ /* #write */
+		/* #write */
+		& (struct menu_node){
 			.name			= "write",
 			.help			= "Write running configuration to memory",
 			.mask			= PRIV(15),
 			.tokenize	= NULL,
 			.run			= NULL,
-			.subtree	= (struct menu_node[]) { /*{{{*/
-				{ /* #write memory */
+			.subtree	= (struct menu_node *[]) { /*{{{*/
+				/* #write memory */
+				& (struct menu_node){
 					.name			= "memory",
 					.help			= "Write to NV memory",
 					.mask			= PRIV(15),
@@ -5851,11 +3080,11 @@ struct menu_node menu_main = {
 					.subtree	= NULL
 				},
 
-				NULL_MENU_NODE
+				NULL
 			} /*}}}*/
 		},
 
-		NULL_MENU_NODE
+		NULL
 	}
 };
 
