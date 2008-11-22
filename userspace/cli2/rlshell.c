@@ -222,7 +222,7 @@ int rlshell_exec(struct rlshell_context *ctx, char *buf)
 {
 	int status;
 
-	switch ((status = cli_exec(&ctx->cc, buf)) & CLI_EX_STAT_MASK) {
+	switch ((status = cli_exec(&ctx->cc, buf))) {
 	case CLI_EX_AMBIGUOUS:
 		rlshell_ambiguous_cmd(buf);
 		return status;
@@ -230,7 +230,7 @@ int rlshell_exec(struct rlshell_context *ctx, char *buf)
 		rlshell_incomplete_cmd(buf);
 		return status;
 	case CLI_EX_INVALID:
-		rlshell_extra_input(ctx->plen + (status >> CLI_EX_STAT_BITS));
+		rlshell_extra_input(ctx->plen + ctx->cc.ex_status.offset);
 		break;
 	default:
 		break;

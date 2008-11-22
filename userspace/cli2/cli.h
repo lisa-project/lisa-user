@@ -2,6 +2,7 @@
 #define _CLI_H
 
 #include <stdio.h>
+#include <sys/types.h>
 
 struct menu_node;
 
@@ -30,7 +31,20 @@ struct tokenize_out {
 #define MATCHES(out) ((out)->matches[0] == NULL ? 0 : ((out)->matches[1] == NULL ? 1 : 2))
 
 struct cli_context {
-	int filter;
+	/* Bitwise selector against menu node masks (nodes that don't match
+	 * are filtered) */
+	int node_filter;
+
+	/* Additional hints about last command execution failure */
+	union {
+		/* Parse error offset for INVALID commands */
+		int offset;
+
+		/* Error description for REJECTED commands */
+		char *reason;
+	} ex_status;
+
+	/* Current menu node root */
 	struct menu_node *root;
 };
 
@@ -80,12 +94,6 @@ enum {
 	CLI_EX_REJECTED			= 4,
 	CLI_EX_NOTIMPL			= 5
 };
-
-/* Define how many bits in the return code are used by the status code
- * (which is one of the enum above); the rest can be used for additional
- * information, such as the error offset for invalid commands */
-#define CLI_EX_STAT_BITS	4
-#define CLI_EX_STAT_MASK	((1 << CLI_EX_STAT_BITS) - 1)
 
 int cli_next_token(const char *buf, struct tokenize_out *out);
 int cli_tokenize(struct cli_context *ctx, const char *buf, struct menu_node **tree, struct tokenize_out *out);

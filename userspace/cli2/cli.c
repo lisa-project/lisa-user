@@ -57,7 +57,7 @@ int cli_tokenize(struct cli_context *ctx, const char *buf, struct menu_node **tr
 	/* lookup token in tree */
 	for (i=0, j=0; tree[i] && j < TOKENIZE_MAX_MATCHES; i++) {
 		/* apply filter */
-		if ((tree[i]->mask & ctx->filter) != tree[i]->mask)
+		if ((tree[i]->mask & ctx->node_filter) != tree[i]->mask)
 			continue;
 
 		if (strncmp(token, tree[i]->name, out->len))
@@ -140,8 +140,8 @@ int cli_exec(struct cli_context *ctx, char *buf)
 			break;
 
 		/* Case D: no matches, extra garbage at the end of the line */
-		return (((cmd - buf) + out.offset + out.ok_len)  << CLI_EX_STAT_BITS)
-			| CLI_EX_INVALID;
+		ctx->ex_status.offset = (cmd - buf) + out.offset + out.ok_len;
+		return CLI_EX_INVALID;
 	}
 
 	/* If control reaches this point, we must run the command. */

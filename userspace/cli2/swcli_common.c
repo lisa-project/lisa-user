@@ -9,7 +9,7 @@ char *swcli_prompt(struct rlshell_context *ctx) {
 	char hostname[HOST_NAME_MAX + 1];
 	size_t buf_size = HOST_NAME_MAX + MENU_NAME_MAX + 3;
 	char *buf = malloc(buf_size);
-	char prompt = ctx->cc.filter & PRIV(2) ? '#' : '>';
+	char prompt = ctx->cc.node_filter & PRIV(2) ? '#' : '>';
 
 	if (buf == NULL)
 		return buf;

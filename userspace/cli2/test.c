@@ -99,7 +99,7 @@ int main(int argc, char **argv) {
 	printf("%s\n", root[0].subtree[1].name);
 	printf("%s\n", root[1].subtree[0].name);
 	*/
-	cc.filter = PRIV_FILTER(15);
+	cc.node_filter = PRIV_FILTER(15);
 	cc.root = &root[0];
 
 	for (cmd = test; *cmd; cmd++)
