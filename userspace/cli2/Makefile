@@ -35,13 +35,14 @@ LIBSWCLI_SRCS += swcli_common.c
 
 SRCS          = $(LIBSWCLI_SRCS) \
 				swcli.c \
+				filter.c \
 				test.c
 LIBSWCLI_OBJS = $(LIBSWCLI_SRCS:.c=.o)
 
 # Targets linked with libswcli
 LIBSWCLI_TARGETS = swcli test
 # Simple targets, not linked with libswcli
-SIMPLE_TARGETS	 = 
+SIMPLE_TARGETS	 = filter
 # All targets
 TARGETS	= libswcli.so $(LIBSWCLI_TARGETS) $(SIMPLE_TARGETS)
 
