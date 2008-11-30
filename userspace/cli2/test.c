@@ -1,59 +1,59 @@
 #include "cli.h"
 #include "swcli_common.h"
 
-int addr_tokenize(struct cli_context *cc, const char *buf, struct menu_node *tree, struct tokenize_out *out) {
+int addr_tokenize(struct cli_context *cc, const char *buf, struct menu_node **tree, struct tokenize_out *out) {
 	int i = 0;
 
 	if (cli_next_token(buf, out))
 		return 0;
 
 	if (out->len >= 4) {
-		out->matches[0] = &tree[0];
+		out->matches[0] = tree[0];
 		out->matches[1] = NULL;
 		return 0;
 	}
 
 	if (!whitespace(buf[out->offset + out->len]))
-		out->matches[i++] = &tree[0];
+		out->matches[i++] = tree[0];
 
 	out->matches[i] = NULL;
 
 	return 1;
 }
 
-struct menu_node root[] = {
-	{ // path = /
+struct menu_node *root[] = {
+	& (struct menu_node){ // path = /
 		.name		= "ip",
-		.subtree	= (struct menu_node[]) {
-			{ // path = /ip
+		.subtree	= (struct menu_node *[]) {
+			& (struct menu_node){ // path = /ip
 				.name		= "access-group"
 			},
-			{ // path = /ip
+			& (struct menu_node){ // path = /ip
 				.name		= "address",
-				.subtree	= (struct menu_node[]) {
-					{ // path = /ip/addr
+				.subtree	= (struct menu_node *[]) {
+					& (struct menu_node){ // path = /ip/addr
 						.name		= "ABCD"
 					},
-					NULL_MENU_NODE
+					NULL
 				},
 				.tokenize	= addr_tokenize
 			},
-			NULL_MENU_NODE
+			NULL
 		}
 	},
-	{ // path = /
+	& (struct menu_node) { // path = /
 		.name		= "show",
-		.subtree	= (struct menu_node[]) {
-			{ // path = /show
+		.subtree	= (struct menu_node *[]) {
+			& (struct menu_node){ // path = /show
 				.name		= "version"
 			},
-			NULL_MENU_NODE
+			NULL
 		}
 	},
-	NULL_MENU_NODE
+	NULL
 };
 
-char * test[] = {
+const char * test[] = {
 	"ip a",
 	"ip a ",
 	"ip addr 123",
@@ -66,11 +66,11 @@ char * test[] = {
 	NULL
 };
 
-void test_cmd(struct cli_context *ctx, char *cmd) {
+void test_cmd(struct cli_context *ctx, const char *cmd) {
 	struct tokenize_out out;
 	int status, size, step = 0;
-	struct menu_node *menu = root;
-	int (*tokenize)(struct cli_context *ctx, const char *buf, struct menu_node *tree, struct tokenize_out *out) = cli_tokenize;
+	struct menu_node **menu = root;
+	int (*tokenize)(struct cli_context *ctx, const char *buf, struct menu_node **tree, struct tokenize_out *out) = cli_tokenize;
 
 	printf("Command: '%s'\n", cmd);
 
@@ -91,7 +91,7 @@ void test_cmd(struct cli_context *ctx, char *cmd) {
 
 int main(int argc, char **argv) {
 	struct cli_context cc;
-	char **cmd;
+	const char **cmd;
 
 	/*
 	printf("%s\n", root[0].name);
@@ -100,7 +100,7 @@ int main(int argc, char **argv) {
 	printf("%s\n", root[1].subtree[0].name);
 	*/
 	cc.node_filter = PRIV_FILTER(15);
-	cc.root = &root[0];
+	cc.root = root[0];
 
 	for (cmd = test; *cmd; cmd++)
 		test_cmd(&cc, *cmd);
