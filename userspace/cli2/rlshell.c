@@ -74,7 +74,7 @@ char **rlshell_completion(const char *text, int start, int end)
 
 		/* A single exact match will have priority over other
 		 * partial matches. */
-		if (out.exact_match != NULL) {
+		if (out.exact_match != NULL && trailing_whitespace) {
 			out.matches[0] = out.exact_match;
 			out.matches[1] = NULL;
 		}
@@ -86,15 +86,16 @@ char **rlshell_completion(const char *text, int start, int end)
 
 		/* Case B: exactly one match. Continue parsing the input. */
 		if (size == 1) {
-			menu = out.matches[0];
-			/* When there's no trailing whitespace and the curent token matches
-			 * exactly the portion in text that we need to complete, store a copy
+			/* When there's no custom tokenizing function (remember the CMPL flag in cli 1?),
+			 * no trailing whitespace and the curent token matches exactly the portion in
+			 * text that we need to complete, store a copy
 			 * of the completion in match_list[0] */
-			if (!trailing_whitespace && !strncmp(text, cmd+out.offset, end-start)) {
+			if (!menu->tokenize && !trailing_whitespace && !strncmp(text, cmd+out.offset, end-start)) {
 				assert(!match_list[0]);
-				match_list[0] = strndup(menu->name, strlen(menu->name));
+				match_list[0] = strndup(out.matches[0]->name, strlen(out.matches[0]->name));
 			}
 			cmd += out.offset + out.len;
+			menu = out.matches[0];
 			continue;
 		}
 
