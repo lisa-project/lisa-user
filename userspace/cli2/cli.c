@@ -68,7 +68,7 @@ int cli_tokenize(struct cli_context *ctx, const char *buf,
 		if ((tree[i]->mask & ctx->node_filter) != tree[i]->mask)
 			continue;
 
-		if (strncmp(token, tree[i]->name, out->len))
+		if (strncasecmp(token, tree[i]->name, out->len))
 			continue;
 
 		/* register match */
@@ -88,7 +88,7 @@ int cli_tokenize(struct cli_context *ctx, const char *buf,
 		if (!out->ok_len)
 			break;
 		for (i = 0; tree[i]; i++) {
-			if (strncmp(token, tree[i]->name, out->ok_len))
+			if (strncasecmp(token, tree[i]->name, out->ok_len))
 				continue;
 			j = 1;
 			break;
