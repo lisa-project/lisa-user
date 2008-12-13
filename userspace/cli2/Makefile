@@ -33,6 +33,9 @@ LIBSWCLI_SRCS += cmd_main.c
 # Common swcli stuff that does not fit in the 4 layers
 LIBSWCLI_SRCS += swcli_common.c
 
+# Interface submenus
+LIBSWCLI_SRCS += menu_interface.c
+
 SRCS          = $(LIBSWCLI_SRCS) \
 				swcli.c \
 				filter.c \

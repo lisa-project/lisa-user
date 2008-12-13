@@ -25,6 +25,86 @@ int swcli_tokenize_line(struct cli_context *ctx, const char *buf,
 	return 1;
 }
 
+static inline int swcli_valid_number(int *valid, int val)
+{
+	int i;
+
+	if (!valid)
+		return 1;
+
+	switch (valid[0]) {
+	case VALID_LIMITS:
+		return val >= valid[1] && val <= valid[2];
+	case VALID_LIST:
+		for (i = 2; i < valid[1] + 2; i++)
+			if (val == valid[i])
+				return 1;
+		return 0;
+	}
+
+	return 1;
+}
+
+int swcli_tokenize_number(struct cli_context *ctx, const char *buf,
+		struct menu_node **tree, struct tokenize_out *out)
+{
+	char c, *token;
+	const char *ok = "0123456789";
+	int *valid = tree[0]->priv;
+
+	if (cli_next_token(buf, out))
+		return 0;
+
+	buf += out->offset;
+
+	c = buf[out->len];
+	out->matches[0] = NULL;
+	out->matches[1] = NULL;
+
+	out->ok_len = strspn(buf, ok);
+
+	if (out->ok_len < out->len) {
+		out->partial_match = tree[0];
+		return whitespace(c);
+	}
+
+	token = strdupa(buf);
+	while (out->ok_len) {
+		int val;
+
+		token[out->ok_len] = '\0';
+		val = atoi(token);
+		if (swcli_valid_number(valid, val))
+			break;
+
+		out->ok_len--;
+	}
+
+	if (out->ok_len < out->len) {
+		out->partial_match = tree[0];
+		return whitespace(c);
+	}
+
+	out->matches[0] = tree[0];
+	return whitespace(c);
+}
+
+int swcli_tokenize_word(struct cli_context *ctx, const char *buf,
+		struct menu_node **tree, struct tokenize_out *out)
+{
+	char c;
+
+	if (cli_next_token(buf, out))
+		return 0;
+
+	c = buf[out->offset + out->len];
+
+	out->matches[0] = tree[0];
+	out->matches[1] = NULL;
+
+	return whitespace(c);
+}
+
 int swcli_output_modifiers_run(struct cli_context *ctx, int argc, char **argv,
 		struct menu_node **nodev)
 {

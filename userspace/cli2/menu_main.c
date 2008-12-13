@@ -1,7 +1,6 @@
 #include "cli.h"
 #include "swcli_common.h"
 
-int swcli_tokenize_line(struct cli_context *ctx, const char *buf, struct menu_node **tree, struct tokenize_out *out);
 int swcli_output_modifiers_run(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev);
 
 int cmd_clr_mac(struct cli_context *, int, char **, struct menu_node **);

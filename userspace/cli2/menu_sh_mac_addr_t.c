@@ -1,5 +1,6 @@
 #include "cli.h"
 #include "swcli_common.h"
+#include "menu_interface.h"
 
 /*                         show
  *                           |
@@ -65,16 +66,18 @@ static struct menu_node vlan = {
 	} /*}}}*/
 };
 
-static struct menu_node interface = {
-	.name			= "interface",
-	.help			= "interface keyword",
-	.mask			= PRIV(1),
-	.tokenize	= NULL, /* tok_interface, */
-	.run			= NULL,
-	.subtree	= (struct menu_node *[]) { /*{{{*/
-		NULL // FIXME
-	} /*}}}*/
+static struct menu_node *if_nexttree[] = {
+	&vlan,
+	NULL
 };
+
+static struct menu_node *if_subtree[] = {
+	IF_ETHER(if_nexttree, cmd_sh_mac_addr_t, NULL),
+	IF_NETDEV(if_nexttree, cmd_sh_mac_addr_t, NULL),
+	NULL
+};
+
+static struct menu_node interface = IF_MENU_NODE(if_subtree);
 
 static struct menu_node address = {
 	.name			= "address",

@@ -26,6 +26,8 @@ struct tokenize_out {
 	struct menu_node *matches[TOKENIZE_MAX_MATCHES+1];
 	/* Exact match (token length == node name length) if any */
 	struct menu_node *exact_match;
+	/* Partially matching node (when no matches found), if any */
+	struct menu_node *partial_match;
 };
 
 #define MATCHES(out) ((out)->matches[0] == NULL ? 0 : ((out)->matches[1] == NULL ? 1 : 2))
@@ -105,6 +107,9 @@ struct menu_node {
 	 */
 	int (*run)(struct cli_context *ctx, int argc, char **tokv,
 					struct menu_node **nodev);
+
+	/* Additional data that a custom tokenize function may use */
+	void *priv;
 
 	/* Points to the sub menu of the node */
 	struct menu_node **subtree;

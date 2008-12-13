@@ -22,6 +22,7 @@ int cli_next_token(const char *buf, struct tokenize_out *out)
 	/* always reset ok_len to 0 */
 	out->ok_len = 0;
 	out->exact_match = NULL;
+	out->partial_match = NULL;
 	out->len = 0;
 
 	/* buf contains only whitespace */
@@ -91,6 +92,7 @@ int cli_tokenize(struct cli_context *ctx, const char *buf,
 			if (strncasecmp(token, tree[i]->name, out->ok_len))
 				continue;
 			j = 1;
+			out->partial_match = tree[i];
 			break;
 		}
 	}
