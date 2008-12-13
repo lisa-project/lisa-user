@@ -228,7 +228,7 @@ int cli_filter_open(struct cli_context *ctx, int out_fd)
 		close(1);
 		dup2(out_fd, 1);
 		priv->argv[0] = FILTER_PATH;
-		execv(FILTER_PATH, priv->argv);
+		execv(FILTER_PATH, (void *)(priv->argv));
 	}
 
 	close(priv->p[0]);

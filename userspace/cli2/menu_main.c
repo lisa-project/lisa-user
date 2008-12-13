@@ -44,7 +44,9 @@ int cmd_trace(struct cli_context *, int, char **, struct menu_node **);
 int cmd_wrme(struct cli_context *, int, char **, struct menu_node **);
 
 int cmd_sh_mac_addr_t(struct cli_context *, int, char **, struct menu_node **);
+int cmd_cl_mac_addr_t(struct cli_context *, int, char **, struct menu_node **);
 extern struct menu_node *show_mac_addr_t[];
+extern struct menu_node *clear_mac_addr_t[];
 
 static struct menu_node output_modifiers_line = {
 	.name			= "LINE",
@@ -149,99 +151,7 @@ struct menu_node menu_main = {
 							.mask			= PRIV(2),
 							.tokenize	= NULL,
 							.run			= NULL,
-							.subtree	= (struct menu_node *[]) { /*{{{*/
-								/* #clear mac address-table dynamic */
-								& (struct menu_node){
-									.name			= "dynamic",
-									.help			= "dynamic entry type",
-									.mask			= PRIV(2),
-									.tokenize	= NULL,
-									.run			= cmd_clr_mac,
-									.subtree	= (struct menu_node *[]) { /*{{{*/
-										/* #clear mac address-table dynamic address */
-										& (struct menu_node){
-											.name			= "address",
-											.help			= "address keyword",
-											.mask			= PRIV(2),
-											.tokenize	= NULL,
-											.run			= NULL,
-											.subtree	= (struct menu_node *[]) { /*{{{*/
-												/* #clear mac address-table dynamic address H.H.H */
-												& (struct menu_node){
-													.name			= "H.H.H",
-													.help			= "48 bit mac address",
-													.mask			= PRIV(2),
-													.tokenize	= NULL,
-													.run			= cmd_clr_mac_adr,
-													.subtree	= NULL
-												},
-
-												NULL
-											} /*}}}*/
-										},
-
-										/* #clear mac address-table dynamic interface */
-										& (struct menu_node){
-											.name			= "interface",
-											.help			= "interface keyword",
-											.mask			= PRIV(2),
-											.tokenize	= NULL,
-											.run			= NULL,
-											.subtree	= (struct menu_node *[]) { /*{{{*/
-												/* #clear mac address-table dynamic interface ethernet */
-												& (struct menu_node){
-													.name			= "ethernet",
-													.help			= "Ethernet IEEE 802.3",
-													.mask			= PRIV(2),
-													.tokenize	= NULL,
-													.run			= NULL,
-													.subtree	= (struct menu_node *[]) { /*{{{*/
-														/* #clear mac address-table dynamic interface ethernet  */
-														& (struct menu_node){
-															.name			= "",
-															.help			= "Ethernet interface number",
-															.mask			= PRIV(2),
-															.tokenize	= NULL,
-															.run			= cmd_clr_mac_eth,
-															.subtree	= NULL
-														},
-
-														NULL
-													} /*}}}*/
-												},
-
-												NULL
-											} /*}}}*/
-										},
-
-										/* #clear mac address-table dynamic vlan */
-										& (struct menu_node){
-											.name			= "vlan",
-											.help			= "vlan keyword",
-											.mask			= PRIV(2),
-											.tokenize	= NULL,
-											.run			= NULL,
-											.subtree	= (struct menu_node *[]) { /*{{{*/
-												/* #clear mac address-table dynamic vlan <1-1094> */
-												& (struct menu_node){
-													.name			= "<1-1094>",
-													.help			= "Vlan interface number",
-													.mask			= PRIV(2),
-													.tokenize	= NULL,
-													.run			= cmd_clr_mac_vl,
-													.subtree	= NULL
-												},
-
-												NULL
-											} /*}}}*/
-										},
-
-										NULL
-									} /*}}}*/
-								},
-
-								NULL
-							} /*}}}*/
+							.subtree	= clear_mac_addr_t,
 						},
 
 						NULL
@@ -255,99 +165,7 @@ struct menu_node menu_main = {
 					.mask			= PRIV(2),
 					.tokenize	= NULL,
 					.run			= NULL,
-					.subtree	= (struct menu_node *[]) { /*{{{*/
-						/* #clear mac-address-table dynamic */
-						& (struct menu_node){
-							.name			= "dynamic",
-							.help			= "dynamic entry type",
-							.mask			= PRIV(2),
-							.tokenize	= NULL,
-							.run			= cmd_clr_mac,
-							.subtree	= (struct menu_node *[]) { /*{{{*/
-								/* #clear mac-address-table dynamic address */
-								& (struct menu_node){
-									.name			= "address",
-									.help			= "address keyword",
-									.mask			= PRIV(2),
-									.tokenize	= NULL,
-									.run			= NULL,
-									.subtree	= (struct menu_node *[]) { /*{{{*/
-										/* #clear mac-address-table dynamic address H.H.H */
-										& (struct menu_node){
-											.name			= "H.H.H",
-											.help			= "48 bit mac address",
-											.mask			= PRIV(2),
-											.tokenize	= NULL,
-											.run			= cmd_clr_mac_adr,
-											.subtree	= NULL
-										},
-
-										NULL
-									} /*}}}*/
-								},
-
-								/* #clear mac-address-table dynamic interface */
-								& (struct menu_node){
-									.name			= "interface",
-									.help			= "interface keyword",
-									.mask			= PRIV(2),
-									.tokenize	= NULL,
-									.run			= NULL,
-									.subtree	= (struct menu_node *[]) { /*{{{*/
-										/* #clear mac-address-table dynamic interface ethernet */
-										& (struct menu_node){
-											.name			= "ethernet",
-											.help			= "Ethernet IEEE 802.3",
-											.mask			= PRIV(2),
-											.tokenize	= NULL,
-											.run			= NULL,
-											.subtree	= (struct menu_node *[]) { /*{{{*/
-												/* #clear mac-address-table dynamic interface ethernet  */
-												& (struct menu_node){
-													.name			= "",
-													.help			= "Ethernet interface number",
-													.mask			= PRIV(2),
-													.tokenize	= NULL,
-													.run			= cmd_clr_mac_eth,
-													.subtree	= NULL
-												},
-
-												NULL
-											} /*}}}*/
-										},
-
-										NULL
-									} /*}}}*/
-								},
-
-								/* #clear mac-address-table dynamic vlan */
-								& (struct menu_node){
-									.name			= "vlan",
-									.help			= "vlan keyword",
-									.mask			= PRIV(2),
-									.tokenize	= NULL,
-									.run			= NULL,
-									.subtree	= (struct menu_node *[]) { /*{{{*/
-										/* #clear mac-address-table dynamic vlan <1-1094> */
-										& (struct menu_node){
-											.name			= "<1-1094>",
-											.help			= "Vlan interface number",
-											.mask			= PRIV(2),
-											.tokenize	= NULL,
-											.run			= cmd_clr_mac_vl,
-											.subtree	= NULL
-										},
-
-										NULL
-									} /*}}}*/
-								},
-
-								NULL
-							} /*}}}*/
-						},
-
-						NULL
-					} /*}}}*/
+					.subtree	= clear_mac_addr_t,
 				},
 
 				NULL

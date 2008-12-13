@@ -24,6 +24,9 @@ LIBSWCLI_SRCS += rlshell.c
 # LiSA Main Menu Tree
 LIBSWCLI_SRCS += menu_main.c
 
+# LiSA "clear mac-address-table" Menu Tree
+LIBSWCLI_SRCS += menu_cl_mac_addr_t.c
+
 # LiSA "show mac-address-table" Menu Tree
 LIBSWCLI_SRCS += menu_sh_mac_addr_t.c
 

@@ -168,7 +168,7 @@ int cmd_disable(struct cli_context *ctx, int argc, char **argv, struct menu_node
 int cmd_enable(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
 
 int cmd_quit(struct cli_context *__ctx, int argc, char **argv, struct menu_node **nodev) {
-	struct rlshell_context *ctx = (struct rhshell_context *)__ctx;
+	struct rlshell_context *ctx = (void *)__ctx;
 
 	ctx->exit = 1;
 	dump_args(__ctx, argc, argv, nodev);
@@ -227,6 +227,12 @@ int cmd_trace(struct cli_context *ctx, int argc, char **argv, struct menu_node *
 int cmd_wrme(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
 
 int cmd_sh_mac_addr_t(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){
+	printf("%s: called\n", __func__);
+	dump_args(ctx, argc, argv, nodev);
+	return 0;
+}
+
+int cmd_cl_mac_addr_t(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){
 	printf("%s: called\n", __func__);
 	dump_args(ctx, argc, argv, nodev);
 	return 0;
