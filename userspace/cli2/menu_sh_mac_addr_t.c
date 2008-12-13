@@ -48,7 +48,7 @@ static struct menu_node *vlan_subtree[] = {
 	NULL
 };
 static struct menu_node vlan =
-IF_VLAN_MENU_NODE(vlan_subtree, cmd_sh_mac_addr_t, NULL);
+VLAN_MENU_NODE(vlan_subtree, cmd_sh_mac_addr_t, NULL);
 
 static struct menu_node *if_nexttree[] = {
 	&vlan,

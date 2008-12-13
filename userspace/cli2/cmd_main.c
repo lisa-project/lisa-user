@@ -186,11 +186,6 @@ int cmd_sh_cdp_ne(struct cli_context *ctx, int argc, char **argv, struct menu_no
 	dump_args(ctx, argc, argv, nodev);
 	return 0;
 }
-int cmd_sh_cdp_ne_int(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
-int cmd_sh_cdp_ne_detail(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){
-	dump_args(ctx, argc, argv, nodev);
-	return 0;
-}
 int cmd_sh_cdp_run(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
 int cmd_sh_cdp_timer(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
 int cmd_sh_cdp_traffic(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
@@ -218,8 +213,7 @@ int cmd_sh_mac_eth(struct cli_context *ctx, int argc, char **argv, struct menu_n
 int cmd_sh_mac_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
 int cmd_show_priv(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
 int cmd_show_run(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
-int cmd_run_eth(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
-int cmd_run_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
+int cmd_sh_run_if(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
 int cmd_show_start(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
 int cmd_show_ver(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
 int cmd_show_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}

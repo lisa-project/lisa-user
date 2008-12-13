@@ -55,9 +55,30 @@
 }
 #define IF_NETDEV(...) & (struct menu_node) IF_NETDEV_MENU_NODE(__VA_ARGS__)
 
-#define IF_VLAN_MENU_NODE(__subtree, __run, __tokenize, __priv...) {\
+#define VLAN_MENU_NODE(__subtree, __run, __tokenize, __priv...) {\
 	.name		= "vlan",\
 	.help		= "VLAN keyword",\
+	.mask		= VA_PRIV(NIL, ##__priv, 1),\
+	.tokenize	= swcli_tokenize_number,\
+	.run		= NULL,\
+	.subtree	= (struct menu_node *[]) {\
+		& (struct menu_node) {\
+			.name		= "<1-1094>",\
+			.help		= "Vlan number",\
+			.mask		= VA_PRIV(NIL, ##__priv, 1),\
+			.tokenize	= __tokenize,\
+			.run		= __run,\
+			.priv		= (int []) {VALID_LIMITS, 1, 4094},\
+			.subtree	= __subtree\
+		},\
+		\
+		NULL\
+	}\
+}
+
+#define IF_VLAN_MENU_NODE(__subtree, __run, __tokenize, __priv...) {\
+	.name		= "vlan",\
+	.help		= "LMS Vlans",\
 	.mask		= VA_PRIV(NIL, ##__priv, 1),\
 	.tokenize	= swcli_tokenize_number,\
 	.run		= NULL,\

@@ -1,5 +1,6 @@
 #include "cli.h"
 #include "swcli_common.h"
+#include "menu_interface.h"
 
 int swcli_output_modifiers_run(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev);
 
@@ -35,8 +36,7 @@ int cmd_sh_mac_eth(struct cli_context *, int, char **, struct menu_node **);
 int cmd_sh_mac_vlan(struct cli_context *, int, char **, struct menu_node **);
 int cmd_show_priv(struct cli_context *, int, char **, struct menu_node **);
 int cmd_show_run(struct cli_context *, int, char **, struct menu_node **);
-int cmd_run_eth(struct cli_context *, int, char **, struct menu_node **);
-int cmd_run_vlan(struct cli_context *, int, char **, struct menu_node **);
+int cmd_sh_run_if(struct cli_context *, int, char **, struct menu_node **);
 int cmd_show_start(struct cli_context *, int, char **, struct menu_node **);
 int cmd_show_ver(struct cli_context *, int, char **, struct menu_node **);
 int cmd_show_vlan(struct cli_context *, int, char **, struct menu_node **);
@@ -122,6 +122,37 @@ struct menu_node output_modifiers = {
 
 		NULL
 	} /*}}}*/
+};
+
+struct menu_node *output_modifiers_subtree[] = {
+	&output_modifiers,
+	NULL
+};
+
+static struct menu_node cdp_ne_det = {
+	.name			= "detail",
+	.help			= "Show detailed information",
+	.mask			= PRIV(1),
+	.tokenize	= NULL,
+	.run			= cmd_sh_cdp_ne,
+	.subtree	= (struct menu_node *[]) { /*{{{*/
+		/* #show cdp neighbors ethernet  detail | */
+		&output_modifiers,
+		NULL
+	} /*}}}*/
+};
+
+static struct menu_node *cdp_ne_if_subtree[] = {
+	&cdp_ne_det,
+	&output_modifiers,
+	NULL
+};
+
+static struct menu_node *sh_int_subtree[] = {
+	// TODO don't use output_modifiers_subtree because we'll have to
+	// extend this anyway when we implement more subnodes
+	&output_modifiers,
+	NULL
 };
 
 struct menu_node menu_main = {
@@ -488,30 +519,11 @@ struct menu_node menu_main = {
 							.name			= "interface",
 							.help			= "CDP interface status and configuration",
 							.mask			= PRIV(1),
-							.tokenize	= NULL,
+							.tokenize	= if_tok_if,
 							.run			= cmd_sh_cdp_int,
 							.subtree	= (struct menu_node *[]) { /*{{{*/
-								/* #show cdp interface ethernet */
-								& (struct menu_node){
-									.name			= "ethernet",
-									.help			= "Ethernet IEEE 802.3",
-									.mask			= PRIV(1),
-									.tokenize	= NULL,
-									.run			= NULL,
-									.subtree	= (struct menu_node *[]) { /*{{{*/
-										/* #show cdp interface ethernet  */
-										& (struct menu_node){
-											.name			= "",
-											.help			= "Ethernet interface number",
-											.mask			= PRIV(1),
-											.tokenize	= NULL,
-											.run			= cmd_sh_cdp_int,
-											.subtree	= NULL
-										},
-
-										NULL
-									} /*}}}*/
-								},
+								IF_ETHER(output_modifiers_subtree, cmd_sh_cdp_int, NULL),
+								IF_NETDEV(output_modifiers_subtree, cmd_sh_cdp_int, NULL),
 
 								/* #show cdp interface | */
 								&output_modifiers,
@@ -524,60 +536,15 @@ struct menu_node menu_main = {
 							.name			= "neighbors",
 							.help			= "CDP neighbor entries",
 							.mask			= PRIV(1),
-							.tokenize	= NULL,
+							.tokenize	= if_tok_if,
 							.run			= cmd_sh_cdp_ne,
 							.subtree	= (struct menu_node *[]) { /*{{{*/
 								/* #show cdp neighbors ethernet */
-								& (struct menu_node){
-									.name			= "ethernet",
-									.help			= "Ethernet IEEE 802.3",
-									.mask			= PRIV(1),
-									.tokenize	= NULL,
-									.run			= NULL,
-									.subtree	= (struct menu_node *[]) { /*{{{*/
-										/* #show cdp neighbors ethernet  */
-										& (struct menu_node){
-											.name			= "",
-											.help			= "Ethernet interface number",
-											.mask			= PRIV(1),
-											.tokenize	= NULL,
-											.run			= cmd_sh_cdp_ne_int,
-											.subtree	= (struct menu_node *[]) { /*{{{*/
-												/* #show cdp neighbors ethernet  detail */
-												& (struct menu_node){
-													.name			= "detail",
-													.help			= "Show detailed information",
-													.mask			= PRIV(1),
-													.tokenize	= NULL,
-													.run			= cmd_sh_cdp_ne_detail,
-													.subtree	= (struct menu_node *[]) { /*{{{*/
-														/* #show cdp neighbors ethernet  detail | */
-														&output_modifiers,
-														NULL
-													} /*}}}*/
-												},
-
-												NULL
-											} /*}}}*/
-										},
-
-										NULL
-									} /*}}}*/
-								},
+								IF_ETHER(cdp_ne_if_subtree, cmd_sh_cdp_ne, NULL),
+								IF_NETDEV(cdp_ne_if_subtree, cmd_sh_cdp_ne, NULL),
 
 								/* #show cdp neighbors detail */
-								& (struct menu_node){
-									.name			= "detail",
-									.help			= "Show detailed information",
-									.mask			= PRIV(1),
-									.tokenize	= NULL,
-									.run			= cmd_sh_cdp_ne_detail,
-									.subtree	= (struct menu_node *[]) { /*{{{*/
-										/* #show cdp neighbors detail | */
-										&output_modifiers,
-										NULL
-									} /*}}}*/
-								},
+								& cdp_ne_det,
 
 								/* #show cdp neighbors | */
 								&output_modifiers,
@@ -652,52 +619,17 @@ struct menu_node menu_main = {
 					.name			= "interfaces",
 					.help			= "Interface status and configuration",
 					.mask			= PRIV(1),
-					.tokenize	= NULL,
+					.tokenize	= if_tok_if,
 					.run			= cmd_sh_int,
 					.subtree	= (struct menu_node *[]) { /*{{{*/
 						/* #show interfaces ethernet */
-						& (struct menu_node){
-							.name			= "ethernet",
-							.help			= "Ethernet IEEE 802.3",
-							.mask			= PRIV(1),
-							.tokenize	= NULL,
-							.run			= NULL,
-							.subtree	= (struct menu_node *[]) { /*{{{*/
-								/* #show interfaces ethernet  */
-								& (struct menu_node){
-									.name			= "",
-									.help			= "Ethernet interface number",
-									.mask			= PRIV(1),
-									.tokenize	= NULL,
-									.run			= cmd_int_eth,
-									.subtree	= NULL
-								},
-
-								NULL
-							} /*}}}*/
-						},
+						IF_ETHER(sh_int_subtree, cmd_sh_int, NULL),
 
 						/* #show interfaces vlan */
-						& (struct menu_node){
-							.name			= "vlan",
-							.help			= "LMS Vlans",
-							.mask			= PRIV(1),
-							.tokenize	= NULL,
-							.run			= NULL,
-							.subtree	= (struct menu_node *[]) { /*{{{*/
-								/* #show interfaces vlan <1-1094> */
-								& (struct menu_node){
-									.name			= "<1-1094>",
-									.help			= "Vlan interface number",
-									.mask			= PRIV(1),
-									.tokenize	= NULL,
-									.run			= cmd_int_vlan,
-									.subtree	= NULL
-								},
+						IF_VLAN(sh_int_subtree, cmd_sh_int, NULL),
 
-								NULL
-							} /*}}}*/
-						},
+						/* #show interfaces | */
+						&output_modifiers,
 
 						NULL
 					} /*}}}*/
@@ -768,52 +700,15 @@ struct menu_node menu_main = {
 							.name			= "interface",
 							.help			= "Show interface configuration",
 							.mask			= PRIV(1),
-							.tokenize	= NULL,
+							.tokenize	= if_tok_if,
 							.run			= NULL,
 							.subtree	= (struct menu_node *[]) { /*{{{*/
 								/* #show running-config interface ethernet */
-								& (struct menu_node){
-									.name			= "ethernet",
-									.help			= "Ethernet IEEE 802.3",
-									.mask			= PRIV(2),
-									.tokenize	= NULL,
-									.run			= NULL,
-									.subtree	= (struct menu_node *[]) { /*{{{*/
-										/* #show running-config interface ethernet  */
-										& (struct menu_node){
-											.name			= "",
-											.help			= "Ethernet interface number",
-											.mask			= PRIV(2),
-											.tokenize	= NULL,
-											.run			= cmd_run_eth,
-											.subtree	= NULL
-										},
-
-										NULL
-									} /*}}}*/
-								},
+								IF_ETHER(output_modifiers_subtree, cmd_sh_run_if, NULL),
+								IF_NETDEV(output_modifiers_subtree, cmd_sh_run_if, NULL),
 
 								/* #show running-config interface vlan */
-								& (struct menu_node){
-									.name			= "vlan",
-									.help			= "LMS Vlans",
-									.mask			= PRIV(2),
-									.tokenize	= NULL,
-									.run			= NULL,
-									.subtree	= (struct menu_node *[]) { /*{{{*/
-										/* #show running-config interface vlan <1-1094> */
-										& (struct menu_node){
-											.name			= "<1-1094>",
-											.help			= "Vlan interface number",
-											.mask			= PRIV(2),
-											.tokenize	= NULL,
-											.run			= cmd_run_vlan,
-											.subtree	= NULL
-										},
-
-										NULL
-									} /*}}}*/
-								},
+								IF_VLAN(output_modifiers_subtree, cmd_sh_run_if, NULL),
 
 								NULL
 							} /*}}}*/

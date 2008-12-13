@@ -38,7 +38,7 @@
 int cmd_cl_mac_addr_t(struct cli_context *, int, char **, struct menu_node **);
 
 static struct menu_node vlan =
-IF_VLAN_MENU_NODE(NULL, cmd_cl_mac_addr_t, NULL);
+VLAN_MENU_NODE(NULL, cmd_cl_mac_addr_t, NULL);
 
 static struct menu_node *if_nexttree[] = {
 	&vlan,
