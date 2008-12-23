@@ -30,6 +30,9 @@ struct rlshell_context {
 	/* Prompt length; used to correctly compute the offset to display
 	 * the '^' marker on invalid commands. */
 	int plen;
+
+	/* Prevent the shell from completing against the last token */
+	int suppress_completion;
 };
 
 int rlshell_main(struct rlshell_context *ctx);

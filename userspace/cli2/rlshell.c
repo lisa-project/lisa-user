@@ -59,6 +59,7 @@ int rlshell_completion(int unused, int key)
 	rl_point = rl_end;
 
 	for (;;) {
+		currctx->suppress_completion = 0;
 		trailing_whitespace = menu->tokenize == NULL ?
 			cli_tokenize(&currctx->cc, cmd, menu->subtree, &out) :
 			menu->tokenize(&currctx->cc, cmd, menu->subtree, &out);
@@ -77,11 +78,9 @@ int rlshell_completion(int unused, int key)
 
 		/* Case B: exactly one match. Continue parsing the input. */
 		if (size == 1) {
-			/* When there's no custom tokenizing function (remember the CMPL flag in cli 1?),
-			 * no trailing whitespace and the curent token matches exactly the portion in
-			 * text that we need to complete, store a copy
-			 * of the completion in match_list[0] */
-			if (!menu->tokenize && !trailing_whitespace) {
+			/* When there's no trailing whitespace, we are at the last
+			 * token and it's ok to complete. */
+			if (!currctx->suppress_completion && !trailing_whitespace) {
 				rl_insert_text(out.matches[0]->name + out.len);
 				rl_insert_text(" ");
 				bell = 0;

@@ -16,11 +16,14 @@ int dump_args(struct cli_context *ctx, int argc, char **argv, struct menu_node *
 int swcli_tokenize_line(struct cli_context *ctx, const char *buf,
 		struct menu_node **tree, struct tokenize_out *out)
 {
+	struct rlshell_context *rlctx = (void *)ctx;
+
 	if (cli_next_token(buf, out))
 		return 0;
 
 	out->matches[0] = tree[0];
 	out->matches[1] = NULL;
+	rlctx->suppress_completion = 1;
 
 	return 1;
 }
@@ -51,6 +54,9 @@ int swcli_tokenize_number(struct cli_context *ctx, const char *buf,
 	char c, *token;
 	const char *ok = "0123456789";
 	int *valid = tree[0]->priv;
+	struct rlshell_context *rlctx = (void *)ctx;
+
+	rlctx->suppress_completion = 1;
 
 	if (cli_next_token(buf, out))
 		return 0;
@@ -93,6 +99,9 @@ int swcli_tokenize_word(struct cli_context *ctx, const char *buf,
 		struct menu_node **tree, struct tokenize_out *out)
 {
 	char c;
+	struct rlshell_context *rlctx = (void *)ctx;
+
+	rlctx->suppress_completion = 1;
 
 	if (cli_next_token(buf, out))
 		return 0;
