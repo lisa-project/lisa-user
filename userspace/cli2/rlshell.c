@@ -46,26 +46,17 @@ void rlshell_go_ahead(void)
 	printf("  <cr>\n");
 }
 
-/* Attempt to complete on the contents of text. start and end
- * bound the region of rl_line_buffer that contains the word to
- * complete. text is the word to complete. We can use the entire
- * contents of rl_line_buffer in case we want to do some simple
- * parsing. Return the array of matches, or NULL if there aren't any */
-char **rlshell_completion(const char *text, int start, int end)
+/* Attempt to complete the last token in command line buffer
+ * and always move the cursor at the end of the buffer. */
+int rlshell_completion(int unused, int key)
 {
 	struct tokenize_out out;
 	int size, trailing_whitespace;
 	struct menu_node *menu = currctx->cc.root;
 	char *cmd = rl_line_buffer;
-	char **match_list = NULL;
+	int bell = 1;
 
-	rl_attempted_completion_over = 1;
-
-	/* Reserve space for just one match. 0 or multiple matches are
-	 * handled inside this function, not by readline. */
-	if (!(match_list = (char **)malloc(2 * sizeof(char *))))
-		return NULL;
-	memset(match_list, 0, 2 * sizeof(char *));
+	rl_point = rl_end;
 
 	for (;;) {
 		trailing_whitespace = menu->tokenize == NULL ?
@@ -90,30 +81,27 @@ char **rlshell_completion(const char *text, int start, int end)
 			 * no trailing whitespace and the curent token matches exactly the portion in
 			 * text that we need to complete, store a copy
 			 * of the completion in match_list[0] */
-			if (!menu->tokenize && !trailing_whitespace && !strncmp(text, cmd+out.offset, end-start)) {
-				assert(!match_list[0]);
-				match_list[0] = strndup(out.matches[0]->name, strlen(out.matches[0]->name));
+			if (!menu->tokenize && !trailing_whitespace) {
+				rl_insert_text(out.matches[0]->name + out.len);
+				rl_insert_text(" ");
+				bell = 0;
+				break;
 			}
 			cmd += out.offset + out.len;
 			menu = out.matches[0];
 			continue;
 		}
 
-		/* Case C: no match.
-		 * If control reaches this point and we found a single match then
-		 * we must hand it to readline. Otherwise we free match_list and
-		 * return NULL. */
-		if (match_list[0])
-			goto out_return;
+		/* Case C: no match or whitespace only
+		 * Either way, just do nothing. */
 		break;
 	}
 
-	free(match_list);
-	match_list = NULL;
-out_return:
-	printf("\n");
+	if (bell)
+		putchar('\a');
+	putchar('\n');
 	rl_forced_update_display();
-	return match_list;
+	return 0;
 }
 
 void rlshell_list_matches_brief(struct tokenize_out *out)
@@ -267,9 +255,8 @@ int rlshell_init(void)
 	signal(SIGTSTP, SIG_IGN);
 
 	/* Tell the completer we want a hook */
-	rl_attempted_completion_function = rlshell_completion;
-	rl_completer_word_break_characters = strdup(" ");
 	rl_bind_key('?', rlshell_help);
+	rl_bind_key('\t', rlshell_completion);
 	rl_set_key("\\C-l", rlshell_ignore_keyseq, rl_get_keymap());
 	return 0;
 }
