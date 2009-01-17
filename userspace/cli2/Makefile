@@ -24,6 +24,9 @@ LIBSWCLI_SRCS += rlshell.c
 # LiSA Main Menu Tree
 LIBSWCLI_SRCS += menu_main.c
 
+# LiSA Configure Menu Tree
+LIBSWCLI_SRCS += menu_config.c
+
 # LiSA "clear mac-address-table" Menu Tree
 LIBSWCLI_SRCS += menu_cl_mac_addr_t.c
 
@@ -32,6 +35,9 @@ LIBSWCLI_SRCS += menu_sh_mac_addr_t.c
 
 # LiSA Command Handlers
 LIBSWCLI_SRCS += cmd_main.c
+
+# LiSA Configure Command Handlers
+LIBSWCLI_SRCS += cmd_config.c
 
 # Common swcli stuff that does not fit in the 4 layers
 LIBSWCLI_SRCS += swcli_common.c

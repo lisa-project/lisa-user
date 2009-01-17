@@ -27,8 +27,6 @@ int cmd_sh_cdp_timer(struct cli_context *, int, char **, struct menu_node **);
 int cmd_sh_cdp_traffic(struct cli_context *, int, char **, struct menu_node **);
 int cmd_history(struct cli_context *, int, char **, struct menu_node **);
 int cmd_sh_int(struct cli_context *, int, char **, struct menu_node **);
-int cmd_int_eth(struct cli_context *, int, char **, struct menu_node **);
-int cmd_int_vlan(struct cli_context *, int, char **, struct menu_node **);
 int cmd_sh_ip(struct cli_context *, int, char **, struct menu_node **);
 int cmd_sh_addr(struct cli_context *, int, char **, struct menu_node **);
 int cmd_sh_mac_age(struct cli_context *, int, char **, struct menu_node **);
