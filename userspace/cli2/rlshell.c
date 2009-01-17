@@ -1,8 +1,9 @@
+#include <termios.h>
+#include <unistd.h>
 #include <assert.h>
 #include <stdio.h>
 #include <readline/readline.h>
 #include <readline/history.h>
-#include <signal.h>
 #include <stdlib.h>
 
 #include "rlshell.h"
@@ -13,8 +14,13 @@
  * readline handlers. Instead, we make a global variable and we
  * initialize it with the current context before calling readline()
  */
-static struct rlshell_context *currctx;
+static struct rlshell_context *currctx = NULL;
+static struct menu_node *initial_root;
+static int ctrl_z;
 
+struct rlshell_context *rlshell_get_context(void) {
+	return currctx;
+}
 
 /* Error reporting & stuff */
 void rlshell_invalid_cmd(void)
@@ -228,17 +234,37 @@ int rlshell_exec(struct rlshell_context *ctx, char *buf)
 }
 
 /* Handler that can be installed on a key sequence */
-int rlshell_ignore_keyseq(int i, int j)
+int rlshell_ctrl_l(int i, int j)
 {
 	return 0;
 }
 
-/* Executed on SIGINT (clears rl_line_buffer and forces redisplay) */
-void rlshell_sigint_handler(int sig)
+int rlshell_ctrl_z(int i, int j)
+{
+	if (!currctx->enable_ctrl_z)
+		return 0;
+	printf("^Z\n");
+	ctrl_z = 1;
+	rl_done = 1;
+	return 0;
+}
+
+int rlshell_ctrl_c(int i, int j)
 {
 	printf("\n");
 	rl_replace_line("", 1);
 	rl_forced_update_display();
+	return 0;
+}
+
+void rlshell_prep_terminal(int meta_flag)
+{
+	struct termios t;
+
+	rl_prep_terminal(meta_flag);
+	tcgetattr(STDIN_FILENO, &t);
+	t.c_lflag &= ~ISIG;
+	tcsetattr(STDIN_FILENO, TCSANOW, &t);
 }
 
 /* Override some readline defaults */
@@ -250,13 +276,14 @@ int rlshell_init(void)
 	rl_readline_name = "rlshell";
 
 	/* Setup to ignore SIGINT and SIGTSTP */
-	signal(SIGINT, rlshell_sigint_handler);
-	signal(SIGTSTP, SIG_IGN);
+	rl_prep_term_function = rlshell_prep_terminal;
 
 	/* Tell the completer we want a hook */
 	rl_bind_key('?', rlshell_help);
 	rl_bind_key('\t', rlshell_completion);
-	rl_set_key("\\C-l", rlshell_ignore_keyseq, rl_get_keymap());
+	rl_set_key("\\C-l", rlshell_ctrl_l, rl_get_keymap());
+	rl_set_key("\\C-z", rlshell_ctrl_z, rl_get_keymap());
+	rl_set_key("\\C-c", rlshell_ctrl_c, rl_get_keymap());
 	return 0;
 }
 
@@ -264,11 +291,19 @@ int rlshell_main(struct rlshell_context *ctx)
 {
 	char *cmd = NULL;
 
+	currctx = ctx;
+	initial_root = ctx->cc.root;
+	ctrl_z = 0;
 	rlshell_init();
 
 	while (!ctx->exit) {
 		int hist_append = 1;
 		char *prompt = NULL;
+
+		if (ctrl_z) {
+			ctx->cc.root = initial_root;
+			ctrl_z = 0;
+		}
 		
 		if (ctx->prompt != NULL)
 			prompt = ctx->prompt(ctx);
@@ -276,9 +311,10 @@ int rlshell_main(struct rlshell_context *ctx)
 		if (cmd != NULL)
 			free(cmd);
 
-		currctx = ctx;
 		ctx->plen = prompt == NULL ? 1 : strlen(prompt);
+
 		cmd = readline(prompt == NULL ? "#" : prompt);
+
 		if (prompt != NULL)
 			free(prompt);
 

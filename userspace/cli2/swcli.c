@@ -10,6 +10,7 @@ int main(int argc, char **argv) {
 	ctx.cc.out_open = cli_out_open;
 	ctx.prompt = swcli_prompt;
 	ctx.exit = 0;
+	ctx.enable_ctrl_z = 0;
 
 	rlshell_main(&ctx);
 

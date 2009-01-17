@@ -33,8 +33,11 @@ struct rlshell_context {
 
 	/* Prevent the shell from completing against the last token */
 	int suppress_completion;
+
+	int enable_ctrl_z;
 };
 
 int rlshell_main(struct rlshell_context *ctx);
+struct rlshell_context *rlshell_get_context(void);
 
 #endif
