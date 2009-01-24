@@ -47,6 +47,16 @@ void rlshell_extra_input(int off)
 	printf("%% Invalid input detected at '^' marker.\n\n");
 }
 
+void rlshell_rejected_cmd(char *reason)
+{
+	if (reason == NULL)
+		printf("Command rejected\n");
+	else {
+		printf("Command rejected: %s\n", reason);
+		free(reason);
+	}
+}
+
 void rlshell_go_ahead(void)
 {
 	printf("  <cr>\n");
@@ -225,6 +235,9 @@ int rlshell_exec(struct rlshell_context *ctx, char *buf)
 		return status;
 	case CLI_EX_INVALID:
 		rlshell_extra_input(ctx->plen + ctx->cc.ex_status.offset);
+		break;
+	case CLI_EX_REJECTED:
+		rlshell_rejected_cmd(ctx->cc.ex_status.reason);
 		break;
 	default:
 		break;

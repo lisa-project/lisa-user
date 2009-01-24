@@ -84,6 +84,10 @@ struct cli_context {
 	struct menu_node *root;
 };
 
+#define EX_STATUS_REASON(ctx, fmt, par...) if (asprintf(&(ctx)->ex_status.reason, fmt, ##par) == -1) {\
+	(ctx)->ex_status.reason = NULL;\
+}
+
 /* Command tree menu node */
 struct menu_node {
 	/* Complete name of the menu node */
