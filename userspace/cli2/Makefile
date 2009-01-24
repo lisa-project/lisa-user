@@ -39,6 +39,9 @@ LIBSWCLI_SRCS += cmd_main.c
 # LiSA Configure Command Handlers
 LIBSWCLI_SRCS += cmd_config.c
 
+# LiSA Interface Configuration Command Handlers
+LIBSWCLI_SRCS += cmd_config_if.c
+
 # Common swcli stuff that does not fit in the 4 layers
 LIBSWCLI_SRCS += swcli_common.c
 

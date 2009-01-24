@@ -1,5 +1,6 @@
 #include "cli.h"
 #include "swcli_common.h"
+#include "menu_interface.h"
 
 int cmd_cdp_version(struct cli_context *, int, char **, struct menu_node **);
 int cmd_cdp_holdtime(struct cli_context *, int, char **, struct menu_node **);
@@ -9,8 +10,6 @@ int cmd_setenpw(struct cli_context *, int, char **, struct menu_node **);
 int cmd_setenpwlev(struct cli_context *, int, char **, struct menu_node **);
 int cmd_end(struct cli_context *, int, char **, struct menu_node **);
 int cmd_hostname(struct cli_context *, int, char **, struct menu_node **);
-int cmd_int_eth(struct cli_context *, int, char **, struct menu_node **);
-int cmd_int_vlan(struct cli_context *, int, char **, struct menu_node **);
 int cmd_int_any(struct cli_context *, int, char **, struct menu_node **);
 int cmd_linevty(struct cli_context *, int, char **, struct menu_node **);
 int cmd_set_aging(struct cli_context *, int, char **, struct menu_node **);
@@ -26,6 +25,15 @@ int cmd_no_int_any(struct cli_context *, int, char **, struct menu_node **);
 int cmd_set_noaging(struct cli_context *, int, char **, struct menu_node **);
 int cmd_novlan(struct cli_context *, int, char **, struct menu_node **);
 int cmd_vlan(struct cli_context *, int, char **, struct menu_node **);
+
+static struct menu_node *if_subtree[] = {
+	IF_ETHER(NULL, cmd_int_any, NULL),
+	IF_VLAN(NULL, cmd_int_any, NULL),
+	IF_NETDEV(NULL, cmd_int_any, NULL),
+	NULL
+};
+
+static struct menu_node interface = IF_MENU_NODE(if_subtree);
 
 struct menu_node config_main = {
 	/* Root node, .name is used as prompt */
@@ -306,70 +314,7 @@ struct menu_node config_main = {
 		},
 
 		/* #interface */
-		& (struct menu_node){
-			.name			= "interface",
-			.help			= "Select an interface to configure",
-			.mask			= PRIV(15),
-			.tokenize	= NULL,
-			.run			= NULL,
-			.subtree	= (struct menu_node *[]) { /*{{{*/
-				/* #interface ethernet */
-				& (struct menu_node){
-					.name			= "ethernet",
-					.help			= "Ethernet IEEE 802.3",
-					.mask			= PRIV(15),
-					.tokenize	= NULL,
-					.run			= NULL,
-					.subtree	= (struct menu_node *[]) { /*{{{*/
-						/* #interface ethernet  */
-						& (struct menu_node){
-							.name			= "",
-							.help			= "Ethernet interface number",
-							.mask			= PRIV(15),
-							.tokenize	= NULL,
-							.run			= cmd_int_eth,
-							.subtree	= NULL
-						},
-
-						NULL
-					} /*}}}*/
-				},
-
-				/* #interface vlan */
-				& (struct menu_node){
-					.name			= "vlan",
-					.help			= "LMS Vlans",
-					.mask			= PRIV(15),
-					.tokenize	= NULL,
-					.run			= NULL,
-					.subtree	= (struct menu_node *[]) { /*{{{*/
-						/* #interface vlan <1-1094> */
-						& (struct menu_node){
-							.name			= "<1-1094>",
-							.help			= "Vlan interface number",
-							.mask			= PRIV(15),
-							.tokenize	= NULL,
-							.run			= cmd_int_vlan,
-							.subtree	= NULL
-						},
-
-						NULL
-					} /*}}}*/
-				},
-
-				/* #interface WORD */
-				& (struct menu_node){
-					.name			= "WORD",
-					.help			= "Any interface name",
-					.mask			= PRIV(15),
-					.tokenize	= NULL,
-					.run			= cmd_int_any,
-					.subtree	= NULL
-				},
-
-				NULL
-			} /*}}}*/
-		},
+		& interface,
 
 		/* #line */
 		& (struct menu_node){

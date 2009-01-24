@@ -82,6 +82,7 @@
 	.mask		= VA_PRIV(NIL, ##__priv, 1),\
 	.tokenize	= swcli_tokenize_number,\
 	.run		= NULL,\
+	.priv		= (void *)1,\
 	.subtree	= (struct menu_node *[]) {\
 		& (struct menu_node) {\
 			.name		= "<1-1094>",\
@@ -119,7 +120,13 @@
 }
 #define IF_ADDRESS(...) & (struct menu_node) IF_ADDRESS_MENU_NODE(__VA_ARGS__)
 
+/* interface type filters; must not collide with PRIV mask filter */
+#define IFF_SWITCHED	((uint32_t)1 << PRIV_SHIFT)
+#define IFF_ROUTED		((uint32_t)2 << PRIV_SHIFT)
+#define IFF_VIF			((uint32_t)4 << PRIV_SHIFT)
+
 int if_tok_if(struct cli_context *ctx, const char *buf,
 		struct menu_node **tree, struct tokenize_out *out);
 
+int parse_vlan(char *buf);
 #endif

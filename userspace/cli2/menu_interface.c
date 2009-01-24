@@ -1,3 +1,11 @@
+#include <stdio.h>
+#include <string.h>
+
+#include <sys/types.h>
+#include <sys/socket.h>
+
+#include <linux/if.h>
+
 #include "cli.h"
 
 int if_tok_if(struct cli_context *ctx, const char *buf,
@@ -17,3 +25,14 @@ int if_tok_if(struct cli_context *ctx, const char *buf,
 	return ret;
 }
 
+int parse_vlan(char *buf) {
+	int ret, n;
+
+	if (!sscanf(buf, "vlan%d%n", &ret, &n))
+		return -1;
+
+	if (strlen(buf) != n)
+		return -1;
+
+	return ret;
+}
