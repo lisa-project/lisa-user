@@ -4,6 +4,7 @@
 
 int main(int argc, char **argv) {
 	struct rlshell_context ctx;
+	struct swcli_context uc;
 
 	ctx.cc.node_filter = PRIV_FILTER(15);
 	ctx.cc.root = &menu_main;
@@ -11,6 +12,7 @@ int main(int argc, char **argv) {
 	ctx.prompt = swcli_prompt;
 	ctx.exit = 0;
 	ctx.enable_ctrl_z = 0;
+	ctx.uc = &uc;
 
 	rlshell_main(&ctx);
 

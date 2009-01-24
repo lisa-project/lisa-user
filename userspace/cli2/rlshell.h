@@ -35,6 +35,9 @@ struct rlshell_context {
 	int suppress_completion;
 
 	int enable_ctrl_z;
+
+	/* Upper layer context data */
+	void *uc;
 };
 
 int rlshell_main(struct rlshell_context *ctx);

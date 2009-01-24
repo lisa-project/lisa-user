@@ -2,6 +2,7 @@
 #define _CLI_H
 
 #include <stdio.h>
+#include <stdint.h>
 #include <sys/types.h>
 
 struct menu_node;
@@ -97,7 +98,7 @@ struct menu_node {
 	const char *help;
 
 	/* Bitwise mask for filtering */
-	int mask;
+	uint32_t mask;
 
 	/* Custom tokenize function for the node */
 	int (*tokenize)(struct cli_context *ctx, const char *buf,
