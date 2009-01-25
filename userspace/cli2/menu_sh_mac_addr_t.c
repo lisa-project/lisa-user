@@ -80,7 +80,7 @@ struct menu_node *show_mac_addr_t[] = {
 	& (struct menu_node) {
 		.name			= "aging-time",
 		.help			= "aging-time keyword",
-		.mask			= PRIV(1),
+		.mask			= CLI_MASK(PRIV(1)),
 		.tokenize	= NULL,
 		.run			= cmd_sh_mac_age,
 		.subtree	= (struct menu_node *[]) {
@@ -93,7 +93,7 @@ struct menu_node *show_mac_addr_t[] = {
 	& (struct menu_node) { 
 		.name			= "dynamic",
 		.help			= "dynamic entry type",
-		.mask			= PRIV(1),
+		.mask			= CLI_MASK(PRIV(1)),
 		.tokenize	= NULL,
 		.run			= cmd_sh_mac_addr_t,
 		.subtree	= (struct menu_node *[]) {
@@ -111,7 +111,7 @@ struct menu_node *show_mac_addr_t[] = {
 	& (struct menu_node) { 
 		.name			= "static",
 		.help			= "static entry type",
-		.mask			= PRIV(1),
+		.mask			= CLI_MASK(PRIV(1)),
 		.tokenize	= NULL,
 		.run			= cmd_sh_mac_addr_t,
 		.subtree	= (struct menu_node *[]) {

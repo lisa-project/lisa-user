@@ -38,7 +38,7 @@ struct cli_context {
 	/* Bitwise selector against menu node masks (nodes that don't match
 	 * are filtered)
 	 */
-	int node_filter;
+	uint32_t node_filter;
 
 	/* Additional hints about last command execution failure */
 	union {
@@ -98,7 +98,7 @@ struct menu_node {
 	const char *help;
 
 	/* Bitwise mask for filtering */
-	uint32_t mask;
+	uint32_t *mask;
 
 	/* Custom tokenize function for the node */
 	int (*tokenize)(struct cli_context *ctx, const char *buf,
@@ -119,6 +119,19 @@ struct menu_node {
 	/* Points to the sub menu of the node */
 	struct menu_node **subtree;
 };
+
+#define CLI_MASK(...) &(uint32_t []){__VA_ARGS__, 0}[0]
+
+static inline int cli_mask_apply(uint32_t *mask, uint32_t filter) {
+	if (!mask)
+		return 1;
+	while (*mask) {
+		if (!(*mask & filter))
+			return 0;
+		mask++;
+	}
+	return 1;
+}
 
 /* CLI output filter private data fields */
 struct cli_filter_priv {

@@ -66,7 +66,7 @@ int cli_tokenize(struct cli_context *ctx, const char *buf,
 	/* lookup token in tree */
 	for (i=0, j=0; tree[i] && j < TOKENIZE_MAX_MATCHES; i++) {
 		/* apply filter */
-		if ((tree[i]->mask & ctx->node_filter) != tree[i]->mask)
+		if (!cli_mask_apply(tree[i]->mask, ctx->node_filter))
 			continue;
 
 		if (strncasecmp(token, tree[i]->name, out->len))

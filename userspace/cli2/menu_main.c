@@ -49,7 +49,7 @@ extern struct menu_node *clear_mac_addr_t[];
 static struct menu_node output_modifiers_line = {
 	.name			= "LINE",
 	.help			= "Regular Expression",
-	.mask			= PRIV(1),
+	.mask			= CLI_MASK(PRIV(1)),
 	.tokenize		= swcli_tokenize_line,
 	.run			= swcli_output_modifiers_run,
 	/* this recurrent node is actually a clever trick that
@@ -65,14 +65,14 @@ static struct menu_node output_modifiers_line = {
 struct menu_node output_modifiers = {
 	.name			= "|",
 	.help			= "Output modifiers",
-	.mask			= PRIV(1),
+	.mask			= CLI_MASK(PRIV(1)),
 	.tokenize	= NULL,
 	.run			= NULL,
 	.subtree	= (struct menu_node *[]) { /*{{{*/
 		& (struct menu_node){
 			.name			= "begin",
 			.help			= "Begin with the line that matches",
-			.mask			= PRIV(1),
+			.mask			= CLI_MASK(PRIV(1)),
 			.tokenize		= swcli_tokenize_line,
 			.run			= NULL,
 			.subtree	= (struct menu_node *[]) {
@@ -84,7 +84,7 @@ struct menu_node output_modifiers = {
 		& (struct menu_node){
 			.name			= "exclude",
 			.help			= "Exclude lines that match",
-			.mask			= PRIV(1),
+			.mask			= CLI_MASK(PRIV(1)),
 			.tokenize		= swcli_tokenize_line,
 			.run			= NULL,
 			.subtree	= (struct menu_node *[]) {
@@ -96,7 +96,7 @@ struct menu_node output_modifiers = {
 		& (struct menu_node){
 			.name			= "include",
 			.help			= "Include lines that match",
-			.mask			= PRIV(1),
+			.mask			= CLI_MASK(PRIV(1)),
 			.tokenize		= swcli_tokenize_line,
 			.run			= NULL,
 			.subtree	= (struct menu_node *[]) {
@@ -109,7 +109,7 @@ struct menu_node output_modifiers = {
 		& (struct menu_node){
 			.name			= "grep",
 			.help			= "Linux grep functionality",
-			.mask			= PRIV(1),
+			.mask			= CLI_MASK(PRIV(1)),
 			.tokenize		= swcli_tokenize_line,
 			.run			= NULL,
 			.subtree	= (struct menu_node *[]) {
@@ -130,7 +130,7 @@ struct menu_node *output_modifiers_subtree[] = {
 static struct menu_node cdp_ne_det = {
 	.name			= "detail",
 	.help			= "Show detailed information",
-	.mask			= PRIV(1),
+	.mask			= CLI_MASK(PRIV(1)),
 	.tokenize	= NULL,
 	.run			= cmd_sh_cdp_ne,
 	.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -161,7 +161,7 @@ struct menu_node menu_main = {
 		& (struct menu_node){
 			.name			= "clear",
 			.help			= "Reset functions",
-			.mask			= PRIV(2),
+			.mask			= CLI_MASK(PRIV(2)),
 			.tokenize	= NULL,
 			.run			= NULL,
 			.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -169,7 +169,7 @@ struct menu_node menu_main = {
 				& (struct menu_node){
 					.name			= "mac",
 					.help			= "MAC forwarding table",
-					.mask			= PRIV(2),
+					.mask			= CLI_MASK(PRIV(2)),
 					.tokenize	= NULL,
 					.run			= NULL,
 					.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -177,7 +177,7 @@ struct menu_node menu_main = {
 						& (struct menu_node){
 							.name			= "address-table",
 							.help			= "MAC forwarding table",
-							.mask			= PRIV(2),
+							.mask			= CLI_MASK(PRIV(2)),
 							.tokenize	= NULL,
 							.run			= NULL,
 							.subtree	= clear_mac_addr_t,
@@ -191,7 +191,7 @@ struct menu_node menu_main = {
 				& (struct menu_node){
 					.name			= "mac-address-table",
 					.help			= "MAC forwarding table",
-					.mask			= PRIV(2),
+					.mask			= CLI_MASK(PRIV(2)),
 					.tokenize	= NULL,
 					.run			= NULL,
 					.subtree	= clear_mac_addr_t,
@@ -205,7 +205,7 @@ struct menu_node menu_main = {
 		& (struct menu_node){
 			.name			= "configure",
 			.help			= "Enter configuration mode",
-			.mask			= PRIV(15),
+			.mask			= CLI_MASK(PRIV(15)),
 			.tokenize	= NULL,
 			.run			= NULL,
 			.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -213,7 +213,7 @@ struct menu_node menu_main = {
 				& (struct menu_node){
 					.name			= "terminal",
 					.help			= "Configure from the terminal",
-					.mask			= PRIV(2),
+					.mask			= CLI_MASK(PRIV(2)),
 					.tokenize	= NULL,
 					.run			= cmd_conf_t,
 					.subtree	= NULL
@@ -227,7 +227,7 @@ struct menu_node menu_main = {
 		& (struct menu_node){
 			.name			= "disable",
 			.help			= "Turn off privileged commands",
-			.mask			= PRIV(2),
+			.mask			= CLI_MASK(PRIV(2)),
 			.tokenize	= NULL,
 			.run			= cmd_disable,
 			.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -235,7 +235,7 @@ struct menu_node menu_main = {
 				& (struct menu_node){
 					.name			= "<1-15>",
 					.help			= "Privilege level to go to",
-					.mask			= PRIV(1),
+					.mask			= CLI_MASK(PRIV(1)),
 					.tokenize	= NULL,
 					.run			= cmd_disable,
 					.subtree	= NULL
@@ -249,7 +249,7 @@ struct menu_node menu_main = {
 		& (struct menu_node){
 			.name			= "enable",
 			.help			= "Turn on privileged commands",
-			.mask			= PRIV(1),
+			.mask			= CLI_MASK(PRIV(1)),
 			.tokenize	= NULL,
 			.run			= cmd_enable,
 			.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -257,7 +257,7 @@ struct menu_node menu_main = {
 				& (struct menu_node){
 					.name			= "<1-15>",
 					.help			= "Enable level",
-					.mask			= PRIV(1),
+					.mask			= CLI_MASK(PRIV(1)),
 					.tokenize	= NULL,
 					.run			= cmd_enable,
 					.subtree	= NULL
@@ -271,7 +271,7 @@ struct menu_node menu_main = {
 		& (struct menu_node){
 			.name			= "exit",
 			.help			= "Exit from the EXEC",
-			.mask			= PRIV(1),
+			.mask			= CLI_MASK(PRIV(1)),
 			.tokenize	= NULL,
 			.run			= cmd_quit,
 			.subtree	= NULL
@@ -281,7 +281,7 @@ struct menu_node menu_main = {
 		& (struct menu_node){
 			.name			= "help",
 			.help			= "Description of the interactive help system",
-			.mask			= PRIV(1),
+			.mask			= CLI_MASK(PRIV(1)),
 			.tokenize	= NULL,
 			.run			= cmd_help,
 			.subtree	= NULL
@@ -291,7 +291,7 @@ struct menu_node menu_main = {
 		& (struct menu_node){
 			.name			= "logout",
 			.help			= "Exit from the EXEC",
-			.mask			= PRIV(1),
+			.mask			= CLI_MASK(PRIV(1)),
 			.tokenize	= NULL,
 			.run			= cmd_quit,
 			.subtree	= NULL
@@ -301,7 +301,7 @@ struct menu_node menu_main = {
 		& (struct menu_node){
 			.name			= "ping",
 			.help			= "Send echo messages",
-			.mask			= PRIV(1),
+			.mask			= CLI_MASK(PRIV(1)),
 			.tokenize	= NULL,
 			.run			= NULL,
 			.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -309,7 +309,7 @@ struct menu_node menu_main = {
 				& (struct menu_node){
 					.name			= "WORD",
 					.help			= "Ping destination address or hostname",
-					.mask			= PRIV(1),
+					.mask			= CLI_MASK(PRIV(1)),
 					.tokenize	= NULL,
 					.run			= cmd_ping,
 					.subtree	= NULL
@@ -323,7 +323,7 @@ struct menu_node menu_main = {
 		& (struct menu_node){
 			.name			= "reload",
 			.help			= "Halt and perform a cold restart",
-			.mask			= PRIV(1),
+			.mask			= CLI_MASK(PRIV(1)),
 			.tokenize	= NULL,
 			.run			= cmd_reload,
 			.subtree	= NULL
@@ -333,7 +333,7 @@ struct menu_node menu_main = {
 		& (struct menu_node){
 			.name			= "quit",
 			.help			= "Exit from the EXEC",
-			.mask			= PRIV(1),
+			.mask			= CLI_MASK(PRIV(1)),
 			.tokenize	= NULL,
 			.run			= cmd_quit,
 			.subtree	= NULL
@@ -343,7 +343,7 @@ struct menu_node menu_main = {
 		& (struct menu_node){
 			.name			= "show",
 			.help			= "Show running system information",
-			.mask			= PRIV(1),
+			.mask			= CLI_MASK(PRIV(1)),
 			.tokenize	= NULL,
 			.run			= NULL,
 			.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -351,7 +351,7 @@ struct menu_node menu_main = {
 				& (struct menu_node){
 					.name			= "arp",
 					.help			= "ARP table",
-					.mask			= PRIV(1),
+					.mask			= CLI_MASK(PRIV(1)),
 					.tokenize	= NULL,
 					.run			= NULL,
 					.subtree	= NULL
@@ -361,7 +361,7 @@ struct menu_node menu_main = {
 				& (struct menu_node){
 					.name			= "clock",
 					.help			= "Display the system clock",
-					.mask			= PRIV(1),
+					.mask			= CLI_MASK(PRIV(1)),
 					.tokenize	= NULL,
 					.run			= NULL,
 					.subtree	= NULL
@@ -371,7 +371,7 @@ struct menu_node menu_main = {
 				& (struct menu_node){
 					.name			= "cdp",
 					.help			= "CDP Information",
-					.mask			= PRIV(1),
+					.mask			= CLI_MASK(PRIV(1)),
 					.tokenize	= NULL,
 					.run			= cmd_sh_cdp,
 					.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -379,7 +379,7 @@ struct menu_node menu_main = {
 						& (struct menu_node){
 							.name			= "entry",
 							.help			= "Information for specific neighbor entry",
-							.mask			= PRIV(1),
+							.mask			= CLI_MASK(PRIV(1)),
 							.tokenize	= NULL,
 							.run			= NULL,
 							.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -387,7 +387,7 @@ struct menu_node menu_main = {
 								& (struct menu_node){
 									.name			= "*",
 									.help			= "all CDP neighbor entries",
-									.mask			= PRIV(1),
+									.mask			= CLI_MASK(PRIV(1)),
 									.tokenize	= NULL,
 									.run			= cmd_sh_cdp_entry,
 									.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -395,7 +395,7 @@ struct menu_node menu_main = {
 										& (struct menu_node){
 											.name			= "protocol",
 											.help			= "Protocol information",
-											.mask			= PRIV(1),
+											.mask			= CLI_MASK(PRIV(1)),
 											.tokenize	= NULL,
 											.run			= cmd_sh_cdp_entry,
 											.subtree	= (struct menu_node *[]) {
@@ -408,7 +408,7 @@ struct menu_node menu_main = {
 										& (struct menu_node){
 											.name			= "version",
 											.help			= "Version information",
-											.mask			= PRIV(1),
+											.mask			= CLI_MASK(PRIV(1)),
 											.tokenize	= NULL,
 											.run			= cmd_sh_cdp_entry,
 											.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -416,7 +416,7 @@ struct menu_node menu_main = {
 												& (struct menu_node){
 													.name			= "protocol",
 													.help			= "Protocol information",
-													.mask			= PRIV(1),
+													.mask			= CLI_MASK(PRIV(1)),
 													.tokenize	= NULL,
 													.run			= cmd_sh_cdp_entry,
 													.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -442,7 +442,7 @@ struct menu_node menu_main = {
 								& (struct menu_node){
 									.name			= "WORD",
 									.help			= "Name of CDP neighbor entry",
-									.mask			= PRIV(1),
+									.mask			= CLI_MASK(PRIV(1)),
 									.tokenize	= NULL,
 									.run			= cmd_sh_cdp_entry,
 									.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -450,7 +450,7 @@ struct menu_node menu_main = {
 										& (struct menu_node){
 											.name			= "protocol",
 											.help			= "Protocol information",
-											.mask			= PRIV(1),
+											.mask			= CLI_MASK(PRIV(1)),
 											.tokenize	= NULL,
 											.run			= cmd_sh_cdp_entry,
 											.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -464,7 +464,7 @@ struct menu_node menu_main = {
 										& (struct menu_node){
 											.name			= "version",
 											.help			= "Version information",
-											.mask			= PRIV(1),
+											.mask			= CLI_MASK(PRIV(1)),
 											.tokenize	= NULL,
 											.run			= cmd_sh_cdp_entry,
 											.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -472,7 +472,7 @@ struct menu_node menu_main = {
 												& (struct menu_node){
 													.name			= "protocol",
 													.help			= "Protocol information",
-													.mask			= PRIV(1),
+													.mask			= CLI_MASK(PRIV(1)),
 													.tokenize	= NULL,
 													.run			= cmd_sh_cdp_entry,
 													.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -502,7 +502,7 @@ struct menu_node menu_main = {
 						& (struct menu_node){
 							.name			= "holdtime",
 							.help			= "Time CDP info kept by neighbors",
-							.mask			= PRIV(1),
+							.mask			= CLI_MASK(PRIV(1)),
 							.tokenize	= NULL,
 							.run			= cmd_sh_cdp_holdtime,
 							.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -516,7 +516,7 @@ struct menu_node menu_main = {
 						& (struct menu_node){
 							.name			= "interface",
 							.help			= "CDP interface status and configuration",
-							.mask			= PRIV(1),
+							.mask			= CLI_MASK(PRIV(1)),
 							.tokenize	= if_tok_if,
 							.run			= cmd_sh_cdp_int,
 							.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -533,7 +533,7 @@ struct menu_node menu_main = {
 						& (struct menu_node){
 							.name			= "neighbors",
 							.help			= "CDP neighbor entries",
-							.mask			= PRIV(1),
+							.mask			= CLI_MASK(PRIV(1)),
 							.tokenize	= if_tok_if,
 							.run			= cmd_sh_cdp_ne,
 							.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -554,7 +554,7 @@ struct menu_node menu_main = {
 						& (struct menu_node){
 							.name			= "run",
 							.help			= "CDP process running",
-							.mask			= PRIV(1),
+							.mask			= CLI_MASK(PRIV(1)),
 							.tokenize	= NULL,
 							.run			= cmd_sh_cdp_run,
 							.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -568,7 +568,7 @@ struct menu_node menu_main = {
 						& (struct menu_node){
 							.name			= "timer",
 							.help			= "Time CDP info is resent to neighbors",
-							.mask			= PRIV(1),
+							.mask			= CLI_MASK(PRIV(1)),
 							.tokenize	= NULL,
 							.run			= cmd_sh_cdp_timer,
 							.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -582,7 +582,7 @@ struct menu_node menu_main = {
 						& (struct menu_node){
 							.name			= "traffic",
 							.help			= "CDP statistics",
-							.mask			= PRIV(1),
+							.mask			= CLI_MASK(PRIV(1)),
 							.tokenize	= NULL,
 							.run			= cmd_sh_cdp_traffic,
 							.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -602,7 +602,7 @@ struct menu_node menu_main = {
 				& (struct menu_node){
 					.name			= "history",
 					.help			= "Display the session command history",
-					.mask			= PRIV(1),
+					.mask			= CLI_MASK(PRIV(1)),
 					.tokenize	= NULL,
 					.run			= cmd_history,
 					.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -616,7 +616,7 @@ struct menu_node menu_main = {
 				& (struct menu_node){
 					.name			= "interfaces",
 					.help			= "Interface status and configuration",
-					.mask			= PRIV(1),
+					.mask			= CLI_MASK(PRIV(1)),
 					.tokenize	= if_tok_if,
 					.run			= cmd_sh_int,
 					.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -637,7 +637,7 @@ struct menu_node menu_main = {
 				& (struct menu_node){
 					.name			= "ip",
 					.help			= "IP information",
-					.mask			= PRIV(1),
+					.mask			= CLI_MASK(PRIV(1)),
 					.tokenize	= NULL,
 					.run			= cmd_sh_ip,
 					.subtree	= NULL
@@ -647,7 +647,7 @@ struct menu_node menu_main = {
 				& (struct menu_node){
 					.name			= "mac",
 					.help			= "MAC configuration",
-					.mask			= PRIV(1),
+					.mask			= CLI_MASK(PRIV(1)),
 					.tokenize	= NULL,
 					.run			= NULL,
 					.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -655,7 +655,7 @@ struct menu_node menu_main = {
 						& (struct menu_node){
 							.name			= "address-table",
 							.help			= "MAC forwarding table",
-							.mask			= PRIV(1),
+							.mask			= CLI_MASK(PRIV(1)),
 							.tokenize	= NULL,
 							.run			= cmd_sh_mac_addr_t,
 							.subtree	= show_mac_addr_t
@@ -669,7 +669,7 @@ struct menu_node menu_main = {
 				& (struct menu_node){
 					.name			= "mac-address-table",
 					.help			= "MAC forwarding table",
-					.mask			= PRIV(1),
+					.mask			= CLI_MASK(PRIV(1)),
 					.tokenize	= NULL,
 					.run			= cmd_sh_mac_addr_t,
 					.subtree	= show_mac_addr_t
@@ -679,7 +679,7 @@ struct menu_node menu_main = {
 				& (struct menu_node){
 					.name			= "privilege",
 					.help			= "Show current privilege level",
-					.mask			= PRIV(2),
+					.mask			= CLI_MASK(PRIV(2)),
 					.tokenize	= NULL,
 					.run			= cmd_show_priv,
 					.subtree	= NULL
@@ -689,7 +689,7 @@ struct menu_node menu_main = {
 				& (struct menu_node){
 					.name			= "running-config",
 					.help			= "Current operating configuration",
-					.mask			= PRIV(2),
+					.mask			= CLI_MASK(PRIV(2)),
 					.tokenize	= NULL,
 					.run			= cmd_show_run,
 					.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -697,7 +697,7 @@ struct menu_node menu_main = {
 						& (struct menu_node){
 							.name			= "interface",
 							.help			= "Show interface configuration",
-							.mask			= PRIV(1),
+							.mask			= CLI_MASK(PRIV(1)),
 							.tokenize	= if_tok_if,
 							.run			= NULL,
 							.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -722,7 +722,7 @@ struct menu_node menu_main = {
 				& (struct menu_node){
 					.name			= "sessions",
 					.help			= "Information about Telnet connections",
-					.mask			= PRIV(1),
+					.mask			= CLI_MASK(PRIV(1)),
 					.tokenize	= NULL,
 					.run			= NULL,
 					.subtree	= NULL
@@ -732,7 +732,7 @@ struct menu_node menu_main = {
 				& (struct menu_node){
 					.name			= "startup-config",
 					.help			= "Contents of startup configuration",
-					.mask			= PRIV(1),
+					.mask			= CLI_MASK(PRIV(1)),
 					.tokenize	= NULL,
 					.run			= cmd_show_start,
 					.subtree	= NULL
@@ -742,7 +742,7 @@ struct menu_node menu_main = {
 				& (struct menu_node){
 					.name			= "users",
 					.help			= "Display information about terminal lines",
-					.mask			= PRIV(1),
+					.mask			= CLI_MASK(PRIV(1)),
 					.tokenize	= NULL,
 					.run			= NULL,
 					.subtree	= NULL
@@ -752,7 +752,7 @@ struct menu_node menu_main = {
 				& (struct menu_node){
 					.name			= "version",
 					.help			= "System hardware and software status",
-					.mask			= PRIV(1),
+					.mask			= CLI_MASK(PRIV(1)),
 					.tokenize	= NULL,
 					.run			= cmd_show_ver,
 					.subtree	= NULL
@@ -762,7 +762,7 @@ struct menu_node menu_main = {
 				& (struct menu_node){
 					.name			= "vlan",
 					.help			= "VTP VLAN status",
-					.mask			= PRIV(1),
+					.mask			= CLI_MASK(PRIV(1)),
 					.tokenize	= NULL,
 					.run			= cmd_show_vlan,
 					.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -770,7 +770,7 @@ struct menu_node menu_main = {
 						& (struct menu_node){
 							.name			= "brief",
 							.help			= "VTP all VLAN status in brief",
-							.mask			= PRIV(1),
+							.mask			= CLI_MASK(PRIV(1)),
 							.tokenize	= NULL,
 							.run			= cmd_show_vlan,
 							.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -794,7 +794,7 @@ struct menu_node menu_main = {
 		& (struct menu_node){
 			.name			= "traceroute",
 			.help			= "Trace route to destination",
-			.mask			= PRIV(1),
+			.mask			= CLI_MASK(PRIV(1)),
 			.tokenize	= NULL,
 			.run			= NULL,
 			.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -802,7 +802,7 @@ struct menu_node menu_main = {
 				& (struct menu_node){
 					.name			= "WORD",
 					.help			= "Ping destination address or hostname",
-					.mask			= PRIV(1),
+					.mask			= CLI_MASK(PRIV(1)),
 					.tokenize	= NULL,
 					.run			= cmd_trace,
 					.subtree	= NULL
@@ -816,7 +816,7 @@ struct menu_node menu_main = {
 		& (struct menu_node){
 			.name			= "where",
 			.help			= "List active connections",
-			.mask			= PRIV(1),
+			.mask			= CLI_MASK(PRIV(1)),
 			.tokenize	= NULL,
 			.run			= NULL,
 			.subtree	= NULL
@@ -826,7 +826,7 @@ struct menu_node menu_main = {
 		& (struct menu_node){
 			.name			= "write",
 			.help			= "Write running configuration to memory",
-			.mask			= PRIV(15),
+			.mask			= CLI_MASK(PRIV(15)),
 			.tokenize	= NULL,
 			.run			= NULL,
 			.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -834,7 +834,7 @@ struct menu_node menu_main = {
 				& (struct menu_node){
 					.name			= "memory",
 					.help			= "Write to NV memory",
-					.mask			= PRIV(15),
+					.mask			= CLI_MASK(PRIV(15)),
 					.tokenize	= NULL,
 					.run			= cmd_wrme,
 					.subtree	= NULL

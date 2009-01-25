@@ -66,7 +66,7 @@ struct menu_node *clear_mac_addr_t[] = {
 	& (struct menu_node) { 
 		.name			= "dynamic",
 		.help			= "dynamic entry type",
-		.mask			= PRIV(1),
+		.mask			= CLI_MASK(PRIV(1)),
 		.tokenize	= NULL,
 		.run			= cmd_cl_mac_addr_t,
 		.subtree	= (struct menu_node *[]) {

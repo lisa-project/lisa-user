@@ -110,7 +110,7 @@ void rec(sw_command_t *cmd, int indent, const char *cmdline) {
 		bufp += sprintf(bufp,
 				"%s.name\t\t\t= \"%s\",\n"
 				"%s.help\t\t\t= \"%s\",\n"
-				"%s.mask\t\t\t= PRIV(%d),\n"
+				"%s.mask\t\t\t= CLI_MASK(PRIV(%d)),\n"
 				"%s.tokenize\t= NULL,\n"
 				"%s.run\t\t\t= %s,\n"
 				"%s.subtree\t= ",

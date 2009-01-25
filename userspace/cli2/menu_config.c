@@ -43,7 +43,7 @@ struct menu_node config_main = {
 		& (struct menu_node){
 			.name			= "cdp",
 			.help			= "Global CDP configuration subcommands",
-			.mask			= PRIV(15),
+			.mask			= CLI_MASK(PRIV(15)),
 			.tokenize	= NULL,
 			.run			= NULL,
 			.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -51,7 +51,7 @@ struct menu_node config_main = {
 				& (struct menu_node){
 					.name			= "advertise-v2",
 					.help			= "CDP sends version-2 advertisements",
-					.mask			= PRIV(15),
+					.mask			= CLI_MASK(PRIV(15)),
 					.tokenize	= NULL,
 					.run			= cmd_cdp_version,
 					.subtree	= NULL
@@ -61,7 +61,7 @@ struct menu_node config_main = {
 				& (struct menu_node){
 					.name			= "holdtime",
 					.help			= "Specify the holdtime (in sec) to be sent in packets",
-					.mask			= PRIV(15),
+					.mask			= CLI_MASK(PRIV(15)),
 					.tokenize	= NULL,
 					.run			= NULL,
 					.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -69,7 +69,7 @@ struct menu_node config_main = {
 						& (struct menu_node){
 							.name			= "<10-255>",
 							.help			= "Length  of time  (in sec) that receiver must keep this packet",
-							.mask			= PRIV(15),
+							.mask			= CLI_MASK(PRIV(15)),
 							.tokenize	= NULL,
 							.run			= cmd_cdp_holdtime,
 							.subtree	= NULL
@@ -83,7 +83,7 @@ struct menu_node config_main = {
 				& (struct menu_node){
 					.name			= "timer",
 					.help			= "Specify the rate at which CDP packets are sent (in sec)",
-					.mask			= PRIV(15),
+					.mask			= CLI_MASK(PRIV(15)),
 					.tokenize	= NULL,
 					.run			= NULL,
 					.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -91,7 +91,7 @@ struct menu_node config_main = {
 						& (struct menu_node){
 							.name			= "<5-254>",
 							.help			= "Rate at which CDP packets are sent (in  sec)",
-							.mask			= PRIV(15),
+							.mask			= CLI_MASK(PRIV(15)),
 							.tokenize	= NULL,
 							.run			= cmd_cdp_timer,
 							.subtree	= NULL
@@ -105,7 +105,7 @@ struct menu_node config_main = {
 				& (struct menu_node){
 					.name			= "run",
 					.help			= "",
-					.mask			= PRIV(15),
+					.mask			= CLI_MASK(PRIV(15)),
 					.tokenize	= NULL,
 					.run			= cmd_cdp_run,
 					.subtree	= NULL
@@ -119,7 +119,7 @@ struct menu_node config_main = {
 		& (struct menu_node){
 			.name			= "enable",
 			.help			= "Modify enable password parameters",
-			.mask			= PRIV(15),
+			.mask			= CLI_MASK(PRIV(15)),
 			.tokenize	= NULL,
 			.run			= NULL,
 			.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -127,7 +127,7 @@ struct menu_node config_main = {
 				& (struct menu_node){
 					.name			= "secret",
 					.help			= "Assign the privileged level secret",
-					.mask			= PRIV(15),
+					.mask			= CLI_MASK(PRIV(15)),
 					.tokenize	= NULL,
 					.run			= NULL,
 					.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -135,7 +135,7 @@ struct menu_node config_main = {
 						& (struct menu_node){
 							.name			= "0",
 							.help			= "Specifies an UNENCRYPTED password will follow",
-							.mask			= PRIV(15),
+							.mask			= CLI_MASK(PRIV(15)),
 							.tokenize	= NULL,
 							.run			= NULL,
 							.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -143,7 +143,7 @@ struct menu_node config_main = {
 								& (struct menu_node){
 									.name			= "LINE",
 									.help			= "The UNENCRYPTED (cleartext) 'enable' secret",
-									.mask			= PRIV(15),
+									.mask			= CLI_MASK(PRIV(15)),
 									.tokenize	= NULL,
 									.run			= cmd_setenpw,
 									.subtree	= NULL
@@ -157,7 +157,7 @@ struct menu_node config_main = {
 						& (struct menu_node){
 							.name			= "5",
 							.help			= "Specifies an ENCRYPTED secret will follow",
-							.mask			= PRIV(15),
+							.mask			= CLI_MASK(PRIV(15)),
 							.tokenize	= NULL,
 							.run			= NULL,
 							.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -165,7 +165,7 @@ struct menu_node config_main = {
 								& (struct menu_node){
 									.name			= "LINE",
 									.help			= "The ENCRYPTED 'enable' secret string",
-									.mask			= PRIV(15),
+									.mask			= CLI_MASK(PRIV(15)),
 									.tokenize	= NULL,
 									.run			= cmd_setenpw,
 									.subtree	= NULL
@@ -179,7 +179,7 @@ struct menu_node config_main = {
 						& (struct menu_node){
 							.name			= "LINE",
 							.help			= "The UNENCRYPTED (cleartext) 'enable' secret",
-							.mask			= PRIV(15),
+							.mask			= CLI_MASK(PRIV(15)),
 							.tokenize	= NULL,
 							.run			= cmd_setenpw,
 							.subtree	= NULL
@@ -189,7 +189,7 @@ struct menu_node config_main = {
 						& (struct menu_node){
 							.name			= "level",
 							.help			= "Set exec level password",
-							.mask			= PRIV(15),
+							.mask			= CLI_MASK(PRIV(15)),
 							.tokenize	= NULL,
 							.run			= NULL,
 							.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -197,7 +197,7 @@ struct menu_node config_main = {
 								& (struct menu_node){
 									.name			= "<1-15>",
 									.help			= "Level number",
-									.mask			= PRIV(15),
+									.mask			= CLI_MASK(PRIV(15)),
 									.tokenize	= NULL,
 									.run			= NULL,
 									.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -205,7 +205,7 @@ struct menu_node config_main = {
 										& (struct menu_node){
 											.name			= "0",
 											.help			= "Specifies an UNENCRYPTED password will follow",
-											.mask			= PRIV(15),
+											.mask			= CLI_MASK(PRIV(15)),
 											.tokenize	= NULL,
 											.run			= NULL,
 											.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -213,7 +213,7 @@ struct menu_node config_main = {
 												& (struct menu_node){
 													.name			= "LINE",
 													.help			= "The UNENCRYPTED (cleartext) 'enable' secret",
-													.mask			= PRIV(15),
+													.mask			= CLI_MASK(PRIV(15)),
 													.tokenize	= NULL,
 													.run			= cmd_setenpwlev,
 													.subtree	= NULL
@@ -227,7 +227,7 @@ struct menu_node config_main = {
 										& (struct menu_node){
 											.name			= "5",
 											.help			= "Specifies an ENCRYPTED secret will follow",
-											.mask			= PRIV(15),
+											.mask			= CLI_MASK(PRIV(15)),
 											.tokenize	= NULL,
 											.run			= NULL,
 											.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -235,7 +235,7 @@ struct menu_node config_main = {
 												& (struct menu_node){
 													.name			= "LINE",
 													.help			= "The ENCRYPTED 'enable' secret string",
-													.mask			= PRIV(15),
+													.mask			= CLI_MASK(PRIV(15)),
 													.tokenize	= NULL,
 													.run			= cmd_setenpwlev,
 													.subtree	= NULL
@@ -249,7 +249,7 @@ struct menu_node config_main = {
 										& (struct menu_node){
 											.name			= "LINE",
 											.help			= "The UNENCRYPTED (cleartext) 'enable' secret",
-											.mask			= PRIV(15),
+											.mask			= CLI_MASK(PRIV(15)),
 											.tokenize	= NULL,
 											.run			= cmd_setenpwlev,
 											.subtree	= NULL
@@ -275,7 +275,7 @@ struct menu_node config_main = {
 		& (struct menu_node){
 			.name			= "end",
 			.help			= "Exit from configure mode",
-			.mask			= PRIV(15),
+			.mask			= CLI_MASK(PRIV(15)),
 			.tokenize	= NULL,
 			.run			= cmd_end,
 			.subtree	= NULL
@@ -285,7 +285,7 @@ struct menu_node config_main = {
 		& (struct menu_node){
 			.name			= "exit",
 			.help			= "Exit from configure mode",
-			.mask			= PRIV(15),
+			.mask			= CLI_MASK(PRIV(15)),
 			.tokenize	= NULL,
 			.run			= cmd_end,
 			.subtree	= NULL
@@ -295,7 +295,7 @@ struct menu_node config_main = {
 		& (struct menu_node){
 			.name			= "hostname",
 			.help			= "Set system's network name",
-			.mask			= PRIV(15),
+			.mask			= CLI_MASK(PRIV(15)),
 			.tokenize	= NULL,
 			.run			= NULL,
 			.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -303,7 +303,7 @@ struct menu_node config_main = {
 				& (struct menu_node){
 					.name			= "WORD",
 					.help			= "This system's network name",
-					.mask			= PRIV(15),
+					.mask			= CLI_MASK(PRIV(15)),
 					.tokenize	= NULL,
 					.run			= cmd_hostname,
 					.subtree	= NULL
@@ -320,7 +320,7 @@ struct menu_node config_main = {
 		& (struct menu_node){
 			.name			= "line",
 			.help			= "Configure a terminal line",
-			.mask			= PRIV(15),
+			.mask			= CLI_MASK(PRIV(15)),
 			.tokenize	= NULL,
 			.run			= NULL,
 			.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -328,7 +328,7 @@ struct menu_node config_main = {
 				& (struct menu_node){
 					.name			= "vty",
 					.help			= "Virtual terminal",
-					.mask			= PRIV(15),
+					.mask			= CLI_MASK(PRIV(15)),
 					.tokenize	= NULL,
 					.run			= NULL,
 					.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -336,7 +336,7 @@ struct menu_node config_main = {
 						& (struct menu_node){
 							.name			= "<0-15>",
 							.help			= "First Line number",
-							.mask			= PRIV(15),
+							.mask			= CLI_MASK(PRIV(15)),
 							.tokenize	= NULL,
 							.run			= NULL,
 							.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -344,7 +344,7 @@ struct menu_node config_main = {
 								& (struct menu_node){
 									.name			= "",
 									.help			= "Last Line number",
-									.mask			= PRIV(15),
+									.mask			= CLI_MASK(PRIV(15)),
 									.tokenize	= NULL,
 									.run			= cmd_linevty,
 									.subtree	= NULL
@@ -366,7 +366,7 @@ struct menu_node config_main = {
 		& (struct menu_node){
 			.name			= "mac-address-table",
 			.help			= "Configure the MAC address table",
-			.mask			= PRIV(15),
+			.mask			= CLI_MASK(PRIV(15)),
 			.tokenize	= NULL,
 			.run			= NULL,
 			.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -374,7 +374,7 @@ struct menu_node config_main = {
 				& (struct menu_node){
 					.name			= "aging-time",
 					.help			= "Set MAC address table entry maximum age",
-					.mask			= PRIV(15),
+					.mask			= CLI_MASK(PRIV(15)),
 					.tokenize	= NULL,
 					.run			= NULL,
 					.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -382,7 +382,7 @@ struct menu_node config_main = {
 						& (struct menu_node){
 							.name			= "<10-1000000>",
 							.help			= "Maximum age in seconds",
-							.mask			= PRIV(15),
+							.mask			= CLI_MASK(PRIV(15)),
 							.tokenize	= NULL,
 							.run			= cmd_set_aging,
 							.subtree	= NULL
@@ -396,7 +396,7 @@ struct menu_node config_main = {
 				& (struct menu_node){
 					.name			= "static",
 					.help			= "static keyword",
-					.mask			= PRIV(15),
+					.mask			= CLI_MASK(PRIV(15)),
 					.tokenize	= NULL,
 					.run			= NULL,
 					.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -404,7 +404,7 @@ struct menu_node config_main = {
 						& (struct menu_node){
 							.name			= "H.H.H",
 							.help			= "48 bit mac address",
-							.mask			= PRIV(15),
+							.mask			= CLI_MASK(PRIV(15)),
 							.tokenize	= NULL,
 							.run			= NULL,
 							.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -412,7 +412,7 @@ struct menu_node config_main = {
 								& (struct menu_node){
 									.name			= "vlan",
 									.help			= "VLAN keyword",
-									.mask			= PRIV(15),
+									.mask			= CLI_MASK(PRIV(15)),
 									.tokenize	= NULL,
 									.run			= NULL,
 									.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -420,7 +420,7 @@ struct menu_node config_main = {
 										& (struct menu_node){
 											.name			= "<1-1094>",
 											.help			= "VLAN id of mac address table",
-											.mask			= PRIV(15),
+											.mask			= CLI_MASK(PRIV(15)),
 											.tokenize	= NULL,
 											.run			= NULL,
 											.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -428,7 +428,7 @@ struct menu_node config_main = {
 												& (struct menu_node){
 													.name			= "interface",
 													.help			= "interface",
-													.mask			= PRIV(15),
+													.mask			= CLI_MASK(PRIV(15)),
 													.tokenize	= NULL,
 													.run			= NULL,
 													.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -436,7 +436,7 @@ struct menu_node config_main = {
 														& (struct menu_node){
 															.name			= "ethernet",
 															.help			= "Ethernet IEEE 802.3",
-															.mask			= PRIV(15),
+															.mask			= CLI_MASK(PRIV(15)),
 															.tokenize	= NULL,
 															.run			= NULL,
 															.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -444,7 +444,7 @@ struct menu_node config_main = {
 																& (struct menu_node){
 																	.name			= "",
 																	.help			= "Ethernet interface number",
-																	.mask			= PRIV(15),
+																	.mask			= CLI_MASK(PRIV(15)),
 																	.tokenize	= NULL,
 																	.run			= cmd_macstatic,
 																	.subtree	= NULL
@@ -482,7 +482,7 @@ struct menu_node config_main = {
 		& (struct menu_node){
 			.name			= "no",
 			.help			= "Negate a command or set its defaults",
-			.mask			= PRIV(15),
+			.mask			= CLI_MASK(PRIV(15)),
 			.tokenize	= NULL,
 			.run			= NULL,
 			.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -490,7 +490,7 @@ struct menu_node config_main = {
 				& (struct menu_node){
 					.name			= "cdp",
 					.help			= "Global CDP configuration subcommands",
-					.mask			= PRIV(15),
+					.mask			= CLI_MASK(PRIV(15)),
 					.tokenize	= NULL,
 					.run			= NULL,
 					.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -498,7 +498,7 @@ struct menu_node config_main = {
 						& (struct menu_node){
 							.name			= "advertise-v2",
 							.help			= "CDP sends version-2 advertisements",
-							.mask			= PRIV(15),
+							.mask			= CLI_MASK(PRIV(15)),
 							.tokenize	= NULL,
 							.run			= cmd_no_cdp_v2,
 							.subtree	= NULL
@@ -508,7 +508,7 @@ struct menu_node config_main = {
 						& (struct menu_node){
 							.name			= "run",
 							.help			= "",
-							.mask			= PRIV(15),
+							.mask			= CLI_MASK(PRIV(15)),
 							.tokenize	= NULL,
 							.run			= cmd_no_cdp_run,
 							.subtree	= NULL
@@ -522,7 +522,7 @@ struct menu_node config_main = {
 				& (struct menu_node){
 					.name			= "enable",
 					.help			= "Modify enable password parameters",
-					.mask			= PRIV(15),
+					.mask			= CLI_MASK(PRIV(15)),
 					.tokenize	= NULL,
 					.run			= NULL,
 					.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -530,7 +530,7 @@ struct menu_node config_main = {
 						& (struct menu_node){
 							.name			= "secret",
 							.help			= "Assign the privileged level secret",
-							.mask			= PRIV(15),
+							.mask			= CLI_MASK(PRIV(15)),
 							.tokenize	= NULL,
 							.run			= cmd_noensecret,
 							.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -538,7 +538,7 @@ struct menu_node config_main = {
 								& (struct menu_node){
 									.name			= "level",
 									.help			= "Set exec level password",
-									.mask			= PRIV(15),
+									.mask			= CLI_MASK(PRIV(15)),
 									.tokenize	= NULL,
 									.run			= NULL,
 									.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -546,7 +546,7 @@ struct menu_node config_main = {
 										& (struct menu_node){
 											.name			= "<1-15>",
 											.help			= "Level number",
-											.mask			= PRIV(15),
+											.mask			= CLI_MASK(PRIV(15)),
 											.tokenize	= NULL,
 											.run			= cmd_noensecret_lev,
 											.subtree	= NULL
@@ -568,7 +568,7 @@ struct menu_node config_main = {
 				& (struct menu_node){
 					.name			= "hostname",
 					.help			= "Set system's network name",
-					.mask			= PRIV(15),
+					.mask			= CLI_MASK(PRIV(15)),
 					.tokenize	= NULL,
 					.run			= cmd_nohostname,
 					.subtree	= NULL
@@ -578,7 +578,7 @@ struct menu_node config_main = {
 				& (struct menu_node){
 					.name			= "interface",
 					.help			= "Select an interface to configure",
-					.mask			= PRIV(15),
+					.mask			= CLI_MASK(PRIV(15)),
 					.tokenize	= NULL,
 					.run			= NULL,
 					.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -586,7 +586,7 @@ struct menu_node config_main = {
 						& (struct menu_node){
 							.name			= "ethernet",
 							.help			= "Ethernet IEEE 802.3",
-							.mask			= PRIV(15),
+							.mask			= CLI_MASK(PRIV(15)),
 							.tokenize	= NULL,
 							.run			= NULL,
 							.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -594,7 +594,7 @@ struct menu_node config_main = {
 								& (struct menu_node){
 									.name			= "",
 									.help			= "Ethernet interface number",
-									.mask			= PRIV(15),
+									.mask			= CLI_MASK(PRIV(15)),
 									.tokenize	= NULL,
 									.run			= cmd_no_int_eth,
 									.subtree	= NULL
@@ -608,7 +608,7 @@ struct menu_node config_main = {
 						& (struct menu_node){
 							.name			= "vlan",
 							.help			= "LMS Vlans",
-							.mask			= PRIV(15),
+							.mask			= CLI_MASK(PRIV(15)),
 							.tokenize	= NULL,
 							.run			= NULL,
 							.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -616,7 +616,7 @@ struct menu_node config_main = {
 								& (struct menu_node){
 									.name			= "<1-1094>",
 									.help			= "Vlan interface number",
-									.mask			= PRIV(15),
+									.mask			= CLI_MASK(PRIV(15)),
 									.tokenize	= NULL,
 									.run			= cmd_no_int_vlan,
 									.subtree	= NULL
@@ -630,7 +630,7 @@ struct menu_node config_main = {
 						& (struct menu_node){
 							.name			= "WORD",
 							.help			= "Any interface name",
-							.mask			= PRIV(15),
+							.mask			= CLI_MASK(PRIV(15)),
 							.tokenize	= NULL,
 							.run			= cmd_no_int_any,
 							.subtree	= NULL
@@ -644,7 +644,7 @@ struct menu_node config_main = {
 				& (struct menu_node){
 					.name			= "mac-address-table",
 					.help			= "Configure the MAC address table",
-					.mask			= PRIV(15),
+					.mask			= CLI_MASK(PRIV(15)),
 					.tokenize	= NULL,
 					.run			= NULL,
 					.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -652,7 +652,7 @@ struct menu_node config_main = {
 						& (struct menu_node){
 							.name			= "aging-time",
 							.help			= "Set MAC address table entry maximum age",
-							.mask			= PRIV(15),
+							.mask			= CLI_MASK(PRIV(15)),
 							.tokenize	= NULL,
 							.run			= cmd_set_noaging,
 							.subtree	= NULL
@@ -662,7 +662,7 @@ struct menu_node config_main = {
 						& (struct menu_node){
 							.name			= "static",
 							.help			= "static keyword",
-							.mask			= PRIV(15),
+							.mask			= CLI_MASK(PRIV(15)),
 							.tokenize	= NULL,
 							.run			= NULL,
 							.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -670,7 +670,7 @@ struct menu_node config_main = {
 								& (struct menu_node){
 									.name			= "H.H.H",
 									.help			= "48 bit mac address",
-									.mask			= PRIV(15),
+									.mask			= CLI_MASK(PRIV(15)),
 									.tokenize	= NULL,
 									.run			= NULL,
 									.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -678,7 +678,7 @@ struct menu_node config_main = {
 										& (struct menu_node){
 											.name			= "vlan",
 											.help			= "VLAN keyword",
-											.mask			= PRIV(15),
+											.mask			= CLI_MASK(PRIV(15)),
 											.tokenize	= NULL,
 											.run			= NULL,
 											.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -686,7 +686,7 @@ struct menu_node config_main = {
 												& (struct menu_node){
 													.name			= "<1-1094>",
 													.help			= "VLAN id of mac address table",
-													.mask			= PRIV(15),
+													.mask			= CLI_MASK(PRIV(15)),
 													.tokenize	= NULL,
 													.run			= NULL,
 													.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -694,7 +694,7 @@ struct menu_node config_main = {
 														& (struct menu_node){
 															.name			= "interface",
 															.help			= "interface",
-															.mask			= PRIV(15),
+															.mask			= CLI_MASK(PRIV(15)),
 															.tokenize	= NULL,
 															.run			= NULL,
 															.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -702,7 +702,7 @@ struct menu_node config_main = {
 																& (struct menu_node){
 																	.name			= "ethernet",
 																	.help			= "Ethernet IEEE 802.3",
-																	.mask			= PRIV(15),
+																	.mask			= CLI_MASK(PRIV(15)),
 																	.tokenize	= NULL,
 																	.run			= NULL,
 																	.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -710,7 +710,7 @@ struct menu_node config_main = {
 																		& (struct menu_node){
 																			.name			= "",
 																			.help			= "Ethernet interface number",
-																			.mask			= PRIV(15),
+																			.mask			= CLI_MASK(PRIV(15)),
 																			.tokenize	= NULL,
 																			.run			= cmd_macstatic,
 																			.subtree	= NULL
@@ -748,7 +748,7 @@ struct menu_node config_main = {
 				& (struct menu_node){
 					.name			= "vlan",
 					.help			= "Vlan commands",
-					.mask			= PRIV(15),
+					.mask			= CLI_MASK(PRIV(15)),
 					.tokenize	= NULL,
 					.run			= NULL,
 					.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -756,7 +756,7 @@ struct menu_node config_main = {
 						& (struct menu_node){
 							.name			= "WORD",
 							.help			= "ISL VLAN IDs 1-4094",
-							.mask			= PRIV(15),
+							.mask			= CLI_MASK(PRIV(15)),
 							.tokenize	= NULL,
 							.run			= cmd_novlan,
 							.subtree	= NULL
@@ -774,7 +774,7 @@ struct menu_node config_main = {
 		& (struct menu_node){
 			.name			= "vlan",
 			.help			= "Vlan commands",
-			.mask			= PRIV(15),
+			.mask			= CLI_MASK(PRIV(15)),
 			.tokenize	= NULL,
 			.run			= NULL,
 			.subtree	= (struct menu_node *[]) { /*{{{*/
@@ -782,7 +782,7 @@ struct menu_node config_main = {
 				& (struct menu_node){
 					.name			= "WORD",
 					.help			= "ISL VLAN IDs 1-4094",
-					.mask			= PRIV(15),
+					.mask			= CLI_MASK(PRIV(15)),
 					.tokenize	= NULL,
 					.run			= cmd_vlan,
 					.subtree	= NULL
