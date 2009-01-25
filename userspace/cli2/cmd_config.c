@@ -56,24 +56,14 @@ static int use_if_ether(struct cli_context *ctx, char *name, int index, int swit
 	sock_fd = socket(PF_SWITCH, SOCK_RAW, 0);
 	assert(sock_fd != -1);
 
-	/* make sure we have the interface index */
-	do {
-		struct ifreq ifr;
+	if (!index)
+		index = if_get_index(name, sock_fd);
 
-		if (index)
-			break;
-
-		strncpy(ifr.ifr_name, name, IFNAMSIZ);
-
-		if (!ioctl(sock_fd, SIOCGIFINDEX, &ifr)) {
-			index = ifr.ifr_ifindex;
-			break;
-		}
-
+	if (!index) {
 		EX_STATUS_REASON(ctx, "interface %s does not exist", name);
 		close(sock_fd);
 		return CLI_EX_REJECTED;
-	} while (0);
+	}
 
 	swcfgr.cmd = SWCFG_ADDIF;
 	swcfgr.ifindex = index;
@@ -109,7 +99,7 @@ static int use_if_ether(struct cli_context *ctx, char *name, int index, int swit
 	return CLI_EX_OK;
 }
 
-int use_if_vlan(struct cli_context *ctx, int vlan, int index)
+static int use_if_vlan(struct cli_context *ctx, int vlan, int index)
 {
 	int status, sock_fd, ioctl_errno;
 	struct swcfgreq swcfgr;
@@ -138,52 +128,158 @@ int use_if_vlan(struct cli_context *ctx, int vlan, int index)
 	return CLI_EX_OK;
 }
 
-int cmd_int_any(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
+static int remove_if_ether(struct cli_context *ctx, char *name, int index, int switchport)
+{
+	int sock_fd;
+	struct swcfgreq swcfgr;
+
+	sock_fd = socket(PF_SWITCH, SOCK_RAW, 0);
+	assert(sock_fd != -1);
+
+	if (!index)
+		index = if_get_index(name, sock_fd);
+
+	if (!index) {
+		close(sock_fd);
+		return CLI_EX_OK;
+	}
+
+	swcfgr.cmd = SWCFG_DELIF;
+	swcfgr.ifindex = index;
+
+	/* Disable CDP on this interface */
+	//FIXME cdp_adm_query(CDP_IF_DISABLE, ioctl_arg.ifindex);
+	
+	/* FIXME nu avem un race aici? codul de kernel pentru socketzi
+	 * are nevoie ca device-ul sa fie port in switch => nu poate fi
+	 * scos portul pana nu se inchid toti socketzii; aici doar trimit
+	 * comanda prin ipc si dureaza pana cdpd inchide socketul.
+	 */
+
+	ioctl(sock_fd, SIOCSWCFG, &swcfgr);
+	close(sock_fd);
+
+	return CLI_EX_OK;
+}
+
+static int remove_if_vlan(struct cli_context *ctx, int vlan, int index)
 {
 	int status, sock_fd, ioctl_errno;
+	struct swcfgreq swcfgr;
+
+	sock_fd = socket(PF_SWITCH, SOCK_RAW, 0);
+	assert(sock_fd != -1);
+
+	swcfgr.cmd = SWCFG_DELVIF;
+	swcfgr.vlan = vlan;
+	status = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
+	ioctl_errno = errno;
+	close(sock_fd);
+
+	if (status && ioctl_errno != ENOENT) {
+		EX_STATUS_REASON_IOCTL(ctx, ioctl_errno);
+		return CLI_EX_REJECTED;
+	}
+
+	return CLI_EX_OK;
+}
+
+static int cmd_no_int_any(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
+{
+	int status, n, sock_fd, ioctl_errno;
 	struct ifreq ifr;
 	struct swcfgreq swcfgr;
 
-	if (!strcmp(nodev[1]->name, "Ethernet")) {
-		int n = atoi(argv[2]);
-		char name[IFNAMSIZ];
+	status = if_parse_args(argv + 1, nodev + 1, ifr.ifr_name, &n);
 
-		/* convert forth and back to int to avoid 0-left-padded numbers */
-		status = snprintf(name, IFNAMSIZ, "eth%d", n);
-		assert(status < IFNAMSIZ);
-		return use_if_ether(ctx, name, 0, 1);
+	switch (status) {
+	case IF_T_ETHERNET:
+		return remove_if_ether(ctx, ifr.ifr_name, 0, 1);
+	case IF_T_VLAN:
+		return remove_if_vlan(ctx, n, 0);
 	}
 
-	if (!strcmp(nodev[1]->name, "vlan")) {
-		int n = atoi(argv[2]);
-		return use_if_vlan(ctx, n, 0);
+	if (status == IF_T_ERROR && n == -1) {
+		EX_STATUS_REASON(ctx, "invalid interface name");
+		return CLI_EX_REJECTED;
 	}
 
-	if (strcmp(nodev[1]->name, "netdev")) {
+	if (status != IF_T_NETDEV) {
 		ctx->ex_status.reason = NULL;
 		return CLI_EX_REJECTED;
 	}
 
 	/* try to guess what netdev name means */
 
-	if (strlen(argv[2]) >= IFNAMSIZ) {
+	sock_fd = socket(PF_SWITCH, SOCK_RAW, 0);
+	assert(sock_fd != -1);
+
+	if (ioctl(sock_fd, SIOCGIFINDEX, &ifr)) {
+		close(sock_fd);
+		return CLI_EX_OK;
+	}
+
+	/* ask switch kernel module what it knows about this interface */
+	swcfgr.cmd = SWCFG_GETIFTYPE;
+	swcfgr.ifindex = ifr.ifr_ifindex;
+	status = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
+	ioctl_errno = errno;
+	close(sock_fd);
+
+	if (status) {
+		EX_STATUS_REASON_IOCTL(ctx, ioctl_errno);
+		return CLI_EX_REJECTED;
+	}
+
+	if (swcfgr.ext.switchport == SW_IF_VIF)
+		return remove_if_vlan(ctx, swcfgr.vlan, ifr.ifr_ifindex);
+
+	return remove_if_ether(ctx, ifr.ifr_name, ifr.ifr_ifindex,
+			swcfgr.ext.switchport != SW_IF_ROUTED);
+}
+
+int cmd_int_any(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
+{
+	int status, n, sock_fd, ioctl_errno;
+	struct ifreq ifr;
+	struct swcfgreq swcfgr;
+
+	if (!strcmp(nodev[0]->name, "no"))
+		return cmd_no_int_any(ctx, argc - 1, argv + 1, nodev + 1);
+
+	status = if_parse_args(argv + 1, nodev + 1, ifr.ifr_name, &n);
+
+	switch (status) {
+	case IF_T_ETHERNET:
+		return use_if_ether(ctx, ifr.ifr_name, 0, 1);
+	case IF_T_VLAN:
+		return use_if_vlan(ctx, n, 0);
+	}
+
+	if (status == IF_T_ERROR && n == -1) {
 		EX_STATUS_REASON(ctx, "invalid interface name");
 		return CLI_EX_REJECTED;
 	}
+
+	if (status != IF_T_NETDEV) {
+		ctx->ex_status.reason = NULL;
+		return CLI_EX_REJECTED;
+	}
+
+	/* try to guess what netdev name means */
 
 	sock_fd = socket(PF_SWITCH, SOCK_RAW, 0);
 	assert(sock_fd != -1);
 
 	/* first test if the interface already exists; SIOCGIFINDEX works
 	 * on any socket type (see man (7) netdevice for details) */
-	strncpy(ifr.ifr_name, argv[2], IFNAMSIZ);
 	do {
 		if (!ioctl(sock_fd, SIOCGIFINDEX, &ifr))
 			break;
 		close(sock_fd);
 
 		/* test for VIF addition */
-		status = parse_vlan(argv[2]);
+		status = if_parse_vlan(ifr.ifr_name);
 		if (status >= 0)
 			return use_if_vlan(ctx, status, 0);
 
@@ -207,7 +303,7 @@ int cmd_int_any(struct cli_context *ctx, int argc, char **argv, struct menu_node
 	if (swcfgr.ext.switchport == SW_IF_VIF)
 		return use_if_vlan(ctx, swcfgr.vlan, ifr.ifr_ifindex);
 
-	return use_if_ether(ctx, argv[2], ifr.ifr_ifindex,
+	return use_if_ether(ctx, ifr.ifr_name, ifr.ifr_ifindex,
 			swcfgr.ext.switchport != SW_IF_ROUTED);
 }
 
@@ -219,9 +315,6 @@ int cmd_no_cdp_run(struct cli_context *ctx, int argc, char **argv, struct menu_n
 int cmd_noensecret(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
 int cmd_noensecret_lev(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
 int cmd_nohostname(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
-int cmd_no_int_eth(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
-int cmd_no_int_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
-int cmd_no_int_any(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
 int cmd_set_noaging(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
 int cmd_novlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
 int cmd_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }

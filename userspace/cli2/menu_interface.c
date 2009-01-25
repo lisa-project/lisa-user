@@ -1,12 +1,18 @@
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
+#include <alloca.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/ioctl.h>
 
 #include <linux/if.h>
+#include <linux/netdevice.h>
+#include <linux/net_switch.h>
 
-#include "cli.h"
+#include "swsock.h"
+#include "menu_interface.h"
 
 int if_tok_if(struct cli_context *ctx, const char *buf,
 		struct menu_node **tree, struct tokenize_out *out)
@@ -25,14 +31,82 @@ int if_tok_if(struct cli_context *ctx, const char *buf,
 	return ret;
 }
 
-int parse_vlan(char *buf) {
+int if_parse_args(char **argv, struct menu_node **nodev, char *name, int *n)
+{
+	int __n, ret;
+
+	do {
+		if (!strcmp(nodev[0]->name, "Ethernet")) {
+			__n = if_name_ethernet(name, argv[1]);
+			ret = IF_T_ETHERNET;
+			break;
+		}
+
+		if (!strcmp(nodev[0]->name, "vlan")) {
+			__n = if_name_vlan(name, argv[1]);
+			ret = IF_T_VLAN;
+			break;
+		}
+
+		if (strcmp(nodev[0]->name, "netdev")) {
+			__n = 0;
+			ret = IF_T_ERROR;
+			break;
+		}
+
+		__n = -1;
+
+		if (strlen(argv[1]) >= IFNAMSIZ) {
+			ret = IF_T_ERROR;
+			break;
+		}
+
+		strcpy(name, argv[1]);
+		ret = IF_T_NETDEV;
+	} while (0);
+
+	if (n)
+		*n = __n;
+
+	return ret;
+}
+
+int if_parse_generic(const char *name, const char *type) {
 	int ret, n;
+	char *fmt;
+	size_t len;
 
-	if (!sscanf(buf, "vlan%d%n", &ret, &n))
+	fmt = alloca((len = strlen(type)) + 5);
+	strcpy(fmt, type);
+	strcpy(fmt + len, "%d%n");
+
+	if (!sscanf(name, fmt, &ret, &n))
 		return -1;
 
-	if (strlen(buf) != n)
+	if (strlen(name) != n)
 		return -1;
+
+	return ret;
+}
+
+int if_get_index(const char *name, int sock_fd)
+{
+	struct ifreq ifr;
+	int fd, ret = 0;
+
+	if (strlen(name) >= IFNAMSIZ)
+		return 0;
+
+	strcpy(ifr.ifr_name, name);
+
+	fd = sock_fd == -1 ? socket(PF_SWITCH, SOCK_RAW, 0) : sock_fd;
+	assert(fd != -1);
+
+	if (!ioctl(fd, SIOCGIFINDEX, &ifr))
+		ret = ifr.ifr_ifindex;
+
+	if (sock_fd == -1)
+		close(fd);
 
 	return ret;
 }

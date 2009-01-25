@@ -1,3 +1,18 @@
+New TODO list based on cli2 work
+--------------------------------
+
+CLI
+
+MLS
+* fix deadlock at VIF removal
+* make SWCFG_ADDIF honour the ext.switchport flag so interfaces can be added
+  directly as routed
+* routed interfaces must not be in promiscuous mode
+
+
+Older TODO list
+---------------
+
 CLI
 
 * Accept multiple interfaces when adding or deleting static MACs

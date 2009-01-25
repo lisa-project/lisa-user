@@ -575,70 +575,7 @@ struct menu_node config_main = {
 				},
 
 				/* #no interface */
-				& (struct menu_node){
-					.name			= "interface",
-					.help			= "Select an interface to configure",
-					.mask			= CLI_MASK(PRIV(15)),
-					.tokenize	= NULL,
-					.run			= NULL,
-					.subtree	= (struct menu_node *[]) { /*{{{*/
-						/* #no interface ethernet */
-						& (struct menu_node){
-							.name			= "ethernet",
-							.help			= "Ethernet IEEE 802.3",
-							.mask			= CLI_MASK(PRIV(15)),
-							.tokenize	= NULL,
-							.run			= NULL,
-							.subtree	= (struct menu_node *[]) { /*{{{*/
-								/* #no interface ethernet  */
-								& (struct menu_node){
-									.name			= "",
-									.help			= "Ethernet interface number",
-									.mask			= CLI_MASK(PRIV(15)),
-									.tokenize	= NULL,
-									.run			= cmd_no_int_eth,
-									.subtree	= NULL
-								},
-
-								NULL
-							} /*}}}*/
-						},
-
-						/* #no interface vlan */
-						& (struct menu_node){
-							.name			= "vlan",
-							.help			= "LMS Vlans",
-							.mask			= CLI_MASK(PRIV(15)),
-							.tokenize	= NULL,
-							.run			= NULL,
-							.subtree	= (struct menu_node *[]) { /*{{{*/
-								/* #no interface vlan <1-1094> */
-								& (struct menu_node){
-									.name			= "<1-1094>",
-									.help			= "Vlan interface number",
-									.mask			= CLI_MASK(PRIV(15)),
-									.tokenize	= NULL,
-									.run			= cmd_no_int_vlan,
-									.subtree	= NULL
-								},
-
-								NULL
-							} /*}}}*/
-						},
-
-						/* #no interface WORD */
-						& (struct menu_node){
-							.name			= "WORD",
-							.help			= "Any interface name",
-							.mask			= CLI_MASK(PRIV(15)),
-							.tokenize	= NULL,
-							.run			= cmd_no_int_any,
-							.subtree	= NULL
-						},
-
-						NULL
-					} /*}}}*/
-				},
+				&config_interface,
 
 				/* #no mac-address-table */
 				& (struct menu_node){
