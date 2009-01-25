@@ -258,15 +258,15 @@ static void cmd_run_vlan(FILE *out, char **argv) {
 	show_ip(out, dev);
 }
 
-static void init_mac_filter(struct net_switch_ioctl_arg *user_arg) {
-	user_arg->if_name = NULL;
+static void init_mac_filter(struct swcfgreq *user_arg) {
+	user_arg->ifindex = NULL;
 	user_arg->cmd = SWCFG_GETMAC;
 	memset(&user_arg->ext.marg.addr, 0, ETH_ALEN);
 	user_arg->ext.marg.addr_type = SW_FDB_ANY;
 	user_arg->vlan = 0;
 }
 
-static void do_mac_filter(FILE *out, struct net_switch_ioctl_arg *user_arg, int size, char *buf) {
+static void do_mac_filter(FILE *out, struct swcfgreq *user_arg, int size, char *buf) {
 	int status;
 
 	do {
@@ -292,7 +292,7 @@ static void do_mac_filter(FILE *out, struct net_switch_ioctl_arg *user_arg, int 
 static void cmd_show_mac(FILE *out, char **argv) {
 	int i, size;
 	char *arg, *buf;
-	struct net_switch_ioctl_arg user_arg;
+	struct swcfgreq user_arg;
 
 	buf = (char *)malloc(INITIAL_BUF_SIZE);
 	size = INITIAL_BUF_SIZE;
@@ -312,7 +312,7 @@ static void cmd_show_mac(FILE *out, char **argv) {
 
 static void cmd_sh_mac_eth(FILE *out, char **argv) {
 	char *arg, *buf;
-	struct net_switch_ioctl_arg user_arg;
+	struct swcfgreq user_arg;
 	int i, size;
 
 
@@ -329,8 +329,8 @@ static void cmd_sh_mac_eth(FILE *out, char **argv) {
 			user_arg.ext.marg.addr_type = SW_FDB_STATIC;
 			continue;
 		}
-		if (valid_eth(arg, arg[strlen(arg)-1]) && !user_arg.if_name) {
-			user_arg.if_name = if_name_eth(arg);
+		if (valid_eth(arg, arg[strlen(arg)-1]) && !user_arg.ifindex) {
+			user_arg.ifindex = if_name_eth(arg);
 		}
 	}
 
@@ -340,7 +340,7 @@ static void cmd_sh_mac_eth(FILE *out, char **argv) {
 
 static void cmd_sh_mac_vlan(FILE *out, char **argv) {
 	char *arg, *buf;
-	struct net_switch_ioctl_arg user_arg;
+	struct swcfgreq user_arg;
 	int i, size, a[2], cnt=0, k;
 
 	
@@ -363,7 +363,7 @@ static void cmd_sh_mac_vlan(FILE *out, char **argv) {
 	}
 	if (cnt > 1) { /* si eth si vlan */
 		sprintf(if_name, "eth%d", a[0]);
-		user_arg.if_name = if_name;
+		user_arg.ifindex = if_name;
 		user_arg.vlan = a[1];
 	}
 	else user_arg.vlan = a[0];
@@ -374,7 +374,7 @@ static void cmd_sh_mac_vlan(FILE *out, char **argv) {
 
 static void cmd_sh_addr(FILE *out, char **argv) {
 	char *arg, *buf;
-	struct net_switch_ioctl_arg user_arg;
+	struct swcfgreq user_arg;
 	int i, size;
 	
 	buf = (char *)malloc(INITIAL_BUF_SIZE);
@@ -424,7 +424,7 @@ static void cmd_trace(FILE *out, char **argv) {
 }
 
 static void cmd_clr_mac_eth(FILE *out, char **argv) {
-	struct net_switch_ioctl_arg ioctl_arg;
+	struct swcfgreq ioctl_arg;
 	int status;
 	unsigned char mac[ETH_ALEN];
 
@@ -432,7 +432,7 @@ static void cmd_clr_mac_eth(FILE *out, char **argv) {
 	ioctl_arg.vlan = 0;
 	memset(mac, 0, ETH_ALEN);
 	ioctl_arg.ext.mac = mac;
-	ioctl_arg.if_name = if_name_eth(argv[0]);
+	ioctl_arg.ifindex = if_name_eth(argv[0]);
 	status = ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 	if (status == -1) {
 		fprintf(out, "MAC address could not be removed\n"
@@ -442,7 +442,7 @@ static void cmd_clr_mac_eth(FILE *out, char **argv) {
 }
 
 static void cmd_clr_mac(FILE *out, char **argv) {
-	struct net_switch_ioctl_arg ioctl_arg;
+	struct swcfgreq ioctl_arg;
 	int status;
 	unsigned char mac[ETH_ALEN];
 
@@ -450,7 +450,7 @@ static void cmd_clr_mac(FILE *out, char **argv) {
 	memset(mac, 0, ETH_ALEN);
 	ioctl_arg.ext.mac = mac;
 	ioctl_arg.vlan = 0;
-	ioctl_arg.if_name = NULL;
+	ioctl_arg.ifindex = NULL;
 	status = ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 	if (status == -1) {
 		fprintf(out, "MAC address could not be removed\n"
@@ -460,7 +460,7 @@ static void cmd_clr_mac(FILE *out, char **argv) {
 }
 
 static void cmd_clr_mac_vl(FILE *out, char **argv) {
-	struct net_switch_ioctl_arg ioctl_arg;
+	struct swcfgreq ioctl_arg;
 	int status;
 	unsigned char mac[ETH_ALEN];
 
@@ -468,7 +468,7 @@ static void cmd_clr_mac_vl(FILE *out, char **argv) {
 	ioctl_arg.vlan = parse_vlan(argv[0]);
 	memset(mac, 0, ETH_ALEN);
 	ioctl_arg.ext.mac = mac;
-	ioctl_arg.if_name = NULL;
+	ioctl_arg.ifindex = NULL;
 	status = ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 	if (status == -1) {
 		fprintf(out, "MAC address could not be removed\n"
@@ -478,7 +478,7 @@ static void cmd_clr_mac_vl(FILE *out, char **argv) {
 }
 
 static void cmd_clr_mac_adr(FILE *out, char **argv) {
-	struct net_switch_ioctl_arg ioctl_arg;
+	struct swcfgreq ioctl_arg;
 	int status;
 	unsigned char mac[ETH_ALEN];
 
@@ -487,7 +487,7 @@ static void cmd_clr_mac_adr(FILE *out, char **argv) {
 	assert(!status);
 	ioctl_arg.ext.mac = mac;
 	ioctl_arg.vlan = 0;
-	ioctl_arg.if_name = NULL;
+	ioctl_arg.ifindex = NULL;
 	status = ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 	if (status == -1) {
 		fprintf(out, "MAC address could not be removed\n"
@@ -568,7 +568,7 @@ static void cmd_show_vlan(FILE *out, char **argv) {
 }
 
 int get_mac_age() {
-	struct net_switch_ioctl_arg ioctl_arg;
+	struct swcfgreq ioctl_arg;
 	int status;
 
 	ioctl_arg.cmd = SWCFG_GETAGETIME;

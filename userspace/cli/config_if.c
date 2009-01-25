@@ -41,25 +41,25 @@ static void cmd_end(FILE *out, char **argv) {
 
 static void cmd_acc_vlan(FILE *out, char **argv) {
 	char *arg = *argv;
-	struct net_switch_ioctl_arg ioctl_arg;
+	struct swcfgreq ioctl_arg;
 
 	ioctl_arg.cmd = SWCFG_SETPORTVLAN;
-	ioctl_arg.if_name = sel_eth;
+	ioctl_arg.ifindex = sel_eth;
 	ioctl_arg.vlan = parse_vlan(arg);
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
 static void cmd_noacc_vlan(FILE *out, char **argv) {
-	struct net_switch_ioctl_arg ioctl_arg;
+	struct swcfgreq ioctl_arg;
 
 	ioctl_arg.cmd = SWCFG_SETPORTVLAN;
-	ioctl_arg.if_name = sel_eth;
+	ioctl_arg.ifindex = sel_eth;
 	ioctl_arg.vlan = 1;
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
 static void cmd_shutd_v(FILE *out, char **argv) {
-	struct net_switch_ioctl_arg ioctl_arg;
+	struct swcfgreq ioctl_arg;
 
 	ioctl_arg.cmd = SWCFG_DISABLEVIF;
 	sscanf(sel_vlan, "vlan%d", &ioctl_arg.vlan);
@@ -67,7 +67,7 @@ static void cmd_shutd_v(FILE *out, char **argv) {
 }
 
 static void cmd_noshutd_v(FILE *out, char **argv) {
-	struct net_switch_ioctl_arg ioctl_arg;
+	struct swcfgreq ioctl_arg;
 
 	ioctl_arg.cmd = SWCFG_ENABLEVIF;
 	sscanf(sel_vlan, "vlan%d", &ioctl_arg.vlan);
@@ -75,44 +75,44 @@ static void cmd_noshutd_v(FILE *out, char **argv) {
 }
 
 static void cmd_shutd(FILE *out, char **argv) {
-	struct net_switch_ioctl_arg ioctl_arg;
+	struct swcfgreq ioctl_arg;
 
 	ioctl_arg.cmd = SWCFG_DISABLEPORT;
-	ioctl_arg.if_name = sel_eth;
+	ioctl_arg.ifindex = sel_eth;
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
 static void cmd_noshutd(FILE *out, char **argv) {
-	struct net_switch_ioctl_arg ioctl_arg;
+	struct swcfgreq ioctl_arg;
 
 	ioctl_arg.cmd = SWCFG_ENABLEPORT;
-	ioctl_arg.if_name = sel_eth;
+	ioctl_arg.ifindex = sel_eth;
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
 static void cmd_access(FILE *out, char **argv) {
-	struct net_switch_ioctl_arg ioctl_arg;
+	struct swcfgreq ioctl_arg;
 
 	ioctl_arg.cmd = SWCFG_SETACCESS;
-	ioctl_arg.if_name = sel_eth;
+	ioctl_arg.ifindex = sel_eth;
 	ioctl_arg.ext.access = 1;
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
 static void cmd_trunk(FILE *out, char **argv) {
-	struct net_switch_ioctl_arg ioctl_arg;
+	struct swcfgreq ioctl_arg;
 
 	ioctl_arg.cmd = SWCFG_SETTRUNK;
-	ioctl_arg.if_name = sel_eth;
+	ioctl_arg.ifindex = sel_eth;
 	ioctl_arg.ext.trunk = 1;
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
 static void cmd_nomode(FILE *out, char **argv) {
-	struct net_switch_ioctl_arg ioctl_arg;
+	struct swcfgreq ioctl_arg;
 
 	ioctl_arg.cmd = SWCFG_SETTRUNK;
-	ioctl_arg.if_name = sel_eth;
+	ioctl_arg.ifindex = sel_eth;
 	ioctl_arg.ext.trunk = 0;
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 	ioctl_arg.cmd = SWCFG_SETACCESS;
@@ -411,42 +411,42 @@ static int parse_vlan_list(char *list, unsigned char *bmp) {
 
 static void cmd_setvlans(FILE *out, char **argv) {
 	char *arg = *argv;
-	struct net_switch_ioctl_arg ioctl_arg;
+	struct swcfgreq ioctl_arg;
 	unsigned char bmp[SW_VLAN_BMP_NO];
 
 	get_vlan_list;
 	ioctl_arg.cmd = SWCFG_SETTRUNKVLANS;
-	ioctl_arg.if_name = sel_eth;
+	ioctl_arg.ifindex = sel_eth;
 	ioctl_arg.ext.bmp = bmp;
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
 static void cmd_addvlans(FILE *out, char **argv) {
 	char *arg = *argv;
-	struct net_switch_ioctl_arg ioctl_arg;
+	struct swcfgreq ioctl_arg;
 	unsigned char bmp[SW_VLAN_BMP_NO];
 
 	get_vlan_list;
 	ioctl_arg.cmd = SWCFG_ADDTRUNKVLANS;
-	ioctl_arg.if_name = sel_eth;
+	ioctl_arg.ifindex = sel_eth;
 	ioctl_arg.ext.bmp = bmp;
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
 static void cmd_allvlans(FILE *out, char **argv) {
-	struct net_switch_ioctl_arg ioctl_arg;
+	struct swcfgreq ioctl_arg;
 	unsigned char bmp[SW_VLAN_BMP_NO];
 
 	memset(bmp, 0, SW_VLAN_BMP_NO);
 	ioctl_arg.cmd = SWCFG_SETTRUNKVLANS;
-	ioctl_arg.if_name = sel_eth;
+	ioctl_arg.ifindex = sel_eth;
 	ioctl_arg.ext.bmp = bmp;
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
 static void cmd_excvlans(FILE *out, char **argv) {
 	char *arg = *argv;
-	struct net_switch_ioctl_arg ioctl_arg;
+	struct swcfgreq ioctl_arg;
 	unsigned char bmp[SW_VLAN_BMP_NO];
 	int i;
 
@@ -454,30 +454,30 @@ static void cmd_excvlans(FILE *out, char **argv) {
 	for(i = 0; i < SW_VLAN_BMP_NO; i++)
 		bmp[i] ^= 0xff;
 	ioctl_arg.cmd = SWCFG_SETTRUNKVLANS;
-	ioctl_arg.if_name = sel_eth;
+	ioctl_arg.ifindex = sel_eth;
 	ioctl_arg.ext.bmp = bmp;
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
 static void cmd_novlans(FILE *out, char **argv) {
-	struct net_switch_ioctl_arg ioctl_arg;
+	struct swcfgreq ioctl_arg;
 	unsigned char bmp[SW_VLAN_BMP_NO];
 
 	memset(bmp, 0xff, SW_VLAN_BMP_NO);
 	ioctl_arg.cmd = SWCFG_SETTRUNKVLANS;
-	ioctl_arg.if_name = sel_eth;
+	ioctl_arg.ifindex = sel_eth;
 	ioctl_arg.ext.bmp = bmp;
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
 static void cmd_remvlans(FILE *out, char **argv) {
 	char *arg = *argv;
-	struct net_switch_ioctl_arg ioctl_arg;
+	struct swcfgreq ioctl_arg;
 	unsigned char bmp[SW_VLAN_BMP_NO];
 
 	get_vlan_list;
 	ioctl_arg.cmd = SWCFG_DELTRUNKVLANS;
-	ioctl_arg.if_name = sel_eth;
+	ioctl_arg.ifindex = sel_eth;
 	ioctl_arg.ext.bmp = bmp;
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
@@ -492,91 +492,91 @@ static int valid_desc(char *argv, char lookahead) {
 
 static void cmd_setethdesc(FILE *out, char **argv) {
 	char *arg = *argv;
-	struct net_switch_ioctl_arg ioctl_arg;
+	struct swcfgreq ioctl_arg;
 
 	ioctl_arg.cmd = SWCFG_SETIFDESC;
-	ioctl_arg.if_name = sel_eth;
+	ioctl_arg.ifindex = sel_eth;
 	ioctl_arg.ext.iface_desc = arg;
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
 static void cmd_noethdesc(FILE *out, char **argv) {
-	struct net_switch_ioctl_arg ioctl_arg;
+	struct swcfgreq ioctl_arg;
 
 	ioctl_arg.cmd = SWCFG_SETIFDESC;
-	ioctl_arg.if_name = sel_eth;
+	ioctl_arg.ifindex = sel_eth;
 	ioctl_arg.ext.iface_desc = (char *)"";
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
 static void cmd_sp_10(FILE *out, char **argv) {
-	struct net_switch_ioctl_arg ioctl_arg;
+	struct swcfgreq ioctl_arg;
 
 	ioctl_arg.cmd = SWCFG_SETSPEED;
-	ioctl_arg.if_name = sel_eth;
+	ioctl_arg.ifindex = sel_eth;
 	ioctl_arg.ext.speed = SW_SPEED_10;
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
 static void cmd_sp_100(FILE *out, char **argv) {
-	struct net_switch_ioctl_arg ioctl_arg;
+	struct swcfgreq ioctl_arg;
 
 	ioctl_arg.cmd = SWCFG_SETSPEED;
-	ioctl_arg.if_name = sel_eth;
+	ioctl_arg.ifindex = sel_eth;
 	ioctl_arg.ext.speed = SW_SPEED_100;
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
 static void cmd_sp_auto(FILE *out, char **argv) {
-	struct net_switch_ioctl_arg ioctl_arg;
+	struct swcfgreq ioctl_arg;
 
 	ioctl_arg.cmd = SWCFG_SETSPEED;
-	ioctl_arg.if_name = sel_eth;
+	ioctl_arg.ifindex = sel_eth;
 	ioctl_arg.ext.speed = SW_SPEED_AUTO;
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
 static void cmd_du_auto(FILE *out, char **argv) {
-	struct net_switch_ioctl_arg ioctl_arg;
+	struct swcfgreq ioctl_arg;
 
 	ioctl_arg.cmd = SWCFG_SETDUPLEX;
-	ioctl_arg.if_name = sel_eth;
+	ioctl_arg.ifindex = sel_eth;
 	ioctl_arg.ext.duplex = SW_DUPLEX_AUTO;
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
 static void cmd_du_full(FILE *out, char **argv) {
-	struct net_switch_ioctl_arg ioctl_arg;
+	struct swcfgreq ioctl_arg;
 
 	ioctl_arg.cmd = SWCFG_SETDUPLEX;
-	ioctl_arg.if_name = sel_eth;
+	ioctl_arg.ifindex = sel_eth;
 	ioctl_arg.ext.duplex = SW_DUPLEX_FULL;
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
 static void cmd_du_half(FILE *out, char **argv) {
-	struct net_switch_ioctl_arg ioctl_arg;
+	struct swcfgreq ioctl_arg;
 
 	ioctl_arg.cmd = SWCFG_SETDUPLEX;
-	ioctl_arg.if_name = sel_eth;
+	ioctl_arg.ifindex = sel_eth;
 	ioctl_arg.ext.duplex = SW_DUPLEX_HALF;
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
 static void cmd_swport_on(FILE *out, char **argv) {
-	struct net_switch_ioctl_arg ioctl_arg;
+	struct swcfgreq ioctl_arg;
 
 	ioctl_arg.cmd = SWCFG_SETSWPORT;
-	ioctl_arg.if_name = sel_eth;
+	ioctl_arg.ifindex = sel_eth;
 	ioctl_arg.ext.switchport = 1;
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
 
 static void cmd_swport_off(FILE *out, char **argv) {
-	struct net_switch_ioctl_arg ioctl_arg;
+	struct swcfgreq ioctl_arg;
 
 	ioctl_arg.cmd = SWCFG_SETSWPORT;
-	ioctl_arg.if_name = sel_eth;
+	ioctl_arg.ifindex = sel_eth;
 	ioctl_arg.ext.switchport = 0;
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }

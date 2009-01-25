@@ -228,7 +228,7 @@ static int get_interfaces_proc(void) {
 	char name[IFNAMSIZ], *s;
 	char desc[SW_MAX_PORT_DESC];
 	struct user_net_device *iface;
-	struct net_switch_ioctl_arg ioctl_arg;
+	struct swcfgreq ioctl_arg;
 
 	fh = fopen(PROCNETDEV_PATH, "r");
 	if (!fh) {
@@ -241,7 +241,7 @@ static int get_interfaces_proc(void) {
 	while (fgets(buf, sizeof(buf), fh)) {
 		s = get_dev_name(name, buf);
 		ioctl_arg.cmd = SWCFG_GETIFCFG;
-		ioctl_arg.if_name = name;
+		ioctl_arg.ifindex = name;
 		ioctl_arg.ext.cfg.forbidden_vlans = NULL;
 		ioctl_arg.ext.cfg.description = desc;
 		iface = NULL;

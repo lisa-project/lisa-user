@@ -103,13 +103,13 @@ void list_vlans(unsigned char *bmp, FILE *out) {
 }
 
 int build_int_eth_config(FILE *out, char *if_name, int put_if_cmd) {
-	struct net_switch_ioctl_arg ioctl_arg;
+	struct swcfgreq ioctl_arg;
 	unsigned char bmp[SW_VLAN_BMP_NO];
 	char desc[SW_MAX_PORT_DESC];
 	int need_trunk_vlans = 1;
 
 	ioctl_arg.cmd = SWCFG_GETIFCFG;
-	ioctl_arg.if_name = if_name;
+	ioctl_arg.ifindex = if_name;
 	ioctl_arg.ext.cfg.forbidden_vlans = bmp;
 	ioctl_arg.ext.cfg.description = desc;
 	if(ioctl(sock_fd, SIOCSWCFG, &ioctl_arg) == -1)
@@ -183,12 +183,12 @@ int build_int_eth_config(FILE *out, char *if_name, int put_if_cmd) {
 void dump_static_macs(FILE *out) {
 	char *buf, *ptr;
 	int status, size;
-	struct net_switch_ioctl_arg ioctl_arg;
+	struct swcfgreq ioctl_arg;
 
 	buf = (char *)malloc(INITIAL_BUF_SIZE);
 	size = INITIAL_BUF_SIZE;
 	assert(buf);
-	ioctl_arg.if_name = NULL;
+	ioctl_arg.ifindex = NULL;
 	ioctl_arg.cmd = SWCFG_GETMAC;
 	memset(&ioctl_arg.ext.marg.addr, 0, ETH_ALEN);
 	ioctl_arg.ext.marg.addr_type = SW_FDB_STATIC;
@@ -298,12 +298,12 @@ void build_list_ip_addr(FILE *out, char *dev) {
 void dump_vlans(FILE *out) {
 	char *buf;
 	int status, size;
-	struct net_switch_ioctl_arg ioctl_arg;
+	struct swcfgreq ioctl_arg;
 
 	buf = (char *)malloc(INITIAL_BUF_SIZE);
 	size = INITIAL_BUF_SIZE;
 	assert(buf);
-	ioctl_arg.if_name = NULL;
+	ioctl_arg.ifindex = NULL;
 	ioctl_arg.cmd = SWCFG_GETVDB;
 
 	do {

@@ -58,15 +58,15 @@ static void cmd_nohostname(FILE *out, char **argv) {
 
 static void cmd_int_eth(FILE *out, char **argv) {
 	char *arg = *argv;
-	struct net_switch_ioctl_arg ioctl_arg;
+	struct swcfgreq ioctl_arg;
 
 	ioctl_arg.cmd = SWCFG_ADDIF;
-	ioctl_arg.if_name = if_name_eth(arg);
+	ioctl_arg.ifindex = if_name_eth(arg);
 	if(ioctl(sock_fd, SIOCSWCFG, &ioctl_arg)) {
 		switch(errno) {
 		case ENODEV:
 			fprintf(out, "Command rejected: device %s does not exist\n",
-					ioctl_arg.if_name);
+					ioctl_arg.ifindex);
 			return;
 		case EBUSY:
 			/* Interface already in the switch; just ignore the
@@ -78,20 +78,20 @@ static void cmd_int_eth(FILE *out, char **argv) {
 		}
 	} else {
 		/* Enable CDP on this interface */
-		cdp_adm_query(CDP_IF_ENABLE, ioctl_arg.if_name);
+		cdp_adm_query(CDP_IF_ENABLE, ioctl_arg.ifindex);
 	}
 
 	cmd_root = &command_root_config_if_eth;
-	strcpy(sel_eth, ioctl_arg.if_name);
+	strcpy(sel_eth, ioctl_arg.ifindex);
 }
 
 /* Add any kind of interface to the switch.
  */
 static void cmd_int_any(FILE *out, char **argv) {
-	struct net_switch_ioctl_arg ioctl_arg;
+	struct swcfgreq ioctl_arg;
 
 	ioctl_arg.cmd = SWCFG_ADDIF;
-	ioctl_arg.if_name = argv[0];
+	ioctl_arg.ifindex = argv[0];
 	/* Only vlan virtual interfaces must not be added. We do not need
 	 * to check this here. Just do the ioctl() and the kernel code
 	 * will report EINVAL if we try to add a vif.
@@ -100,7 +100,7 @@ static void cmd_int_any(FILE *out, char **argv) {
 		switch(errno) {
 		case ENODEV:
 			fprintf(out, "Command rejected: device %s does not exist\n",
-					ioctl_arg.if_name);
+					ioctl_arg.ifindex);
 			return;
 		case EINVAL:
 			fprintf(out, "I don't like VIFs\n");
@@ -116,22 +116,22 @@ static void cmd_int_any(FILE *out, char **argv) {
 		}
 	} else {
 		/* Enable CDP on this interface */
-		cdp_adm_query(CDP_IF_ENABLE, ioctl_arg.if_name);
+		cdp_adm_query(CDP_IF_ENABLE, ioctl_arg.ifindex);
 	}
 
 	cmd_root = &command_root_config_if_eth;
-	strcpy(sel_eth, ioctl_arg.if_name);
+	strcpy(sel_eth, ioctl_arg.ifindex);
 }
 
 static void cmd_no_int_eth(FILE *out, char **argv) {
 	char *arg = argv[1]; /* argv[0] is "no" */
-	struct net_switch_ioctl_arg ioctl_arg;
+	struct swcfgreq ioctl_arg;
 	
 	ioctl_arg.cmd = SWCFG_DELIF;
-	ioctl_arg.if_name = if_name_eth(arg);
+	ioctl_arg.ifindex = if_name_eth(arg);
 
 	/* Disable CDP on this interface */
-	cdp_adm_query(CDP_IF_DISABLE, ioctl_arg.if_name);
+	cdp_adm_query(CDP_IF_DISABLE, ioctl_arg.ifindex);
 	
 	/* FIXME nu avem un race aici? codul de kernel pentru socketzi
 	 * are nevoie ca device-ul sa fie port in switch => nu poate fi
@@ -144,7 +144,7 @@ static void cmd_no_int_eth(FILE *out, char **argv) {
 
 static void cmd_int_vlan(FILE *out, char **argv) {
 	char *arg = *argv;
-	struct net_switch_ioctl_arg ioctl_arg;
+	struct swcfgreq ioctl_arg;
 	int vlan = parse_vlan(arg);
 
 	ioctl_arg.cmd = SWCFG_ADDVIF;
@@ -160,14 +160,14 @@ static void cmd_no_int_vlan(FILE *out, char **argv) {
 }
 
 static void cmd_no_int_any(FILE *out, char **argv) {
-	struct net_switch_ioctl_arg ioctl_arg;
+	struct swcfgreq ioctl_arg;
 	int ret;
 
 	ioctl_arg.cmd = SWCFG_DELIF;
-	ioctl_arg.if_name = argv[1]; /* argv[0] is "no" */
+	ioctl_arg.ifindex = argv[1]; /* argv[0] is "no" */
 
 	/* Disable CDP on this interface */
-	cdp_adm_query(CDP_IF_DISABLE, ioctl_arg.if_name);
+	cdp_adm_query(CDP_IF_DISABLE, ioctl_arg.ifindex);
 	
 	/* FIXME FIXME FIXME FIXME
 	 * daca ioctl() de scos interfata esueaza din varii motive,
@@ -182,7 +182,7 @@ static void cmd_no_int_any(FILE *out, char **argv) {
 }
 
 static void cmd_macstatic(FILE *out, char **argv) {
-	struct net_switch_ioctl_arg ioctl_arg;
+	struct swcfgreq ioctl_arg;
 	int status;
 	unsigned char mac[ETH_ALEN];
 
@@ -195,7 +195,7 @@ static void cmd_macstatic(FILE *out, char **argv) {
 	assert(!status);
 	ioctl_arg.ext.mac = mac;
 	ioctl_arg.vlan = parse_vlan(argv[1]);
-	ioctl_arg.if_name = if_name_eth(argv[2]);
+	ioctl_arg.ifindex = if_name_eth(argv[2]);
 	status = ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 	if(ioctl_arg.cmd == SWCFG_DELMACSTATIC && status == -1) {
 		fprintf(out, "MAC address could not be removed\n"
@@ -266,7 +266,7 @@ static void cmd_noensecret_lev(FILE *out, char **argv) {
 }
 
 static void cmd_set_aging(FILE *out, char **argv) {
-	struct net_switch_ioctl_arg ioctl_arg;
+	struct swcfgreq ioctl_arg;
 	int status;
 	
 	sscanf(*argv, "%d", &ioctl_arg.ext.nsec);
@@ -277,7 +277,7 @@ static void cmd_set_aging(FILE *out, char **argv) {
 }
 
 static void cmd_set_noaging(FILE *out, char **argv) {
-	struct net_switch_ioctl_arg ioctl_arg;
+	struct swcfgreq ioctl_arg;
 	int status;
 
 	ioctl_arg.cmd = SWCFG_SETAGETIME;
@@ -291,7 +291,7 @@ static void cmd_linevty(FILE *out, char **argv) {
 }
 
 static void cmd_vlan(FILE *out, char **argv) {
-	struct net_switch_ioctl_arg ioctl_arg;
+	struct swcfgreq ioctl_arg;
 
 	vlan_no = parse_vlan(*argv);
 	ioctl_arg.cmd = SWCFG_ADDVLAN;
@@ -302,7 +302,7 @@ static void cmd_vlan(FILE *out, char **argv) {
 }
 
 static void cmd_namevlan(FILE *out, char **argv) {
-	struct net_switch_ioctl_arg ioctl_arg;
+	struct swcfgreq ioctl_arg;
 	int status;
 
 	ioctl_arg.cmd = SWCFG_RENAMEVLAN;
@@ -316,7 +316,7 @@ static void cmd_namevlan(FILE *out, char **argv) {
 }
 
 static void cmd_nonamevlan(FILE *out, char **argv) {
-	struct net_switch_ioctl_arg ioctl_arg;
+	struct swcfgreq ioctl_arg;
 
 	ioctl_arg.cmd = SWCFG_RENAMEVLAN;
 	ioctl_arg.vlan = vlan_no;
@@ -326,7 +326,7 @@ static void cmd_nonamevlan(FILE *out, char **argv) {
 }
 
 static void cmd_novlan(FILE *out, char **argv) {
-	struct net_switch_ioctl_arg ioctl_arg;
+	struct swcfgreq ioctl_arg;
 	int status;
 
 	ioctl_arg.cmd = SWCFG_DELVLAN;
