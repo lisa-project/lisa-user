@@ -4,7 +4,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "command.h"
+#include "config_if.h"
 
 char buf[1024 * 1024];
 char *bufp = buf;
@@ -155,11 +155,17 @@ int main(int argc, char **argv) {
 			"\n"
 		  );
 
-	rec(command_root_main.cmd, 2, "#");
+	rec(command_root_config_if_eth.cmd, 2, "#");
 
 	for (i = 0; i < hdlr; i++)
 		printf("int %s(struct cli_context *, int, char **, struct menu_node **);\n",
 				hdlrs[i]);
+
+	printf("\n/* move to cmd_ corresponding file */\n");
+	for (i = 0; i < hdlr; i++)
+		printf("int %s(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }\n",
+				hdlrs[i]);
+	printf("/* ------------------------------- */\n");
 
 	printf(
 			"\nstruct menu_node menu_main = {\n"
