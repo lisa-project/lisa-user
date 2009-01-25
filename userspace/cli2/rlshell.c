@@ -155,8 +155,11 @@ void rlshell_list_subtree(struct menu_node *node)
 
 	snprintf(fmt, sizeof(fmt), "  %%-%ds  %%s\n", len);
 
-	for (sub = node->subtree; *sub != NULL; sub++)
+	for (sub = node->subtree; *sub != NULL; sub++) {
+		if (!cli_mask_apply((*sub)->mask, currctx->cc.node_filter))
+			continue;
 		printf(fmt, (*sub)->name, (*sub)->help);
+	}
 
 	if (node->run != NULL)
 		rlshell_go_ahead();

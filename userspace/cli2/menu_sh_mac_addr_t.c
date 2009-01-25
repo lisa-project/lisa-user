@@ -62,7 +62,7 @@ static struct menu_node *if_subtree[] = {
 	NULL
 };
 
-static struct menu_node interface = IF_MENU_NODE(if_subtree);
+static struct menu_node interface = IF_MENU_NODE(if_subtree, "interface keyword");
 
 static struct menu_node *address_subtree[] = {
 	&interface,

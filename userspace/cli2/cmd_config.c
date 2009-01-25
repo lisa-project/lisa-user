@@ -25,10 +25,26 @@ int cmd_cdp_timer(struct cli_context *ctx, int argc, char **argv, struct menu_no
 int cmd_cdp_run(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
 int cmd_setenpw(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
 int cmd_setenpwlev(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
-int cmd_end(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
-int cmd_hostname(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
 
-extern char curr_if_name[]; //FIXME move to .h
+extern struct menu_node menu_main;
+extern struct menu_node config_main;
+extern struct menu_node config_if_main;
+
+int cmd_end(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
+{
+	ctx->root = &menu_main;
+	ctx->node_filter &= PRIV_FILTER(PRIV_MAX);
+	return CLI_EX_OK;
+}
+
+int cmd_exit(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
+{
+	ctx->root =& config_main;
+	ctx->node_filter &= PRIV_FILTER(PRIV_MAX);
+	return CLI_EX_OK;
+}
+
+int cmd_hostname(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
 
 static int use_if_ether(struct cli_context *ctx, char *name, int index, int switchport)
 {
@@ -85,9 +101,11 @@ static int use_if_ether(struct cli_context *ctx, char *name, int index, int swit
 		// FIXME cdp_adm_query(CDP_IF_ENABLE, ioctl_arg.if_name);
 	}
 
+	ctx->node_filter &= PRIV_FILTER(PRIV_MAX);
+	ctx->node_filter |= IFF_SWITCHED;
+	ctx->root = &config_if_main;
 	uc->ifindex = index;
 
-	// FIXME change menu root
 	return CLI_EX_OK;
 }
 
@@ -112,9 +130,11 @@ int use_if_vlan(struct cli_context *ctx, int vlan, int index)
 		return CLI_EX_REJECTED;
 	}
 
+	ctx->node_filter &= PRIV_FILTER(PRIV_MAX);
+	ctx->node_filter |= IFF_VIF;
+	ctx->root = &config_if_main;
 	uc->ifindex = swcfgr.ifindex;
 
-	// FIXME change menu root
 	return CLI_EX_OK;
 }
 

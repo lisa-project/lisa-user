@@ -33,7 +33,7 @@ static struct menu_node *if_subtree[] = {
 	NULL
 };
 
-static struct menu_node interface = IF_MENU_NODE(if_subtree);
+struct menu_node config_interface = IF_MENU_NODE(if_subtree, "Select an interface to configure");
 
 struct menu_node config_main = {
 	/* Root node, .name is used as prompt */
@@ -314,7 +314,7 @@ struct menu_node config_main = {
 		},
 
 		/* #interface */
-		& interface,
+		& config_interface,
 
 		/* #line */
 		& (struct menu_node){

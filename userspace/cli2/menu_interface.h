@@ -1,9 +1,9 @@
 #ifndef _MENU_INTERFACE_H
 #define _MENU_INTERFACE_H
 
-#define IF_MENU_NODE(__subtree, __priv...) {\
+#define IF_MENU_NODE(__subtree, __help, __priv...) {\
 	.name		= "interface",\
-	.help		= "interface keyword",\
+	.help		= __help,\
 	.mask		= CLI_MASK(VA_PRIV(NIL, ##__priv, 1)),\
 	.tokenize	= if_tok_if,\
 	.run		= NULL,\
