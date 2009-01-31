@@ -90,7 +90,7 @@ static int setup_switch_socket(int fd, char *ifname) {
 void register_cdp_interface(char *ifname) {
 	int fd, sockfd, status;
 	struct ifreq ifr;
-	struct net_switch_ioctl_arg ioctl_arg;
+	struct swcfgreq ioctl_arg;
 	struct cdp_interface *entry, *tmp;
 
 	sys_dbg("Enabling cdp on '%s'\n", ifname);
@@ -125,7 +125,7 @@ void register_cdp_interface(char *ifname) {
 
 	/* check if the interface is in the switch */
 	ioctl_arg.cmd = SWCFG_GETIFCFG;
-	ioctl_arg.if_name = strdup(ifname);
+	ioctl_arg.ifindex = strdup(ifname);
 	ioctl_arg.ext.cfg.forbidden_vlans = NULL;
 	ioctl_arg.ext.cfg.description = NULL;
 	if (ioctl(fd, SIOCSWCFG, &ioctl_arg)) {

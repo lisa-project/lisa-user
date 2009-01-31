@@ -61,7 +61,7 @@ static void cmd_noacc_vlan(FILE *out, char **argv) {
 static void cmd_shutd_v(FILE *out, char **argv) {
 	struct swcfgreq ioctl_arg;
 
-	ioctl_arg.cmd = SWCFG_DISABLEVIF;
+	ioctl_arg.cmd = SWCFG_DISABLE_IF;
 	sscanf(sel_vlan, "vlan%d", &ioctl_arg.vlan);
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
@@ -69,7 +69,7 @@ static void cmd_shutd_v(FILE *out, char **argv) {
 static void cmd_noshutd_v(FILE *out, char **argv) {
 	struct swcfgreq ioctl_arg;
 
-	ioctl_arg.cmd = SWCFG_ENABLEVIF;
+	ioctl_arg.cmd = SWCFG_ENABLE_IF;
 	sscanf(sel_vlan, "vlan%d", &ioctl_arg.vlan);
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
@@ -77,7 +77,7 @@ static void cmd_noshutd_v(FILE *out, char **argv) {
 static void cmd_shutd(FILE *out, char **argv) {
 	struct swcfgreq ioctl_arg;
 
-	ioctl_arg.cmd = SWCFG_DISABLEPORT;
+	ioctl_arg.cmd = SWCFG_DISABLE_IF;
 	ioctl_arg.ifindex = sel_eth;
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }
@@ -85,7 +85,7 @@ static void cmd_shutd(FILE *out, char **argv) {
 static void cmd_noshutd(FILE *out, char **argv) {
 	struct swcfgreq ioctl_arg;
 
-	ioctl_arg.cmd = SWCFG_ENABLEPORT;
+	ioctl_arg.cmd = SWCFG_ENABLE_IF;
 	ioctl_arg.ifindex = sel_eth;
 	ioctl(sock_fd, SIOCSWCFG, &ioctl_arg);
 }

@@ -136,7 +136,7 @@ int cdp_ipc_receive(struct cdp_session_info *s) {
 
 void cmd_showmac(FILE *out, char *arg)  {
 	struct net_switch_mac *mac;
-	struct net_switch_ioctl_arg *user_arg = (struct net_switch_ioctl_arg *)arg;
+	struct swcfgreq *user_arg = (struct swcfgreq *)arg;
 	int size = 0, actual_size = user_arg->ext.marg.actual_size;
 	char *buf = user_arg->ext.marg.buf;
 
