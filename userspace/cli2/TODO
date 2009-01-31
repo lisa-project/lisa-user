@@ -1,0 +1,217 @@
+
+List of unimplemented command handlers follows:
+
+#
+clear mac address-table dynamic 
+clear mac address-table dynamic address H.H.H 
+clear mac address-table dynamic address H.H.H interface Ethernet <0-24> 
+clear mac address-table dynamic address H.H.H interface Ethernet <0-24> vlan <1-1094> 
+clear mac address-table dynamic address H.H.H interface netdev WORD 
+clear mac address-table dynamic address H.H.H interface netdev WORD vlan <1-1094> 
+clear mac address-table dynamic address H.H.H vlan <1-1094> 
+clear mac address-table dynamic interface Ethernet <0-24> 
+clear mac address-table dynamic interface Ethernet <0-24> vlan <1-1094> 
+clear mac address-table dynamic interface netdev WORD 
+clear mac address-table dynamic interface netdev WORD vlan <1-1094> 
+clear mac address-table dynamic vlan <1-1094> 
+clear mac-address-table dynamic 
+clear mac-address-table dynamic address H.H.H 
+clear mac-address-table dynamic address H.H.H interface Ethernet <0-24> 
+clear mac-address-table dynamic address H.H.H interface Ethernet <0-24> vlan <1-1094> 
+clear mac-address-table dynamic address H.H.H interface netdev WORD 
+clear mac-address-table dynamic address H.H.H interface netdev WORD vlan <1-1094> 
+clear mac-address-table dynamic address H.H.H vlan <1-1094> 
+clear mac-address-table dynamic interface Ethernet <0-24> 
+clear mac-address-table dynamic interface Ethernet <0-24> vlan <1-1094> 
+clear mac-address-table dynamic interface netdev WORD 
+clear mac-address-table dynamic interface netdev WORD vlan <1-1094> 
+clear mac-address-table dynamic vlan <1-1094> 
+disable 
+disable <1-15> 
+enable 
+enable <1-15> 
+help 
+ping WORD 
+reload 
+show cdp 
+show cdp entry * 
+show cdp entry * protocol 
+show cdp entry * version 
+show cdp entry * version protocol 
+show cdp entry WORD 
+show cdp entry WORD protocol 
+show cdp entry WORD version 
+show cdp entry WORD version protocol 
+show cdp holdtime 
+show cdp interface 
+show cdp interface Ethernet <0-24> 
+show cdp interface netdev WORD 
+show cdp neighbors 
+show cdp neighbors Ethernet <0-24> 
+show cdp neighbors Ethernet <0-24> detail 
+show cdp neighbors netdev WORD 
+show cdp neighbors netdev WORD detail 
+show cdp neighbors detail 
+show cdp run 
+show cdp timer 
+show cdp traffic 
+show history 
+show interfaces 
+show interfaces Ethernet <0-24> 
+show interfaces vlan <1-1094> 
+show ip 
+show mac address-table 
+show mac address-table address H.H.H 
+show mac address-table address H.H.H interface Ethernet <0-24> 
+show mac address-table address H.H.H interface Ethernet <0-24> vlan <1-1094> 
+show mac address-table address H.H.H interface netdev WORD 
+show mac address-table address H.H.H interface netdev WORD vlan <1-1094> 
+show mac address-table address H.H.H vlan <1-1094> 
+show mac address-table aging-time 
+show mac address-table dynamic 
+show mac address-table dynamic address H.H.H 
+show mac address-table dynamic address H.H.H interface Ethernet <0-24> 
+show mac address-table dynamic address H.H.H interface Ethernet <0-24> vlan <1-1094> 
+show mac address-table dynamic address H.H.H interface netdev WORD 
+show mac address-table dynamic address H.H.H interface netdev WORD vlan <1-1094> 
+show mac address-table dynamic address H.H.H vlan <1-1094> 
+show mac address-table dynamic interface Ethernet <0-24> 
+show mac address-table dynamic interface Ethernet <0-24> vlan <1-1094> 
+show mac address-table dynamic interface netdev WORD 
+show mac address-table dynamic interface netdev WORD vlan <1-1094> 
+show mac address-table dynamic vlan <1-1094> 
+show mac address-table interface Ethernet <0-24> 
+show mac address-table interface Ethernet <0-24> vlan <1-1094> 
+show mac address-table interface netdev WORD 
+show mac address-table interface netdev WORD vlan <1-1094> 
+show mac address-table static 
+show mac address-table static address H.H.H 
+show mac address-table static address H.H.H interface Ethernet <0-24> 
+show mac address-table static address H.H.H interface Ethernet <0-24> vlan <1-1094> 
+show mac address-table static address H.H.H interface netdev WORD 
+show mac address-table static address H.H.H interface netdev WORD vlan <1-1094> 
+show mac address-table static address H.H.H vlan <1-1094> 
+show mac address-table static interface Ethernet <0-24> 
+show mac address-table static interface Ethernet <0-24> vlan <1-1094> 
+show mac address-table static interface netdev WORD 
+show mac address-table static interface netdev WORD vlan <1-1094> 
+show mac address-table static vlan <1-1094> 
+show mac address-table vlan <1-1094> 
+show mac-address-table 
+show mac-address-table address H.H.H 
+show mac-address-table address H.H.H interface Ethernet <0-24> 
+show mac-address-table address H.H.H interface Ethernet <0-24> vlan <1-1094> 
+show mac-address-table address H.H.H interface netdev WORD 
+show mac-address-table address H.H.H interface netdev WORD vlan <1-1094> 
+show mac-address-table address H.H.H vlan <1-1094> 
+show mac-address-table aging-time 
+show mac-address-table dynamic 
+show mac-address-table dynamic address H.H.H 
+show mac-address-table dynamic address H.H.H interface Ethernet <0-24> 
+show mac-address-table dynamic address H.H.H interface Ethernet <0-24> vlan <1-1094> 
+show mac-address-table dynamic address H.H.H interface netdev WORD 
+show mac-address-table dynamic address H.H.H interface netdev WORD vlan <1-1094> 
+show mac-address-table dynamic address H.H.H vlan <1-1094> 
+show mac-address-table dynamic interface Ethernet <0-24> 
+show mac-address-table dynamic interface Ethernet <0-24> vlan <1-1094> 
+show mac-address-table dynamic interface netdev WORD 
+show mac-address-table dynamic interface netdev WORD vlan <1-1094> 
+show mac-address-table dynamic vlan <1-1094> 
+show mac-address-table interface Ethernet <0-24> 
+show mac-address-table interface Ethernet <0-24> vlan <1-1094> 
+show mac-address-table interface netdev WORD 
+show mac-address-table interface netdev WORD vlan <1-1094> 
+show mac-address-table static 
+show mac-address-table static address H.H.H 
+show mac-address-table static address H.H.H interface Ethernet <0-24> 
+show mac-address-table static address H.H.H interface Ethernet <0-24> vlan <1-1094> 
+show mac-address-table static address H.H.H interface netdev WORD 
+show mac-address-table static address H.H.H interface netdev WORD vlan <1-1094> 
+show mac-address-table static address H.H.H vlan <1-1094> 
+show mac-address-table static interface Ethernet <0-24> 
+show mac-address-table static interface Ethernet <0-24> vlan <1-1094> 
+show mac-address-table static interface netdev WORD 
+show mac-address-table static interface netdev WORD vlan <1-1094> 
+show mac-address-table static vlan <1-1094> 
+show mac-address-table vlan <1-1094> 
+show privilege 
+show running-config 
+show running-config interface Ethernet <0-24> 
+show running-config interface netdev WORD 
+show running-config interface vlan <1-1094> 
+show startup-config 
+show version 
+show vlan 
+show vlan brief 
+traceroute WORD 
+write memory 
+
+(config)#
+cdp advertise-v2 
+cdp holdtime <10-255> 
+cdp timer <5-254> 
+cdp run 
+enable secret 0 LINE 
+enable secret 5 LINE 
+enable secret LINE 
+enable secret level <1-15> 0 LINE 
+enable secret level <1-15> 5 LINE 
+enable secret level <1-15> LINE 
+hostname WORD 
+line vty <0-15>  
+mac-address-table aging-time <10-1000000> 
+mac-address-table static H.H.H vlan <1-1094> interface ethernet  
+no cdp advertise-v2 
+no cdp run 
+no enable secret 
+no enable secret level <1-15> 
+no hostname 
+no mac-address-table aging-time 
+no mac-address-table static H.H.H vlan <1-1094> interface ethernet  
+no vlan WORD 
+vlan WORD 
+
+(config-if)#
+cdp enable 
+description LINE 
+duplex auto 
+duplex full 
+duplex half 
+help 
+ip address A.B.C.D A.B.C.D 
+ip address A.B.C.D A.B.C.D secondary 
+no cdp enable 
+no description 
+no duplex 
+no ip address 
+no ip address A.B.C.D A.B.C.D 
+no ip address A.B.C.D A.B.C.D secondary 
+no speed 
+no switchport 
+no switchport access vlan 
+no switchport mode 
+no switchport trunk allowed vlan 
+speed 10 
+speed 100 
+speed auto 
+switchport 
+switchport access vlan <1-1094> 
+switchport trunk allowed vlan WORD 
+switchport trunk allowed vlan add WORD 
+switchport trunk allowed vlan all 
+switchport trunk allowed vlan except WORD 
+switchport trunk allowed vlan none 
+switchport trunk allowed vlan remove WORD 
+
+(config-vlan)#
+exit 
+name WORD 
+no name 
+vlan WORD 
+
+(config-line)#
+password 0 LINE 
+password LINE 
+exit 
+end 
+

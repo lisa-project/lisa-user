@@ -66,11 +66,12 @@ LIBSWCLI_SRCS += menu_interface.c
 SRCS          = $(LIBSWCLI_SRCS) \
 				swcli.c \
 				filter.c \
+				list_commands.c \
 				test.c
 LIBSWCLI_OBJS = $(LIBSWCLI_SRCS:.c=.o)
 
 # Targets linked with libswcli
-LIBSWCLI_TARGETS = swcli test
+LIBSWCLI_TARGETS = swcli test list_commands
 # Simple targets, not linked with libswcli
 SIMPLE_TARGETS	 = filter
 # All targets
