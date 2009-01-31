@@ -15,6 +15,7 @@ char *swcli_prompt(struct rlshell_context *ctx);
 
 struct swcli_context {
 	int ifindex;
+	int vlan;
 };
 
 // FIXME move these to an appropriate place
@@ -29,5 +30,7 @@ enum {
 
 #define EX_STATUS_REASON_IOCTL(__ctx, __errno) \
 	EX_STATUS_REASON(__ctx, "ioctl() failed (%d - %s)", __errno, strerror(__errno))
+
+int cmd_ioctl_simple(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev);
 
 #endif

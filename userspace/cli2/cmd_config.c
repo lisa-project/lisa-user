@@ -95,6 +95,7 @@ static int use_if_ether(struct cli_context *ctx, char *name, int index, int swit
 	ctx->node_filter |= IFF_SWITCHED;
 	ctx->root = &config_if_main;
 	uc->ifindex = index;
+	uc->vlan = -1;
 
 	return CLI_EX_OK;
 }
@@ -124,6 +125,7 @@ static int use_if_vlan(struct cli_context *ctx, int vlan, int index)
 	ctx->node_filter |= IFF_VIF;
 	ctx->root = &config_if_main;
 	uc->ifindex = swcfgr.ifindex;
+	uc->vlan = vlan;
 
 	return CLI_EX_OK;
 }

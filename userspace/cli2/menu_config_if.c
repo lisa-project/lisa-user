@@ -1,3 +1,14 @@
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/ioctl.h>
+
+#include <linux/if.h>
+#include <linux/netdevice.h>
+#include <linux/net_switch.h>
+#include <linux/sockios.h>
+
+#include "swsock.h"
+
 #include "cli.h"
 #include "swcli_common.h"
 #include "menu_interface.h"
@@ -330,8 +341,14 @@ struct menu_node config_if_main = {
 					.help			= "Shutdown the selected interface",
 					.mask			= CLI_MASK(PRIV(2)),
 					.tokenize	= NULL,
-					.run			= cmd_noshutd,
-					.subtree	= NULL
+					.run			= cmd_ioctl_simple,
+					.subtree	= NULL,
+					.priv			= (struct swcfgreq *[]) { /*{{{*/
+						& (struct swcfgreq){
+							.cmd				= SWCFG_ENABLE_IF
+						},
+						NULL
+					} /*}}}*/
 				},
 
 				/* #no speed */
@@ -432,8 +449,14 @@ struct menu_node config_if_main = {
 			.help			= "Shutdown the selected interface",
 			.mask			= CLI_MASK(PRIV(2)),
 			.tokenize	= NULL,
-			.run			= cmd_shutd,
-			.subtree	= NULL
+			.run			= cmd_ioctl_simple,
+			.subtree	= NULL,
+			.priv			= (struct swcfgreq *[]) { /*{{{*/
+				& (struct swcfgreq){
+					.cmd				= SWCFG_DISABLE_IF
+				},
+				NULL
+			} /*}}}*/
 		},
 
 		/* #speed */
@@ -534,8 +557,15 @@ struct menu_node config_if_main = {
 							.help			= "Set trunking mode to ACCESS unconditionally",
 							.mask			= CLI_MASK(PRIV(2)),
 							.tokenize	= NULL,
-							.run			= cmd_access,
-							.subtree	= NULL
+							.run			= cmd_ioctl_simple,
+							.subtree	= NULL,
+							.priv			= (struct swcfgreq *[]) { /*{{{*/
+								& (struct swcfgreq){
+									.cmd					= SWCFG_SETACCESS,
+									.ext.access		= 1
+								},
+								NULL
+							} /*}}}*/
 						},
 
 						/* #switchport mode trunk */
@@ -544,8 +574,15 @@ struct menu_node config_if_main = {
 							.help			= "Set trunking mode to TRUNK unconditionally",
 							.mask			= CLI_MASK(PRIV(2)),
 							.tokenize	= NULL,
-							.run			= cmd_trunk,
-							.subtree	= NULL
+							.run			= cmd_ioctl_simple,
+							.subtree	= NULL,
+							.priv			= (struct swcfgreq *[]) { /*{{{*/
+								& (struct swcfgreq){
+									.cmd					= SWCFG_SETTRUNK,
+									.ext.trunk		= 1
+								},
+								NULL
+							} /*}}}*/
 						},
 
 						NULL
