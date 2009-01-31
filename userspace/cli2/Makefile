@@ -30,6 +30,12 @@ LIBSWCLI_SRCS += menu_config.c
 # LiSA Configure-Interface Menu Tree
 LIBSWCLI_SRCS += menu_config_if.c
 
+# LiSA Configure-Line Menu Tree
+LIBSWCLI_SRCS += menu_config_line.c
+
+# LiSA Configure-Vlan Menu Tree
+LIBSWCLI_SRCS += menu_config_vlan.c
+
 # LiSA "clear mac-address-table" Menu Tree
 LIBSWCLI_SRCS += menu_cl_mac_addr_t.c
 
@@ -44,6 +50,12 @@ LIBSWCLI_SRCS += cmd_config.c
 
 # LiSA Interface Configuration Command Handlers
 LIBSWCLI_SRCS += cmd_config_if.c
+
+# LiSA Line Configuration Command Handlers
+LIBSWCLI_SRCS += cmd_config_line.c
+
+# LiSA Vlan Configuration Command Handlers
+LIBSWCLI_SRCS += cmd_config_vlan.c
 
 # Common swcli stuff that does not fit in the 4 layers
 LIBSWCLI_SRCS += swcli_common.c
