@@ -20,10 +20,7 @@ int cli_next_token(const char *buf, struct tokenize_out *out)
 	const char *delim = " \t";
 
 	/* always reset ok_len to 0 */
-	out->ok_len = 0;
-	out->exact_match = NULL;
-	out->partial_match = NULL;
-	out->len = 0;
+	cli_init_tok_out(out);
 
 	/* buf contains only whitespace */
 	out->offset = strspn(buf, delim);

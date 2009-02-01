@@ -85,6 +85,14 @@ struct cli_context {
 	struct menu_node *root;
 };
 
+static inline void cli_init_tok_out(struct tokenize_out *out)
+{
+	out->ok_len = 0;
+	out->exact_match = NULL;
+	out->partial_match = NULL;
+	out->len = 0;
+}
+
 #define EX_STATUS_REASON(ctx, fmt, par...) if (asprintf(&(ctx)->ex_status.reason, fmt, ##par) == -1) {\
 	(ctx)->ex_status.reason = NULL;\
 }

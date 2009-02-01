@@ -74,8 +74,8 @@ int rlshell_completion(int unused, int key)
 
 	rl_point = rl_end;
 
+	currctx->completion = 1;
 	for (;;) {
-		currctx->suppress_completion = 0;
 		trailing_whitespace = menu->tokenize == NULL ?
 			cli_tokenize(&currctx->cc, cmd, menu->subtree, &out) :
 			menu->tokenize(&currctx->cc, cmd, menu->subtree, &out);
@@ -96,7 +96,7 @@ int rlshell_completion(int unused, int key)
 		if (size == 1) {
 			/* When there's no trailing whitespace, we are at the last
 			 * token and it's ok to complete. */
-			if (!currctx->suppress_completion && !trailing_whitespace) {
+			if (!trailing_whitespace) {
 				rl_insert_text(out.matches[0]->name + out.len);
 				rl_insert_text(" ");
 				bell = 0;
@@ -111,6 +111,7 @@ int rlshell_completion(int unused, int key)
 		 * Either way, just do nothing. */
 		break;
 	}
+	currctx->completion = 0;
 
 	if (bell)
 		putchar('\a');
@@ -311,6 +312,7 @@ int rlshell_main(struct rlshell_context *ctx)
 	initial_root = ctx->cc.root;
 	ctrl_z = 0;
 	rlshell_init();
+	ctx->completion = 0;
 
 	while (!ctx->exit) {
 		int hist_append = 1;

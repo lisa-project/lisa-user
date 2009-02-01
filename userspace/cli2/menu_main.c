@@ -50,16 +50,9 @@ static struct menu_node output_modifiers_line = {
 	.name			= "LINE",
 	.help			= "Regular Expression",
 	.mask			= CLI_MASK(PRIV(1)),
-	.tokenize		= swcli_tokenize_line,
+	.tokenize	= swcli_tokenize_line,
 	.run			= swcli_output_modifiers_run,
-	/* this recurrent node is actually a clever trick that
-	 * helps tokenizing the line. at every step the tokenize()
-	 * function will extract exactly one token and add it into
-	 * tokv[argc] */
-	.subtree		= (struct menu_node *[]) {
-		&output_modifiers_line,
-		NULL
-	}
+	.subtree	= NULL
 };
 
 struct menu_node output_modifiers = {

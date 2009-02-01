@@ -15,19 +15,20 @@ int dump_args(struct cli_context *ctx, int argc, char **argv, struct menu_node *
 	return 0;
 }
 
+/* Accept any character sequence, including whitespace */
 int swcli_tokenize_line(struct cli_context *ctx, const char *buf,
 		struct menu_node **tree, struct tokenize_out *out)
 {
 	struct rlshell_context *rlctx = (void *)ctx;
 
-	if (cli_next_token(buf, out))
-		return 0;
+	cli_init_tok_out(out);
+	out->offset = out->len = strlen(buf);
 
-	out->matches[0] = tree[0];
+	out->matches[0] = rlctx->completion ? NULL : tree[0];
 	out->matches[1] = NULL;
-	rlctx->suppress_completion = 1;
 
-	return 1;
+	/* This is always the last token (it CAN contain whitespace) */
+	return 0;
 }
 
 static inline int swcli_valid_number(int *valid, int val)
@@ -53,27 +54,28 @@ static inline int swcli_valid_number(int *valid, int val)
 int swcli_tokenize_number(struct cli_context *ctx, const char *buf,
 		struct menu_node **tree, struct tokenize_out *out)
 {
-	char c, *token;
+	char *token;
 	const char *ok = "0123456789";
-	int *valid = tree[0]->priv;
+	int ws, *valid = tree[0]->priv;
 	struct rlshell_context *rlctx = (void *)ctx;
-
-	rlctx->suppress_completion = 1;
 
 	if (cli_next_token(buf, out))
 		return 0;
 
 	buf += out->offset;
 
-	c = buf[out->len];
+	ws = whitespace(buf[out->len]);
 	out->matches[0] = NULL;
 	out->matches[1] = NULL;
+
+	if (rlctx->completion && !ws)
+		return ws;
 
 	out->ok_len = strspn(buf, ok);
 
 	if (out->ok_len < out->len) {
 		out->partial_match = tree[0];
-		return whitespace(c);
+		return ws;
 	}
 
 	token = strdupa(buf);
@@ -90,30 +92,31 @@ int swcli_tokenize_number(struct cli_context *ctx, const char *buf,
 
 	if (out->ok_len < out->len) {
 		out->partial_match = tree[0];
-		return whitespace(c);
+		return ws;
 	}
 
 	out->matches[0] = tree[0];
-	return whitespace(c);
+	return ws;
 }
 
+/* Accept any single WORD (no whitespace) and suppress completion */
 int swcli_tokenize_word(struct cli_context *ctx, const char *buf,
 		struct menu_node **tree, struct tokenize_out *out)
 {
-	char c;
+	int ws;
 	struct rlshell_context *rlctx = (void *)ctx;
-
-	rlctx->suppress_completion = 1;
 
 	if (cli_next_token(buf, out))
 		return 0;
 
-	c = buf[out->offset + out->len];
+	ws = whitespace(buf[out->offset + out->len]);
 
-	out->matches[0] = tree[0];
+	/* To prevent completion, return no matches if we are at the
+	 * token (no trailing whitespace) */
+	out->matches[0] = rlctx->completion && !ws ? NULL : tree[0];
 	out->matches[1] = NULL;
 
-	return whitespace(c);
+	return ws;
 }
 
 int swcli_output_modifiers_run(struct cli_context *ctx, int argc, char **argv,

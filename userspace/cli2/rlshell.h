@@ -31,8 +31,11 @@ struct rlshell_context {
 	 * the '^' marker on invalid commands. */
 	int plen;
 
-	/* Prevent the shell from completing against the last token */
-	int suppress_completion;
+	/* This is automatically set to 1 while rlshell is doing
+	 * completion. Special tokenizers may use this as a hint to
+	 * suppress certain matches (and therefore prevent completion),
+	 * for instance with special nodes like LINE or WORD */
+	int completion;
 
 	int enable_ctrl_z;
 
