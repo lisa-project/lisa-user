@@ -119,6 +119,58 @@ int swcli_tokenize_word(struct cli_context *ctx, const char *buf,
 	return ws;
 }
 
+/* Accept any single WORD (no whitespace) OR any subnode other than
+ * WORD. Subnode names have priority over WORD. WORD is selected as
+ * match only if no other subnode matches. In this case, suppress
+ * completion. */
+int swcli_tokenize_word_mixed(struct cli_context *ctx, const char *buf,
+		struct menu_node **tree, struct tokenize_out *out)
+{
+	char *token;
+	int i, j, ws;
+	struct rlshell_context *rlctx = (void *)ctx;
+
+	/* get next token */
+	if (cli_next_token(buf, out))
+		return 0;
+
+	ws = whitespace(buf[out->offset + out->len]);
+
+	token = strdupa(buf + out->offset);
+	token[out->len] = '\0';
+
+	/* lookup token in tree */
+	for (i=0, j=0; tree[i] && j < TOKENIZE_MAX_MATCHES; i++) {
+		/* apply filter */
+		if (!cli_mask_apply(tree[i]->mask, ctx->node_filter))
+			continue;
+
+		if (!strcmp(tree[i]->name, "WORD")) {
+			if (!rlctx->completion || ws)
+				out->matches[j++] = tree[i];
+			continue;
+		}
+
+		if (strncasecmp(token, tree[i]->name, out->len))
+			continue;
+
+		/* register match */
+		out->matches[j++] = tree[i];
+
+		/* check for exact match */
+		if (out->len == strlen(tree[i]->name))
+			out->exact_match = tree[i];
+	}
+	out->matches[j] = NULL;
+
+	/* ok_len is always equal to token length, since WORD can have an
+	 * arbitrary number of characters in length */
+	out->ok_len = out->len;
+
+	return ws;
+}
+
+
 int swcli_output_modifiers_run(struct cli_context *ctx, int argc, char **argv,
 		struct menu_node **nodev)
 {

@@ -15,16 +15,16 @@ int cmd_noethdesc(struct cli_context *ctx, int argc, char **argv, struct menu_no
 int cmd_sp_auto(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
 int cmd_swport_off(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
 int cmd_noacc_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
+
+int cmd_trunk_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
+{ 
+	return 0;
+}
+
 int cmd_nomode(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
-int cmd_allvlans(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
 int cmd_sp_10(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
 int cmd_sp_100(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
 int cmd_swport_on(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
 int cmd_acc_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
-int cmd_setvlans(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
-int cmd_addvlans(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
-int cmd_excvlans(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
-int cmd_novlans(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
-int cmd_remvlans(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
 int cmd_ip(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
 int cmd_no_ip(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }

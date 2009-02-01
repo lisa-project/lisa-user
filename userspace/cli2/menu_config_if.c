@@ -12,6 +12,7 @@
 #include "cli.h"
 #include "swcli_common.h"
 #include "menu_interface.h"
+#include "cmd_config_if.h"
 
 int cmd_cdp_if_enable(struct cli_context *, int, char **, struct menu_node **);
 int cmd_setethdesc(struct cli_context *, int, char **, struct menu_node **);
@@ -28,7 +29,6 @@ int cmd_sp_auto(struct cli_context *, int, char **, struct menu_node **);
 int cmd_swport_off(struct cli_context *, int, char **, struct menu_node **);
 int cmd_noacc_vlan(struct cli_context *, int, char **, struct menu_node **);
 int cmd_nomode(struct cli_context *, int, char **, struct menu_node **);
-int cmd_allvlans(struct cli_context *, int, char **, struct menu_node **);
 int cmd_shutd(struct cli_context *, int, char **, struct menu_node **);
 int cmd_sp_10(struct cli_context *, int, char **, struct menu_node **);
 int cmd_sp_100(struct cli_context *, int, char **, struct menu_node **);
@@ -36,15 +36,22 @@ int cmd_swport_on(struct cli_context *, int, char **, struct menu_node **);
 int cmd_acc_vlan(struct cli_context *, int, char **, struct menu_node **);
 int cmd_access(struct cli_context *, int, char **, struct menu_node **);
 int cmd_trunk(struct cli_context *, int, char **, struct menu_node **);
-int cmd_setvlans(struct cli_context *, int, char **, struct menu_node **);
-int cmd_addvlans(struct cli_context *, int, char **, struct menu_node **);
-int cmd_excvlans(struct cli_context *, int, char **, struct menu_node **);
-int cmd_novlans(struct cli_context *, int, char **, struct menu_node **);
-int cmd_remvlans(struct cli_context *, int, char **, struct menu_node **);
 int cmd_ip(struct cli_context *, int, char **, struct menu_node **);
 int cmd_no_ip(struct cli_context *, int, char **, struct menu_node **);
 
 extern struct menu_node config_interface;
+
+#define VLAN_WORD_MENU_NODE(__priv) {\
+	.name			= "WORD",\
+	.help			= "VLAN IDs of the allowed VLANs when this port is in trunking mode",\
+	.mask			= CLI_MASK(PRIV(2)),\
+	.tokenize	= NULL,\
+	.run			= cmd_trunk_vlan,\
+	.subtree	= NULL,\
+	.priv			= (void *)(__priv)\
+}
+
+#define VLAN_WORD(__priv) & (struct menu_node) VLAN_WORD_MENU_NODE(__priv)
 
 struct menu_node config_if_main = {
 	/* Root node, .name is used as prompt */
@@ -423,8 +430,9 @@ struct menu_node config_if_main = {
 											.help			= "Set allowed VLANs when interface is in trunking mode",
 											.mask			= CLI_MASK(PRIV(2)),
 											.tokenize	= NULL,
-											.run			= cmd_allvlans,
-											.subtree	= NULL
+											.run			= cmd_trunk_vlan,
+											.subtree	= NULL,
+											.priv			= (void *)CMD_VLAN_NO
 										},
 
 										NULL
@@ -610,36 +618,22 @@ struct menu_node config_if_main = {
 									.name			= "vlan",
 									.help			= "Set allowed VLANs when interface is in trunking mode",
 									.mask			= CLI_MASK(PRIV(2)),
-									.tokenize	= NULL,
+									.tokenize	= swcli_tokenize_word_mixed,
 									.run			= NULL,
 									.subtree	= (struct menu_node *[]) { /*{{{*/
 										/* #switchport trunk allowed vlan WORD */
-										& (struct menu_node){
-											.name			= "WORD",
-											.help			= "VLAN IDs of the allowed VLANs when this port is in trunking mode",
-											.mask			= CLI_MASK(PRIV(2)),
-											.tokenize	= NULL,
-											.run			= cmd_setvlans,
-											.subtree	= NULL
-										},
+										VLAN_WORD(CMD_VLAN_SET),
 
 										/* #switchport trunk allowed vlan add */
 										& (struct menu_node){
 											.name			= "add",
 											.help			= "add VLANs to the current list",
 											.mask			= CLI_MASK(PRIV(2)),
-											.tokenize	= NULL,
+											.tokenize	= swcli_tokenize_word,
 											.run			= NULL,
 											.subtree	= (struct menu_node *[]) { /*{{{*/
 												/* #switchport trunk allowed vlan add WORD */
-												& (struct menu_node){
-													.name			= "WORD",
-													.help			= "VLAN IDs of the allowed VLANs when this port is in trunking mode",
-													.mask			= CLI_MASK(PRIV(2)),
-													.tokenize	= NULL,
-													.run			= cmd_addvlans,
-													.subtree	= NULL
-												},
+												VLAN_WORD(CMD_VLAN_ADD),
 
 												NULL
 											} /*}}}*/
@@ -651,8 +645,9 @@ struct menu_node config_if_main = {
 											.help			= "all VLANs",
 											.mask			= CLI_MASK(PRIV(2)),
 											.tokenize	= NULL,
-											.run			= cmd_allvlans,
-											.subtree	= NULL
+											.run			= cmd_trunk_vlan,
+											.subtree	= NULL,
+											.priv			= (void *)CMD_VLAN_ALL
 										},
 
 										/* #switchport trunk allowed vlan except */
@@ -660,18 +655,11 @@ struct menu_node config_if_main = {
 											.name			= "except",
 											.help			= "all VLANs except the following",
 											.mask			= CLI_MASK(PRIV(2)),
-											.tokenize	= NULL,
+											.tokenize	= swcli_tokenize_word,
 											.run			= NULL,
 											.subtree	= (struct menu_node *[]) { /*{{{*/
 												/* #switchport trunk allowed vlan except WORD */
-												& (struct menu_node){
-													.name			= "WORD",
-													.help			= "VLAN IDs of the allowed VLANs when this port is in trunking mode",
-													.mask			= CLI_MASK(PRIV(2)),
-													.tokenize	= NULL,
-													.run			= cmd_excvlans,
-													.subtree	= NULL
-												},
+												VLAN_WORD(CMD_VLAN_EXCEPT),
 
 												NULL
 											} /*}}}*/
@@ -683,8 +671,9 @@ struct menu_node config_if_main = {
 											.help			= "no VLANs",
 											.mask			= CLI_MASK(PRIV(2)),
 											.tokenize	= NULL,
-											.run			= cmd_novlans,
-											.subtree	= NULL
+											.run			= cmd_trunk_vlan,
+											.subtree	= NULL,
+											.priv			= (void *)CMD_VLAN_NONE
 										},
 
 										/* #switchport trunk allowed vlan remove */
@@ -692,18 +681,11 @@ struct menu_node config_if_main = {
 											.name			= "remove",
 											.help			= "remove VLANs from the current list",
 											.mask			= CLI_MASK(PRIV(2)),
-											.tokenize	= NULL,
+											.tokenize	= swcli_tokenize_word,
 											.run			= NULL,
 											.subtree	= (struct menu_node *[]) { /*{{{*/
 												/* #switchport trunk allowed vlan remove WORD */
-												& (struct menu_node){
-													.name			= "WORD",
-													.help			= "VLAN IDs of the allowed VLANs when this port is in trunking mode",
-													.mask			= CLI_MASK(PRIV(2)),
-													.tokenize	= NULL,
-													.run			= cmd_remvlans,
-													.subtree	= NULL
-												},
+												VLAN_WORD(CMD_VLAN_REMOVE),
 
 												NULL
 											} /*}}}*/
