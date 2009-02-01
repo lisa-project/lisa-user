@@ -21,8 +21,9 @@ int swcli_tokenize_line(struct cli_context *ctx, const char *buf,
 {
 	struct rlshell_context *rlctx = (void *)ctx;
 
-	cli_init_tok_out(out);
-	out->offset = out->len = strlen(buf);
+	if (cli_next_token(buf, out))
+		return 0;
+	out->len = strlen(buf) - out->offset;
 
 	out->matches[0] = rlctx->completion ? NULL : tree[0];
 	out->matches[1] = NULL;
@@ -123,8 +124,9 @@ int swcli_tokenize_word(struct cli_context *ctx, const char *buf,
  * WORD. Subnode names have priority over WORD. WORD is selected as
  * match only if no other subnode matches. In this case, suppress
  * completion. */
-int swcli_tokenize_word_mixed(struct cli_context *ctx, const char *buf,
-		struct menu_node **tree, struct tokenize_out *out)
+int swcli_tokenize_mixed(struct cli_context *ctx, const char *buf,
+		struct menu_node **tree, struct tokenize_out *out,
+		const char *word, int enable_ws)
 {
 	char *token;
 	int i, j, ws;
@@ -145,8 +147,8 @@ int swcli_tokenize_word_mixed(struct cli_context *ctx, const char *buf,
 		if (!cli_mask_apply(tree[i]->mask, ctx->node_filter))
 			continue;
 
-		if (!strcmp(tree[i]->name, "WORD")) {
-			if (!rlctx->completion || ws)
+		if (!strcmp(tree[i]->name, word)) {
+			if (!rlctx->completion || (ws && enable_ws))
 				out->matches[j++] = tree[i];
 			continue;
 		}
@@ -167,9 +169,33 @@ int swcli_tokenize_word_mixed(struct cli_context *ctx, const char *buf,
 	 * arbitrary number of characters in length */
 	out->ok_len = out->len;
 
-	return ws;
+	return enable_ws ? ws : out->exact_match != NULL && ws;
 }
 
+int swcli_tokenize_word_mixed(struct cli_context *ctx, const char *buf,
+		struct menu_node **tree, struct tokenize_out *out)
+{
+	return swcli_tokenize_mixed(ctx, buf, tree, out, "WORD", 1);
+}
+
+int swcli_tokenize_line_mixed(struct cli_context *ctx, const char *buf,
+		struct menu_node **tree, struct tokenize_out *out)
+{
+	int ws = swcli_tokenize_mixed(ctx, buf, tree, out, "LINE", 0);
+
+	if (MATCHES(out) == 1 && !strcmp(out->matches[0]->name, "LINE"))
+		out->len = strlen(buf) - out->offset;
+
+	/* FIXME to ressemble Cisco exactly, this is the point where we
+	 * would suppress an exact match (reset out->exact_match to NULL)
+	 * if and only if we are invoked by command execution AND there
+	 * is no next token. Example: "enable secret 0 " is ambiguous
+	 * only for command execution; otherwise (inline help or
+	 * completion) node "0" is an exact match and calling function
+	 * advances to subnode. */
+
+	return ws;
+}
 
 int swcli_output_modifiers_run(struct cli_context *ctx, int argc, char **argv,
 		struct menu_node **nodev)

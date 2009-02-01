@@ -25,6 +25,7 @@ int cmd_no_int_any(struct cli_context *, int, char **, struct menu_node **);
 int cmd_set_noaging(struct cli_context *, int, char **, struct menu_node **);
 int cmd_novlan(struct cli_context *, int, char **, struct menu_node **);
 int cmd_vlan(struct cli_context *, int, char **, struct menu_node **);
+int dump_args(struct cli_context *, int, char **, struct menu_node **);
 
 static struct menu_node *if_subtree[] = {
 	IF_ETHER(NULL, cmd_int_any, NULL),
@@ -128,7 +129,7 @@ struct menu_node config_main = {
 					.name			= "secret",
 					.help			= "Assign the privileged level secret",
 					.mask			= CLI_MASK(PRIV(15)),
-					.tokenize	= NULL,
+					.tokenize	= swcli_tokenize_line_mixed,
 					.run			= NULL,
 					.subtree	= (struct menu_node *[]) { /*{{{*/
 						/* #enable secret 0 */
@@ -136,7 +137,7 @@ struct menu_node config_main = {
 							.name			= "0",
 							.help			= "Specifies an UNENCRYPTED password will follow",
 							.mask			= CLI_MASK(PRIV(15)),
-							.tokenize	= NULL,
+							.tokenize	= swcli_tokenize_line,
 							.run			= NULL,
 							.subtree	= (struct menu_node *[]) { /*{{{*/
 								/* #enable secret 0 LINE */
@@ -145,7 +146,7 @@ struct menu_node config_main = {
 									.help			= "The UNENCRYPTED (cleartext) 'enable' secret",
 									.mask			= CLI_MASK(PRIV(15)),
 									.tokenize	= NULL,
-									.run			= cmd_setenpw,
+									.run			= dump_args, //cmd_setenpw,
 									.subtree	= NULL
 								},
 
@@ -181,7 +182,7 @@ struct menu_node config_main = {
 							.help			= "The UNENCRYPTED (cleartext) 'enable' secret",
 							.mask			= CLI_MASK(PRIV(15)),
 							.tokenize	= NULL,
-							.run			= cmd_setenpw,
+							.run			= dump_args, //cmd_setenpw,
 							.subtree	= NULL
 						},
 
