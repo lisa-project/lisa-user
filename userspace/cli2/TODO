@@ -1,3 +1,5 @@
+* move all systems includes that are necessary for net_switch.h and
+  swsock.h to a local .h file; use this file for all cmd_*.c files
 
 List of unimplemented command handlers follows:
 
@@ -190,18 +192,11 @@ no speed
 no switchport 
 no switchport access vlan 
 no switchport mode 
-no switchport trunk allowed vlan 
 speed 10 
 speed 100 
 speed auto 
 switchport 
 switchport access vlan <1-1094> 
-switchport trunk allowed vlan WORD 
-switchport trunk allowed vlan add WORD 
-switchport trunk allowed vlan all 
-switchport trunk allowed vlan except WORD 
-switchport trunk allowed vlan none 
-switchport trunk allowed vlan remove WORD 
 
 (config-vlan)#
 exit 

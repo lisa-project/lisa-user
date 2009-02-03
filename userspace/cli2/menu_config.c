@@ -713,7 +713,7 @@ struct menu_node config_main = {
 			.name			= "vlan",
 			.help			= "Vlan commands",
 			.mask			= CLI_MASK(PRIV(15)),
-			.tokenize	= NULL,
+			.tokenize	= swcli_tokenize_number,
 			.run			= NULL,
 			.subtree	= (struct menu_node *[]) { /*{{{*/
 				/* #vlan WORD */
@@ -723,7 +723,8 @@ struct menu_node config_main = {
 					.mask			= CLI_MASK(PRIV(15)),
 					.tokenize	= NULL,
 					.run			= cmd_vlan,
-					.subtree	= NULL
+					.subtree	= NULL,
+					.priv		= (int []) {VALID_LIMITS, 1, 4094}
 				},
 
 				NULL

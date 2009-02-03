@@ -319,4 +319,38 @@ int cmd_noensecret_lev(struct cli_context *ctx, int argc, char **argv, struct me
 int cmd_nohostname(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
 int cmd_set_noaging(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
 int cmd_novlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
-int cmd_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
+
+#define default_vlan_name(__lvalue, __vlan) if (1) {\
+	int status; \
+	__lvalue = alloca(9); \
+	status = snprintf(__lvalue, 9, "VLAN%04d", (__vlan)); \
+	assert(status < 9); \
+}
+
+int cmd_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
+{
+	struct swcfgreq swcfgr;
+	int status, sock_fd, ioctl_errno;
+
+	swcfgr.vlan = atoi(argv[argc - 1]);
+	if (strcmp(nodev[0]->name, "no")) {
+		/* vlan is added */
+		swcfgr.cmd = SWCFG_ADDVLAN;
+		default_vlan_name(swcfgr.ext.vlan_desc, swcfgr.vlan);
+	} else {
+		/* vlan is removed */
+		swcfgr.cmd = SWCFG_DELVLAN;
+	}
+
+	sock_fd = socket(PF_SWITCH, SOCK_RAW, 0);
+	assert(sock_fd != -1);
+
+	status = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
+	ioctl_errno = errno;
+	close(sock_fd); /* this can overwrite ioctl errno */
+
+	if (status == -1 && ioctl_errno == EACCES)
+		printf("Default VLAN %d may not be deleted.\n", swcfgr.vlan); //FIXME output
+	
+	return CLI_EX_OK;
+}
