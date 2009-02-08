@@ -74,7 +74,7 @@ int rlshell_completion(int unused, int key)
 
 	rl_point = rl_end;
 
-	currctx->completion = 1;
+	currctx->state = RLSHELL_COMPLETION;
 	for (;;) {
 		trailing_whitespace = menu->tokenize == NULL ?
 			cli_tokenize(&currctx->cc, cmd, menu->subtree, &out) :
@@ -111,7 +111,6 @@ int rlshell_completion(int unused, int key)
 		 * Either way, just do nothing. */
 		break;
 	}
-	currctx->completion = 0;
 
 	if (bell)
 		putchar('\a');
@@ -178,6 +177,7 @@ int rlshell_help(int unused, int key)
 
 	printf("%c\n", key);
 
+	currctx->state = RLSHELL_HELP;
 	for (;;) {
 		trailing_whitespace = menu->tokenize == NULL ?
 			cli_tokenize(&currctx->cc, cmd, menu->subtree, &out) :
@@ -230,6 +230,7 @@ int rlshell_exec(struct rlshell_context *ctx, char *buf)
 {
 	int status;
 
+	ctx->state = RLSHELL_EXEC;
 	switch ((status = cli_exec(&ctx->cc, buf))) {
 	case CLI_EX_AMBIGUOUS:
 		rlshell_ambiguous_cmd(buf);
@@ -312,7 +313,6 @@ int rlshell_main(struct rlshell_context *ctx)
 	initial_root = ctx->cc.root;
 	ctrl_z = 0;
 	rlshell_init();
-	ctx->completion = 0;
 
 	while (!ctx->exit) {
 		int hist_append = 1;

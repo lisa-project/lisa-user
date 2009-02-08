@@ -4,10 +4,6 @@
 
 int swcli_output_modifiers_run(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev);
 
-int cmd_clr_mac(struct cli_context *, int, char **, struct menu_node **);
-int cmd_clr_mac_adr(struct cli_context *, int, char **, struct menu_node **);
-int cmd_clr_mac_eth(struct cli_context *, int, char **, struct menu_node **);
-int cmd_clr_mac_vl(struct cli_context *, int, char **, struct menu_node **);
 int cmd_conf_t(struct cli_context *, int, char **, struct menu_node **);
 int cmd_disable(struct cli_context *, int, char **, struct menu_node **);
 int cmd_enable(struct cli_context *, int, char **, struct menu_node **);
@@ -30,8 +26,6 @@ int cmd_sh_int(struct cli_context *, int, char **, struct menu_node **);
 int cmd_sh_ip(struct cli_context *, int, char **, struct menu_node **);
 int cmd_sh_addr(struct cli_context *, int, char **, struct menu_node **);
 int cmd_sh_mac_age(struct cli_context *, int, char **, struct menu_node **);
-int cmd_sh_mac_eth(struct cli_context *, int, char **, struct menu_node **);
-int cmd_sh_mac_vlan(struct cli_context *, int, char **, struct menu_node **);
 int cmd_show_priv(struct cli_context *, int, char **, struct menu_node **);
 int cmd_show_run(struct cli_context *, int, char **, struct menu_node **);
 int cmd_sh_run_if(struct cli_context *, int, char **, struct menu_node **);

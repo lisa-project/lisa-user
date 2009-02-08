@@ -4,30 +4,6 @@
 List of unimplemented command handlers follows:
 
 #
-clear mac address-table dynamic 
-clear mac address-table dynamic address H.H.H 
-clear mac address-table dynamic address H.H.H interface Ethernet <0-24> 
-clear mac address-table dynamic address H.H.H interface Ethernet <0-24> vlan <1-1094> 
-clear mac address-table dynamic address H.H.H interface netdev WORD 
-clear mac address-table dynamic address H.H.H interface netdev WORD vlan <1-1094> 
-clear mac address-table dynamic address H.H.H vlan <1-1094> 
-clear mac address-table dynamic interface Ethernet <0-24> 
-clear mac address-table dynamic interface Ethernet <0-24> vlan <1-1094> 
-clear mac address-table dynamic interface netdev WORD 
-clear mac address-table dynamic interface netdev WORD vlan <1-1094> 
-clear mac address-table dynamic vlan <1-1094> 
-clear mac-address-table dynamic 
-clear mac-address-table dynamic address H.H.H 
-clear mac-address-table dynamic address H.H.H interface Ethernet <0-24> 
-clear mac-address-table dynamic address H.H.H interface Ethernet <0-24> vlan <1-1094> 
-clear mac-address-table dynamic address H.H.H interface netdev WORD 
-clear mac-address-table dynamic address H.H.H interface netdev WORD vlan <1-1094> 
-clear mac-address-table dynamic address H.H.H vlan <1-1094> 
-clear mac-address-table dynamic interface Ethernet <0-24> 
-clear mac-address-table dynamic interface Ethernet <0-24> vlan <1-1094> 
-clear mac-address-table dynamic interface netdev WORD 
-clear mac-address-table dynamic interface netdev WORD vlan <1-1094> 
-clear mac-address-table dynamic vlan <1-1094> 
 disable 
 disable <1-15> 
 enable 
@@ -62,80 +38,8 @@ show interfaces
 show interfaces Ethernet <0-24> 
 show interfaces vlan <1-1094> 
 show ip 
-show mac address-table 
-show mac address-table address H.H.H 
-show mac address-table address H.H.H interface Ethernet <0-24> 
-show mac address-table address H.H.H interface Ethernet <0-24> vlan <1-1094> 
-show mac address-table address H.H.H interface netdev WORD 
-show mac address-table address H.H.H interface netdev WORD vlan <1-1094> 
-show mac address-table address H.H.H vlan <1-1094> 
 show mac address-table aging-time 
-show mac address-table dynamic 
-show mac address-table dynamic address H.H.H 
-show mac address-table dynamic address H.H.H interface Ethernet <0-24> 
-show mac address-table dynamic address H.H.H interface Ethernet <0-24> vlan <1-1094> 
-show mac address-table dynamic address H.H.H interface netdev WORD 
-show mac address-table dynamic address H.H.H interface netdev WORD vlan <1-1094> 
-show mac address-table dynamic address H.H.H vlan <1-1094> 
-show mac address-table dynamic interface Ethernet <0-24> 
-show mac address-table dynamic interface Ethernet <0-24> vlan <1-1094> 
-show mac address-table dynamic interface netdev WORD 
-show mac address-table dynamic interface netdev WORD vlan <1-1094> 
-show mac address-table dynamic vlan <1-1094> 
-show mac address-table interface Ethernet <0-24> 
-show mac address-table interface Ethernet <0-24> vlan <1-1094> 
-show mac address-table interface netdev WORD 
-show mac address-table interface netdev WORD vlan <1-1094> 
-show mac address-table static 
-show mac address-table static address H.H.H 
-show mac address-table static address H.H.H interface Ethernet <0-24> 
-show mac address-table static address H.H.H interface Ethernet <0-24> vlan <1-1094> 
-show mac address-table static address H.H.H interface netdev WORD 
-show mac address-table static address H.H.H interface netdev WORD vlan <1-1094> 
-show mac address-table static address H.H.H vlan <1-1094> 
-show mac address-table static interface Ethernet <0-24> 
-show mac address-table static interface Ethernet <0-24> vlan <1-1094> 
-show mac address-table static interface netdev WORD 
-show mac address-table static interface netdev WORD vlan <1-1094> 
-show mac address-table static vlan <1-1094> 
-show mac address-table vlan <1-1094> 
-show mac-address-table 
-show mac-address-table address H.H.H 
-show mac-address-table address H.H.H interface Ethernet <0-24> 
-show mac-address-table address H.H.H interface Ethernet <0-24> vlan <1-1094> 
-show mac-address-table address H.H.H interface netdev WORD 
-show mac-address-table address H.H.H interface netdev WORD vlan <1-1094> 
-show mac-address-table address H.H.H vlan <1-1094> 
 show mac-address-table aging-time 
-show mac-address-table dynamic 
-show mac-address-table dynamic address H.H.H 
-show mac-address-table dynamic address H.H.H interface Ethernet <0-24> 
-show mac-address-table dynamic address H.H.H interface Ethernet <0-24> vlan <1-1094> 
-show mac-address-table dynamic address H.H.H interface netdev WORD 
-show mac-address-table dynamic address H.H.H interface netdev WORD vlan <1-1094> 
-show mac-address-table dynamic address H.H.H vlan <1-1094> 
-show mac-address-table dynamic interface Ethernet <0-24> 
-show mac-address-table dynamic interface Ethernet <0-24> vlan <1-1094> 
-show mac-address-table dynamic interface netdev WORD 
-show mac-address-table dynamic interface netdev WORD vlan <1-1094> 
-show mac-address-table dynamic vlan <1-1094> 
-show mac-address-table interface Ethernet <0-24> 
-show mac-address-table interface Ethernet <0-24> vlan <1-1094> 
-show mac-address-table interface netdev WORD 
-show mac-address-table interface netdev WORD vlan <1-1094> 
-show mac-address-table static 
-show mac-address-table static address H.H.H 
-show mac-address-table static address H.H.H interface Ethernet <0-24> 
-show mac-address-table static address H.H.H interface Ethernet <0-24> vlan <1-1094> 
-show mac-address-table static address H.H.H interface netdev WORD 
-show mac-address-table static address H.H.H interface netdev WORD vlan <1-1094> 
-show mac-address-table static address H.H.H vlan <1-1094> 
-show mac-address-table static interface Ethernet <0-24> 
-show mac-address-table static interface Ethernet <0-24> vlan <1-1094> 
-show mac-address-table static interface netdev WORD 
-show mac-address-table static interface netdev WORD vlan <1-1094> 
-show mac-address-table static vlan <1-1094> 
-show mac-address-table vlan <1-1094> 
 show privilege 
 show running-config 
 show running-config interface Ethernet <0-24> 

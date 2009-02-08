@@ -115,7 +115,7 @@
 	.name		= "address",\
 	.help		= "address keyword",\
 	.mask		= CLI_MASK(VA_PRIV(NIL, ##__priv, 1)),\
-	.tokenize	= NULL,\
+	.tokenize	= swcli_tokenize_mac,\
 	.run		= NULL,\
 	.subtree	= (struct menu_node *[]) {\
 		& (struct menu_node) {\

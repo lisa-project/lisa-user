@@ -21,6 +21,7 @@ struct swcli_context {
 // FIXME move these to an appropriate place
 int swcli_tokenize_line(struct cli_context *ctx, const char *buf, struct menu_node **tree, struct tokenize_out *out);
 int swcli_tokenize_number(struct cli_context *ctx, const char *buf, struct menu_node **tree, struct tokenize_out *out);
+int swcli_tokenize_mac(struct cli_context *ctx, const char *buf, struct menu_node **tree, struct tokenize_out *out);
 int swcli_tokenize_word(struct cli_context *ctx, const char *buf, struct menu_node **tree, struct tokenize_out *out);
 int swcli_tokenize_word_mixed(struct cli_context *ctx, const char *buf, struct menu_node **tree, struct tokenize_out *out);
 int swcli_tokenize_line_mixed(struct cli_context *ctx, const char *buf, struct menu_node **tree, struct tokenize_out *out);
@@ -32,6 +33,17 @@ enum {
 
 #define EX_STATUS_REASON_IOCTL(__ctx, __errno) \
 	EX_STATUS_REASON(__ctx, "ioctl() failed (%d - %s)", __errno, strerror(__errno))
+
+static inline int __shift_arg(int *argc, char ***argv, struct menu_node ***nodev, int shift) {
+	*argv += shift;
+	*nodev += shift;
+	return *argc -= shift;
+}
+
+#define __SHIFT_ARG(__argc, __argv, __nodev, __shift, ...) \
+	__shift_arg(&(__argc), &(__argv), &(__nodev), __shift)
+#define SHIFT_ARG(__argc, __argv, __nodev, __shift...) \
+	__SHIFT_ARG(__argc, __argv, __nodev, ##__shift, 1)
 
 int cmd_ioctl_simple(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev);
 

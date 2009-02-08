@@ -8,7 +8,8 @@ MLS
 * make SWCFG_ADDIF honour the ext.switchport flag so interfaces can be added
   directly as routed
 * routed interfaces must not be in promiscuous mode
-
+* unify static and dynamic mac removal in a single command, based on the
+  addr_type field of struct net_switch_mac
 
 Older TODO list
 ---------------

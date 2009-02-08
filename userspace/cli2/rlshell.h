@@ -31,16 +31,25 @@ struct rlshell_context {
 	 * the '^' marker on invalid commands. */
 	int plen;
 
-	/* This is automatically set to 1 while rlshell is doing
-	 * completion. Special tokenizers may use this as a hint to
+	/* Specifies whether rlshell is doing completion, inline help
+	 * or exec. Special tokenizers may use this as a hint to
 	 * suppress certain matches (and therefore prevent completion),
 	 * for instance with special nodes like LINE or WORD */
-	int completion;
+	int state;
 
 	int enable_ctrl_z;
 
 	/* Upper layer context data */
 	void *uc;
+};
+
+/**
+ * Possible values for state in struct rlshell_context
+ */
+enum {
+	RLSHELL_COMPLETION,
+	RLSHELL_HELP,
+	RLSHELL_EXEC
 };
 
 int rlshell_main(struct rlshell_context *ctx);

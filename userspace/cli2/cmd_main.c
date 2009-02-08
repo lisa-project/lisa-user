@@ -1,9 +1,23 @@
 #include <string.h>
-#include <stdlib.h>
+#include <assert.h>
+#include <unistd.h>
 #include <errno.h>
+#include <stdlib.h>
+
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/ioctl.h>
+
+#include <linux/if.h>
+#include <linux/netdevice.h>
+#include <linux/net_switch.h>
+#include <linux/sockios.h>
+
+#include "swsock.h"
 
 #include "cli.h"
 #include "swcli_common.h"
+#include "menu_interface.h"
 
 extern struct menu_node config_main;
 
@@ -25,20 +39,30 @@ int swcli_tokenize_line(struct cli_context *ctx, const char *buf,
 		return 0;
 	out->len = strlen(buf) - out->offset;
 
-	out->matches[0] = rlctx->completion ? NULL : tree[0];
+	out->matches[0] = rlctx->state == RLSHELL_COMPLETION ? NULL : tree[0];
 	out->matches[1] = NULL;
 
 	/* This is always the last token (it CAN contain whitespace) */
 	return 0;
 }
 
-static inline int swcli_valid_number(int *valid, int val)
+static int swcli_valid_number(const char *token, int part, void *priv)
 {
-	int i;
+	int i, val;
+	int *valid = priv;
 
 	if (!valid)
 		return 1;
 
+	assert(token);
+
+	for (i = 0; token[i] != '\0'; i++)
+		if (token[i] < '0' || token[i] > '9')
+			return 0;
+
+	val = atoi(token);
+
+	// FIXME implement tests for part == 1
 	switch (valid[0]) {
 	case VALID_LIMITS:
 		return val >= valid[1] && val <= valid[2];
@@ -50,54 +74,6 @@ static inline int swcli_valid_number(int *valid, int val)
 	}
 
 	return 1;
-}
-
-int swcli_tokenize_number(struct cli_context *ctx, const char *buf,
-		struct menu_node **tree, struct tokenize_out *out)
-{
-	char *token;
-	const char *ok = "0123456789";
-	int ws, *valid = tree[0]->priv;
-	struct rlshell_context *rlctx = (void *)ctx;
-
-	if (cli_next_token(buf, out))
-		return 0;
-
-	buf += out->offset;
-
-	ws = whitespace(buf[out->len]);
-	out->matches[0] = NULL;
-	out->matches[1] = NULL;
-
-	if (rlctx->completion && !ws)
-		return ws;
-
-	out->ok_len = strspn(buf, ok);
-
-	if (out->ok_len < out->len) {
-		out->partial_match = tree[0];
-		return ws;
-	}
-
-	token = strdupa(buf);
-	while (out->ok_len) {
-		int val;
-
-		token[out->ok_len] = '\0';
-		val = atoi(token);
-		if (swcli_valid_number(valid, val))
-			break;
-
-		out->ok_len--;
-	}
-
-	if (out->ok_len < out->len) {
-		out->partial_match = tree[0];
-		return ws;
-	}
-
-	out->matches[0] = tree[0];
-	return ws;
 }
 
 /* Accept any single WORD (no whitespace) and suppress completion */
@@ -114,7 +90,7 @@ int swcli_tokenize_word(struct cli_context *ctx, const char *buf,
 
 	/* To prevent completion, return no matches if we are at the
 	 * token (no trailing whitespace) */
-	out->matches[0] = rlctx->completion && !ws ? NULL : tree[0];
+	out->matches[0] = rlctx->state == RLSHELL_COMPLETION && !ws ? NULL : tree[0];
 	out->matches[1] = NULL;
 
 	return ws;
@@ -148,7 +124,7 @@ int swcli_tokenize_mixed(struct cli_context *ctx, const char *buf,
 			continue;
 
 		if (!strcmp(tree[i]->name, word)) {
-			if (!rlctx->completion || (ws && enable_ws))
+			if (rlctx->state != RLSHELL_COMPLETION || (ws && enable_ws))
 				out->matches[j++] = tree[i];
 			continue;
 		}
@@ -195,6 +171,107 @@ int swcli_tokenize_line_mixed(struct cli_context *ctx, const char *buf,
 	 * advances to subnode. */
 
 	return ws;
+}
+
+/**
+ * Generic tokenizer based on string validator callback.
+ */
+int swcli_tokenize_validator(struct cli_context *ctx, const char *buf, struct menu_node **tree, struct tokenize_out *out, int (*valid)(const char *, int, void *), void *valid_priv)
+{
+	char *token;
+	struct rlshell_context *rlctx = (void *)ctx;
+	int ws, part;
+
+	if (cli_next_token(buf, out))
+		return 0;
+
+	buf += out->offset;
+
+	ws = whitespace(buf[out->len]);
+	out->matches[0] = NULL;
+	out->matches[1] = NULL;
+
+	if (rlctx->state == RLSHELL_COMPLETION && !ws)
+		return ws;
+
+	out->ok_len = out->len;
+	token = strdupa(buf);
+	part = !ws && rlctx->state != RLSHELL_EXEC;
+
+	while (out->ok_len) {
+		token[out->ok_len] = '\0';
+
+		if (valid(token, part, valid_priv))
+			break;
+
+		out->ok_len--;
+		part = 1;
+	}
+
+	if (out->ok_len < out->len) {
+		out->partial_match = tree[0];
+		return ws;
+	}
+
+	out->matches[0] = tree[0];
+	return ws;
+}
+
+static int parse_mac(const char *str, unsigned char *mac)
+{
+	int a, b, c, n;
+
+	if (sscanf(str, "%x.%x.%x%n", &a, &b, &c, &n) != 3)
+		return EINVAL;
+	if (strlen(str) != n)
+		return EINVAL;
+
+	mac[0] = (a & 0xff00) >> 8;
+	mac[1] = (a & 0x00ff) >> 0;
+	mac[2] = (b & 0xff00) >> 8;
+	mac[3] = (b & 0x00ff) >> 0;
+	mac[4] = (c & 0xff00) >> 8;
+	mac[5] = (c & 0x00ff) >> 0;
+
+	return 0;
+}
+
+#define IS_HEX_DIGIT(c) \
+	(((c) >= '0' && (c) <= '9') || ((c) >= 'a' && (c) <= 'f') || ((c) >= 'A' && (c) <= 'F'))
+
+int valid_mac(const char *token, int part, void *priv) {
+	int digits = 0, group = 1, i;
+
+	for (i = 0; token[i] != '\0'; i++) {
+		if (token[i] == '.') {
+			if (!digits)
+				return 0;
+			digits = 0;
+			group ++;
+			continue;
+		}
+		if (!IS_HEX_DIGIT(token[i]))
+			return 0;
+		if (++digits > 4)
+			return 0;
+	}
+
+	if (group > 3)
+		return 0;
+
+	return part || group == 3;
+}
+
+int swcli_tokenize_number(struct cli_context *ctx, const char *buf,
+		struct menu_node **tree, struct tokenize_out *out)
+{
+	return swcli_tokenize_validator(ctx, buf, tree, out, swcli_valid_number, tree[0]->priv);
+}
+
+int swcli_tokenize_mac(struct cli_context *ctx, const char *buf,
+		struct menu_node **tree, struct tokenize_out *out)
+{
+	return swcli_tokenize_validator(ctx, buf, tree, out, valid_mac, NULL);
 }
 
 int swcli_output_modifiers_run(struct cli_context *ctx, int argc, char **argv,
@@ -251,10 +328,205 @@ out_return:
 	return err;
 }
 
-int cmd_clr_mac(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
-int cmd_clr_mac_adr(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
-int cmd_clr_mac_eth(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
-int cmd_clr_mac_vl(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
+static inline void init_mac_filter(struct swcfgreq *swcfgr) {
+	swcfgr->ifindex = 0;
+	memset(&swcfgr->ext.marg.addr, 0, ETH_ALEN);
+	swcfgr->ext.marg.addr_type = SW_FDB_ANY;
+	swcfgr->vlan = 0;
+}
+
+static int parse_mac_filter(struct swcfgreq *swcfgr, struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev, int sock_fd, char *ifname)
+{
+	int status;
+
+	init_mac_filter(swcfgr);
+
+	if (!argc)
+		return 0;
+
+	do {
+		if (!strcmp(nodev[0]->name, "static")) {
+			swcfgr->ext.marg.addr_type = SW_FDB_STATIC;
+			SHIFT_ARG(argc, argv, nodev);
+			break;
+		}
+
+		if (!strcmp(nodev[0]->name, "dynamic")) {
+			swcfgr->ext.marg.addr_type = SW_FDB_DYN;
+			SHIFT_ARG(argc, argv, nodev);
+			break;
+		}
+	} while (0);
+
+	if (!argc)
+		return 0;
+
+	if (!strcmp(nodev[0]->name, "address")) {
+		assert(argc >= 2);
+		status = parse_mac(argv[1], swcfgr->ext.marg.addr);
+		assert(!status);
+		SHIFT_ARG(argc, argv, nodev, 2);
+	}
+
+	if (!argc)
+		return 0;
+	
+	if (!strcmp(nodev[0]->name, "interface")) {
+		char __name[IFNAMSIZ];
+		int n;
+		char *name = ifname ? ifname : &__name[0];
+
+		assert(argc >= 3);
+		SHIFT_ARG(argc, argv, nodev);
+
+		status = if_parse_args(argv, nodev, name, &n);
+
+		if (status == IF_T_ERROR) {
+			if (n == -1)
+				EX_STATUS_REASON(ctx, "invalid interface name");
+			else 
+				ctx->ex_status.reason = NULL;
+			return CLI_EX_REJECTED;
+		}
+		
+		if (!(swcfgr->ifindex = if_get_index(name, sock_fd))) {
+			EX_STATUS_REASON(ctx, "interface %s does not exist", name);
+			return CLI_EX_REJECTED;
+		}
+
+		SHIFT_ARG(argc, argv, nodev, 2);
+	}
+
+	if (!argc)
+		return 0;
+
+	if (!strcmp(nodev[0]->name, "vlan")) {
+		assert(argc >= 2);
+		swcfgr->vlan = atoi(argv[1]);
+	}
+
+	return 0;
+}
+
+#define PAGE_SIZE 4096
+// FIXME move this to .h ; it's better to determine it at compile time
+// by using an auxiliary test program and getpagesize() - for further
+// details, see man 2 getpagesize
+
+// FIXME move this to common util file, so it can be user by swctl too
+void print_mac(FILE *out, void *buf, int size) {
+	void *end = (char *)buf + size;
+	struct net_switch_mac *mac = buf;
+
+	fprintf(out,
+			"Destination Address  Address Type  VLAN  Destination Port\n"
+			"-------------------  ------------  ----  ----------------\n");
+	while ((void *)mac < end) {
+		fprintf(out, "%02x%02x.%02x%02x.%02x%02x       "
+				"%-12s  %4d  %s\n", 
+				mac->addr[0], mac->addr[1], mac->addr[2],
+				mac->addr[3], mac->addr[4], mac->addr[5],
+			    (mac->addr_type)? "Static" : "Dynamic",
+				mac->vlan,
+				mac->port
+				);
+		mac++;
+	}
+}
+
+int cmd_sh_mac_addr_t(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
+{
+	int ret = CLI_EX_OK;
+	int status, sock_fd;
+	struct swcfgreq swcfgr = {
+		.cmd = SWCFG_GETMAC
+	};
+	void *buf;
+	int size = PAGE_SIZE;
+	char ifname[IFNAMSIZ];
+
+	sock_fd = socket(PF_SWITCH, SOCK_RAW, 0);
+	assert(sock_fd != -1);
+
+	assert(argc >= 2);
+	SHIFT_ARG(argc, argv, nodev, strcmp(nodev[1]->name, "mac") ? 2 : 3);
+
+	if ((status = parse_mac_filter(&swcfgr, ctx, argc, argv, nodev, sock_fd, ifname))) {
+		close(sock_fd);
+		return status;
+	}
+
+	buf = malloc(size);
+	assert(buf);
+
+	do {
+		swcfgr.ext.marg.buf_size = size;
+		swcfgr.ext.marg.buf = buf;
+		status = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
+		if (status >= 0)
+			break;
+
+		switch (errno) {
+		case ENOMEM:
+			//dbg("Insufficient buffer space. Realloc'ing ...\n");
+			size += PAGE_SIZE;
+			buf = realloc(buf, size);
+			assert(buf);
+			continue;
+		case EINVAL:
+			EX_STATUS_REASON(ctx, "interface %s not in switch", ifname);
+			ret = CLI_EX_REJECTED;
+			break;
+		default:
+			perror("ioctl");
+			break;
+		}
+
+		break;
+	} while (1);
+
+	if (status >= 0) {
+		// FIXME open output
+		//print_mac(out, buf, status);
+		print_mac(stdout, buf, status);
+	}
+
+	free(buf);
+	close(sock_fd);
+
+	return ret;
+}
+
+int cmd_cl_mac_addr_t(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
+{
+	int status, sock_fd;
+	struct swcfgreq swcfgr = {
+		.cmd = SWCFG_DELMACDYN
+	};
+
+	sock_fd = socket(PF_SWITCH, SOCK_RAW, 0);
+	assert(sock_fd != -1);
+
+	assert(argc >= 2);
+	SHIFT_ARG(argc, argv, nodev, strcmp(nodev[1]->name, "mac") ? 2 : 3);
+
+	if ((status = parse_mac_filter(&swcfgr, ctx, argc, argv, nodev, sock_fd, NULL))) {
+		close(sock_fd);
+		return status;
+	}
+
+	status = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
+	close(sock_fd); /* this can overwrite ioctl errno */
+
+	if (status == -1) {
+		// FIXME output
+		fprintf(stdout, "MAC address could not be removed\n"
+				"Address not found\n\n");
+		fflush(stdout);
+	}
+
+	return 0;
+}
 
 int cmd_conf_t(struct cli_context *__ctx, int argc, char **argv, struct menu_node **nodev)
 {
@@ -320,14 +592,3 @@ int cmd_show_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_no
 int cmd_trace(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
 int cmd_wrme(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
 
-int cmd_sh_mac_addr_t(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){
-	printf("%s: called\n", __func__);
-	dump_args(ctx, argc, argv, nodev);
-	return 0;
-}
-
-int cmd_cl_mac_addr_t(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){
-	printf("%s: called\n", __func__);
-	dump_args(ctx, argc, argv, nodev);
-	return 0;
-}
