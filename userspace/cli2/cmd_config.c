@@ -29,6 +29,7 @@ int cmd_setenpwlev(struct cli_context *ctx, int argc, char **argv, struct menu_n
 extern struct menu_node menu_main;
 extern struct menu_node config_main;
 extern struct menu_node config_if_main;
+extern struct menu_node config_vlan_main;
 
 int cmd_end(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
@@ -320,17 +321,12 @@ int cmd_nohostname(struct cli_context *ctx, int argc, char **argv, struct menu_n
 int cmd_set_noaging(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
 int cmd_novlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
 
-#define default_vlan_name(__lvalue, __vlan) if (1) {\
-	int status; \
-	__lvalue = alloca(9); \
-	status = snprintf(__lvalue, 9, "VLAN%04d", (__vlan)); \
-	assert(status < 9); \
-}
-
 int cmd_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
 	struct swcfgreq swcfgr;
 	int status, sock_fd, ioctl_errno;
+	struct rlshell_context *rlctx = (void *)ctx;
+	struct swcli_context *uc = (void*)rlctx->uc;
 
 	swcfgr.vlan = atoi(argv[argc - 1]);
 	if (strcmp(nodev[0]->name, "no")) {
@@ -351,6 +347,11 @@ int cmd_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **
 
 	if (status == -1 && ioctl_errno == EACCES)
 		printf("Default VLAN %d may not be deleted.\n", swcfgr.vlan); //FIXME output
+
+	if (swcfgr.cmd == SWCFG_ADDVLAN && (!status || ioctl_errno == EEXIST)) {
+		ctx->root = &config_vlan_main;
+		uc->vlan = swcfgr.vlan;
+	}
 	
 	return CLI_EX_OK;
 }

@@ -36,6 +36,39 @@ static struct menu_node *if_subtree[] = {
 
 struct menu_node config_interface = IF_MENU_NODE(if_subtree, "Select an interface to configure");
 
+// FIXME FIXME FIXME
+// #1 - Cisco accepts multiple vlans at the same time (vlan list, similar
+//      to the one at "switchport trunk allowed vlans")
+// #2 - If other nodes must also be included in "vlan" subtree, there are
+//      two issues:
+//      a. we need a mixed vlan id / regular node tokenizer; one suitable
+//         is swcli_tokenize_word_mixed(), and this also leads back to #1
+//      b. we cannot have a common "vlan" node for all places
+//         (config#/vlan, config#/no vlan, config-vlan#/vlan etc), so the
+//         parent "vlan" node must be replicated for each place where it
+//         is needed
+struct menu_node config_vlan = {
+	.name			= "vlan",
+	.help			= "Vlan commands",
+	.mask			= CLI_MASK(PRIV(15)),
+	.tokenize	= swcli_tokenize_number,
+	.run			= NULL,
+	.subtree	= (struct menu_node *[]) { /*{{{*/
+		/* #vlan WORD */
+		& (struct menu_node){
+			.name			= "WORD",
+			.help			= "ISL VLAN IDs 1-4094",
+			.mask			= CLI_MASK(PRIV(15)),
+			.tokenize	= NULL,
+			.run			= cmd_vlan,
+			.subtree	= NULL,
+			.priv		= (int []) {VALID_LIMITS, 1, 4094}
+		},
+
+		NULL
+	} /*}}}*/
+};
+
 struct menu_node config_main = {
 	/* Root node, .name is used as prompt */
 	.name			= "config",
@@ -683,53 +716,14 @@ struct menu_node config_main = {
 				},
 
 				/* #no vlan */
-				& (struct menu_node){
-					.name			= "vlan",
-					.help			= "Vlan commands",
-					.mask			= CLI_MASK(PRIV(15)),
-					.tokenize	= NULL,
-					.run			= NULL,
-					.subtree	= (struct menu_node *[]) { /*{{{*/
-						/* #no vlan WORD */
-						& (struct menu_node){
-							.name			= "WORD",
-							.help			= "ISL VLAN IDs 1-4094",
-							.mask			= CLI_MASK(PRIV(15)),
-							.tokenize	= NULL,
-							.run			= cmd_novlan,
-							.subtree	= NULL
-						},
-
-						NULL
-					} /*}}}*/
-				},
+				& config_vlan,
 
 				NULL
 			} /*}}}*/
 		},
 
 		/* #vlan */
-		& (struct menu_node){
-			.name			= "vlan",
-			.help			= "Vlan commands",
-			.mask			= CLI_MASK(PRIV(15)),
-			.tokenize	= swcli_tokenize_number,
-			.run			= NULL,
-			.subtree	= (struct menu_node *[]) { /*{{{*/
-				/* #vlan WORD */
-				& (struct menu_node){
-					.name			= "WORD",
-					.help			= "ISL VLAN IDs 1-4094",
-					.mask			= CLI_MASK(PRIV(15)),
-					.tokenize	= NULL,
-					.run			= cmd_vlan,
-					.subtree	= NULL,
-					.priv		= (int []) {VALID_LIMITS, 1, 4094}
-				},
-
-				NULL
-			} /*}}}*/
-		},
+		& config_vlan,
 
 		NULL
 	}

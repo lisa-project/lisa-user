@@ -3,8 +3,8 @@
 
 int cmd_exit(struct cli_context *, int, char **, struct menu_node **);
 int cmd_namevlan(struct cli_context *, int, char **, struct menu_node **);
-int cmd_nonamevlan(struct cli_context *, int, char **, struct menu_node **);
-int cmd_cfg_vlan(struct cli_context *, int, char **, struct menu_node **);
+
+extern struct menu_node config_vlan;
 
 struct menu_node config_vlan_main = {
 	/* Root node, .name is used as prompt */
@@ -25,7 +25,7 @@ struct menu_node config_vlan_main = {
 			.name			= "name",
 			.help			= "Ascii name of the VLAN",
 			.mask			= CLI_MASK(PRIV(15)),
-			.tokenize	= NULL,
+			.tokenize	= swcli_tokenize_word,
 			.run			= NULL,
 			.subtree	= (struct menu_node *[]) { /*{{{*/
 				/* #name WORD */
@@ -56,7 +56,7 @@ struct menu_node config_vlan_main = {
 					.help			= "Ascii name of the VLAN",
 					.mask			= CLI_MASK(PRIV(15)),
 					.tokenize	= NULL,
-					.run			= cmd_nonamevlan,
+					.run			= cmd_namevlan,
 					.subtree	= NULL
 				},
 
@@ -65,26 +65,7 @@ struct menu_node config_vlan_main = {
 		},
 
 		/* #vlan */
-		& (struct menu_node){
-			.name			= "vlan",
-			.help			= "Vlan commands",
-			.mask			= CLI_MASK(PRIV(15)),
-			.tokenize	= NULL,
-			.run			= NULL,
-			.subtree	= (struct menu_node *[]) { /*{{{*/
-				/* #vlan WORD */
-				& (struct menu_node){
-					.name			= "WORD",
-					.help			= "ISL VLAN IDs 1-4094",
-					.mask			= CLI_MASK(PRIV(15)),
-					.tokenize	= NULL,
-					.run			= cmd_cfg_vlan,
-					.subtree	= NULL
-				},
-
-				NULL
-			} /*}}}*/
-		},
+		& config_vlan,
 
 		NULL
 	}

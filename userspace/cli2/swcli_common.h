@@ -26,6 +26,14 @@ int swcli_tokenize_word(struct cli_context *ctx, const char *buf, struct menu_no
 int swcli_tokenize_word_mixed(struct cli_context *ctx, const char *buf, struct menu_node **tree, struct tokenize_out *out);
 int swcli_tokenize_line_mixed(struct cli_context *ctx, const char *buf, struct menu_node **tree, struct tokenize_out *out);
 
+// FIXME move this to appropriate place
+#define default_vlan_name(__lvalue, __vlan) do {\
+	int status; \
+	__lvalue = alloca(9); \
+	status = snprintf(__lvalue, 9, "VLAN%04d", (__vlan)); \
+	assert(status < 9); \
+} while (0)
+
 enum {
 	VALID_LIMITS,
 	VALID_LIST
