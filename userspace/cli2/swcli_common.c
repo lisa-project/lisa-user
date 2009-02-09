@@ -48,8 +48,7 @@ int cmd_ioctl_simple(struct cli_context *ctx, int argc, char **argv, struct menu
 
 	assert(argc);
 
-	sock_fd = socket(PF_SWITCH, SOCK_RAW, 0);
-	assert(sock_fd != -1);
+	SW_SOCK_OPEN(ctx, sock_fd);
 
 	for (rp = nodev[argc - 1]->priv; *rp; rp++) {
 		swcfgr = **rp;
@@ -58,7 +57,7 @@ int cmd_ioctl_simple(struct cli_context *ctx, int argc, char **argv, struct menu
 		ioctl(sock_fd, SIOCSWCFG, &swcfgr);
 	}
 
-	close(sock_fd);
+	SW_SOCK_CLOSE(ctx, sock_fd);
 
 	return CLI_EX_OK;
 }

@@ -41,12 +41,10 @@ int cmd_namevlan(struct cli_context *ctx, int argc, char **argv, struct menu_nod
 		default_vlan_name(swcfgr.ext.vlan_desc, uc->vlan);
 	}
 
-	sock_fd = socket(PF_SWITCH, SOCK_RAW, 0);
-	assert(sock_fd != -1);
-
+	SW_SOCK_OPEN(ctx, sock_fd);
 	status = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
 	ioctl_errno = errno;
-	close(sock_fd); /* this can overwrite ioctl errno */
+	SW_SOCK_CLOSE(ctx, sock_fd); /* this can overwrite ioctl errno */
 
 	if (u_rename && status == -1 && ioctl_errno == EPERM)
 		printf("Default VLAN %d may not have its name changed.\n", uc->vlan); // FIXME output

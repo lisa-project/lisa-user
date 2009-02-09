@@ -146,11 +146,9 @@ int cmd_trunk_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_n
 	swcfgr.ifindex = uc->ifindex;
 	swcfgr.ext.bmp = bmp;
 
-	sock_fd = socket(PF_SWITCH, SOCK_RAW, 0);
-	assert(sock_fd != -1);
-
+	SW_SOCK_OPEN(ctx, sock_fd);
 	ioctl(sock_fd, SIOCSWCFG, &swcfgr);
-	close(sock_fd);
+	SW_SOCK_CLOSE(ctx, sock_fd);
 
 	return CLI_EX_OK;
 }

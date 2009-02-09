@@ -92,21 +92,17 @@ int if_parse_generic(const char *name, const char *type) {
 int if_get_index(const char *name, int sock_fd)
 {
 	struct ifreq ifr;
-	int fd, ret = 0;
+	int ret = 0;
 
 	if (strlen(name) >= IFNAMSIZ)
 		return 0;
 
 	strcpy(ifr.ifr_name, name);
 
-	fd = sock_fd == -1 ? socket(PF_SWITCH, SOCK_RAW, 0) : sock_fd;
-	assert(fd != -1);
+	assert(sock_fd != -1);
 
-	if (!ioctl(fd, SIOCGIFINDEX, &ifr))
+	if (!ioctl(sock_fd, SIOCGIFINDEX, &ifr))
 		ret = ifr.ifr_ifindex;
-
-	if (sock_fd == -1)
-		close(fd);
 
 	return ret;
 }

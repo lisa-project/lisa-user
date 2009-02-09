@@ -54,15 +54,14 @@ static int use_if_ether(struct cli_context *ctx, char *name, int index, int swit
 	struct rlshell_context *rlctx = (void *)ctx;
 	struct swcli_context *uc = (void*)rlctx->uc;
 
-	sock_fd = socket(PF_SWITCH, SOCK_RAW, 0);
-	assert(sock_fd != -1);
+	SW_SOCK_OPEN(ctx, sock_fd);
 
 	if (!index)
 		index = if_get_index(name, sock_fd);
 
 	if (!index) {
 		EX_STATUS_REASON(ctx, "interface %s does not exist", name);
-		close(sock_fd);
+		SW_SOCK_CLOSE(ctx, sock_fd);
 		return CLI_EX_REJECTED;
 	}
 
@@ -71,7 +70,7 @@ static int use_if_ether(struct cli_context *ctx, char *name, int index, int swit
 	swcfgr.ext.switchport = switchport;
 	status = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
 	ioctl_errno = errno;
-	close(sock_fd); /* this can overwrite ioctl errno */
+	SW_SOCK_CLOSE(ctx, sock_fd); /* this can overwrite ioctl errno */
 
 	if (status) {
 		switch (ioctl_errno) {
@@ -108,14 +107,13 @@ static int use_if_vlan(struct cli_context *ctx, int vlan, int index)
 	struct rlshell_context *rlctx = (void *)ctx;
 	struct swcli_context *uc = (void*)rlctx->uc;
 
-	sock_fd = socket(PF_SWITCH, SOCK_RAW, 0);
-	assert(sock_fd != -1);
+	SW_SOCK_OPEN(ctx, sock_fd);
 
 	swcfgr.cmd = SWCFG_ADDVIF;
 	swcfgr.vlan = vlan;
 	status = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
 	ioctl_errno = errno;
-	close(sock_fd);
+	SW_SOCK_CLOSE(ctx, sock_fd);
 
 	if (status && ioctl_errno != EEXIST) {
 		EX_STATUS_REASON_IOCTL(ctx, ioctl_errno);
@@ -136,14 +134,13 @@ static int remove_if_ether(struct cli_context *ctx, char *name, int index, int s
 	int sock_fd;
 	struct swcfgreq swcfgr;
 
-	sock_fd = socket(PF_SWITCH, SOCK_RAW, 0);
-	assert(sock_fd != -1);
+	SW_SOCK_OPEN(ctx, sock_fd);
 
 	if (!index)
 		index = if_get_index(name, sock_fd);
 
 	if (!index) {
-		close(sock_fd);
+		SW_SOCK_CLOSE(ctx, sock_fd);
 		return CLI_EX_OK;
 	}
 
@@ -160,7 +157,7 @@ static int remove_if_ether(struct cli_context *ctx, char *name, int index, int s
 	 */
 
 	ioctl(sock_fd, SIOCSWCFG, &swcfgr);
-	close(sock_fd);
+	SW_SOCK_CLOSE(ctx, sock_fd);
 
 	return CLI_EX_OK;
 }
@@ -170,14 +167,13 @@ static int remove_if_vlan(struct cli_context *ctx, int vlan, int index)
 	int status, sock_fd, ioctl_errno;
 	struct swcfgreq swcfgr;
 
-	sock_fd = socket(PF_SWITCH, SOCK_RAW, 0);
-	assert(sock_fd != -1);
+	SW_SOCK_OPEN(ctx, sock_fd);
 
 	swcfgr.cmd = SWCFG_DELVIF;
 	swcfgr.vlan = vlan;
 	status = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
 	ioctl_errno = errno;
-	close(sock_fd);
+	SW_SOCK_CLOSE(ctx, sock_fd);
 
 	if (status && ioctl_errno != ENOENT) {
 		EX_STATUS_REASON_IOCTL(ctx, ioctl_errno);
@@ -214,11 +210,10 @@ static int cmd_no_int_any(struct cli_context *ctx, int argc, char **argv, struct
 
 	/* try to guess what netdev name means */
 
-	sock_fd = socket(PF_SWITCH, SOCK_RAW, 0);
-	assert(sock_fd != -1);
+	SW_SOCK_OPEN(ctx, sock_fd);
 
 	if (ioctl(sock_fd, SIOCGIFINDEX, &ifr)) {
-		close(sock_fd);
+		SW_SOCK_CLOSE(ctx, sock_fd);
 		return CLI_EX_OK;
 	}
 
@@ -227,7 +222,7 @@ static int cmd_no_int_any(struct cli_context *ctx, int argc, char **argv, struct
 	swcfgr.ifindex = ifr.ifr_ifindex;
 	status = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
 	ioctl_errno = errno;
-	close(sock_fd);
+	SW_SOCK_CLOSE(ctx, sock_fd);
 
 	if (status) {
 		EX_STATUS_REASON_IOCTL(ctx, ioctl_errno);
@@ -271,15 +266,14 @@ int cmd_int_any(struct cli_context *ctx, int argc, char **argv, struct menu_node
 
 	/* try to guess what netdev name means */
 
-	sock_fd = socket(PF_SWITCH, SOCK_RAW, 0);
-	assert(sock_fd != -1);
+	SW_SOCK_OPEN(ctx, sock_fd);
 
 	/* first test if the interface already exists; SIOCGIFINDEX works
 	 * on any socket type (see man (7) netdevice for details) */
 	do {
 		if (!ioctl(sock_fd, SIOCGIFINDEX, &ifr))
 			break;
-		close(sock_fd);
+		SW_SOCK_CLOSE(ctx, sock_fd);
 
 		/* test for VIF addition */
 		status = if_parse_vlan(ifr.ifr_name);
@@ -296,7 +290,7 @@ int cmd_int_any(struct cli_context *ctx, int argc, char **argv, struct menu_node
 	swcfgr.ifindex = ifr.ifr_ifindex;
 	status = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
 	ioctl_errno = errno;
-	close(sock_fd);
+	SW_SOCK_CLOSE(ctx, sock_fd);
 
 	if (status) {
 		EX_STATUS_REASON_IOCTL(ctx, ioctl_errno);
@@ -338,12 +332,11 @@ int cmd_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **
 		swcfgr.cmd = SWCFG_DELVLAN;
 	}
 
-	sock_fd = socket(PF_SWITCH, SOCK_RAW, 0);
-	assert(sock_fd != -1);
+	SW_SOCK_OPEN(ctx, sock_fd);
 
 	status = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
 	ioctl_errno = errno;
-	close(sock_fd); /* this can overwrite ioctl errno */
+	SW_SOCK_CLOSE(ctx, sock_fd); /* this can overwrite ioctl errno */
 
 	if (status == -1 && ioctl_errno == EACCES)
 		printf("Default VLAN %d may not be deleted.\n", swcfgr.vlan); //FIXME output

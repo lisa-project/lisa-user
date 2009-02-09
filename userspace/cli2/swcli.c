@@ -13,6 +13,7 @@ int main(int argc, char **argv) {
 	ctx.exit = 0;
 	ctx.enable_ctrl_z = 0;
 	ctx.uc = &uc;
+	ctx.sock_fd = -1;
 
 	rlshell_main(&ctx);
 

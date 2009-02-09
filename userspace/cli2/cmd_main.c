@@ -445,14 +445,13 @@ int cmd_sh_mac_addr_t(struct cli_context *ctx, int argc, char **argv, struct men
 	int size = PAGE_SIZE;
 	char ifname[IFNAMSIZ];
 
-	sock_fd = socket(PF_SWITCH, SOCK_RAW, 0);
-	assert(sock_fd != -1);
+	SW_SOCK_OPEN(ctx, sock_fd);
 
 	assert(argc >= 2);
 	SHIFT_ARG(argc, argv, nodev, strcmp(nodev[1]->name, "mac") ? 2 : 3);
 
 	if ((status = parse_mac_filter(&swcfgr, ctx, argc, argv, nodev, sock_fd, ifname))) {
-		close(sock_fd);
+		SW_SOCK_CLOSE(ctx, sock_fd);
 		return status;
 	}
 
@@ -492,7 +491,7 @@ int cmd_sh_mac_addr_t(struct cli_context *ctx, int argc, char **argv, struct men
 	}
 
 	free(buf);
-	close(sock_fd);
+	SW_SOCK_CLOSE(ctx, sock_fd);
 
 	return ret;
 }
@@ -504,19 +503,18 @@ int cmd_cl_mac_addr_t(struct cli_context *ctx, int argc, char **argv, struct men
 		.cmd = SWCFG_DELMACDYN
 	};
 
-	sock_fd = socket(PF_SWITCH, SOCK_RAW, 0);
-	assert(sock_fd != -1);
+	SW_SOCK_OPEN(ctx, sock_fd);
 
 	assert(argc >= 2);
 	SHIFT_ARG(argc, argv, nodev, strcmp(nodev[1]->name, "mac") ? 2 : 3);
 
 	if ((status = parse_mac_filter(&swcfgr, ctx, argc, argv, nodev, sock_fd, NULL))) {
-		close(sock_fd);
+		SW_SOCK_CLOSE(ctx, sock_fd);
 		return status;
 	}
 
 	status = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
-	close(sock_fd); /* this can overwrite ioctl errno */
+	SW_SOCK_CLOSE(ctx, sock_fd); /* this can overwrite ioctl errno */
 
 	if (status == -1) {
 		// FIXME output
