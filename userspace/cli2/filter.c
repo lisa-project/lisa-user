@@ -84,17 +84,6 @@ static int grep(char *grep_args[])
 	return 0;
 }
 
-static void dump_args(int argc, char *argv[])
-{
-	int i;
-
-	printf("-> %s()\n", __func__);
-	for (i=0; i<argc; i++) {
-		printf("[%d]: '%s'\n", i, argv[i]);
-	}
-	printf("%s() ->\n", __func__);
-}
-
 /* Program help message */
 static int usage(const char *progname)
 {
@@ -113,7 +102,6 @@ int main(int argc, char *argv[]) {
 
 	if (argc < 3) {
 		printf("Error: invalid number of arguments: %d\n", argc);
-		dump_args(argc, argv);
 		return usage(argv[0]);
 	}
 
