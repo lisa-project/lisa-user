@@ -19,6 +19,7 @@
 #include <linux/sockios.h>
 
 #include "swsock.h"
+#include "util.h"
 #include "cli.h"
 #include "rlshell.h"
 #include "interface.h"

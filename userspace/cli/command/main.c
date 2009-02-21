@@ -428,27 +428,6 @@ static int parse_mac_filter(struct swcfgreq *swcfgr, struct cli_context *ctx, in
 // by using an auxiliary test program and getpagesize() - for further
 // details, see man 2 getpagesize
 
-// FIXME move this to common util file, so it can be user by swctl too
-void print_mac(FILE *out, void *buf, int size) {
-	void *end = (char *)buf + size;
-	struct net_switch_mac *mac = buf;
-
-	fprintf(out,
-			"Destination Address  Address Type  VLAN  Destination Port\n"
-			"-------------------  ------------  ----  ----------------\n");
-	while ((void *)mac < end) {
-		fprintf(out, "%02x%02x.%02x%02x.%02x%02x       "
-				"%-12s  %4d  %s\n", 
-				mac->addr[0], mac->addr[1], mac->addr[2],
-				mac->addr[3], mac->addr[4], mac->addr[5],
-			    (mac->addr_type)? "Static" : "Dynamic",
-				mac->vlan,
-				mac->port
-				);
-		mac++;
-	}
-}
-
 int cmd_sh_mac_addr_t(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
 	int ret = CLI_EX_OK;

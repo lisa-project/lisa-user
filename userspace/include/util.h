@@ -19,6 +19,9 @@
 #ifndef _UTIL_H
 #define _UTIL_H
 
+#include <stdio.h>
+
 void daemonize(void);
+void print_mac(FILE *out, void *buf, int size);
 
 #endif
