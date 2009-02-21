@@ -239,7 +239,8 @@ static int parse_mac(const char *str, unsigned char *mac)
 #define IS_HEX_DIGIT(c) \
 	(((c) >= '0' && (c) <= '9') || ((c) >= 'a' && (c) <= 'f') || ((c) >= 'A' && (c) <= 'F'))
 
-int valid_mac(const char *token, int part, void *priv) {
+int valid_mac(const char *token, int part, void *priv)
+{
 	int digits = 0, group = 1, i;
 
 	for (i = 0; token[i] != '\0'; i++) {
@@ -262,6 +263,32 @@ int valid_mac(const char *token, int part, void *priv) {
 	return part || group == 3;
 }
 
+int valid_ip(const char *token, int part, void *priv)
+{
+	int x = 0, digits = 0, group = 1, i;
+
+	for (i = 0; token[i] != '\0'; i++) {
+		if (token[i] == '.') {
+			if (!digits)
+				return 0;
+			digits = 0;
+			x = 0;
+			group ++;
+			continue;
+		}
+		if (token[i] < '0' || token[i] > '9')
+			return 0;
+		++digits;
+		if ((x = x * 10 + (token[i] - '0')) > 255)
+			return 0;
+	}
+
+	if (group > 4)
+		return 0;
+
+	return part || group == 4;
+}
+
 int swcli_tokenize_number(struct cli_context *ctx, const char *buf,
 		struct menu_node **tree, struct tokenize_out *out)
 {
@@ -272,6 +299,13 @@ int swcli_tokenize_mac(struct cli_context *ctx, const char *buf,
 		struct menu_node **tree, struct tokenize_out *out)
 {
 	return swcli_tokenize_validator(ctx, buf, tree, out, valid_mac, NULL);
+}
+
+// FIXME move to appropriate place
+int swcli_tokenize_ip(struct cli_context *ctx, const char *buf,
+		struct menu_node **tree, struct tokenize_out *out)
+{
+	return swcli_tokenize_validator(ctx, buf, tree, out, valid_ip, NULL);
 }
 
 int swcli_output_modifiers_run(struct cli_context *ctx, int argc, char **argv,

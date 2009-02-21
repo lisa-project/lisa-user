@@ -15,7 +15,7 @@
 #include "cmd_config_if.h"
 
 int cmd_cdp_if_enable(struct cli_context *, int, char **, struct menu_node **);
-int cmd_setethdesc(struct cli_context *, int, char **, struct menu_node **);
+int cmd_if_desc(struct cli_context *, int, char **, struct menu_node **);
 int cmd_du_auto(struct cli_context *, int, char **, struct menu_node **);
 int cmd_du_full(struct cli_context *, int, char **, struct menu_node **);
 int cmd_du_half(struct cli_context *, int, char **, struct menu_node **);
@@ -23,7 +23,6 @@ int cmd_end(struct cli_context *, int, char **, struct menu_node **);
 int cmd_exit(struct cli_context *, int, char **, struct menu_node **);
 int cmd_help(struct cli_context *, int, char **, struct menu_node **);
 int cmd_cdp_if_disable(struct cli_context *, int, char **, struct menu_node **);
-int cmd_noethdesc(struct cli_context *, int, char **, struct menu_node **);
 int cmd_noshutd(struct cli_context *, int, char **, struct menu_node **);
 int cmd_sp_auto(struct cli_context *, int, char **, struct menu_node **);
 int cmd_swport_off(struct cli_context *, int, char **, struct menu_node **);
@@ -37,9 +36,11 @@ int cmd_acc_vlan(struct cli_context *, int, char **, struct menu_node **);
 int cmd_access(struct cli_context *, int, char **, struct menu_node **);
 int cmd_trunk(struct cli_context *, int, char **, struct menu_node **);
 int cmd_ip(struct cli_context *, int, char **, struct menu_node **);
-int cmd_no_ip(struct cli_context *, int, char **, struct menu_node **);
 
 extern struct menu_node config_interface;
+
+int swcli_tokenize_ip(struct cli_context *ctx, const char *buf,
+		struct menu_node **tree, struct tokenize_out *out);
 
 #define VLAN_WORD_MENU_NODE(__priv) {\
 	.name			= "WORD",\
@@ -93,7 +94,7 @@ struct menu_node config_if_main = {
 					.help			= "A character string describing this interface",
 					.mask			= CLI_MASK(PRIV(2)),
 					.tokenize	= NULL,
-					.run			= cmd_setethdesc,
+					.run			= cmd_if_desc,
 					.subtree	= NULL
 				},
 
@@ -189,7 +190,7 @@ struct menu_node config_if_main = {
 					.name			= "address",
 					.help			= "Set the IP address of an interface",
 					.mask			= CLI_MASK(PRIV(2)),
-					.tokenize	= NULL,
+					.tokenize	= swcli_tokenize_ip,
 					.run			= NULL,
 					.subtree	= (struct menu_node *[]) { /*{{{*/
 						/* #ip address A.B.C.D */
@@ -197,7 +198,7 @@ struct menu_node config_if_main = {
 							.name			= "A.B.C.D",
 							.help			= "IP address",
 							.mask			= CLI_MASK(PRIV(2)),
-							.tokenize	= NULL,
+							.tokenize	= swcli_tokenize_ip,
 							.run			= NULL,
 							.subtree	= (struct menu_node *[]) { /*{{{*/
 								/* #ip address A.B.C.D A.B.C.D */
@@ -270,7 +271,7 @@ struct menu_node config_if_main = {
 					.help			= "Interface specific description",
 					.mask			= CLI_MASK(PRIV(2)),
 					.tokenize	= NULL,
-					.run			= cmd_noethdesc,
+					.run			= cmd_if_desc,
 					.subtree	= NULL
 				},
 
@@ -297,15 +298,15 @@ struct menu_node config_if_main = {
 							.name			= "address",
 							.help			= "Set the IP address of an interface",
 							.mask			= CLI_MASK(PRIV(2)),
-							.tokenize	= NULL,
-							.run			= cmd_no_ip,
+							.tokenize	= swcli_tokenize_ip,
+							.run			= cmd_ip,
 							.subtree	= (struct menu_node *[]) { /*{{{*/
 								/* #no ip address A.B.C.D */
 								& (struct menu_node){
 									.name			= "A.B.C.D",
 									.help			= "IP address",
 									.mask			= CLI_MASK(PRIV(2)),
-									.tokenize	= NULL,
+									.tokenize	= swcli_tokenize_ip,
 									.run			= NULL,
 									.subtree	= (struct menu_node *[]) { /*{{{*/
 										/* #no ip address A.B.C.D A.B.C.D */
