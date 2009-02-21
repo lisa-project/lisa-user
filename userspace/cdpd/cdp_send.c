@@ -18,6 +18,7 @@
  */
 
 #include "cdpd.h"
+#include "util.h"
 #include "debug.h"
 
 /**

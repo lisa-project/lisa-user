@@ -44,7 +44,6 @@
 #include <math.h>
 #include <time.h>
 
-#include "common.h"
 #include "list.h"
 
 /* the pid file of the cdp daemon */

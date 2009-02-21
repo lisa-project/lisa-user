@@ -18,10 +18,11 @@
  */
 
 #include "cdpd.h"
-#include "cdp_ipc.h"
+#include "cdp.h"
 #include "debug.h"
 #include "swsock.h"
-#include "misc.h"
+#include "if_generic.h"
+#include "util.h"
 #include <signal.h>
 
 /* Two linked lists with the cdp registered and de-registered interfaces */
@@ -88,50 +89,48 @@ static int setup_switch_socket(int fd, char *ifname) {
  * interfaces.
  */
 void register_cdp_interface(char *ifname) {
-	int fd, sockfd, status;
+	int sock, status;
 	struct ifreq ifr;
-	struct swcfgreq ioctl_arg;
+	struct swcfgreq swcfgr;
 	struct cdp_interface *entry, *tmp;
 
 	sys_dbg("Enabling cdp on '%s'\n", ifname);
 
-	/* check if the interface is virtual */
-	if (!strncmp(ifname, LMS_VIRT_PREFIX, strlen(LMS_VIRT_PREFIX))) {
-		sys_dbg("interface %s is virtual.\n", ifname);
-		return;
-	}
-
 	/* Open a socket to request interface status information (up/down) */
-	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-	assert(sockfd>=0);
+	sock = socket(AF_INET, SOCK_DGRAM, 0);
+	assert(sock>=0);
 
 	/* get interface flags */
 	strncpy(ifr.ifr_name, ifname, IFNAMSIZ);
-	status = ioctl(sockfd, SIOCGIFFLAGS, &ifr);
+	status = ioctl(sock, SIOCGIFFLAGS, &ifr);
 	assert(status>=0);
 
 	/* interface is down */
 	if (!(ifr.ifr_flags & IFF_UP)) {
 		sys_dbg("interface %s is down.\n", ifname);
-		close(sockfd);
+		close(sock);
 		return;
 	}
-	close(sockfd);
+	close(sock);
 
 
 	/* Open a switch socket to check if the interface is in the switch */
-	fd = socket(PF_SWITCH, SOCK_RAW, 0);
-	assert(fd>=0);
+	sock = socket(PF_SWITCH, SOCK_RAW, 0);
+	assert(sock>=0);
 
 	/* check if the interface is in the switch */
-	ioctl_arg.cmd = SWCFG_GETIFCFG;
-	ioctl_arg.ifindex = strdup(ifname);
-	ioctl_arg.ext.cfg.forbidden_vlans = NULL;
-	ioctl_arg.ext.cfg.description = NULL;
-	if (ioctl(fd, SIOCSWCFG, &ioctl_arg)) {
+	swcfgr.cmd = SWCFG_GETIFTYPE;
+	swcfgr.ifindex = if_get_index(ifname, sock);
+	if (ioctl(sock, SIOCSWCFG, &swcfgr)) {
 		sys_dbg("interface %s is not in the switch.\n", ifname);
 		perror("ioctl");
-		close(fd);
+		close(sock);
+		return;
+	}
+
+	if (swcfgr.ext.switchport != SW_IF_SWITCHED) {
+		sys_dbg("interface %s is virtual.\n", ifname);
+		close(sock);
 		return;
 	}
 
@@ -139,7 +138,7 @@ void register_cdp_interface(char *ifname) {
 	list_for_each_entry_safe(entry, tmp, &registered_interfaces, lh)
 		if (!strncmp(ifname, entry->name, IFNAMSIZ)) {
 			sys_dbg("CDP already enabled on interface %s.\n", ifname);
-			close(fd);
+			close(sock);
 			return;
 		}
 
@@ -148,9 +147,9 @@ void register_cdp_interface(char *ifname) {
 		if (!strncmp(ifname, entry->name, IFNAMSIZ)) {
 			/* if setup_switch_socket fails, the interface will not be
 			 registered */
-			if (setup_switch_socket(fd, ifname))
+			if (setup_switch_socket(sock, ifname))
 				return;
-			entry->sw_sock_fd = fd;
+			entry->sw_sock_fd = sock;
 			list_del(&entry->lh);
 			list_add_tail(&entry->lh, &registered_interfaces);
 			return;
@@ -158,7 +157,7 @@ void register_cdp_interface(char *ifname) {
 
 	/* Bind the switch socket to the interface before
 	 allocating the cdp_interface structure */
-	if (setup_switch_socket(fd, ifname))
+	if (setup_switch_socket(sock, ifname))
 		return;
 
 	/* if not found, we must allocate the structure and do the 
@@ -166,7 +165,7 @@ void register_cdp_interface(char *ifname) {
 	entry = (struct cdp_interface *) malloc(sizeof(struct cdp_interface));
 	assert(entry);
 	strncpy(entry->name, ifname, IFNAMSIZ);
-	entry->sw_sock_fd = fd;
+	entry->sw_sock_fd = sock;
 
 	status = sem_init(&entry->n_sem, 0, 1);
 	assert(!status);

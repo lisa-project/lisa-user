@@ -24,8 +24,6 @@
 #include <time.h>
 #include <mqueue.h>
 
-#include "cdpd.h"
-
 /* Message queues:
  *
  * By convention, the cdpd daemon listens for requests on queue lisa-cdp-0

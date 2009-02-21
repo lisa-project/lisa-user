@@ -18,4 +18,4 @@ include $(TOP_DIR)/scripts/Makefile.rules
 
 cdpd: $(OBJS)
 	$(Q)$(MAKE) -C $(TOP_DIR)/lib
-	$(QUIET_LD)$(CC) $(LDFLAGS) -o $@ $^ ../lib/misc.o
+	$(QUIET_LD)$(CC) $(LDFLAGS) -o $@ $^ ../lib/util.o ../lib/if_generic.o

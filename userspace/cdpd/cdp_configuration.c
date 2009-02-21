@@ -18,7 +18,7 @@
  */
 
 #include "cdpd.h"
-#include "cdp_ipc.h"
+#include "cdp.h"
 #include "debug.h"
 
 /**

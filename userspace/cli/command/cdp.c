@@ -1,7 +1,4 @@
-#include "cdpd.h"
-#include "cdp_ipc.h"
 #include "cdp.h"
-#include "climain.h"
 
 /* selected interface in interface configuration mode */
 extern char sel_eth[IFNAMSIZ];

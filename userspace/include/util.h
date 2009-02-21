@@ -21,6 +21,8 @@
 
 #include <stdio.h>
 
+#define MAX_HOSTNAME 32
+
 void daemonize(void);
 void print_mac(FILE *out, void *buf, int size);
 

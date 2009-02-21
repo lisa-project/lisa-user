@@ -32,7 +32,6 @@
 #include "climain.h"
 #include "shared.h"
 #include "ip.h"
-#include "cdpd.h"
 #include "cdp.h"
 
 /* extern functions from cdp.c */
