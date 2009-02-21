@@ -4,7 +4,7 @@ include $(TOP_DIR)/scripts/Makefile.variables
 
 SUBDIRS = $(TOP_DIR)/include \
 	  $(TOP_DIR)/cli     \
-	  $(TOP_DIR)/login   \
+	  $(TOP_DIR)/tools   \
 	  $(TOP_DIR)/swctl   \
 	  $(TOP_DIR)/cdpd    \
 	  $(TOP_DIR)/test

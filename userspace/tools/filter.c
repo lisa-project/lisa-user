@@ -24,8 +24,6 @@
 #include <regex.h>
 #include <unistd.h>
 
-#include "cli.h"
-
 #define MAX_LINE_WIDTH 1024
 #define GREP_PATH "/bin/grep"
 
