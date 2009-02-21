@@ -3,7 +3,7 @@ TOP_DIR = .
 include $(TOP_DIR)/scripts/Makefile.variables
 
 SUBDIRS = $(TOP_DIR)/include \
-	  $(TOP_DIR)/cli2    \
+	  $(TOP_DIR)/cli     \
 	  $(TOP_DIR)/login   \
 	  $(TOP_DIR)/swctl   \
 	  $(TOP_DIR)/cdpd    \

@@ -3,9 +3,9 @@ CFLAGS		= -fPIC -g
 # LDFLAGS		= -L. -lswcli -lrt
 INC		= $(TOP_DIR)/../linux-2.6/include \
 		  $(TOP_DIR)/include \
-		  $(TOP_DIR)/cli2 \
-		  $(TOP_DIR)/cli2/lib \
-		  $(TOP_DIR)/cli2/command
+		  $(TOP_DIR)/cli \
+		  $(TOP_DIR)/cli/lib \
+		  $(TOP_DIR)/cli/command
 DEF		= _GNU_SOURCE CONFIG_CLI_TESTING
 
 ifndef DIST
