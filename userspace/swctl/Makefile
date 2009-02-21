@@ -17,4 +17,4 @@ include $(TOP_DIR)/scripts/Makefile.rules
 
 swctl: $(OBJS)
 	$(Q) $(MAKE) -C $(TOP_DIR)/lib
-	$(QUIET_LD)$(CC) $(LDFLAGS) -o $@ $^ ../lib/misc.o
+	$(QUIET_LD)$(CC) $(LDFLAGS) -o $@ $^ ../lib/util.o ../lib/shared.o

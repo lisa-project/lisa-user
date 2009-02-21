@@ -31,11 +31,11 @@
 
 #include "swsock.h"
 #include "shared.h"
+#include "util.h"
+#include "if_generic.h"
 
 #define INITIAL_BUF_SIZE 4096
 #define ETH_ALEN 6
-
-extern void cmd_showmac(FILE *, char *);
 
 unsigned char *parse_hw_addr(char *mac) {
 	unsigned char *buf = calloc(sizeof(unsigned char), ETH_ALEN+1);
@@ -118,7 +118,7 @@ int main(int argc, char **argv) {
 			return 0;
 		}
 		user_arg.cmd = SWCFG_ADDIF;
-		user_arg.ifindex = argv[2];
+		user_arg.ifindex = if_get_index(argv[2], sock);
 		status = ioctl(sock, SIOCSWCFG, &user_arg);
 		if(status)
 			perror("add failed");
@@ -142,7 +142,7 @@ int main(int argc, char **argv) {
 		}
 
 		user_arg.cmd = SWCFG_ADDIF;
-		user_arg.ifindex = argv[2];
+		user_arg.ifindex = if_get_index(argv[2], sock);
 		status = ioctl(sock, SIOCSWCFG, &user_arg);
 		if (status) {
 			cfg_set_if_tag(argv[2], NULL, NULL);
@@ -174,7 +174,7 @@ int main(int argc, char **argv) {
 		cfg_lock();
 
 		user_arg.cmd = SWCFG_DELIF;
-		user_arg.ifindex = argv[2];
+		user_arg.ifindex = if_get_index(argv[2], sock);
 		status = ioctl(sock, SIOCSWCFG, &user_arg);
 		if (status && !silent) {
 			cfg_unlock();
@@ -215,7 +215,7 @@ int main(int argc, char **argv) {
 		}
 		user_arg.cmd = SWCFG_DELVLAN;
 		user_arg.vlan = atoi(argv[2]);
-		user_arg.ifindex = NULL;
+		user_arg.ifindex = 0;
 		status = ioctl(sock, SIOCSWCFG, &user_arg);
 		if (status)
 			perror("delvlan failed");
@@ -242,7 +242,7 @@ int main(int argc, char **argv) {
 			return 0;
 		}
 		user_arg.cmd = SWCFG_ADDVLANPORT;
-		user_arg.ifindex = argv[2];
+		user_arg.ifindex = if_get_index(argv[2], sock);
 		user_arg.vlan = atoi(argv[3]);
 		status = ioctl(sock, SIOCSWCFG, &user_arg);
 		if (status)
@@ -256,7 +256,7 @@ int main(int argc, char **argv) {
 			return 0;
 		}
 		user_arg.cmd = SWCFG_DELVLANPORT;
-		user_arg.ifindex = argv[2];
+		user_arg.ifindex = if_get_index(argv[2], sock);
 		user_arg.vlan = atoi(argv[3]);
 		status = ioctl(sock, SIOCSWCFG, &user_arg);
 		if (status)
@@ -270,7 +270,7 @@ int main(int argc, char **argv) {
 			return 0;
 		}
 		user_arg.cmd = SWCFG_SETTRUNK;
-		user_arg.ifindex = argv[2];
+		user_arg.ifindex = if_get_index(argv[2], sock);
 		user_arg.ext.trunk = atoi(argv[3]);
 		status = ioctl(sock, SIOCSWCFG, &user_arg);
 		if (status)
@@ -284,7 +284,7 @@ int main(int argc, char **argv) {
 			return 0;
 		}
 		user_arg.cmd = SWCFG_SETPORTVLAN;
-		user_arg.ifindex = argv[2];
+		user_arg.ifindex = if_get_index(argv[2], sock);
 		user_arg.vlan = atoi(argv[3]);
 		status = ioctl(sock, SIOCSWCFG, &user_arg);
 		if (status)
@@ -298,7 +298,7 @@ int main(int argc, char **argv) {
 			return 0;
 		}
 		user_arg.cmd = SWCFG_CLEARMACINT;
-		user_arg.ifindex = argv[2];
+		user_arg.ifindex = if_get_index(argv[2], sock);
 		status = ioctl(sock, SIOCSWCFG, &user_arg);
 		if (status)
 			perror("clearportmac failed");
@@ -324,7 +324,7 @@ int main(int argc, char **argv) {
 			return 0;
 		}
 		user_arg.cmd = SWCFG_MACSTATIC;
-		user_arg.ifindex = argv[2];
+		user_arg.ifindex = if_get_index(argv[2], sock);
 		user_arg.vlan = atoi(argv[3]);
 		user_arg.ext.mac = parse_hw_addr(argv[4]);
 		status = ioctl(sock, SIOCSWCFG, &user_arg);
@@ -364,7 +364,7 @@ int main(int argc, char **argv) {
 		buf = (char *)malloc(INITIAL_BUF_SIZE);
 		size = INITIAL_BUF_SIZE;
 		assert(buf);
-		user_arg.ifindex = NULL;
+		user_arg.ifindex = 0;
 		user_arg.cmd = SWCFG_GETMAC;
 		memset(&user_arg.ext.marg.addr, 0, ETH_ALEN);
 		user_arg.ext.marg.addr_type = SW_FDB_ANY;
@@ -387,8 +387,8 @@ int main(int argc, char **argv) {
 				return (-1);
 			}
 		} while (status < 0);
-		user_arg.ext.marg.actual_size = status;
-		cmd_showmac(stdout, (char *)&user_arg);
+		/* the ioctl return value is actually the result size */
+		print_mac(stdout, (void *)&user_arg, status);
 		
 		return 0;
 	}
