@@ -1,6 +1,6 @@
-#include "rlshell.h"
-#include "swcli_common.h"
-#include "menu_main.h"
+#include "common.h"
+
+extern struct menu_node menu_main;
 
 int main(int argc, char **argv) {
 	struct rlshell_context ctx;

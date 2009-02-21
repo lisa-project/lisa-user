@@ -148,7 +148,7 @@ enum {
 int if_tok_if(struct cli_context *ctx, const char *buf,
 		struct menu_node **tree, struct tokenize_out *out);
 
-static inline int if_name_generic(char *name, const char *type, const char *num) {
+static __inline__ int if_name_generic(char *name, const char *type, const char *num) {
 	int status;
 	int n = atoi(num);
 

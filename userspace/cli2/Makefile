@@ -1,8 +1,11 @@
-TOP_DIR		= ..
+TOP_DIR		:= $(shell pwd)/../
 CFLAGS		= -fPIC -g
 # LDFLAGS		= -L. -lswcli -lrt
 INC		= $(TOP_DIR)/../linux-2.6/include \
-		  $(TOP_DIR)/include
+		  $(TOP_DIR)/include \
+		  $(TOP_DIR)/cli2 \
+		  $(TOP_DIR)/cli2/lib \
+		  $(TOP_DIR)/cli2/command
 DEF		= _GNU_SOURCE CONFIG_CLI_TESTING
 
 ifndef DIST
@@ -22,56 +25,55 @@ LIBSWCLI_SRCS = cli.c
 LIBSWCLI_SRCS += rlshell.c
 
 # LiSA Main Menu Tree
-LIBSWCLI_SRCS += menu_main.c
+LIBSWCLI_SRCS += menu/main.c
 
 # LiSA Configure Menu Tree
-LIBSWCLI_SRCS += menu_config.c
+LIBSWCLI_SRCS += menu/config.c
 
 # LiSA Configure-Interface Menu Tree
-LIBSWCLI_SRCS += menu_config_if.c
+LIBSWCLI_SRCS += menu/config_if.c
 
 # LiSA Configure-Line Menu Tree
-LIBSWCLI_SRCS += menu_config_line.c
+LIBSWCLI_SRCS += menu/config_line.c
 
 # LiSA Configure-Vlan Menu Tree
-LIBSWCLI_SRCS += menu_config_vlan.c
+LIBSWCLI_SRCS += menu/config_vlan.c
 
 # LiSA "clear mac-address-table" Menu Tree
-LIBSWCLI_SRCS += menu_cl_mac_addr_t.c
+LIBSWCLI_SRCS += menu/cl_mac_addr_t.c
 
 # LiSA "show mac-address-table" Menu Tree
-LIBSWCLI_SRCS += menu_sh_mac_addr_t.c
+LIBSWCLI_SRCS += menu/sh_mac_addr_t.c
 
 # LiSA Command Handlers
-LIBSWCLI_SRCS += cmd_main.c
+LIBSWCLI_SRCS += command/main.c
 
 # LiSA Configure Command Handlers
-LIBSWCLI_SRCS += cmd_config.c
+LIBSWCLI_SRCS += command/config.c
 
 # LiSA Interface Configuration Command Handlers
-LIBSWCLI_SRCS += cmd_config_if.c
+LIBSWCLI_SRCS += command/config_if.c
 
 # LiSA Line Configuration Command Handlers
-LIBSWCLI_SRCS += cmd_config_line.c
+LIBSWCLI_SRCS += command/config_line.c
 
 # LiSA Vlan Configuration Command Handlers
-LIBSWCLI_SRCS += cmd_config_vlan.c
+LIBSWCLI_SRCS += command/config_vlan.c
 
 # Common swcli stuff that does not fit in the 4 layers
-LIBSWCLI_SRCS += swcli_common.c
+LIBSWCLI_SRCS += lib/common.c
 
 # Interface submenus
-LIBSWCLI_SRCS += menu_interface.c
+LIBSWCLI_SRCS += lib/interface.c
 
 SRCS          = $(LIBSWCLI_SRCS) \
 				swcli.c \
 				filter.c \
-				list_commands.c \
-				test.c
+				list_commands.c
 LIBSWCLI_OBJS = $(LIBSWCLI_SRCS:.c=.o)
 
 # Targets linked with libswcli
-LIBSWCLI_TARGETS = swcli test list_commands
+LIBSWCLI_TARGETS = swcli list_commands
 # Simple targets, not linked with libswcli
 SIMPLE_TARGETS	 = filter
 # All targets

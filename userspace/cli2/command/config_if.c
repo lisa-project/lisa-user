@@ -1,26 +1,6 @@
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-#include <limits.h>
-#include <assert.h>
-
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/ioctl.h>
-
-#include <arpa/inet.h>
-
-#include <linux/if.h>
-#include <linux/netdevice.h>
-#include <linux/net_switch.h>
-#include <linux/sockios.h>
-
-#include "swsock.h"
+#include "common.h"
 #include "netlink.h"
-
-#include "cli.h"
-#include "swcli_common.h"
-#include "cmd_config_if.h"
+#include "config_if.h"
 
 #define is_digit(arg) ((arg) >= '0' && (arg) <= '9')
 // FIXME move is_digit() to .h

@@ -1,19 +1,4 @@
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/ioctl.h>
-#include <assert.h>
-#include <stdio.h>
-
-#include <linux/if.h>
-#include <linux/netdevice.h>
-#include <linux/net_switch.h>
-#include <linux/sockios.h>
-
-#include "swsock.h"
-
-#include "cli.h"
-#include "swcli_common.h"
-#include "menu_interface.h"
+#include "common.h"
 
 #define MAX_DEPTH 32
 

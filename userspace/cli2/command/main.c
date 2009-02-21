@@ -1,23 +1,4 @@
-#include <string.h>
-#include <assert.h>
-#include <unistd.h>
-#include <errno.h>
-#include <stdlib.h>
-
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/ioctl.h>
-
-#include <linux/if.h>
-#include <linux/netdevice.h>
-#include <linux/net_switch.h>
-#include <linux/sockios.h>
-
-#include "swsock.h"
-
-#include "cli.h"
-#include "swcli_common.h"
-#include "menu_interface.h"
+#include "common.h"
 
 extern struct menu_node config_main;
 
@@ -362,7 +343,7 @@ out_return:
 	return err;
 }
 
-static inline void init_mac_filter(struct swcfgreq *swcfgr) {
+static __inline__ void init_mac_filter(struct swcfgreq *swcfgr) {
 	swcfgr->ifindex = 0;
 	memset(&swcfgr->ext.marg.addr, 0, ETH_ALEN);
 	swcfgr->ext.marg.addr_type = SW_FDB_ANY;

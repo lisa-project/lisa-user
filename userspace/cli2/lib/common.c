@@ -1,22 +1,4 @@
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-#include <limits.h>
-#include <assert.h>
-
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/ioctl.h>
-
-#include <linux/if.h>
-#include <linux/netdevice.h>
-#include <linux/net_switch.h>
-#include <linux/sockios.h>
-
-#include "swsock.h"
-
-#include "cli.h"
-#include "swcli_common.h"
+#include "common.h"
 
 char *swcli_prompt(struct rlshell_context *ctx) {
 	char hostname[HOST_NAME_MAX + 1];

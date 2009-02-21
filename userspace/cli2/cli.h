@@ -85,7 +85,7 @@ struct cli_context {
 	struct menu_node *root;
 };
 
-static inline void cli_init_tok_out(struct tokenize_out *out)
+static __inline__ void cli_init_tok_out(struct tokenize_out *out)
 {
 	out->ok_len = 0;
 	out->exact_match = NULL;
@@ -131,7 +131,7 @@ struct menu_node {
 
 #define CLI_MASK(...) &(uint32_t []){__VA_ARGS__, 0}[0]
 
-static inline int cli_mask_apply(uint32_t *mask, uint32_t filter) {
+static __inline__ int cli_mask_apply(uint32_t *mask, uint32_t filter) {
 	if (!mask)
 		return 1;
 	while (*mask) {

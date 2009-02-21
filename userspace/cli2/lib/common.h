@@ -1,7 +1,27 @@
 #ifndef _SWCLI_COMMON_H
 #define _SWCLI_COMMON_H
 
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <limits.h>
+#include <assert.h>
+#include <errno.h>
+
+#include <arpa/inet.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/ioctl.h>
+
+#include <linux/if.h>
+#include <linux/netdevice.h>
+#include <linux/net_switch.h>
+#include <linux/sockios.h>
+
+#include "swsock.h"
+#include "cli.h"
 #include "rlshell.h"
+#include "interface.h"
 
 char *swcli_prompt(struct rlshell_context *ctx);
 
@@ -42,7 +62,7 @@ enum {
 #define EX_STATUS_REASON_IOCTL(__ctx, __errno) \
 	EX_STATUS_REASON(__ctx, "ioctl() failed (%d - %s)", __errno, strerror(__errno))
 
-static inline int __shift_arg(int *argc, char ***argv, struct menu_node ***nodev, int shift) {
+static __inline__ int __shift_arg(int *argc, char ***argv, struct menu_node ***nodev, int shift) {
 	*argv += shift;
 	*nodev += shift;
 	return *argc -= shift;

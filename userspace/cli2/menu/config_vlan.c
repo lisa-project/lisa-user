@@ -1,5 +1,4 @@
-#include "cli.h"
-#include "swcli_common.h"
+#include "common.h"
 
 int cmd_exit(struct cli_context *, int, char **, struct menu_node **);
 int cmd_namevlan(struct cli_context *, int, char **, struct menu_node **);

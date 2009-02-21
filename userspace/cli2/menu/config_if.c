@@ -1,18 +1,5 @@
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/ioctl.h>
-
-#include <linux/if.h>
-#include <linux/netdevice.h>
-#include <linux/net_switch.h>
-#include <linux/sockios.h>
-
-#include "swsock.h"
-
-#include "cli.h"
-#include "swcli_common.h"
-#include "menu_interface.h"
-#include "cmd_config_if.h"
+#include "common.h"
+#include "config_if.h"
 
 int cmd_cdp_if_enable(struct cli_context *, int, char **, struct menu_node **);
 int cmd_if_desc(struct cli_context *, int, char **, struct menu_node **);

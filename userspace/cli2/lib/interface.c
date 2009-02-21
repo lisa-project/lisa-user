@@ -12,7 +12,7 @@
 #include <linux/net_switch.h>
 
 #include "swsock.h"
-#include "menu_interface.h"
+#include "interface.h"
 
 int if_tok_if(struct cli_context *ctx, const char *buf,
 		struct menu_node **tree, struct tokenize_out *out)
