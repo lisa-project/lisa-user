@@ -16,15 +16,9 @@
  *    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, 
  *    MA  02111-1307  USA
  */
+#ifndef _UTIL_H
+#define _UTIL_H
 
-#ifndef _CONFIG_H
-#define _CONFIG_H
+void daemonize(void);
 
-#include "command.h"
-
-extern sw_command_t sh_conf_int[];
-extern sw_command_root_t command_root_config;
-extern sw_command_root_t command_root_config_vlan;
-
-extern int valid_0(char *, char);
 #endif

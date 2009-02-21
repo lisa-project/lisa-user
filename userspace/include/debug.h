@@ -32,7 +32,7 @@
 #define sys_dbg(text,par...) syslog(LOG_DEBUG, text, ##par)
 #define __dbg_static
 
-static inline void dump_mem(void *m, int len) {
+static __inline__ void dump_mem(void *m, int len) {
 	int j;
 	char buf[49];
 	unsigned char *mem= m;
