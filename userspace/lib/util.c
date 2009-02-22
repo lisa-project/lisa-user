@@ -71,9 +71,9 @@ void print_mac(FILE *out, void *buf, int size) {
 				"%-12s  %4d  %s\n", 
 				mac->addr[0], mac->addr[1], mac->addr[2],
 				mac->addr[3], mac->addr[4], mac->addr[5],
-			    (mac->addr_type)? "Static" : "Dynamic",
+			    (mac->type)? "Static" : "Dynamic",
 				mac->vlan,
-				mac->port
+				"FIXME" //mac->ifindex
 				);
 		mac++;
 	}

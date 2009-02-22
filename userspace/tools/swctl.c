@@ -37,8 +37,7 @@
 #define INITIAL_BUF_SIZE 4096
 #define ETH_ALEN 6
 
-unsigned char *parse_hw_addr(char *mac) {
-	unsigned char *buf = calloc(sizeof(unsigned char), ETH_ALEN+1);
+void parse_hw_addr(char *mac, unsigned char *buf) {
 	unsigned short a0, a1, a2;
 	int i;
 	
@@ -63,7 +62,6 @@ unsigned char *parse_hw_addr(char *mac) {
 		printf("0x%x ", buf[i]);
 	}
 	printf("\n");
-	return buf;
 }
 
 void usage(void) {
@@ -326,7 +324,7 @@ int main(int argc, char **argv) {
 		user_arg.cmd = SWCFG_MACSTATIC;
 		user_arg.ifindex = if_get_index(argv[2], sock);
 		user_arg.vlan = atoi(argv[3]);
-		user_arg.ext.mac = parse_hw_addr(argv[4]);
+		parse_hw_addr(argv[4], user_arg.ext.mac.addr);
 		status = ioctl(sock, SIOCSWCFG, &user_arg);
 		if (status)
 			perror("macstatic failed");
@@ -366,13 +364,13 @@ int main(int argc, char **argv) {
 		assert(buf);
 		user_arg.ifindex = 0;
 		user_arg.cmd = SWCFG_GETMAC;
-		memset(&user_arg.ext.marg.addr, 0, ETH_ALEN);
-		user_arg.ext.marg.addr_type = SW_FDB_ANY;
+		memset(user_arg.ext.mac.addr, 0, ETH_ALEN);
+		user_arg.ext.mac.type = SW_FDB_ANY;
 		user_arg.vlan = 0;
 
 		do {
-			user_arg.ext.marg.buf_size = size;
-			user_arg.ext.marg.buf = buf;
+			user_arg.buf.size = size;
+			user_arg.buf.addr = buf;
 			status = ioctl(sock, SIOCSWCFG, &user_arg);
 			printf("status %d\n", status);
 			if (status == -1) {

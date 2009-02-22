@@ -345,8 +345,8 @@ out_return:
 
 static __inline__ void init_mac_filter(struct swcfgreq *swcfgr) {
 	swcfgr->ifindex = 0;
-	memset(&swcfgr->ext.marg.addr, 0, ETH_ALEN);
-	swcfgr->ext.marg.addr_type = SW_FDB_ANY;
+	memset(&swcfgr->ext.mac.addr, 0, ETH_ALEN);
+	swcfgr->ext.mac.type = SW_FDB_ANY;
 	swcfgr->vlan = 0;
 }
 
@@ -361,13 +361,13 @@ static int parse_mac_filter(struct swcfgreq *swcfgr, struct cli_context *ctx, in
 
 	do {
 		if (!strcmp(nodev[0]->name, "static")) {
-			swcfgr->ext.marg.addr_type = SW_FDB_STATIC;
+			swcfgr->ext.mac.type = SW_FDB_STATIC;
 			SHIFT_ARG(argc, argv, nodev);
 			break;
 		}
 
 		if (!strcmp(nodev[0]->name, "dynamic")) {
-			swcfgr->ext.marg.addr_type = SW_FDB_DYN;
+			swcfgr->ext.mac.type = SW_FDB_DYN;
 			SHIFT_ARG(argc, argv, nodev);
 			break;
 		}
@@ -378,7 +378,7 @@ static int parse_mac_filter(struct swcfgreq *swcfgr, struct cli_context *ctx, in
 
 	if (!strcmp(nodev[0]->name, "address")) {
 		assert(argc >= 2);
-		status = parse_mac(argv[1], swcfgr->ext.marg.addr);
+		status = parse_mac(argv[1], swcfgr->ext.mac.addr);
 		assert(!status);
 		SHIFT_ARG(argc, argv, nodev, 2);
 	}
@@ -453,8 +453,8 @@ int cmd_sh_mac_addr_t(struct cli_context *ctx, int argc, char **argv, struct men
 	assert(buf);
 
 	do {
-		swcfgr.ext.marg.buf_size = size;
-		swcfgr.ext.marg.buf = buf;
+		swcfgr.buf.size = size;
+		swcfgr.buf.addr = buf;
 		status = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
 		if (status >= 0)
 			break;
