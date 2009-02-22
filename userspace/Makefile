@@ -2,11 +2,13 @@ TOP_DIR = .
 
 include $(TOP_DIR)/scripts/Makefile.variables
 
-SUBDIRS = $(TOP_DIR)/include \
-	  $(TOP_DIR)/cli     \
-	  $(TOP_DIR)/tools   \
-	  $(TOP_DIR)/cdpd    \
-	  $(TOP_DIR)/test
+SUBDIRS = \
+	$(TOP_DIR)/include \
+	$(TOP_DIR)/lib     \
+	$(TOP_DIR)/cli     \
+	$(TOP_DIR)/tools   \
+	$(TOP_DIR)/cdpd    \
+	$(TOP_DIR)/test
 
 all:
 	$(Q) for subdir in $(SUBDIRS) ; \

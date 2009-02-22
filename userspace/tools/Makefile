@@ -17,7 +17,7 @@ include $(TOP_DIR)/scripts/Makefile.rules
 
 swctl: swctl.o
 	$(Q) $(MAKE) -C $(TOP_DIR)/lib
-	$(QUIET_LD)$(CC) $(LDFLAGS) -o $@ $^ ../lib/if_generic.o ../lib/util.o \
+	$(QUIET_LD)$(CC) $(LDFLAGS) -o $@ $^ ../lib/if_generic.o ../lib/netlink.o ../lib/util.o \
 		../lib/mm.o ../lib/shared.o -lrt -lreadline
 	
 $(SIMPLE_TARGETS): % : %.o

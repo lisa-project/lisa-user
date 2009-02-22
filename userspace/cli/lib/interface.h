@@ -145,9 +145,30 @@ enum {
 #define IFF_ROUTED		((uint32_t)2 << PRIV_SHIFT)
 #define IFF_VIF			((uint32_t)4 << PRIV_SHIFT)
 
+/* Interface type/identifier tokenizer. It calls the standard cli
+ * tokenizer, but adds logic to make input like "eth1" be treated as
+ * "Ethernet 1" rather than a partial match of the "Ethernet" node.
+ */
 int if_tok_if(struct cli_context *ctx, const char *buf,
 		struct menu_node **tree, struct tokenize_out *out);
 
+/* Parse cli args denoting an interface "extended" name in Cisco format:
+ * interface type (Ethernet, vlan etc) followed by interface identifier
+ * (number, card/number etc).
+ *
+ * The real linux netdevice name is returned in name, which must point
+ * to a buffer at least IFNAMSIZ bytes long.
+ *
+ * If n is not null, it will be filled up with the interface identifier
+ * (e.g. vlan number for vlan interfaces). For the special "netdev"
+ * interface type, n will be filled with -1.
+ *
+ * The function returns the interface type, which is one of the constants
+ * in the interface type enum above. For an unknown interface type or a
+ * netdevice with invalid name (longer than IFNAMSIZ), IF_T_ERROR is
+ * returned. To distinguish between the two cases, one must look at n,
+ * which is 0 for unknown interface type and -1 for invalid netdev name.
+ */
 int if_parse_args(char **argv, struct menu_node **nodev, char *name, int *n);
 
 #endif
