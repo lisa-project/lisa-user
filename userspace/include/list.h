@@ -185,11 +185,9 @@ static __inline__ void list_splice(struct list_head *list, struct list_head *hea
  * @member:	the name of the list_struct within the struct.
  */
 #define list_for_each_entry(pos, head, member)				\
-	for (pos = list_entry((head)->next, typeof(*pos), member),	\
-		     pos->member.next;			\
+	for (pos = list_entry((head)->next, typeof(*pos), member);	\
 	     &pos->member != (head); 					\
-	     pos = list_entry(pos->member.next, typeof(*pos), member),	\
-		     pos->member.next)
+	     pos = list_entry(pos->member.next, typeof(*pos), member))
 
 /**
  * list_for_each_entry_safe - iterate over list of given type safe against removal of list entry
@@ -203,5 +201,19 @@ static __inline__ void list_splice(struct list_head *list, struct list_head *hea
 		n = list_entry(pos->member.next, typeof(*pos), member);	\
 	     &pos->member != (head); 					\
 	     pos = n, n = list_entry(n->member.next, typeof(*n), member))
+
+/**
+ * list_entry - get the struct for this entry
+ * @ptr:	the &struct list_head pointer.
+ * @type:	the type of the struct this is embedded in.
+ * @member:	the name of the list_struct within the struct.
+ */
+#define list_free(ptr, type, member) do {\
+	type *__pos, *__n; \
+	list_for_each_entry_safe(__pos, __n, ptr, member) {\
+		free(__pos);\
+	}\
+	INIT_LIST_HEAD(ptr);\
+} while(0)
 
 #endif
