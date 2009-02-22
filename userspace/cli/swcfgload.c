@@ -25,7 +25,7 @@
 #include "climain.h"
 #include "shared.h"
 #include "config.h"
-#include "cdp.h"
+#include "cdp_client.h"
 #include "swsock.h"
 
 extern int sock_fd;

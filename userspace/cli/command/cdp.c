@@ -1,4 +1,5 @@
-#include "cdp.h"
+#include "common.h"
+#include "cdp_client.h"
 
 /* selected interface in interface configuration mode */
 extern char sel_eth[IFNAMSIZ];

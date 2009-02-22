@@ -18,8 +18,6 @@
  */
 
 #include "cdpd.h"
-#include "cdp.h"
-#include "debug.h"
 
 /**
  * Configuration management via a POSIX message queue.
@@ -28,42 +26,38 @@ extern struct cdp_configuration ccfg;
 extern struct list_head registered_interfaces;
 extern struct cdp_traffic_stats cdp_stats;
 
-extern void register_cdp_interface(char *);
-extern void unregister_cdp_interface(char *);
-extern int get_cdp_status(char *);
-
 char cdp_queue_name[32];
 
 static void cdp_ipc_add_neighbor(struct cdp_neighbor *n, struct cdp_interface *entry, char *ptr) {
-	struct cdp_ipc_neighbor neighbor;
+	struct cdp_neighbor_info *info;
 
-	/* make sure the neighbor is in a consistent state */
-	memcpy(neighbor.interface, entry->name, sizeof(entry->name));
-	memcpy(&neighbor.n, n, sizeof(struct cdp_neighbor));
-	neighbor.n.ttl = neighbor.n.hnode->tstamp - time(NULL); 
-	memcpy(ptr, &neighbor, sizeof(struct cdp_ipc_neighbor));
+	/* copy the neighbor info into the buffer pointed by ptr */
+	memcpy(ptr, &n->info, sizeof(struct cdp_neighbor_info));
+	info = (struct cdp_neighbor_info *)ptr;
+	info->if_index = entry->if_index;
+	info->ttl = n->hnode->tstamp - time(NULL);
 }
 
 /**
  * Fetch cdp registered interfaces into the cdp response
  */
-static int cdp_ipc_get_interfaces(char *cdpr, char *ifname) {
+static int cdp_ipc_get_interfaces(char *cdpr, int if_index) {
 	struct cdp_interface *entry, *tmp;
 	int count = 0;
 	char *ptr = cdpr + sizeof(int);
 
-	sys_dbg("requested interface: %s\n", ifname);
 	list_for_each_entry_safe(entry, tmp, &registered_interfaces, lh) {
 		sem_wait(&entry->n_sem);
-		if (ifname && strncmp(entry->name, ifname, strlen(ifname))) {
+		if (if_index && if_index != entry->if_index) {
 			sem_post(&entry->n_sem);
 			continue;
 		}
 		count++;
-		strncpy(ptr, entry->name, strlen(entry->name));
-		ptr[strlen(entry->name)] = '\0';
-		ptr += strlen(entry->name)+1;
+		*((int *)ptr) = entry->if_index;
+		ptr += sizeof(int);
 		sem_post(&entry->n_sem);
+		if (if_index)
+			break;
 	}
 
 	return count;
@@ -71,96 +65,41 @@ static int cdp_ipc_get_interfaces(char *cdpr, char *ifname) {
 
 /**
  * Fetch all known neighbors into the cdp response.
+ *
+ * A value of 0 for if_index means all interfaces and a value of
+ * NULL disables filtering by device_id.
  */
-static int cdp_ipc_get_neighbors(char *cdpr) {
+static int cdp_ipc_get_neighbors(char *cdpr, int if_index, char *device_id) {
 	struct cdp_interface *entry, *tmp;
 	struct cdp_neighbor *n, *t;
 	int count = 0;
 	char *ptr = (char *) cdpr + sizeof(int);
 
 	list_for_each_entry_safe(entry, tmp, &registered_interfaces, lh) {
+		/* filter out unwanted interfaces */
+		if (if_index && if_index != entry->if_index)
+			continue;
+
 		sem_wait(&entry->n_sem);
+
 		list_for_each_entry_safe(n, t, &(entry->neighbors), lh) {
-			cdp_ipc_add_neighbor(n, entry, ptr);
-			ptr += sizeof(struct cdp_ipc_neighbor);
-			count++;
-			/* not enough memory for another neighbor in cdpr->data  */
-			if (CDP_MAX_RESPONSE_SIZE-sizeof(int) < (count+1) * sizeof(struct cdp_ipc_neighbor)) {
-				sem_post(&entry->n_sem);
-				return count;
-			}
-		}
-		sem_post(&entry->n_sem);
-	}
-	return count;
-}
-
-/**
- * Fetch all known neighbors on the specified interface into the
- * cdp response.
- */
-static int cdp_ipc_get_neighbors_intf(char *cdpr, char *interface) {
-	struct cdp_interface *entry, *tmp;
-	struct cdp_neighbor *n, *t;
-	int count = 0, found = 0;
-	char *ptr = cdpr + sizeof(int);
-
-	list_for_each_entry_safe(entry, tmp, &registered_interfaces, lh)
-		if (!strncmp(entry->name, interface, strlen(interface))) {
-			found = 1;
-			break;
-		}
-
-	if (!found)
-		return 0;
-
-	sem_wait(&entry->n_sem);
-	list_for_each_entry_safe(n, t, &(entry->neighbors), lh) {
-		cdp_ipc_add_neighbor(n, entry, ptr);	
-		ptr += sizeof(struct cdp_ipc_neighbor);
-		count++;
-		/* not enough memory for another neighbor in cdpr->data  */
-		if (CDP_MAX_RESPONSE_SIZE-sizeof(int) < (count+1) * sizeof(struct cdp_ipc_neighbor)) {
-			sem_post(&entry->n_sem);
-			return count;
-		}
-	}
-	sem_post(&entry->n_sem);
-	return count;
-}
-
-/**
- * Fetch all neighbors with the specified device id into the
- * cdp response.
- */
-static int cdp_ipc_get_neighbors_devid(char *cdpr, char *device_id) {
-	struct cdp_interface *entry, *tmp;
-	struct cdp_neighbor *n, *t;
-	int count = 0;
-	char *ptr = (char *) cdpr + sizeof(int);
-
-	sys_dbg("getting cdp entries with devid: %s\n", device_id);
-	list_for_each_entry_safe(entry, tmp, &registered_interfaces, lh) {
-		sem_wait(&entry->n_sem);
-		list_for_each_entry_safe(n, t, &(entry->neighbors), lh) {
-			sys_dbg("analizing device: %s ... ", n->device_id);
-			if (strncmp(n->device_id, device_id, strlen(device_id))) {
-				sys_dbg("not matched\n");
+			/* filter out unwanted device ids */
+			if (device_id && strncmp(n->info.device_id, device_id, strlen(device_id)))
 				continue;
-			}
-			sys_dbg("matched");
+
 			cdp_ipc_add_neighbor(n, entry, ptr);
-			ptr += sizeof(struct cdp_ipc_neighbor);
+			ptr += sizeof(struct cdp_neighbor_info);
 			count++;
+
 			/* not enough memory for another neighbor in cdpr->data  */
-			if (CDP_MAX_RESPONSE_SIZE-sizeof(int) < (count+1) * sizeof(struct cdp_ipc_neighbor)) {
+			if (CDP_MAX_RESPONSE_SIZE-sizeof(int) < (count+1) * sizeof(struct cdp_neighbor_info)) {
 				sem_post(&entry->n_sem);
 				return count;
 			}
 		}
+
 		sem_post(&entry->n_sem);
 	}
-	sys_dbg("%d matches for %s\n", count, device_id);
 	return count;
 }
 
@@ -176,17 +115,13 @@ static void cdp_ipc_show(struct cdp_show *sq, char *cdpr) {
 		memcpy(cdpr, &cdp_stats, sizeof(cdp_stats));
 		break;
 	case CDP_SHOW_INTF:
-		*((int *) cdpr) = cdp_ipc_get_interfaces(cdpr, sq->interface);
+		*((int *) cdpr) = cdp_ipc_get_interfaces(cdpr, sq->if_index);
 		break;
 	case CDP_SHOW_NEIGHBORS:
-		sys_dbg("[ipc listener]: interface: %s, %d\n", sq->interface, strlen(sq->interface));
-		sys_dbg("[ipc listener]: device_id: %s, %d\n", sq->device_id, strlen(sq->device_id));
-		if (strlen(sq->interface))
-			*((int *) cdpr) = cdp_ipc_get_neighbors_intf(cdpr, sq->interface);
-		else if (strlen(sq->device_id))
-			*((int *) cdpr) = cdp_ipc_get_neighbors_devid(cdpr, sq->device_id);
-		else
-			*((int *) cdpr) = cdp_ipc_get_neighbors(cdpr);
+		sys_dbg("[ipc listener]: interface: %d, device_id: %s, %d\n",
+				sq->if_index, sq->device_id, strlen(sq->device_id));
+		*((int *)cdpr) = cdp_ipc_get_neighbors(cdpr, sq->if_index,
+				strlen(sq->device_id)? sq->device_id :  NULL);
 		break;
 	}
 }
@@ -225,16 +160,16 @@ static void cdp_ipc_adm(struct cdp_adm *aq, char *cdpr) {
 	sys_dbg("[ipc listener]: ipc adm query.\n");
 	switch (aq->type) {
 	case CDP_IF_ENABLE:
-		sys_dbg("[ipc listener]: Enable cdp on interface %s\n", aq->interface);
-		register_cdp_interface(aq->interface);
+		sys_dbg("[ipc listener]: Enable cdp on interface %d\n", aq->if_index);
+		cdpd_register_interface(aq->if_index);
 		break;
 	case CDP_IF_DISABLE:
-		sys_dbg("[ipc listener]: Disable cdp on interface %s\n", aq->interface);
-		unregister_cdp_interface(aq->interface);
+		sys_dbg("[ipc listener]: Disable cdp on interface %d\n", aq->if_index);
+		cdpd_unregister_interface(aq->if_index);
 		break;
 	case CDP_IF_STATUS:
-		sys_dbg("[ipc listener]: Get cdp status on interface %s\n", aq->interface);
-		*((int *) cdpr) = get_cdp_status(aq->interface);
+		sys_dbg("[ipc listener]: Get cdp status on interface %d\n", aq->if_index);
+		*((int *) cdpr) = cdpd_get_interface_status(aq->if_index);
 		break;
 	default:
 		sys_dbg("[ipc listener]: Unknown administrative command type %d.\n", aq->type);

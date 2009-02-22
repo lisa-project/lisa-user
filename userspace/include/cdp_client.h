@@ -17,12 +17,20 @@
  *    MA  02111-1307  USA
  */
 
-#ifndef _CDP_H
-#define _CDP_H
+#ifndef _CDP_CLIENT_H
+#define _CDP_CLIENT_H
 
-#include <sys/types.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <assert.h>
 #include <time.h>
 #include <mqueue.h>
+
+#include <sys/types.h>
+#include <sys/socket.h>
+
+#include <linux/if.h>
 
 /* Message queues:
  *
@@ -33,7 +41,7 @@
 
 #define CDP_MAX_RESPONSE_SIZE 4096
 
-#define CDP_CLIENT_TIMEOUT_S     3  /* client receive timeout in seconds */
+#define CDP_CLIENT_TIMEOUT_S 3  /* client receive timeout in seconds */
 
 /* cdp query types */
 #define CDP_SHOW_QUERY 0x01			/* show cdp command */
@@ -63,8 +71,8 @@
 struct cdp_show {
 	unsigned char type;
 	/* filter by interface or device id for "show cdp neighbors" queries */
-	char interface[IFNAMSIZ];	/* show cdp neighbors eth x */
-	char device_id[64];			/* show cdp entry */
+	int if_index;		/* show cdp neighbors eth x */
+	char device_id[64];	/* show cdp entry */
 };
 
 /**
@@ -80,7 +88,7 @@ struct cdp_conf {
  */
 struct cdp_adm {
 	unsigned char type;
-	char interface[IFNAMSIZ];
+	int if_index;
 };
 
 /* cdp request structure */
@@ -94,9 +102,24 @@ struct cdp_request {
 	} query;
 };
 
-struct cdp_ipc_neighbor {
-	char interface[IFNAMSIZ];
-	struct cdp_neighbor n;
+/* Information about a CDP neighbor */
+struct cdp_neighbor_info {
+	int if_index;							/* Index of the interface */
+	unsigned char ttl;						/* Holdtime (time to live) */
+	unsigned char cdp_version;
+	char device_id[64];						/* Device ID */
+	unsigned char num_addr;					/* Number of decoded addresses */
+	unsigned int addr[8];					/* Device addresses */
+	char port_id[32];						/* Port ID */			
+	unsigned char cap;						/* Capabilities */
+	char software_version[255];				/* Software (Cisco IOS version) */
+	char platform[32];						/* Hardware platform of the device */
+	char vtp_mgmt_domain[32];				/* VTP Management Domain */
+	unsigned int oui; 						/* OUI (0x00000c for Cisco) */
+	unsigned short protocol_id;				/* Protocol Id (0x0112 for Cluster Management) */
+	unsigned char payload[27];				/* the other fields */ 
+	unsigned char duplex;					/* Duplex */
+	unsigned short native_vlan;				/* Native VLAN */
 };
 
 /* Information needed by a cdp session */
@@ -107,5 +130,14 @@ struct cdp_session_info {
 	char  *cdp_response;             /* the receive buffer for cdp messages */
 	int   max_msg_len;               /* the maximum size of messages on the rx queue */
 };
+
+/* Initiates a cdp client session */
+int cdp_init_ipc(struct cdp_session_info *s);
+
+/* Ends a cdp client session */
+void cdp_destroy_ipc(struct cdp_session_info *s);
+
+/* timed receive for a message from the client queue */
+int cdp_ipc_receive(struct cdp_session_info *s);
 
 #endif

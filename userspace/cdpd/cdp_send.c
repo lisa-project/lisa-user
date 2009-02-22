@@ -18,8 +18,6 @@
  */
 
 #include "cdpd.h"
-#include "util.h"
-#include "debug.h"
 
 /**
  *  Functions for building and sending cdp frames
@@ -34,7 +32,7 @@ extern struct cdp_traffic_stats cdp_stats;
 /**
  * Fill in the cdp frame header fields.
  */
-static int cdp_frame_init(unsigned char *buffer, int len, char *if_name) {
+static int cdp_frame_init(unsigned char *buffer, int len, int if_index) {
 	int sockfd, status;
 	struct ifreq ifr;
 	struct cdp_frame_header *fhdr;
@@ -44,8 +42,10 @@ static int cdp_frame_init(unsigned char *buffer, int len, char *if_name) {
 	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 	assert(sockfd >= 0);
 
+	/* get interface name */
+	if_get_name(if_index, sockfd, ifr.ifr_name);
+
 	/* get hardware address */
-	strncpy(ifr.ifr_name, if_name, IFNAMSIZ);
 	status = ioctl(sockfd, SIOCGIFHWADDR, &ifr);
 	assert(status >= 0);
 	
@@ -136,15 +136,24 @@ static int cdp_add_addr(unsigned char *buffer) {
 /**
  * Add the port id field.
  */
-static int cdp_add_port_id(unsigned char *buffer, char *port) {
+static int cdp_add_port_id(unsigned char *buffer, int if_index) {
 	struct cdp_field *field;
+	char *port;
+	int sockfd;
 
-	assert(port);
+	/* open socket */
+	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+	assert(sockfd >= 0);
+
 	field = (struct cdp_field *)buffer;
+	port = (char *)buffer+sizeof(struct cdp_field);
+
+	/* get interface name */
+	if_get_name(if_index, sockfd, port);
+	close(sockfd);
+
 	field->type = htons(TYPE_PORT_ID);
 	field->length = htons(strlen(port) + 4);
-	buffer += sizeof(struct cdp_field);
-	memcpy(buffer, port, strlen(port));
 
 	return strlen(port)+4;
 }
@@ -236,10 +245,10 @@ void *cdp_send_loop(void *arg) {
 			continue;
 		}
 		list_for_each_entry_safe(entry, tmp, &registered_interfaces, lh) {
-			offset = cdp_frame_init(data, sizeof(data), entry->name); 
+			offset = cdp_frame_init(data, sizeof(data), entry->if_index); 
 			offset += cdp_add_device_id(data+offset);
 			offset += cdp_add_addr(data+offset);
-			offset += cdp_add_port_id(data+offset, entry->name);
+			offset += cdp_add_port_id(data+offset, entry->if_index);
 			offset += cdp_add_capabilities(data+offset);
 			offset += cdp_add_software_version(data+offset);
 			offset += cdp_add_platform(data+offset);
@@ -252,7 +261,7 @@ void *cdp_send_loop(void *arg) {
 						offset-sizeof(struct cdp_frame_header));
 			if ((r=send(entry->sw_sock_fd, data, offset, 0))!=offset)
 				sys_dbg("Wrote only %d bytes (error was: %s).\n", r, strerror(errno));
-			sys_dbg("Sent CDP packet of %d bytes on %s.\n", r, entry->name);
+			sys_dbg("Sent CDP packet of %d bytes on interface %d.\n", r, entry->if_index);
 			/* update cdp out stats */
 			if (ccfg.version == 1)
 				cdp_stats.v1_out++;

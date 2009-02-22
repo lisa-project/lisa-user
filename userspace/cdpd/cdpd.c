@@ -18,12 +18,6 @@
  */
 
 #include "cdpd.h"
-#include "cdp.h"
-#include "debug.h"
-#include "swsock.h"
-#include "if_generic.h"
-#include "util.h"
-#include <signal.h>
 
 /* Two linked lists with the cdp registered and de-registered interfaces */
 LIST_HEAD(registered_interfaces);
@@ -67,6 +61,8 @@ static const char *get_description(unsigned short val, const description_table *
 
 /**
  * setup a switch socket.
+ * FIXME FIXME FIXME: we should use if_index instead of
+ * if_name for the switch socket bind().
  */
 static int setup_switch_socket(int fd, char *ifname) {
 	struct sockaddr_sw addr;
@@ -88,26 +84,28 @@ static int setup_switch_socket(int fd, char *ifname) {
  * add an interface to the list of cdp-enabled
  * interfaces.
  */
-void register_cdp_interface(char *ifname) {
+void cdpd_register_interface(int if_index) {
 	int sock, status;
 	struct ifreq ifr;
 	struct swcfgreq swcfgr;
 	struct cdp_interface *entry, *tmp;
 
-	sys_dbg("Enabling cdp on '%s'\n", ifname);
+	sys_dbg("Enabling cdp on interface %d\n", if_index);
 
 	/* Open a socket to request interface status information (up/down) */
 	sock = socket(AF_INET, SOCK_DGRAM, 0);
 	assert(sock>=0);
 
+	/* get interface name */
+	if_get_name(if_index, sock, ifr.ifr_name);
+
 	/* get interface flags */
-	strncpy(ifr.ifr_name, ifname, IFNAMSIZ);
 	status = ioctl(sock, SIOCGIFFLAGS, &ifr);
 	assert(status>=0);
 
 	/* interface is down */
 	if (!(ifr.ifr_flags & IFF_UP)) {
-		sys_dbg("interface %s is down.\n", ifname);
+		sys_dbg("interface %s is down.\n", ifr.ifr_name);
 		close(sock);
 		return;
 	}
@@ -120,34 +118,34 @@ void register_cdp_interface(char *ifname) {
 
 	/* check if the interface is in the switch */
 	swcfgr.cmd = SWCFG_GETIFTYPE;
-	swcfgr.ifindex = if_get_index(ifname, sock);
+	swcfgr.ifindex = if_index; 
 	if (ioctl(sock, SIOCSWCFG, &swcfgr)) {
-		sys_dbg("interface %s is not in the switch.\n", ifname);
+		sys_dbg("interface %s is not in the switch.\n", ifr.ifr_name);
 		perror("ioctl");
 		close(sock);
 		return;
 	}
 
 	if (swcfgr.ext.switchport != SW_IF_SWITCHED) {
-		sys_dbg("interface %s is virtual.\n", ifname);
+		sys_dbg("interface %s is not known by the switch.\n", ifr.ifr_name);
 		close(sock);
 		return;
 	}
 
 	/* check if cdp is already enabled on that interface */
 	list_for_each_entry_safe(entry, tmp, &registered_interfaces, lh)
-		if (!strncmp(ifname, entry->name, IFNAMSIZ)) {
-			sys_dbg("CDP already enabled on interface %s.\n", ifname);
+		if (if_index == entry->if_index) {
+			sys_dbg("CDP already enabled on interface %s.\n", ifr.ifr_name);
 			close(sock);
 			return;
 		}
 
 	/* search for the interface in the deregistered_interfaces list */
 	list_for_each_entry_safe(entry, tmp, &deregistered_interfaces, lh)
-		if (!strncmp(ifname, entry->name, IFNAMSIZ)) {
+		if (if_index == entry->if_index) {
 			/* if setup_switch_socket fails, the interface will not be
 			 registered */
-			if (setup_switch_socket(sock, ifname))
+			if (setup_switch_socket(sock, ifr.ifr_name))
 				return;
 			entry->sw_sock_fd = sock;
 			list_del(&entry->lh);
@@ -157,14 +155,14 @@ void register_cdp_interface(char *ifname) {
 
 	/* Bind the switch socket to the interface before
 	 allocating the cdp_interface structure */
-	if (setup_switch_socket(sock, ifname))
+	if (setup_switch_socket(sock, ifr.ifr_name))
 		return;
 
 	/* if not found, we must allocate the structure and do the 
 	   proper intialization */
 	entry = (struct cdp_interface *) malloc(sizeof(struct cdp_interface));
 	assert(entry);
-	strncpy(entry->name, ifname, IFNAMSIZ);
+	entry->if_index = if_index;
 	entry->sw_sock_fd = sock;
 
 	status = sem_init(&entry->n_sem, 0, 1);
@@ -179,13 +177,14 @@ void register_cdp_interface(char *ifname) {
  * remove an interface from the list of cdp-enabled
  * interfaces.
  */
-void unregister_cdp_interface(char *ifname) {
+void cdpd_unregister_interface(int if_index) {
 	struct cdp_interface *entry, *tmp;
 
+	sys_dbg("Disabling cdp on interface %d\n", if_index);
+
 	/* move the entry to the deregistrated_interfaces list */
-	sys_dbg("Disabling cdp on '%s'\n", ifname);
 	list_for_each_entry_safe(entry, tmp, &registered_interfaces, lh)
-		if (!strncmp(ifname, entry->name, IFNAMSIZ)) {
+		if (if_index == entry->if_index) {
 			/* close the switch socket before moving the entry to
 			 the deregistered interfaces list */
 			close(entry->sw_sock_fd);
@@ -197,11 +196,11 @@ void unregister_cdp_interface(char *ifname) {
 /**
  * Returns 1 if the interface is cdp-enabled, 0 otherwise.
  */
-int get_cdp_status(char *ifname) {
+int cdpd_get_interface_status(int if_index) {
 	struct cdp_interface *entry, *tmp;
 
 	list_for_each_entry_safe(entry, tmp, &registered_interfaces, lh)
-		if (!strncmp(ifname, entry->name, IFNAMSIZ))
+		if (if_index == entry->if_index)
 			return 1;
 	return 0;
 }
@@ -214,7 +213,7 @@ static struct cdp_neighbor *find_by_device_id(struct cdp_interface *entry, char 
 	struct cdp_neighbor *n, *tmp;
 
 	list_for_each_entry_safe(n, tmp, &(entry->neighbors), lh)
-		if (!strncmp(n->device_id, device_id, sizeof(n->device_id)))
+		if (!strncmp(n->info.device_id, device_id, sizeof(n->info.device_id)))
 			return n;
 	return NULL;
 }
@@ -266,7 +265,7 @@ static inline void print_ipv4_addr(unsigned int addr) {
  * Address (variable) [ address of the interface, or address of the system if addresses
  * 		are not assigned to the interface ]
  */
-static void decode_address(char *field, unsigned int len, struct cdp_neighbor *n) {
+static void decode_address(char *field, unsigned int len, struct cdp_neighbor_info *n) {
 	unsigned int i, number, offset;
 
 	number = ntohl(*((unsigned int *)field));
@@ -305,10 +304,10 @@ static void print_capabilities(unsigned char cap) {
 	}
 }
 
-static void decode_protocol_hello(char *field, unsigned int len, struct protocol_hello *h) {
-	h->oui = ntohl(*((unsigned int *)field)) >> 8;
-	h->protocol_id = ntohs(*((unsigned short *) (field + 3)));
-	memcpy(h->payload, (field + 5), sizeof(h->payload));
+static void decode_protocol_hello(char *field, unsigned int len, struct cdp_neighbor_info *n) {
+	n->oui = ntohl(*((unsigned int *)field)) >> 8;
+	n->protocol_id = ntohs(*((unsigned short *) (field + 3)));
+	memcpy(n->payload, (field + 5), sizeof(n->payload));
 }
 
 static void copy_alpha_field(char *dest, char *src, size_t size) {
@@ -324,13 +323,13 @@ static void decode_field(struct cdp_neighbor **ne, int type, int len, char *fiel
 		n = find_by_device_id(neighbor->interface, field);
 		if (n) {
 			/* version may have changed */
-			n->cdp_version = neighbor->cdp_version;
+			n->info.cdp_version = neighbor->info.cdp_version;
 			free(neighbor);
 			sys_dbg("\t\tneighbor %s already registered.\n", field);
 			neighbor = n;
 			sem_wait(&nheap_sem);
 			/* update neighbor heap node timestamp */
-			neighbor->hnode->tstamp = neighbor->ttl + time(NULL);
+			neighbor->hnode->tstamp = neighbor->info.ttl + time(NULL);
 			/* sift down the updated node to keep the heap ordered (min-heap) */
 			sift_down(nheap, (neighbor->hnode - nheap)/sizeof(neighbor_heap_t), hend);
 			sem_post(&nheap_sem);
@@ -339,9 +338,9 @@ static void decode_field(struct cdp_neighbor **ne, int type, int len, char *fiel
 		else {
 			/* a new neighbor was found */
 			sys_dbg("\t\tnew neighbor: %s.\n", field);
-			copy_alpha_field(neighbor->device_id, field, sizeof(neighbor->device_id));
+			copy_alpha_field(neighbor->info.device_id, field, sizeof(neighbor->info.device_id));
 			sem_wait(&nheap_sem);
-			nheap[++hend].tstamp = neighbor->ttl + time(NULL);	
+			nheap[++hend].tstamp = neighbor->info.ttl + time(NULL);	
 			sys_dbg("\t\ttimestamp: %ld\n", nheap[hend].tstamp);
 			nheap[hend].n = neighbor;
 			neighbor->hnode = &nheap[hend];
@@ -357,49 +356,45 @@ static void decode_field(struct cdp_neighbor **ne, int type, int len, char *fiel
 		}
 		break;
 	case TYPE_PORT_ID:
-		copy_alpha_field(neighbor->port_id, field, sizeof(neighbor->port_id));
+		copy_alpha_field(neighbor->info.port_id, field, sizeof(neighbor->info.port_id));
 		break;
 	case TYPE_IOS_VERSION:
-		copy_alpha_field(neighbor->software_version, field, sizeof(neighbor->software_version));
+		copy_alpha_field(neighbor->info.software_version, field, sizeof(neighbor->info.software_version));
 		break;
 	case TYPE_PLATFORM:
-		copy_alpha_field(neighbor->platform, field, sizeof(neighbor->platform));
+		copy_alpha_field(neighbor->info.platform, field, sizeof(neighbor->info.platform));
 		break;
 	case TYPE_VTP_MGMT_DOMAIN:
-		copy_alpha_field(neighbor->vtp_mgmt_domain, field, sizeof(neighbor->vtp_mgmt_domain));
+		copy_alpha_field(neighbor->info.vtp_mgmt_domain, field, sizeof(neighbor->info.vtp_mgmt_domain));
 		break;
 	case TYPE_ADDRESS:
-		decode_address(field, len, neighbor);
+		decode_address(field, len, &neighbor->info);
 		break;
 	case TYPE_CAPABILITIES:
-		neighbor->cap = ntohl(*((unsigned int *)field));
+		neighbor->info.cap = ntohl(*((unsigned int *)field));
 		break;
 	case TYPE_PROTOCOL_HELLO:
-		decode_protocol_hello(field, len, &neighbor->p_hello);
+		decode_protocol_hello(field, len, &neighbor->info);
 		break;
 	case TYPE_DUPLEX:
-		neighbor->duplex = field[0];
+		neighbor->info.duplex = field[0];
 		break;
 	case TYPE_NATIVE_VLAN:
-		neighbor->native_vlan = ntohs(*((unsigned short *) field));
+		neighbor->info.native_vlan = ntohs(*((unsigned short *) field));
 		break;
 	default:
 		sys_dbg("\t\twe don't decode [%s].\n", get_description(type, field_types));
 	}
 }
 
-/* packet introspection function */
-/**
- * Trebuie sa existe un hold time pentru o inregistrare de neighbor.
- * Daca holdtime expira -> zboara inregistrarea.
- */
+/* packet parsing function */
 static void dissect_packet(unsigned char *packet, struct cdp_neighbor **neighbor) {
 	struct cdp_frame_header *header = (struct cdp_frame_header *)packet;
 	struct cdp_hdr *hdr;
 	struct cdp_field *field;
 	unsigned int packet_length, consumed, field_type, field_len;
 
-	sys_dbg("Received CDP packet on %s", (*neighbor)->interface->name);
+	sys_dbg("Received CDP packet on interface %d", (*neighbor)->interface->if_index);
 
 	hdr = (struct cdp_hdr *) (((unsigned char *)packet) + 22);
 	sys_dbg("\tCDP version: %d, ttl: %d, checksum: %d\n", hdr->version,
@@ -409,12 +404,14 @@ static void dissect_packet(unsigned char *packet, struct cdp_neighbor **neighbor
 		cdp_stats.v1_in++;
 	else
 		cdp_stats.v2_in++;
+
+	(*neighbor)->info.cdp_version = hdr->version;
+	(*neighbor)->info.ttl = hdr->time_to_live;
+
 	sys_dbg("header->length: %d\n", ntohs(header->length));
 	packet_length = (ntohs(header->length) - 8) - sizeof(struct cdp_hdr);
 	sys_dbg("\tpacket length: %d\n", packet_length);
 	field = (struct cdp_field *) ((((unsigned char *)packet) + 22) + sizeof(struct cdp_hdr));
-	(*neighbor)->cdp_version = hdr->version;
-	(*neighbor)->ttl = hdr->time_to_live;
 
 	consumed = 0;
 	while (consumed < packet_length) {
@@ -431,9 +428,16 @@ static void dissect_packet(unsigned char *packet, struct cdp_neighbor **neighbor
 /**
  * Display the contents of the cdp_neighbor structure.
  */
-static void print_cdp_neighbor(struct cdp_neighbor *n) {
+static void print_cdp_neighbor(struct cdp_neighbor *neighbor) {
+	struct cdp_neighbor_info *n = &neighbor->info;
+	char *name;
 	int i;
-	sys_dbg("CDP neighbor [%p] on %s\n", n, n->interface->name);
+
+	name = if_get_name(neighbor->interface->if_index,
+			neighbor->interface->sw_sock_fd, NULL);
+	assert(name);
+
+	sys_dbg("CDP neighbor [%p] on %s\n", n, name);
 	sys_dbg("--------------------------------------\n");
 	sys_dbg("\t[%s]: '%s'\n", get_description(TYPE_DEVICE_ID, field_types), n->device_id);
 	sys_dbg("\t[%s] (%d):\n", get_description(TYPE_ADDRESS, field_types), n->num_addr);
@@ -449,19 +453,21 @@ static void print_cdp_neighbor(struct cdp_neighbor *n) {
 	sys_dbg("\t[%s]: '%s'\n", get_description(TYPE_PLATFORM, field_types), n->platform);
 	sys_dbg("\t[%s]: '%s'\n", get_description(TYPE_VTP_MGMT_DOMAIN, field_types), n->vtp_mgmt_domain);
 	sys_dbg("\t[%s]:\n", get_description(TYPE_PROTOCOL_HELLO, field_types));
-	sys_dbg("\t\tOUI: 0x%02X%02X%02X\n", n->p_hello.oui >> 16, (n->p_hello.oui >> 8) & 0xFF,
-			n->p_hello.oui &0xFF);
-	sys_dbg("\t\tProtocol ID: 0x%02X%02X\n", n->p_hello.protocol_id >> 8,
-			n->p_hello.protocol_id & 0xFF);
-	sys_dbg("\t\tpayload len: %d\n", sizeof(n->p_hello.payload));
+	sys_dbg("\t\tOUI: 0x%02X%02X%02X\n", n->oui >> 16, (n->oui >> 8) & 0xFF,
+			n->oui &0xFF);
+	sys_dbg("\t\tProtocol ID: 0x%02X%02X\n", n->protocol_id >> 8,
+			n->protocol_id & 0xFF);
+	sys_dbg("\t\tpayload len: %d\n", sizeof(n->payload));
 	sys_dbg("\t\tvalue: ");
-	for (i=0; i<sizeof(n->p_hello.payload); i++) {
-		sys_dbg("%02X", n->p_hello.payload[i]);
+	for (i=0; i<sizeof(n->payload); i++) {
+		sys_dbg("%02X", n->payload[i]);
 	}
 	sys_dbg("\n");
 	sys_dbg("\t[%s]: %d\n", get_description(TYPE_DUPLEX, field_types), n->duplex);
 	sys_dbg("\t[%s]: %d\n", get_description(TYPE_NATIVE_VLAN, field_types), n->native_vlan);
 	sys_dbg("\n");
+
+	free(name);
 }
 
 static void cdp_recv_loop(void) {
@@ -491,7 +497,7 @@ static void cdp_recv_loop(void) {
 		list_for_each_entry_safe(entry, tmp, &registered_interfaces, lh) {
 			if (!FD_ISSET(entry->sw_sock_fd, &rdfs))
 				continue;
-			sys_dbg("data available on %s\n", entry->name);
+			sys_dbg("data available on interface %d\n", entry->if_index);
 			if ((len = recv(entry->sw_sock_fd, packet, sizeof(packet), 0)) < 0) {
 				perror("recv");
 				continue;

@@ -49,6 +49,8 @@ int if_parse_generic(const char *name, const char *type);
 
 int if_get_index(const char *name, int sock_fd);
 
+char *if_get_name(int if_index, int sock_fd, char *name);
+
 struct if_addr {
 	struct list_head lh;
 	int ifindex;

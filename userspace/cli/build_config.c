@@ -32,7 +32,7 @@
 #include "climain.h"
 #include "shared.h"
 #include "ip.h"
-#include "cdp.h"
+#include "cdp_client.h"
 
 /* extern functions from cdp.c */
 extern int get_cdp_configuration(struct cdp_configuration *);

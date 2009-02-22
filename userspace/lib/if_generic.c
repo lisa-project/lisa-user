@@ -39,6 +39,25 @@ int if_get_index(const char *name, int sock_fd)
 	return ret;
 }
 
+char *if_get_name(int if_index, int sock_fd, char *name)
+{
+	struct ifreq ifr;
+
+	assert(sock_fd != -1);
+
+	ifr.ifr_ifindex = if_index;
+
+	if (ioctl(sock_fd, SIOCGIFNAME, &ifr))
+		return NULL;
+
+	if (!name)
+		return strdup(ifr.ifr_name);
+
+	strncpy(name, ifr.ifr_name, IFNAMSIZ);	
+
+	return name;
+}
+
 struct build_ip_list_priv {
 	struct list_head *lh;
 	int ifindex;

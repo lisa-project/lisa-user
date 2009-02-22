@@ -25,6 +25,12 @@ neighbor_heap_t *nheap;
 int hend, heap_size;
 sem_t nheap_sem;
 
+/* Neigbor heap helper macros */
+#define LEFT(k)		(2*k+1)
+#define RIGHT(k)	(2*k+2)
+#define PARENT(k)	((int)floor((k-1)/2))
+#define ROOT(heap)	(heap[0])
+
 /* Exchange 2 elements in the heap */
 #define _XCHG(h, i1, i2) do { \
 		neighbor_heap_t temp; \
@@ -99,7 +105,7 @@ void *cdp_clean_loop(void *arg) {
 			}
 			n = ROOT(nheap).n;
 			i = n->interface;
-			sys_dbg("[cdp cleaner]: cleaning cdp neighbor %s\n", n->device_id);
+			sys_dbg("[cdp cleaner]: cleaning cdp neighbor %s\n", n->info.device_id);
 			/* get the lock on the interface neighbor list */
 			sem_wait(&i->n_sem);
 			/* safely delete the expired neighbor */

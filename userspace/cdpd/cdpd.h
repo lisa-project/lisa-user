@@ -40,11 +40,17 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <signal.h>
 #include <arpa/inet.h>
 #include <math.h>
 #include <time.h>
 
+#include "cdp_client.h"
+#include "debug.h"
+#include "util.h"
 #include "list.h"
+#include "swsock.h"
+#include "if_generic.h"
 
 /* the pid file of the cdp daemon */
 #define CDPD_PID_FILE "/var/run/cdpd.pid"
@@ -136,16 +142,16 @@ static const description_table proto_types[] = {
 };
 
 /* possible values for the protocol value in address fields */
-#define PROTO_ISO_CLNS 			0x81  /* protocol type 3D 1 */
-#define PROTO_IP				0xCC  /* protocol type 3D 1 */
+#define PROTO_ISO_CLNS 			0x81  	/* protocol type 3D 1 */
+#define PROTO_IP				0xCC  	/* protocol type 3D 1 */
 /* for 802.2 the protocol value is 0xAAAA 0300 0000 followed by one of: */
-#define PROTO_IPV6				0x0800 /* protocol type 3D 2 */
-#define PROTO_DECNET_PHASE_IV 	0x6003 /* protocol type 3D 2 */
-#define PROTO_APPLETALK			0x809B /* protocol type 3D 2 */
-#define PROTO_NOVELL_IPX 		0x8137 /* protocol type 3D 2 */
-#define PROTO_BANYAN_VINES		0x80C4 /* protocol type 3D 2 */
-#define PROTO_XNS				0x0600 /* protocol type 3D 2 */
-#define PROTO_APOLLO_DOMAIN		0x8019 /* protocol type 3D 2 */
+#define PROTO_IPV6				0x0800 	/* protocol type 3D 2 */
+#define PROTO_DECNET_PHASE_IV 	0x6003 	/* protocol type 3D 2 */
+#define PROTO_APPLETALK			0x809B 	/* protocol type 3D 2 */
+#define PROTO_NOVELL_IPX 		0x8137 	/* protocol type 3D 2 */
+#define PROTO_BANYAN_VINES		0x80C4 	/* protocol type 3D 2 */
+#define PROTO_XNS				0x0600 	/* protocol type 3D 2 */
+#define PROTO_APOLLO_DOMAIN		0x8019 	/* protocol type 3D 2 */
 
 /* description table for protocol values */
 static const description_table proto_values[] = {
@@ -221,62 +227,21 @@ struct cdp_field {
 	unsigned short	length;
 };
 
-/**
- * Structura campului "Protocol Hello" e urmatoarea 
- * (dedusa dintr-un snapshot de ethereal de pe wiki-ul lor, 
- * plus some debugging):
- * 
- * - OUI [3 bytes] (0x00000c - Cisco) 
- * - Protocol ID [2 bytes] (0x0112 - Cluster Management)
- *
- *   TODO: la show cdp neighbors detail pe Cisco, urmatoarele
- * campuri sunt trantite intr-un string (cu valorile hex) de genul:
- *  value=00000000FFFFFFFF010121FF00000000000000097CCEEB00FF029A
- *
- * - Cluster Master IP [ 4 bytes ] (0.0.0.0)
- * - UNKNOWN IP? or mask? [ 4 bytes ] (255.255.255.255)
- * - Version? [ 1 byte ] (0x01)
- * - Sub Version? [ 1 byte ] (0x01)
- * - Status? [ 1 byte ] (0x21)
- * - UNKNOWN [ 1 byte ] (0xff)
- * - Cluster Commander MAC [ 6 bytes ] ( 00:00:00:00:00:00 )
- * - Switch's MAC [ 6 bytes ] ( 00:D0:BA:7A:FF:C0 )
- * - UNKNOWN [ 1 byte ] (0xff)
- * - Management VLAN [ 2 bytes ] ( 0x029a, adica 666)
- */
-struct protocol_hello {
-	unsigned int oui; 							/* OUI (0x00000c for Cisco) */
-	unsigned short protocol_id;					/* Protocol Id (0x0112 for Cluster Management) */
-	unsigned char payload[27];					/* the other fields */ 
-};
-
-/* CDP neighbor */
+/* CDP Neighbor */
 struct cdp_neighbor {
 	struct cdp_interface *interface;		/* Interface */
-	unsigned char ttl;						/* Holdtime (time to live) */
-	unsigned char cdp_version;
-	char device_id[64];						/* Device ID */
-	unsigned char num_addr;					/* Number of decoded addresses */
-	unsigned int addr[8];					/* Device addresses */
-	char port_id[32];						/* Port ID */			
-	unsigned char cap;						/* Capabilities */
-	char software_version[255];				/* Software (Cisco IOS version) */
-	char platform[32];						/* Hardware platform of the device */
-	char vtp_mgmt_domain[32];				/* VTP Management Domain */
-	struct protocol_hello p_hello;			/* Protocol Hello */
-	unsigned char duplex;					/* Duplex */
-	unsigned short native_vlan;				/* Native VLAN */
-	struct  cdp_neighbor_heap_node *hnode;	/* Pointer to the associated heap node structure */
+	struct cdp_neighbor_info info;			/* Information about the neighbor */
+	struct cdp_neighbor_heap_node *hnode;	/* Pointer to the associated heap node structure */
 	struct list_head lh;					/* list head */
 };
 
 /* CDP interface */
 struct cdp_interface {
-	char name[IFNAMSIZ];					/* Name of the interface */
+	int if_index;							/* Interface index */
 	int sw_sock_fd;							/* Our PF_SWITCH socket */
 	sem_t n_sem;							/* semaphore used for locking on the neighbor list */
-	struct list_head neighbors;				/* list of cdp neighbors (on this interface) */
-	struct list_head lh;
+	struct list_head neighbors;				/* list of cdpd neighbors (on this interface) */
+	struct list_head lh;					/* list of cdp interfaces */
 };
 
 /**
@@ -293,8 +258,8 @@ struct cdp_configuration {
 	unsigned char 	holdtime;				/* cdp ttl (holdtime) in seconds */
 	unsigned char	timer;					/* rate at which packets are sent (in seconds) */
 	unsigned int	capabilities;			/* device capabilities */
-	char		software_version[255];	/* software version information */
-	char		platform[16];			/* platform information */
+	char			software_version[255];	/* software version information */
+	char			platform[16];			/* platform information */
 	unsigned char	duplex;					/* duplex */
 };
 
@@ -306,17 +271,21 @@ struct cdp_traffic_stats {
 };
 
 /* CDP neighbor heap (used for neighbor aging mechanism) */
-#define INITIAL_HEAP_SIZE 32			/* initial neighbor heap size */
-
-#define LEFT(k)		(2*k+1)
-#define RIGHT(k)	(2*k+2)
-#define PARENT(k)	((int)floor((k-1)/2))
-#define ROOT(heap)	(heap[0])
+#define INITIAL_HEAP_SIZE 32
 
 /* CDP neighbor heap node */
 typedef struct cdp_neighbor_heap_node {
-	time_t tstamp;						/* Expire timestamp */
-	struct cdp_neighbor *n;				/* Pointer to the neighbor struct */
+	time_t tstamp;			/* Expire timestamp */
+	struct cdp_neighbor *n;	/* Pointer to the cdpd neighbor struct */
 } neighbor_heap_t;
+
+void cdpd_register_interface(int if_index);
+void cdpd_unregister_interface(int if_index);
+int  cdpd_get_interface_status(int if_index);
+void sift_up(neighbor_heap_t *, int);
+void sift_down(neighbor_heap_t *, int, int);
+void *cdp_send_loop(void *);
+void *cdp_ipc_listen(void *);
+void *cdp_clean_loop(void *);
 
 #endif
