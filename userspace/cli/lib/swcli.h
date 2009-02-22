@@ -40,7 +40,7 @@ struct swcli_context {
 	int ifindex;
 	int vlan;
 	int sock_fd;
-	struct cdp_session cdp;
+	struct cdp_session *cdp;
 };
 
 #define SWCLI_CTX(ctx) ((struct swcli_context *)(ctx))
@@ -48,14 +48,14 @@ struct swcli_context {
 #define SW_SOCK_OPEN(__ctx, __sock_fd) do {\
 	if (SWCLI_CTX(__ctx)->sock_fd == -1) {\
 		__sock_fd =  socket(PF_SWITCH, SOCK_RAW, 0); \
-		assert(sock_fd != -1);\
+		assert(__sock_fd != -1);\
 	} else\
 		__sock_fd = SWCLI_CTX(__ctx)->sock_fd;\
 } while (0)
 
 #define SW_SOCK_CLOSE(__ctx, __sock_fd) do {\
 	if (__sock_fd != SWCLI_CTX(__ctx)->sock_fd)\
-		close(sock_fd);\
+		close(__sock_fd);\
 } while (0)
 
 // FIXME move these to an appropriate place (suggestion: userspace/cli/lib/cli.h?)
