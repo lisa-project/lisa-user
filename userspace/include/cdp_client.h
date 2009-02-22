@@ -123,7 +123,7 @@ struct cdp_neighbor_info {
 };
 
 /* Information needed by a cdp session */
-struct cdp_session_info {
+struct cdp_session {
 	int   enabled;                   /* flag indicating if cdp is enabled in this session */
 	mqd_t sq, rq;                    /* send and receive message queues */
 	char  sq_name[32], rq_name[32];  /* send and receive message queues names */
@@ -132,12 +132,12 @@ struct cdp_session_info {
 };
 
 /* Initiates a cdp client session */
-int cdp_init_ipc(struct cdp_session_info *s);
+int cdp_session_start(struct cdp_session *s);
 
 /* Ends a cdp client session */
-void cdp_destroy_ipc(struct cdp_session_info *s);
+void cdp_session_end(struct cdp_session *s);
 
-/* timed receive for a message from the client queue */
-int cdp_ipc_receive(struct cdp_session_info *s);
+/* Timed receive for a message from the client queue */
+int cdp_session_recv(struct cdp_session *s);
 
 #endif

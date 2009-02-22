@@ -5,13 +5,13 @@
 #include "cdp_client.h"
 
 /* Initiates a cdp client session */
-int cdp_init_ipc(struct cdp_session_info *s) {
+int cdp_session_start(struct cdp_session *s) {
 	struct mq_attr attr;
 	int    status = 0;
 
 	/* Be paranoid about user input */
 	assert(s);
-	memset(s, 0, sizeof(struct cdp_session_info));
+	memset(s, 0, sizeof(struct cdp_session));
 
 	/* Try to open the send message queue on which we send requests to cdpd */
 	memset(s->sq_name, 0, sizeof(s->sq_name));
@@ -45,7 +45,7 @@ int cdp_init_ipc(struct cdp_session_info *s) {
 }
 
 /* Ends a cdp client session */
-void cdp_destroy_ipc(struct cdp_session_info *s) {
+void cdp_session_end(struct cdp_session *s) {
 	assert(s);
 
 	if (!s->enabled)
@@ -60,7 +60,7 @@ void cdp_destroy_ipc(struct cdp_session_info *s) {
 }
 
 /* timed receive for a message from the client queue */
-int cdp_ipc_receive(struct cdp_session_info *s) {
+int cdp_session_recv(struct cdp_session *s) {
 	struct timespec ts;
 	time_t ns;
 

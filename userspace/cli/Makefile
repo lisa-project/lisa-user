@@ -60,6 +60,9 @@ LIBSWCLI_SRCS += command/config_line.c
 # LiSA Vlan Configuration Command Handlers
 LIBSWCLI_SRCS += command/config_vlan.c
 
+# LiSA CDP Configuration Command Handlers
+LIBSWCLI_SRCS += command/cdp.c
+
 # Common swcli stuff that does not fit in the 4 layers
 LIBSWCLI_SRCS += lib/common.c
 

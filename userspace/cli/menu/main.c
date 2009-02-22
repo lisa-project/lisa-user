@@ -1,4 +1,5 @@
 #include "common.h"
+#include "cdp.h"
 
 int swcli_output_modifiers_run(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev);
 
@@ -9,16 +10,6 @@ int cmd_quit(struct cli_context *, int, char **, struct menu_node **);
 int cmd_help(struct cli_context *, int, char **, struct menu_node **);
 int cmd_ping(struct cli_context *, int, char **, struct menu_node **);
 int cmd_reload(struct cli_context *, int, char **, struct menu_node **);
-int cmd_sh_cdp(struct cli_context *, int, char **, struct menu_node **);
-int cmd_sh_cdp_entry(struct cli_context *, int, char **, struct menu_node **);
-int cmd_sh_cdp_holdtime(struct cli_context *, int, char **, struct menu_node **);
-int cmd_sh_cdp_int(struct cli_context *, int, char **, struct menu_node **);
-int cmd_sh_cdp_ne(struct cli_context *, int, char **, struct menu_node **);
-int cmd_sh_cdp_ne_int(struct cli_context *, int, char **, struct menu_node **);
-int cmd_sh_cdp_ne_detail(struct cli_context *, int, char **, struct menu_node **);
-int cmd_sh_cdp_run(struct cli_context *, int, char **, struct menu_node **);
-int cmd_sh_cdp_timer(struct cli_context *, int, char **, struct menu_node **);
-int cmd_sh_cdp_traffic(struct cli_context *, int, char **, struct menu_node **);
 int cmd_history(struct cli_context *, int, char **, struct menu_node **);
 int cmd_sh_int(struct cli_context *, int, char **, struct menu_node **);
 int cmd_sh_ip(struct cli_context *, int, char **, struct menu_node **);
