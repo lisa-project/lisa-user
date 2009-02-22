@@ -209,13 +209,14 @@ int cmd_ip(struct cli_context *ctx, int argc, char **argv, struct menu_node **no
 	status = inet_aton(argv[1], &mask);
 	assert(status);
 	if ((mask_len = count_mask_bits(mask.s_addr)) < 0) {
-		printf("Bad mask 0x%X for address %s\n", ntohl(mask.s_addr), inet_ntoa(addr));
-		//FIXME output
+		EX_STATUS_REASON(ctx, "Bad mask 0x%X for address %s", ntohl(mask.s_addr), inet_ntoa(addr));
+		ret = CLI_EX_WARNING;
 		goto out_cleanup;
 	}
 	
 	if (!(addr.s_addr & ~mask.s_addr) || (addr.s_addr & ~mask.s_addr) == ~mask.s_addr) {
-		printf("Bad mask /%d for address %s\n", mask_len, inet_ntoa(addr)); // FIXME output
+		EX_STATUS_REASON(ctx, "Bad mask /%d for address %s", mask_len, inet_ntoa(addr));
+		ret = CLI_EX_WARNING;
 		goto out_cleanup;
 	}
 
@@ -236,7 +237,8 @@ int cmd_ip(struct cli_context *ctx, int argc, char **argv, struct menu_node **no
 	has_primary = !ioctl(sock_fd, SIOCGIFADDR, &ifr);
 
 	if (secondary && has_primary && ((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr.s_addr == addr.s_addr) {
-		printf("Secondary can't be same as primary\n"); //FIXME output
+		EX_STATUS_REASON(ctx, "Secondary can't be same as primary");
+		ret = CLI_EX_WARNING;
 		goto out_cleanup;
 	}
 
@@ -257,7 +259,8 @@ int cmd_ip(struct cli_context *ctx, int argc, char **argv, struct menu_node **no
 		assert(!status);
 		/* strip host part for displaying error msg */
 		addr.s_addr &= mask.s_addr;
-		printf("%s overlaps with %s\n", inet_ntoa(addr), ifr.ifr_name); // FIXME output
+		EX_STATUS_REASON(ctx, "%s overlaps with %s", inet_ntoa(addr), ifr.ifr_name);
+		ret = CLI_EX_WARNING;
 
 		goto out_cleanup;
 	}
@@ -267,20 +270,23 @@ int cmd_ip(struct cli_context *ctx, int argc, char **argv, struct menu_node **no
 		/* if address count is at least 2, then we have a primary
 		 * address AND at least 1 secodary address */
 		if (!secondary && addr_cnt >= 2) {
-			printf("Must delete secondary before deleting primary\n"); //FIXME output
+			EX_STATUS_REASON(ctx, "Must delete secondary before deleting primary");
+			ret = CLI_EX_WARNING;
 			goto out_cleanup;
 		}
 		list_for_each_entry(if_addr, &addrl, lh) {
 			if (if_addr->ifindex != uc->ifindex)
 				continue;
 			if (!secondary && (if_addr->inet.s_addr != addr.s_addr || if_addr->prefixlen != mask_len)) {
-				printf("Invalid address\n"); //FIXME output
+				EX_STATUS_REASON(ctx, "Invalid address");
+				ret = CLI_EX_WARNING;
 				goto out_cleanup;
 			}
 			if (if_addr->inet.s_addr != addr.s_addr)
 				continue;
 			if (if_addr->prefixlen != mask_len) {
-				printf("Invalid Mask\n"); // FIXME output
+				EX_STATUS_REASON(ctx, "Invalid Mask");
+				ret = CLI_EX_WARNING;
 				goto out_cleanup;
 			}
 			if_change_addr(cmd, uc->ifindex, addr, mask_len, secondary, NULL);
@@ -318,14 +324,16 @@ int cmd_ip(struct cli_context *ctx, int argc, char **argv, struct menu_node **no
 	ifr.ifr_addr.sa_family = AF_INET;
 	((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr = addr;
 	if (ioctl(sock_fd, SIOCSIFADDR, &ifr)) {
-		perror("SIOCSIFADDR"); // FIXME output
+		EX_STATUS_REASON(ctx, "ioctl (SIOCSIFADDR) failed: %s", strerror(errno));
+		ret = CLI_EX_WARNING;
 		goto out_cleanup;
 	}
 
 	ifr.ifr_netmask.sa_family = AF_INET;
 	((struct sockaddr_in *)&ifr.ifr_netmask)->sin_addr = mask;
 	if (ioctl(sock_fd, SIOCSIFNETMASK, &ifr)) {
-		perror("SIOCSIFNETMASK"); // FIXME output
+		EX_STATUS_REASON(ctx, "ioctl (SIOCSIFNETMASK) failed: %s", strerror(errno));
+		ret = CLI_EX_WARNING;
 		goto out_cleanup;
 	}
 
@@ -333,7 +341,8 @@ int cmd_ip(struct cli_context *ctx, int argc, char **argv, struct menu_node **no
 	((struct sockaddr_in *)&ifr.ifr_broadaddr)->sin_addr.s_addr =
 		addr.s_addr | ~mask.s_addr;
 	if (ioctl(sock_fd, SIOCSIFBRDADDR, &ifr)) {
-		perror("SIOCSIFBRDADDR"); // FIXME output
+		EX_STATUS_REASON(ctx, "ioctl (SIOCSIFBRDADDR) failed: %s", strerror(errno));
+		ret = CLI_EX_WARNING;
 		goto out_cleanup;
 	}
 	

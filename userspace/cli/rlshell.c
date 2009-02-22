@@ -57,6 +57,15 @@ void rlshell_rejected_cmd(char *reason)
 	}
 }
 
+void rlshell_warning_cmd(char *reason)
+{
+	if (reason == NULL)
+		return;
+
+	puts(reason);
+	free(reason);
+}
+
 void rlshell_go_ahead(void)
 {
 	printf("  <cr>\n");
@@ -243,6 +252,9 @@ int rlshell_exec(struct rlshell_context *ctx, char *buf)
 		break;
 	case CLI_EX_REJECTED:
 		rlshell_rejected_cmd(ctx->cc.ex_status.reason);
+		break;
+	case CLI_EX_WARNING:
+		rlshell_warning_cmd(ctx->cc.ex_status.reason);
 		break;
 	default:
 		break;

@@ -96,9 +96,18 @@ static __inline__ void cli_init_tok_out(struct tokenize_out *out)
 }
 
 #define EX_STATUS_REASON(ctx, fmt, par...) do {\
-	if (asprintf(&(ctx)->ex_status.reason, fmt, ##par) == -1)\
-		(ctx)->ex_status.reason = NULL;\
+	if (asprintf(&CLI_CTX(ctx)->ex_status.reason, fmt, ##par) == -1)\
+		CLI_CTX(ctx)->ex_status.reason = NULL;\
 } while (0)
+
+#define __EX_STATUS_PERROR(ctx, str, ...) do {\
+	if ((str) == NULL) \
+		CLI_CTX(ctx)->ex_status.reason = strdup(strerror(errno));\
+	else \
+		EX_STATUS_REASON(ctx, "%s: %s", str, strerror(errno));\
+} while (0)
+
+#define EX_STATUS_PERROR(ctx, str...) __EX_STATUS_PERROR(ctx, ##str, NULL)
 
 /* Command tree menu node */
 struct menu_node {
@@ -172,7 +181,8 @@ enum {
 	/* Codes returned by handlers */
 	CLI_EX_OK				= 0,
 	CLI_EX_REJECTED			= 4,
-	CLI_EX_NOTIMPL			= 5
+	CLI_EX_WARNING			= 5,
+	CLI_EX_NOTIMPL			= 6
 };
 
 /* CLI token parsing function.
