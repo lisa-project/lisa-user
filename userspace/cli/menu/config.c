@@ -1,4 +1,4 @@
-#include "common.h"
+#include "swcli.h"
 
 int cmd_cdp_version(struct cli_context *, int, char **, struct menu_node **);
 int cmd_cdp_holdtime(struct cli_context *, int, char **, struct menu_node **);

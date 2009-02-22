@@ -38,27 +38,9 @@ struct rlshell_context {
 	int state;
 
 	int enable_ctrl_z;
-
-	/* Upper layer context data */
-	void *uc;
-
-	/* Pre-opened PF_SWITCH socket to be used for batch processing
-	 * (i.e. swcfgload) */
-	int sock_fd;
 };
 
-#define SW_SOCK_OPEN(__ctx, __sock_fd) do {\
-	if (((struct rlshell_context *)(__ctx))->sock_fd == -1) {\
-		__sock_fd =  socket(PF_SWITCH, SOCK_RAW, 0); \
-		assert(sock_fd != -1);\
-	} else\
-		__sock_fd = ((struct rlshell_context *)(__ctx))->sock_fd;\
-} while (0)
-
-#define SW_SOCK_CLOSE(__ctx, __sock_fd) do {\
-	if (__sock_fd != ((struct rlshell_context *)(__ctx))->sock_fd)\
-		close(sock_fd);\
-} while (0)
+#define RLSHELL_CTX(ctx) ((struct rlshell_context *)(ctx))
 
 /**
  * Possible values for state in struct rlshell_context

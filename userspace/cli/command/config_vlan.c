@@ -1,9 +1,8 @@
-#include "common.h"
+#include "swcli.h"
 
 int cmd_namevlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
-	struct rlshell_context *rlctx = (void *)ctx;
-	struct swcli_context *uc = (void*)rlctx->uc;
+	struct swcli_context *uc = SWCLI_CTX(ctx);
 	struct swcfgreq swcfgr;
 	int status, sock_fd, ioctl_errno;
 	int u_rename = 0;

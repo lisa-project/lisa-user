@@ -1,4 +1,4 @@
-#include "common.h"
+#include "swcli.h"
 
 int cmd_cdp_version(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
 int cmd_cdp_holdtime(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
@@ -32,8 +32,7 @@ static int use_if_ether(struct cli_context *ctx, char *name, int index, int swit
 {
 	int status, sock_fd, ioctl_errno;
 	struct swcfgreq swcfgr;
-	struct rlshell_context *rlctx = (void *)ctx;
-	struct swcli_context *uc = (void*)rlctx->uc;
+	struct swcli_context *uc = SWCLI_CTX(ctx);
 
 	SW_SOCK_OPEN(ctx, sock_fd);
 
@@ -85,8 +84,7 @@ static int use_if_vlan(struct cli_context *ctx, int vlan, int index)
 {
 	int status, sock_fd, ioctl_errno;
 	struct swcfgreq swcfgr;
-	struct rlshell_context *rlctx = (void *)ctx;
-	struct swcli_context *uc = (void*)rlctx->uc;
+	struct swcli_context *uc = SWCLI_CTX(ctx);
 
 	SW_SOCK_OPEN(ctx, sock_fd);
 
@@ -300,8 +298,7 @@ int cmd_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **
 {
 	struct swcfgreq swcfgr;
 	int status, sock_fd, ioctl_errno;
-	struct rlshell_context *rlctx = (void *)ctx;
-	struct swcli_context *uc = (void*)rlctx->uc;
+	struct swcli_context *uc = SWCLI_CTX(ctx);
 
 	swcfgr.vlan = atoi(argv[argc - 1]);
 	if (strcmp(nodev[0]->name, "no")) {

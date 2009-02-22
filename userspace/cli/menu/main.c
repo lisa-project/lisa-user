@@ -1,4 +1,4 @@
-#include "common.h"
+#include "swcli.h"
 #include "cdp.h"
 
 int swcli_output_modifiers_run(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev);

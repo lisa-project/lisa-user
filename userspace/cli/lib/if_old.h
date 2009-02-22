@@ -36,7 +36,7 @@
 #include <unistd.h>
 
 
-#include "common.h"
+#include "swcli.h"
 #include "climain.h"
 #include "command.h"
 #include "list.h"

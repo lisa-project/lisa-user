@@ -1,5 +1,5 @@
-#ifndef _SWCLI_COMMON_H
-#define _SWCLI_COMMON_H
+#ifndef _SWCLI_H
+#define _SWCLI_H
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -21,6 +21,7 @@
 #include "swsock.h"
 #include "util.h"
 #include "cli.h"
+#include "cdp_client.h"
 #include "rlshell.h"
 #include "interface.h"
 
@@ -35,11 +36,29 @@ char *swcli_prompt(struct rlshell_context *ctx);
 #define MENU_NAME_MAX 32
 
 struct swcli_context {
+	struct rlshell_context rlc;
 	int ifindex;
 	int vlan;
+	int sock_fd;
+	struct cdp_session cdp;
 };
 
-// FIXME move these to an appropriate place
+#define SWCLI_CTX(ctx) ((struct swcli_context *)(ctx))
+
+#define SW_SOCK_OPEN(__ctx, __sock_fd) do {\
+	if (SWCLI_CTX(__ctx)->sock_fd == -1) {\
+		__sock_fd =  socket(PF_SWITCH, SOCK_RAW, 0); \
+		assert(sock_fd != -1);\
+	} else\
+		__sock_fd = SWCLI_CTX(__ctx)->sock_fd;\
+} while (0)
+
+#define SW_SOCK_CLOSE(__ctx, __sock_fd) do {\
+	if (__sock_fd != SWCLI_CTX(__ctx)->sock_fd)\
+		close(sock_fd);\
+} while (0)
+
+// FIXME move these to an appropriate place (suggestion: userspace/cli/lib/cli.h?)
 int swcli_tokenize_line(struct cli_context *ctx, const char *buf, struct menu_node **tree, struct tokenize_out *out);
 int swcli_tokenize_number(struct cli_context *ctx, const char *buf, struct menu_node **tree, struct tokenize_out *out);
 int swcli_tokenize_mac(struct cli_context *ctx, const char *buf, struct menu_node **tree, struct tokenize_out *out);

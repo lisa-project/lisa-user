@@ -64,7 +64,7 @@ LIBSWCLI_SRCS += command/config_vlan.c
 LIBSWCLI_SRCS += command/cdp.c
 
 # Common swcli stuff that does not fit in the 4 layers
-LIBSWCLI_SRCS += lib/common.c
+LIBSWCLI_SRCS += lib/swcli.c
 
 # Interface submenus
 LIBSWCLI_SRCS += lib/interface.c
@@ -77,6 +77,7 @@ LIBSWCLI_OBJS = $(LIBSWCLI_SRCS:.c=.o)
 
 # Targets linked with libswcli
 LIBSWCLI_TARGETS = swcli list_commands
+
 # All targets
 TARGETS	= libswcli.so $(LIBSWCLI_TARGETS)
 

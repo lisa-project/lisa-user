@@ -85,6 +85,8 @@ struct cli_context {
 	struct menu_node *root;
 };
 
+#define CLI_CTX(ctx) ((struct cli_context *)(ctx))
+
 static __inline__ void cli_init_tok_out(struct tokenize_out *out)
 {
 	out->ok_len = 0;

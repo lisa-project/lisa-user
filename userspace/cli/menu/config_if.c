@@ -1,4 +1,4 @@
-#include "common.h"
+#include "swcli.h"
 #include "config_if.h"
 
 int cmd_cdp_if_enable(struct cli_context *, int, char **, struct menu_node **);

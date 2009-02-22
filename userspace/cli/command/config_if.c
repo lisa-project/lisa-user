@@ -1,4 +1,4 @@
-#include "common.h"
+#include "swcli.h"
 #include "netlink.h"
 #include "config_if.h"
 
@@ -74,8 +74,7 @@ int cmd_cdp_if_enable(struct cli_context *ctx, int argc, char **argv, struct men
 
 int cmd_if_desc(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
-	struct rlshell_context *rlctx = (void *)ctx;
-	struct swcli_context *uc = (void*)rlctx->uc;
+	struct swcli_context *uc = SWCLI_CTX(ctx);
 	struct swcfgreq swcfgr;
 	int sock_fd;
 
@@ -111,8 +110,7 @@ int cmd_trunk_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_n
 { 
 	int parse_vlan_err = 0, i, sock_fd;
 	struct swcfgreq swcfgr;
-	struct rlshell_context *rlctx = (void *)ctx;
-	struct swcli_context *uc = (void*)rlctx->uc;
+	struct swcli_context *uc = SWCLI_CTX(ctx);
 	unsigned char bmp[SW_VLAN_BMP_NO];
 
 	assert(argc > 1);
@@ -188,8 +186,7 @@ int cmd_ip(struct cli_context *ctx, int argc, char **argv, struct menu_node **no
 	int sock_fd = -1, secondary = 0;
 	int has_primary, status, addr_cnt = 0;
 	struct ifreq ifr;
-    struct rlshell_context *rlctx = (void *)ctx;
-    struct swcli_context *uc = (void*)rlctx->uc;
+    struct swcli_context *uc = SWCLI_CTX(ctx);
 	struct in_addr addr, mask;
 	int mask_len;
 	LIST_HEAD(addrl);

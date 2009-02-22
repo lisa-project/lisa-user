@@ -1,21 +1,19 @@
-#include "common.h"
+#include "swcli.h"
 
 extern struct menu_node menu_main;
 
 int main(int argc, char **argv) {
-	struct rlshell_context ctx;
-	struct swcli_context uc;
+	struct swcli_context ctx;
 
-	ctx.cc.node_filter = PRIV_FILTER(15);
-	ctx.cc.root = &menu_main;
-	ctx.cc.out_open = cli_out_open;
-	ctx.prompt = swcli_prompt;
-	ctx.exit = 0;
-	ctx.enable_ctrl_z = 0;
-	ctx.uc = &uc;
+	CLI_CTX(&ctx)->node_filter = PRIV_FILTER(15);
+	CLI_CTX(&ctx)->root = &menu_main;
+	CLI_CTX(&ctx)->out_open = cli_out_open;
+	RLSHELL_CTX(&ctx)->prompt = swcli_prompt;
+	RLSHELL_CTX(&ctx)->exit = 0;
+	RLSHELL_CTX(&ctx)->enable_ctrl_z = 0;
 	ctx.sock_fd = -1;
 
-	rlshell_main(&ctx);
+	rlshell_main(RLSHELL_CTX(&ctx));
 
 	return 0;
 }

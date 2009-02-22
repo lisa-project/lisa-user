@@ -1,4 +1,4 @@
-#include "common.h"
+#include "swcli.h"
 
 char *swcli_prompt(struct rlshell_context *ctx) {
 	char hostname[HOST_NAME_MAX + 1];
@@ -23,8 +23,7 @@ char *swcli_prompt(struct rlshell_context *ctx) {
 
 int cmd_ioctl_simple(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
-	struct rlshell_context *rlctx = (void *)ctx;
-	struct swcli_context *uc = (void*)rlctx->uc;
+	struct swcli_context *uc = SWCLI_CTX(ctx);
 	struct swcfgreq swcfgr, **rp;
 	int sock_fd;
 

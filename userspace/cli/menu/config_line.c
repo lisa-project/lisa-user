@@ -1,4 +1,4 @@
-#include "common.h"
+#include "swcli.h"
 
 int cmd_setpw(struct cli_context *, int, char **, struct menu_node **);
 int cmd_exit(struct cli_context *, int, char **, struct menu_node **);
