@@ -386,7 +386,7 @@ int main(int argc, char **argv) {
 			}
 		} while (status < 0);
 		/* the ioctl return value is actually the result size */
-		print_mac(stdout, (void *)&user_arg, status);
+		print_mac(stdout, (void *)&user_arg, status, NULL, NULL);
 		
 		return 0;
 	}

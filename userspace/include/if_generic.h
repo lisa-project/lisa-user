@@ -10,6 +10,8 @@
 #include <sys/socket.h>
 
 #include <linux/if.h>
+#include <linux/netdevice.h>
+#include <linux/net_switch.h>
 
 #include "netlink.h"
 #include "list.h"
@@ -72,5 +74,64 @@ static __inline__ int ip_addr_overlap(struct in_addr a1, int m1, struct in_addr 
 }
 
 int if_change_addr(int cmd, int ifindex, struct in_addr addr, int prefixlen, int secondary, struct rtnl_handle *rth);
+
+#define IF_MAP_HASH_SIZE 17
+
+struct if_map_hash_entry {
+	struct list_head lh;
+	struct net_switch_dev *dev;
+};
+
+struct if_map {
+	/* number of (net)devices in map */
+	int size;
+
+	/* array of (net)devices */
+	struct net_switch_dev *dev;
+
+	/* ifindex hash of (net)devices */
+	struct list_head ifindex_hash[IF_MAP_HASH_SIZE];
+
+	/* local cache for if_get_name fallback */
+	struct net_switch_dev cache;
+
+	/* local cache for normal operation */
+	struct net_switch_dev *last_dev;
+};
+
+#define if_map_ifindex_hash(i) ((i) % IF_MAP_HASH_SIZE)
+
+static __inline__ void if_map_init(struct if_map *map)
+{
+	memset(map, 0, sizeof(struct if_map));
+}
+
+struct net_switch_dev *if_map_lookup_ifindex(struct if_map *map, int ifindex, int sock_fd);
+int if_map_init_ifindex_hash(struct if_map *map);
+int if_map_fetch(struct if_map *map, int type, int sock_fd);
+
+struct if_map_priv {
+	struct if_map *map;
+	int sock_fd;
+};
+
+static __inline__ char *if_map_print_mac(int ifindex, void *__priv)
+{
+	struct if_map_priv *priv = __priv;
+	struct net_switch_dev *dev = if_map_lookup_ifindex(priv->map, ifindex, priv->sock_fd);
+
+	return dev == NULL ? NULL : dev->name;
+}
+
+static __inline__ void if_map_cleanup(struct if_map *map)
+{
+	int i;
+	struct if_map_hash_entry *he, *tmp;
+
+	if (map->ifindex_hash[0].prev != NULL)
+		for (i = 0; i < IF_MAP_HASH_SIZE; i++)
+			list_for_each_entry_safe(he, tmp, &map->ifindex_hash[i], lh)
+				free(he);
+}
 
 #endif

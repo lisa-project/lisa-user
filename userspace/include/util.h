@@ -21,9 +21,15 @@
 
 #include <stdio.h>
 
+#define PAGE_SIZE 4096
+// FIXME it's better to determine it at compile time
+// by using an auxiliary test program and getpagesize() - for further
+// details, see man 2 getpagesize
+
 #define MAX_HOSTNAME 32
 
 void daemonize(void);
-void print_mac(FILE *out, void *buf, int size);
+void print_mac(FILE *out, void *buf, int size, char *(*get_if_name)(int, void*), void *priv);
+int buf_alloc_swcfgr(struct swcfgreq *swcfgr, int sock_fd);
 
 #endif

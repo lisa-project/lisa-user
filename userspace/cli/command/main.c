@@ -423,11 +423,6 @@ static int parse_mac_filter(struct swcfgreq *swcfgr, struct cli_context *ctx, in
 	return 0;
 }
 
-#define PAGE_SIZE 4096
-// FIXME move this to .h ; it's better to determine it at compile time
-// by using an auxiliary test program and getpagesize() - for further
-// details, see man 2 getpagesize
-
 int cmd_sh_mac_addr_t(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
 	int ret = CLI_EX_OK;
@@ -435,8 +430,6 @@ int cmd_sh_mac_addr_t(struct cli_context *ctx, int argc, char **argv, struct men
 	struct swcfgreq swcfgr = {
 		.cmd = SWCFG_GETMAC
 	};
-	void *buf;
-	int size = PAGE_SIZE;
 	char ifname[IFNAMSIZ];
 
 	SW_SOCK_OPEN(ctx, sock_fd);
@@ -449,42 +442,45 @@ int cmd_sh_mac_addr_t(struct cli_context *ctx, int argc, char **argv, struct men
 		return status;
 	}
 
-	buf = malloc(size);
-	assert(buf);
-
-	do {
-		swcfgr.buf.size = size;
-		swcfgr.buf.addr = buf;
-		status = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
-		if (status >= 0)
-			break;
-
-		switch (errno) {
-		case ENOMEM:
-			//dbg("Insufficient buffer space. Realloc'ing ...\n");
-			size += PAGE_SIZE;
-			buf = realloc(buf, size);
-			assert(buf);
-			continue;
+	if ((status = buf_alloc_swcfgr(&swcfgr, sock_fd)) < 0)
+		switch (-status) {
 		case EINVAL:
 			EX_STATUS_REASON(ctx, "interface %s not in switch", ifname);
 			ret = CLI_EX_REJECTED;
 			break;
 		default:
-			perror("ioctl");
+			EX_STATUS_REASON_IOCTL(ctx, status);
+			ret = CLI_EX_WARNING;
 			break;
 		}
+	else {
+		int size = status;
+		struct if_map if_map;
+		struct if_map_priv priv = {
+			.map = &if_map,
+			.sock_fd = sock_fd
+		};
 
-		break;
-	} while (1);
+		if_map_init(&if_map);
 
-	if (status >= 0) {
+		/* if user asked for mac on specific interface, all results will
+		 * have the same ifindex and if_get_name fallback is enough;
+		 * otherwise fetch interface list from kernel and init hash */
+		if (!swcfgr.ifindex) {
+			status = if_map_fetch(&if_map, SW_IF_SWITCHED, sock_fd);
+			assert(!status);
+			status = if_map_init_ifindex_hash(&if_map);
+			assert(!status);
+		}
+
 		// FIXME open output
-		//print_mac(out, buf, status);
-		print_mac(stdout, buf, status);
+		print_mac(stdout, swcfgr.buf.addr, size, if_map_print_mac, &priv);
+
+		if_map_cleanup(&if_map);
 	}
 
-	free(buf);
+	if (swcfgr.buf.addr != NULL)
+		free(swcfgr.buf.addr);
 	SW_SOCK_CLOSE(ctx, sock_fd);
 
 	return ret;
@@ -565,7 +561,12 @@ int cmd_sh_mac_age(struct cli_context *ctx, int argc, char **argv, struct menu_n
 int cmd_sh_mac_eth(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
 int cmd_sh_mac_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
 int cmd_show_priv(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
-int cmd_show_run(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
+
+int cmd_show_run(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
+{
+	return CLI_EX_OK;
+}
+
 int cmd_sh_run_if(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
 int cmd_show_start(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
 int cmd_show_ver(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}

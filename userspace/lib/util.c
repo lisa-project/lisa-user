@@ -1,4 +1,6 @@
 #include <linux/net_switch.h>
+#include <linux/sockios.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -8,6 +10,8 @@
 #include <sys/resource.h>
 #include <fcntl.h>
 #include <syslog.h>
+
+#include "util.h"
 
 /* Forks, closes all file descriptors and redirects stdin/stdout to
  * /dev/null */
@@ -59,22 +63,52 @@ void daemonize(void) {
 	dup(fd);
 }
 
-void print_mac(FILE *out, void *buf, int size) {
-	void *end = (char *)buf + size;
-	struct net_switch_mac *mac = buf;
+void print_mac(FILE *out, void *buf, int size, char *(*get_if_name)(int, void*), void *priv)
+{
+	struct net_switch_mac *mac, *end =
+		(struct net_switch_mac *)((char *)buf + size);
 
 	fprintf(out,
 			"Destination Address  Address Type  VLAN  Destination Port\n"
 			"-------------------  ------------  ----  ----------------\n");
-	while ((void *)mac < end) {
+	for (mac = buf; mac < end; mac++) {
+		char *name = NULL;
+		if (get_if_name)
+			name = get_if_name(mac->ifindex, priv);
 		fprintf(out, "%02x%02x.%02x%02x.%02x%02x       "
 				"%-12s  %4d  %s\n", 
 				mac->addr[0], mac->addr[1], mac->addr[2],
 				mac->addr[3], mac->addr[4], mac->addr[5],
 			    (mac->type)? "Static" : "Dynamic",
 				mac->vlan,
-				"FIXME" //mac->ifindex
+				name ? name : "N/A"
 				);
-		mac++;
 	}
+}
+
+int buf_alloc_swcfgr(struct swcfgreq *swcfgr, int sock_fd)
+{
+	void *buf;
+	int size = PAGE_SIZE;
+	int status;
+
+	buf = malloc(size);
+	if (buf == NULL)
+		return -ENOMEM;
+
+	do {
+		swcfgr->buf.size = size;
+		swcfgr->buf.addr = buf;
+		status = ioctl(sock_fd, SIOCSWCFG, swcfgr);
+		if (status >= 0)
+			return status;
+
+		if (errno != ENOMEM)
+			return -errno;
+
+		size += PAGE_SIZE;
+		buf = realloc(buf, size);
+		if (buf == NULL)
+			return -ENOMEM;
+	} while (1);
 }

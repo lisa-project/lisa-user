@@ -1,6 +1,7 @@
 #include <sys/ioctl.h>
 
 #include "if_generic.h"
+#include "util.h"
 
 int if_parse_generic(const char *name, const char *type)
 {
@@ -170,5 +171,68 @@ int if_change_addr(int cmd, int ifindex, struct in_addr addr, int prefixlen, int
 	if (rth == &__rth)
 		rtnl_close(rth);
 
+	return 0;
+}
+
+struct net_switch_dev *if_map_lookup_ifindex(struct if_map *map, int ifindex, int sock_fd)
+{
+	struct if_map_hash_entry *he;
+
+	if (map->ifindex_hash[0].prev == NULL) {
+		if (map->cache.ifindex == ifindex)
+			return map->cache.name[0] == '\0' ? NULL : &map->cache;
+		if (if_get_name(ifindex, sock_fd, map->cache.name) == NULL) {
+			map->cache.name[0] = '\0';
+			return NULL;
+		}
+		map->cache.ifindex = ifindex;
+		return &map->cache;
+	}
+
+	if (map->last_dev && map->last_dev->ifindex == ifindex)
+		return map->last_dev;
+
+	list_for_each_entry(he, &map->ifindex_hash[if_map_ifindex_hash(ifindex)], lh) {
+		if (he->dev->ifindex == ifindex) {
+			map->last_dev = he->dev;
+			return he->dev;
+		}
+	}
+
+	return NULL;
+}
+
+int if_map_init_ifindex_hash(struct if_map *map)
+{
+	int i;
+	struct if_map_hash_entry *he;
+	
+	for (i = 0; i < IF_MAP_HASH_SIZE; i++)
+		INIT_LIST_HEAD(&map->ifindex_hash[i]);
+
+	for (i = 0; i < map->size; i++) {
+		he = malloc(sizeof(*he));
+		if (he == NULL)
+			return -1;
+		he->dev = map->dev + i;
+		list_add_tail(&he->lh, &map->ifindex_hash[if_map_ifindex_hash(map->dev[i].ifindex)]);
+	}
+
+	return 0;
+}
+
+int if_map_fetch(struct if_map *map, int type, int sock_fd)
+{
+	struct swcfgreq swcfgr;
+	int status;
+
+	swcfgr.cmd = SWCFG_GETIFLIST;
+	swcfgr.ext.switchport = type;
+
+	if ((status = buf_alloc_swcfgr(&swcfgr, sock_fd)) < 0)
+		return -status;
+
+	map->dev = (struct net_switch_dev *)swcfgr.buf.addr;
+	map->size = status / sizeof(struct net_switch_dev);
 	return 0;
 }
