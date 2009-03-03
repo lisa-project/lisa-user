@@ -89,7 +89,7 @@ include $(TOP_DIR)/scripts/Makefile.rules
 libswcli.so: $(LIBSWCLI_OBJS)
 	$(Q)$(MAKE) -C $(TOP_DIR)/lib
 	$(QUIET_LD)$(CC) $(CFLAGS) -shared -Wl,-soname,$@ -o $@ -lreadline -lcurses -lutil -lcrypt -lrt \
-		$^ ../lib/util.o ../lib/mm.o ../lib/if_generic.o ../lib/netlink.o
+		$^ ../lib/util.o ../lib/mm.o ../lib/if_generic.o ../lib/netlink.o ../lib/shared.o
 
 $(LIBSWCLI_TARGETS): % : %.o libswcli.so
 	$(QUIET_LD)$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^

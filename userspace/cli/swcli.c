@@ -13,6 +13,8 @@ int main(int argc, char **argv) {
 	RLSHELL_CTX(&ctx)->enable_ctrl_z = 0;
 	ctx.sock_fd = -1;
 
+	shared_init();
+
 	rlshell_main(RLSHELL_CTX(&ctx));
 
 	return 0;

@@ -17,154 +17,66 @@
  *    MA  02111-1307  USA
  */
 
-#include <stdio.h>
-#include <readline/readline.h>
-#include <readline/history.h>
-#include <sys/types.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <sys/shm.h>
-#include <sys/sem.h>
-#include <unistd.h>
-#include <stdlib.h>
+#include <errno.h>
 #include <string.h>
-#include <termios.h>
 
+#include "mm.h"
 #include "shared.h"
 
-/* the following need to be moved to shared.h as soon as we figure
- * out how to fix the kernel/userspace headers mixing crap
+/*
+ * Switch shared memory structure
  */
-#define IFNAMSIZ 16
-/* arghhhh this is really nasty */
+struct shared {
+	/* Enable secrets (crypted) */
+	struct {
+		char secret[SW_SECRET_LEN + 1];
+	} enable[SW_MAX_ENABLE+1];
+	/* Line vty passwords (clear text) */
+	struct {
+		char passwd[SW_PASS_LEN + 1];
+	} vty[SW_MAX_VTY + 1];
+	/* List of interface tags */
+	struct mm_list_head if_tags;
+};
 
 struct if_tag {
-	char if_name[IFNAMSIZ];
-	char tag[CLI_MAX_TAG + 1];
+	int if_index;
+	char tag[SW_MAX_TAG + 1];
 	struct mm_list_head lh;
 };
-/* end of things to be moved */
 
-extern int errno;
+static struct mm_private *mm = NULL;
+#define SHM ((struct shared *)MM_STATIC(mm))
 
-struct mm_private *cfg = NULL;
-
-void cfg_init_data(void) {
-	memset(CFG, 0, sizeof(struct cli_config));
-	MM_INIT_LIST_HEAD(cfg, mm_ptr(cfg, &CFG->if_tags));
-}
-
-int cfg_init(void) {
-	if (cfg)
-		return 0;
-
-	cfg = mm_create("lisa", sizeof(struct cli_config), 4096);
-	if (!cfg)
-		return -1;
-
-	if (cfg->init)
-		cfg_init_data();
-
-	return 0;
-}
-
-static void sw_redisplay_password(void) {
-	fprintf(rl_outstream, "\rPassword: ");
-	fflush(rl_outstream);
-}
-
-int cfg_checkpass(int retries, int (*validator)(char *, void *), void *arg) {
-	rl_voidfunc_t *old_redisplay = rl_redisplay_function;
-	char *pw;
-	int i;
-
-	rl_redisplay_function = sw_redisplay_password;
-	for(i = 0; i < retries; i++) {
-		pw = readline(NULL);
-		if(validator(pw, arg))
-			break;
-	}
-	rl_redisplay_function = old_redisplay;
-	return i < retries;
-}
-
-static void sw_redisplay_void(void) {
-}
-
-int cfg_waitcr(void) {
-	rl_voidfunc_t *old_redisplay = rl_redisplay_function;
-
-	rl_redisplay_function = sw_redisplay_void;
-	readline(NULL);
-	rl_redisplay_function = old_redisplay;
-	return 0;
-}
-
-int read_key() {
-	int ret;
-	struct termios t_old, t_new;
-
-	tcgetattr(0, &t_old);
-	t_new = t_old;
-	t_new.c_lflag = ~ICANON;
-	t_new.c_cc[VTIME] = 0;
-	t_new.c_cc[VMIN] = 1;
-	tcsetattr(0, TCSANOW, &t_new);
-	ret = getchar();
-	tcsetattr(0, TCSANOW, &t_old);
-	return ret;
-}
-
-const char config_file[] = "/etc/lisa/config.text";
-const char config_tags_path[] = "/etc/lisa/tags";
-
-static mm_ptr_t __cfg_get_if_tag(char *if_name) {
+static mm_ptr_t __shared_get_if_tag(int if_index) {
 	mm_ptr_t ret;
 
-	mm_list_for_each(cfg, ret, mm_ptr(cfg, &CFG->if_tags)) {
+	mm_list_for_each(mm, ret, mm_ptr(mm, &SHM->if_tags)) {
 		struct if_tag *tag =
-			mm_addr(cfg, mm_list_entry(ret, struct if_tag, lh));
-		if (!strcmp(if_name, tag->if_name))
+			mm_addr(mm, mm_list_entry(ret, struct if_tag, lh));
+		if (tag->if_index == if_index)
 			return ret;
 	}
 
 	return MM_NULL;
 }
 
-int cfg_get_if_tag(char *if_name, char *tag) {
-	mm_ptr_t ptr;
-	struct if_tag *s_tag;
-
-	cfg_lock();
-	ptr = __cfg_get_if_tag(if_name);
-	if (MM_NULL == ptr) {
-		cfg_unlock();
-		return 1;
-	}
-	s_tag = mm_addr(cfg, mm_list_entry(ptr, struct if_tag, lh));
-	strcpy(tag, s_tag->tag);
-
-	cfg_unlock();
-	return 0;
-}
-
-static int __cfg_del_if_tag(char *if_name) {
-	mm_ptr_t lh = __cfg_get_if_tag(if_name);
+static int __shared_del_if_tag(int if_index) {
+	mm_ptr_t lh = __shared_get_if_tag(if_index);
 
 	if (MM_NULL == lh)
 		return 1;
-	mm_list_del(cfg, lh);
-	mm_free(cfg, mm_list_entry(lh, struct if_tag, lh));
+	mm_list_del(mm, lh);
+	mm_free(mm, mm_list_entry(lh, struct if_tag, lh));
 	return 0;
 }
 
-static mm_ptr_t __cfg_get_tag_if(char *tag) {
+static mm_ptr_t __shared_get_tag_if(char *tag) {
 	mm_ptr_t ret;
 
-	mm_list_for_each(cfg, ret, mm_ptr(cfg, &CFG->if_tags)) {
+	mm_list_for_each(mm, ret, mm_ptr(mm, &SHM->if_tags)) {
 		struct if_tag *s_tag =
-			mm_addr(cfg, mm_list_entry(ret, struct if_tag, lh));
+			mm_addr(mm, mm_list_entry(ret, struct if_tag, lh));
 		if (!strcmp(tag, s_tag->tag))
 			return ret;
 	}
@@ -172,55 +84,155 @@ static mm_ptr_t __cfg_get_tag_if(char *tag) {
 	return MM_NULL;
 }
 
-int cfg_set_if_tag(char *if_name, char *tag, char *other_if) {
+int shared_init(void) {
+	if (mm)
+		return 0;
+
+	mm = mm_create("lisa", sizeof(struct shared), 4096);
+	if (!mm)
+		return  -1;
+
+	if (mm->init) {
+		memset(SHM, 0, sizeof(struct shared));
+		MM_INIT_LIST_HEAD(mm, mm_ptr(mm, &SHM->if_tags));
+	}
+
+	return 0;
+}
+
+int shared_auth(int type, int level,
+		int (*auth)(char *pw, void *priv), void *priv)
+{
+	char *passwd;
+	int err = -EINVAL;
+
+	if (!auth)
+		return err;
+
+	mm_lock(mm);
+	switch (type) {
+	case SHARED_AUTH_VTY:
+		if (level < 0 || level > SW_MAX_VTY)
+			goto out_unlock;
+		passwd = SHM->vty[level].passwd;
+		break;
+	case SHARED_AUTH_ENABLE:
+		if (level < 0 || level > SW_MAX_ENABLE)
+			goto out_unlock;
+		passwd = SHM->enable[level].secret;
+		break;
+	default:
+		goto out_unlock;
+		break;
+	}
+	err = auth(passwd, priv);
+
+out_unlock:
+	mm_unlock(mm);
+
+	return err;
+}
+
+int shared_set_passwd(int type, int level, char *passwd)
+{
+	int err = -EINVAL;
+
+	if (!passwd)
+		return err;
+
+	mm_lock(mm);
+	switch (type) {
+	case SHARED_AUTH_VTY:
+		if (level < 0 || level > SW_MAX_VTY)
+			goto out_unlock;
+		strncpy(SHM->vty[level].passwd, passwd, SW_PASS_LEN);
+		SHM->vty[level].passwd[SW_PASS_LEN] = 0;
+		err = 0;
+		break;
+	case SHARED_AUTH_ENABLE:
+		if (level < 0 || level > SW_MAX_ENABLE)
+			goto out_unlock;
+		strncpy(SHM->enable[level].secret, passwd, SW_SECRET_LEN);
+		SHM->enable[level].secret[SW_SECRET_LEN] = 0;
+		err = 0;
+		break;
+	default:
+		break;
+	}
+
+out_unlock:
+	mm_unlock(mm);
+
+	return err;
+}
+
+int shared_get_if_tag(int if_index, char *tag) {
+	mm_ptr_t ptr;
+	struct if_tag *s_tag;
+
+	mm_lock(mm);
+	ptr = __shared_get_if_tag(if_index);
+	if (MM_NULL == ptr) {
+		mm_unlock(mm);
+		return 1;
+	}
+	s_tag = mm_addr(mm, mm_list_entry(ptr, struct if_tag, lh));
+	strcpy(tag, s_tag->tag);
+
+	mm_unlock(mm);
+	return 0;
+}
+
+
+int shared_set_if_tag(int if_index, char *tag, int *other_if) {
 	mm_ptr_t lh, mm_s_tag;
 	struct if_tag *s_tag;
 	int ret;
 
-	cfg_lock();
+	mm_lock(mm);
 
 	if (NULL == tag) {
-		ret = __cfg_del_if_tag(if_name);
-		cfg_unlock();
+		ret = __shared_del_if_tag(if_index);
+		mm_unlock(mm);
 		return ret;
 	}
 
-	lh = __cfg_get_tag_if(tag);
+	lh = __shared_get_tag_if(tag);
 	if (MM_NULL != lh) {
-		if (NULL != other_if) {
-			s_tag = mm_addr(cfg, mm_list_entry(lh, struct if_tag, lh));
-			strcpy(other_if, s_tag->if_name);
+		if (*other_if) {
+			s_tag = mm_addr(mm, mm_list_entry(lh, struct if_tag, lh));
+			s_tag->if_index = *other_if;
 		}
-		cfg_unlock();
+		mm_unlock(mm);
 		return 1;
 	}
 
-	lh = __cfg_get_if_tag(if_name);
+	lh = __shared_get_if_tag(if_index);
 	if (MM_NULL != lh) {
-		s_tag = mm_addr(cfg, mm_list_entry(lh, struct if_tag, lh));
-		strncpy(s_tag->tag, tag, CLI_MAX_TAG);
-		s_tag->tag[CLI_MAX_TAG] = '\0';
-		cfg_unlock();
+		s_tag = mm_addr(mm, mm_list_entry(lh, struct if_tag, lh));
+		strncpy(s_tag->tag, tag, SW_MAX_TAG);
+		s_tag->tag[SW_MAX_TAG] = '\0';
+		mm_unlock(mm);
 		return 0;
 	}
 
-	mm_s_tag = mm_alloc(cfg, sizeof(struct if_tag));
+	mm_s_tag = mm_alloc(mm, sizeof(struct if_tag));
 	/* first save mm pointer obtained from mm_alloc, then compute s_tag
-	 * pointer, because mm_alloc() can change cfg->area if the shm area
+	 * pointer, because mm_alloc() can change mm->area if the shm area
 	 * is extended (refer to README.mm for details) */
-	s_tag = mm_addr(cfg, mm_s_tag);
+	s_tag = mm_addr(mm, mm_s_tag);
 	if (NULL == s_tag) {
-		if (NULL != other_if)
-			*other_if = '\0';
-		cfg_unlock();
+		if (*other_if)
+			*other_if = 0;
+		mm_unlock(mm);
 		return 1;
 	}
 
-	strncpy(s_tag->if_name, if_name, IFNAMSIZ);
-	strncpy(s_tag->tag, tag, CLI_MAX_TAG);
-	s_tag->tag[CLI_MAX_TAG] = '\0';
-	mm_list_add(cfg, mm_ptr(cfg, &s_tag->lh), mm_ptr(cfg, &CFG->if_tags));
+	s_tag->if_index = if_index;
+	strncpy(s_tag->tag, tag, SW_MAX_TAG);
+	s_tag->tag[SW_MAX_TAG] = '\0';
+	mm_list_add(mm, mm_ptr(mm, &s_tag->lh), mm_ptr(mm, &SHM->if_tags));
 
-	cfg_unlock();
+	mm_unlock(mm);
 	return 0;
 }

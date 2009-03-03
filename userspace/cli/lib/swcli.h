@@ -20,6 +20,7 @@
 
 #include "swsock.h"
 #include "util.h"
+#include "shared.h"
 #include "cli.h"
 #include "cdp_client.h"
 #include "rlshell.h"

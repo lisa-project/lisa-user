@@ -20,50 +20,44 @@
 #ifndef _SHARED_H
 #define _SHARED_H
 
-#include "mm.h"
+#define SW_CONFIG_FILE	"/etc/lisa/config.text";
+#define SW_TAGS_FILE	"/etc/lisa/tags";
 
-#define CLI_PASS_LEN 30
-#define CLI_SECRET_LEN 30
-#define CLI_MAX_ENABLE 15
-#define CLI_MAX_VTY 15
+#define SW_MAX_VTY		15
+#define SW_MAX_ENABLE	15
 
-#define CLI_MAX_TAG 40
+#define SW_PASS_LEN 	30
+#define SW_SECRET_LEN 	30
 
-struct cli_vty_config {
-	char passwd[CLI_PASS_LEN + 1];
+#define SW_MAX_TAG		40
+
+/* Identifiers for the types of passwords stored in the
+ * shared memory area
+ */
+enum {
+	SHARED_AUTH_VTY,
+	SHARED_AUTH_ENABLE,
 };
 
-struct cli_config {
-	char enable_secret[CLI_MAX_ENABLE + 1][CLI_SECRET_LEN + 1];
-	struct cli_vty_config vty[CLI_MAX_VTY + 1];
-	struct mm_list_head if_tags;
-};
+/* Initialize the switch's shared memory area */
+int shared_init(void);
 
-extern struct mm_private *cfg;
-#define CFG ((struct cli_config *)MM_STATIC(cfg))
+/* The caller invokes this function requesting the type of
+ * authentication and level. In turn, the function will call
+ * the user's auth() callback function with the appropriate
+ * password from the shared memory area, passing it back the
+ * private data pointer.
+ */
+int shared_auth(int type, int level,
+		int (*auth)(char *pw, void *priv), void *priv);
 
-extern int cfg_init(void);
-
-static __inline__ void cfg_lock(void)
-{
-	mm_lock(cfg);
-}
-
-static __inline__ void cfg_unlock(void) {
-	mm_unlock(cfg);
-}
-
-extern int cfg_checkpass(int, int (*)(char *, void *), void *);
-extern int cfg_waitcr(void);
-extern int read_key(void);
-
-extern const char config_file[];
-extern const char config_tags_path[];
+/* Stores the requested password in the shared memory area */
+int shared_set_passwd(int type, int level, char *passwd);
 
 /* lookup interface arg0 and put tag into arg1; return 0 if
  * interface has a tag, 1 otherwise
  */
-extern int cfg_get_if_tag(char *, char *);
+int shared_get_if_tag(int if_index, char *tag);
 
 /* 1. if arg1 is not null, then assign tag arg1 to interface
  * arg0; if arg2 is not NULL and tag is already assigned to
@@ -73,5 +67,6 @@ extern int cfg_get_if_tag(char *, char *);
  * 2. if arg1 is null, delete tag for interface arg0. return 0 if
  * successfull, 1 if interface had no tag assigned.
  */
-extern int cfg_set_if_tag(char *, char *, char *);
+int shared_set_if_tag(int if_index, char *tag, int *other_if);
+
 #endif
