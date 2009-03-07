@@ -125,34 +125,36 @@ int main(int argc, char **argv) {
 
 	if(!strcmp(argv[1], "addtagged")) {
 		char buf[IFNAMSIZ];
+		int if_index, other_if;
 		if (argc < 4) {
 			usage();
 			return 0;
 		}
-		status = cfg_init();
+		status = shared_init();
 		assert(!status);
 
-		cfg_lock();
-		if (cfg_set_if_tag(argv[2], argv[3], buf)) {
-			cfg_unlock();
-			fprintf(stderr, "Tag %s already assigned to %s\n", argv[3], buf);
+		if_index = if_get_index(argv[2], sock);
+		assert(if_index);
+
+		if (shared_set_if_tag(if_index, argv[3], &other_if)) {
+			fprintf(stderr, "Tag %s already assigned to %s\n",
+					argv[3], if_get_name(other_if, sock, buf));
 			return 1;
 		}
 
 		user_arg.cmd = SWCFG_ADDIF;
-		user_arg.ifindex = if_get_index(argv[2], sock);
+		user_arg.ifindex = if_index;
 		status = ioctl(sock, SIOCSWCFG, &user_arg);
 		if (status) {
-			cfg_set_if_tag(argv[2], NULL, NULL);
-			cfg_unlock();
+			shared_set_if_tag(if_index, NULL, NULL);
 			perror("add failed");
 			return 1;
 		}
-		cfg_unlock();
 		return 0;
 	}
 
 	if(!strcmp(argv[1], "del")) {
+		int if_index;
 		int silent = 0;
 		if (argc < 3) {
 			usage();
@@ -167,15 +169,16 @@ int main(int argc, char **argv) {
 			silent = 1;
 		} while(0);
 
-		status = cfg_init();
+		status = shared_init();
 		assert(!status);
-		cfg_lock();
+
+		if_index = if_get_index(argv[2], sock);
+		assert(if_index);
 
 		user_arg.cmd = SWCFG_DELIF;
-		user_arg.ifindex = if_get_index(argv[2], sock);
+		user_arg.ifindex = if_index;
 		status = ioctl(sock, SIOCSWCFG, &user_arg);
 		if (status && !silent) {
-			cfg_unlock();
 			perror("del failed");
 			return 1;
 		}
@@ -187,8 +190,7 @@ int main(int argc, char **argv) {
 		 * but the interface tag must be deleted later, via userspace
 		 * brctl).
 		 */
-		cfg_set_if_tag(argv[2], NULL, NULL);
-		cfg_unlock();
+		shared_set_if_tag(if_index, NULL, NULL);
 		return 0;
 	}
 
