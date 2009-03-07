@@ -41,24 +41,16 @@
 
 #define CDP_MAX_RESPONSE_SIZE 4096
 
-#define CDP_CLIENT_TIMEOUT_S 3  /* client receive timeout in seconds */
+#define CDP_CLIENT_TIMEOUT 3  		/* client receive timeout in seconds */
 
 /* cdp query types */
 #define CDP_SHOW_QUERY 0x01			/* show cdp command */
-#define CDP_CONF_QUERY 0x02			/* configuration of cdp parameters */
-#define CDP_ADM_QUERY  0x03			/* administrative query */
+#define CDP_ADM_QUERY  0x02			/* administrative query */
 
 /* show cdp command types */
-#define CDP_SHOW_CFG       0x01	    /* get global configuration parameters */
-#define CDP_SHOW_NEIGHBORS 0x02     /* show cdp neighbors (with filtering options) */
-#define CDP_SHOW_STATS     0x03	    /* show cdp traffic */
-#define CDP_SHOW_INTF      0x04     /* show cdp registered interfaces */
-
-/* cdp global configuration field identifiers */
-#define CDP_CFG_VERSION  0x01
-#define CDP_CFG_HOLDTIME 0x02
-#define CDP_CFG_TIMER    0x03
-#define CDP_CFG_ENABLED  0x04
+#define CDP_SHOW_NEIGHBORS 0x01     /* show cdp neighbors (with filtering options) */
+#define CDP_SHOW_STATS     0x02	    /* show cdp traffic */
+#define CDP_SHOW_INTF      0x03     /* show cdp registered interfaces */
 
 /* cdp administrative query types */
 #define CDP_IF_ENABLE	0x01		/* Enable cdp on an interface */
@@ -76,14 +68,6 @@ struct cdp_show {
 };
 
 /**
- * cofiguration command query
- */
-struct cdp_conf {
-	unsigned char field_id;
-	unsigned char field_value;
-};
-
-/**
  * cdp adminsitrative query
  */
 struct cdp_adm {
@@ -97,9 +81,33 @@ struct cdp_request {
 	pid_t pid;        /* pid of the requesting process */
 	union {           /* request data */
 		struct cdp_show show;
-		struct cdp_conf conf;
 		struct cdp_adm  adm;
 	} query;
+};
+
+/* CDP global configuration settings default values */
+#define CDP_DFL_VERSION 0x02
+#define CDP_DFL_HOLDTIME 0xb4
+#define CDP_DFL_TIMER 0x3c
+
+/* CDP configuration parameters */
+struct cdp_configuration {
+	unsigned char	enabled;				/* enabled flag */
+	unsigned char 	version;				/* cdp version */
+	unsigned char 	holdtime;				/* cdp ttl (holdtime) in seconds */
+	unsigned char	timer;					/* rate at which packets are sent (in seconds) */
+	unsigned int	capabilities;			/* device capabilities */
+	char			software_version[255];	/* software version information */
+	char			platform[16];			/* platform information */
+	unsigned char	duplex;					/* duplex */
+};
+
+/* CDP traffic statistics */
+struct cdp_traffic_stats {
+	unsigned int	v1_in;
+	unsigned int	v2_in;
+	unsigned int	v1_out;
+	unsigned int	v2_out;
 };
 
 /* Information about a CDP neighbor */
@@ -122,22 +130,34 @@ struct cdp_neighbor_info {
 	unsigned short native_vlan;				/* Native VLAN */
 };
 
-/* Information needed by a cdp session */
+/* cdp client session */
 struct cdp_session {
-	int   enabled;                   /* flag indicating if cdp is enabled in this session */
 	mqd_t sq, rq;                    /* send and receive message queues */
 	char  sq_name[32], rq_name[32];  /* send and receive message queues names */
-	char  *cdp_response;             /* the receive buffer for cdp messages */
+	char  *response;             	 /* the receive buffer for cdp messages */
 	int   max_msg_len;               /* the maximum size of messages on the rx queue */
 };
 
-/* Initiates a cdp client session */
-int cdp_session_start(struct cdp_session *s);
+/* Starts a cdp client session */
+struct cdp_session *cdp_session_start(void);
 
 /* Ends a cdp client session */
 void cdp_session_end(struct cdp_session *s);
 
 /* Timed receive for a message from the client queue */
 int cdp_session_recv(struct cdp_session *s);
+
+#define CDP_SESSION_OPEN(__ctx, __session) do {\
+	if (!SWCLI_CTX(__ctx)->cdp) {\
+		__session = cdp_session_start();\
+		assert(__session);\
+	} else\
+		__session = SCLI_CTX(__ctx)->cdp;\
+} while (0)
+
+#define CDP_SESSION_CLOSE(__ctx, __session) do {\
+	if (__session != SCLI_CTX(__ctx)->cdp) \
+		cdp_session_end(__session);\
+} while (0)
 
 #endif

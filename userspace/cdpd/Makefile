@@ -16,7 +16,8 @@ all: $(TARGETS)
 include $(TOP_DIR)/scripts/Makefile.variables
 include $(TOP_DIR)/scripts/Makefile.rules
 
-LIB_OBJS = $(TOP_DIR)/lib/util.o $(TOP_DIR)/lib/if_generic.o $(TOP_DIR)/lib/netlink.o
+LIB_OBJS = $(TOP_DIR)/lib/util.o $(TOP_DIR)/lib/shared.o $(TOP_DIR)/lib/mm.o \
+		   $(TOP_DIR)/lib/if_generic.o $(TOP_DIR)/lib/netlink.o
 
 $(TOP_DIR)/include/swsock.h:
 	$(Q)$(MAKE) -C $(TOP_DIR)/include

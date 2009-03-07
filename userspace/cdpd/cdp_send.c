@@ -19,13 +19,8 @@
 
 #include "cdpd.h"
 
-/**
- *  Functions for building and sending cdp frames
- */
- 
-/* data buffer for cdp frame building */
 static unsigned char data[MAX_CDP_FRAME_SIZE];
-extern struct cdp_configuration ccfg;
+static struct cdp_configuration cdp;
 extern struct list_head registered_interfaces;
 extern struct cdp_traffic_stats cdp_stats;
 
@@ -73,9 +68,9 @@ static int cdp_frame_init(unsigned char *buffer, int len, int if_index) {
 	/* Now the CDP packet header */
 	phdr = (struct cdp_hdr *) (buffer + sizeof(struct cdp_frame_header));
 	/* CDP version */
-	phdr->version = ccfg.version;
+	phdr->version = cdp.version;
 	/* CDP holdtime */
-	phdr->time_to_live = ccfg.holdtime;
+	phdr->time_to_live = cdp.holdtime;
 	/* Checksum will be calculated later */
 	phdr->checksum = 0x00;
 
@@ -168,7 +163,7 @@ static int cdp_add_capabilities(unsigned char *buffer) {
 	field->type = htons(TYPE_CAPABILITIES);
 	field->length = htons(sizeof(struct cdp_field) + sizeof(unsigned int));
 	buffer += sizeof(struct cdp_field);
-	*((unsigned int *) buffer) = htonl(ccfg.capabilities);
+	*((unsigned int *) buffer) = htonl(cdp.capabilities);
 	
 	return sizeof(struct cdp_field) + sizeof(unsigned int);
 }
@@ -181,11 +176,11 @@ static int cdp_add_software_version(unsigned char *buffer) {
 
 	field = (struct cdp_field *)buffer;
 	field->type = htons(TYPE_IOS_VERSION);
-	field->length = htons(sizeof(struct cdp_field) + strlen(ccfg.software_version));
+	field->length = htons(sizeof(struct cdp_field) + strlen(cdp.software_version));
 	buffer += sizeof(struct cdp_field);
-	memcpy(buffer, ccfg.software_version, strlen(ccfg.software_version));
+	memcpy(buffer, cdp.software_version, strlen(cdp.software_version));
 
-	return sizeof(struct cdp_field) + strlen(ccfg.software_version);
+	return sizeof(struct cdp_field) + strlen(cdp.software_version);
 }
 
 /**
@@ -196,11 +191,11 @@ static int cdp_add_platform(unsigned char *buffer) {
 
 	field = (struct cdp_field *) buffer;
 	field->type = htons(TYPE_PLATFORM);
-	field->length = htons(sizeof(struct cdp_field) + strlen(ccfg.platform));
+	field->length = htons(sizeof(struct cdp_field) + strlen(cdp.platform));
 	buffer += sizeof(struct cdp_field);
-	memcpy(buffer, ccfg.platform, strlen(ccfg.platform));
+	memcpy(buffer, cdp.platform, strlen(cdp.platform));
 
-	return sizeof(struct cdp_field) + strlen(ccfg.platform);
+	return sizeof(struct cdp_field) + strlen(cdp.platform);
 }
 
 /**
@@ -213,7 +208,7 @@ static int cdp_add_duplex(unsigned char *buffer) {
 	field->type = htons(TYPE_DUPLEX);
 	field->length = htons(sizeof(struct cdp_field) + 1);
 	buffer += sizeof(struct cdp_field);
-	buffer[0] = ccfg.duplex;
+	buffer[0] = cdp.duplex;
 
 	return sizeof(struct cdp_field) + 1;
 }
@@ -237,10 +232,12 @@ void *cdp_send_loop(void *arg) {
 	struct cdp_interface *entry, *tmp;
 	int offset, r;
 
+	shared_get_cdp(&cdp);
 	while (1) {
-		sleep(ccfg.timer);
+		sleep(cdp.timer);
 		sys_dbg("cdp_send_loop()\n");
-		if (!ccfg.enabled) {
+		shared_get_cdp(&cdp);
+		if (!cdp.enabled) {
 			sys_dbg("cdp is disabled\n");
 			continue;
 		}
@@ -263,7 +260,7 @@ void *cdp_send_loop(void *arg) {
 				sys_dbg("Wrote only %d bytes (error was: %s).\n", r, strerror(errno));
 			sys_dbg("Sent CDP packet of %d bytes on interface %d.\n", r, entry->if_index);
 			/* update cdp out stats */
-			if (ccfg.version == 1)
+			if (cdp.version == 1)
 				cdp_stats.v1_out++;
 			else
 				cdp_stats.v2_out++;

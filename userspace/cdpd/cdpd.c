@@ -23,8 +23,6 @@
 LIST_HEAD(registered_interfaces);
 LIST_HEAD(deregistered_interfaces);
 
-/* cdp configuration parameters (version, ttl, timer) */
-struct cdp_configuration ccfg;
 /* sender, listener and cleaner threads */
 pthread_t sender_thread, listener_thread, cleaner_thread, shutdown_thread;
 /* cdp traffic statistics */
@@ -220,23 +218,27 @@ static struct cdp_neighbor *find_by_device_id(struct cdp_interface *entry, char 
 
 /* Default CDP configuration */
 static void do_initial_cfg(void) {
+	struct cdp_configuration cdp;
 	struct utsname u_name;
 
-	ccfg.enabled = 1;						/* CDP is enabled by default */
-	ccfg.version = CFG_DFL_VERSION;			/* CDPv2*/
-	ccfg.holdtime = CFG_DFL_HOLDTIME;		/* 180 seconds */
-	ccfg.timer = CFG_DFL_TIMER;				/* 60 seconds */
-	ccfg.capabilities = CAP_L2SW;	/* advertise as a layer 2 (non-STP) switch */
-	ccfg.duplex = 0x01;
+	cdp.enabled = 1;					/* CDP is enabled by default */
+	cdp.version = CDP_DFL_VERSION;		/* CDPv2*/
+	cdp.holdtime = CDP_DFL_HOLDTIME;	/* 180 seconds */
+	cdp.timer = CDP_DFL_TIMER;			/* 60 seconds */
+	cdp.capabilities = CAP_L2SW;		/* advertise as a layer 2 (non-STP) switch */
+	cdp.duplex = 0x01;
 	/* get uname information and set software version and platform */
 	uname(&u_name);
-	memset(ccfg.software_version, 0, sizeof(ccfg.software_version));
-	snprintf(ccfg.software_version, sizeof(ccfg.software_version), 
+	memset(cdp.software_version, 0, sizeof(cdp.software_version));
+	snprintf(cdp.software_version, sizeof(cdp.software_version),
 			"Linux %s, %s.", u_name.release, u_name.version);
-	ccfg.software_version[sizeof(ccfg.software_version)-1] = '\0';
-	memset(ccfg.platform, 0, sizeof(ccfg.platform));
-	snprintf(ccfg.platform, sizeof(ccfg.platform), "%s", u_name.machine);
-	ccfg.platform[sizeof(ccfg.platform)-1] = '\0';
+	cdp.software_version[sizeof(cdp.software_version)-1] = '\0';
+	memset(cdp.platform, 0, sizeof(cdp.platform));
+	snprintf(cdp.platform, sizeof(cdp.platform), "%s", u_name.machine);
+	cdp.platform[sizeof(cdp.platform)-1] = '\0';
+
+	/* store initial config into the shared memory */
+	shared_set_cdp(&cdp);
 
 	/* initialize statistics */
 	cdp_stats.v1_in = cdp_stats.v2_in = cdp_stats.v1_out = cdp_stats.v2_out = 0;
@@ -473,6 +475,7 @@ static void print_cdp_neighbor(struct cdp_neighbor *neighbor) {
 static void cdp_recv_loop(void) {
 	struct cdp_interface *entry, *tmp;
 	struct cdp_neighbor *neighbor;
+	struct cdp_configuration cdp;
 	int fd, maxfd, status, len;
 	fd_set rdfs;
 
@@ -502,8 +505,10 @@ static void cdp_recv_loop(void) {
 				perror("recv");
 				continue;
 			}
-			if (!ccfg.enabled) {
+			shared_get_cdp(&cdp);
+			if (!cdp.enabled) {
 				sys_dbg("[cdp receiver]: cdp is disabled\n");
+				continue;
 			}
 			neighbor = (struct cdp_neighbor *) malloc(sizeof(struct cdp_neighbor));
 			neighbor->interface = entry;

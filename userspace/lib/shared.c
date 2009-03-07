@@ -17,6 +17,7 @@
  *    MA  02111-1307  USA
  */
 
+#include <assert.h>
 #include <errno.h>
 #include <string.h>
 
@@ -35,6 +36,8 @@ struct shared {
 	struct {
 		char passwd[SW_PASS_LEN + 1];
 	} vty[SW_MAX_VTY + 1];
+	/* CDP configuration */
+	struct cdp_configuration cdp;
 	/* List of interface tags */
 	struct mm_list_head if_tags;
 };
@@ -235,4 +238,20 @@ int shared_set_if_tag(int if_index, char *tag, int *other_if) {
 
 	mm_unlock(mm);
 	return 0;
+}
+
+void shared_set_cdp(struct cdp_configuration *cdp)
+{
+	assert(cdp);
+	mm_lock(mm);
+	memcpy(&SHM->cdp, cdp, sizeof(struct cdp_configuration));
+	mm_unlock(mm);
+}
+
+void shared_get_cdp(struct cdp_configuration *cdp)
+{
+	assert(cdp);
+	mm_lock(mm);
+	memcpy(cdp, &SHM->cdp, sizeof(struct cdp_configuration));
+	mm_unlock(mm);
 }

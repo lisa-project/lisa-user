@@ -20,6 +20,8 @@
 #ifndef _SHARED_H
 #define _SHARED_H
 
+#include "cdp_client.h"
+
 #define SW_CONFIG_FILE	"/etc/lisa/config.text";
 #define SW_TAGS_FILE	"/etc/lisa/tags";
 
@@ -68,5 +70,11 @@ int shared_get_if_tag(int if_index, char *tag);
  * successfull, 1 if interface had no tag assigned.
  */
 int shared_set_if_tag(int if_index, char *tag, int *other_if);
+
+/* Sets the cdp global configuration */
+void shared_set_cdp(struct cdp_configuration *cdp);
+
+/* Gets the cdp global configuration */
+void shared_get_cdp(struct cdp_configuration *cdp);
 
 #endif

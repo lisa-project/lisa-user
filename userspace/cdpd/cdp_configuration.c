@@ -22,7 +22,6 @@
 /**
  * Configuration management via a POSIX message queue.
  */
-extern struct cdp_configuration ccfg;
 extern struct list_head registered_interfaces;
 extern struct cdp_traffic_stats cdp_stats;
 
@@ -108,9 +107,6 @@ static void cdp_ipc_show(struct cdp_show *sq, char *cdpr) {
 	sys_dbg("[ipc_listener]: ipc show query.\n");
 	sys_dbg("[ipc listener]: show type: %d\n", sq->type);
 	switch (sq->type) {
-	case CDP_SHOW_CFG:
-		memcpy(cdpr, &ccfg, sizeof(ccfg));
-		break;
 	case CDP_SHOW_STATS:
 		memcpy(cdpr, &cdp_stats, sizeof(cdp_stats));
 		break;
@@ -123,35 +119,6 @@ static void cdp_ipc_show(struct cdp_show *sq, char *cdpr) {
 		*((int *)cdpr) = cdp_ipc_get_neighbors(cdpr, sq->if_index,
 				strlen(sq->device_id)? sq->device_id :  NULL);
 		break;
-	}
-}
-
-static void cdp_ipc_conf(struct cdp_conf *cq, char *cdpr) {
-	memset(cdpr, 0, CDP_MAX_RESPONSE_SIZE);
-	sys_dbg("[ipc_listener]: ipc conf query.\n");
-	switch (cq->field_id) {
-	case CDP_CFG_VERSION:
-		sys_dbg("[ipc_listener]: cdp advertise-v2 : %d\n", cq->field_value);
-		if (cq->field_value >= 1 && cq->field_value <=2)
-			ccfg.version = cq->field_value;
-		break;
-	case CDP_CFG_HOLDTIME:
-		sys_dbg("[ipc listener]: cdp holdtime %d\n", cq->field_value);
-		if (cq->field_value >= 10)
-			ccfg.holdtime = cq->field_value;
-		break;
-	case CDP_CFG_TIMER:
-		sys_dbg("[ipc listener]: cdp timer %d\n", cq->field_value);
-		if (cq->field_value >= 5 && cq->field_value <= 254)
-			ccfg.timer = cq->field_value;
-		break;
-	case CDP_CFG_ENABLED:
-		sys_dbg("[ipc listener]: cdp enabled %d\n", cq->field_value);
-		if (cq->field_value <= 1)
-			ccfg.enabled = cq->field_value;
-		break;
-	default:
-		sys_dbg("[ipc listener]: invalid configuration field id: %d\n", cq->field_id);
 	}
 }
 
@@ -246,9 +213,6 @@ void *cdp_ipc_listen(void *arg) {
 		switch (m->type) {
 		case CDP_SHOW_QUERY:
 			cdp_ipc_show(&m->query.show, r);
-			break;
-		case CDP_CONF_QUERY:
-			cdp_ipc_conf(&m->query.conf, r);
 			break;
 		case CDP_ADM_QUERY:
 			cdp_ipc_adm(&m->query.adm, r);

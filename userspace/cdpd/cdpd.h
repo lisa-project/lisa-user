@@ -50,6 +50,7 @@
 #include "util.h"
 #include "list.h"
 #include "swsock.h"
+#include "shared.h"
 #include "if_generic.h"
 
 /* the pid file of the cdp daemon */
@@ -242,32 +243,6 @@ struct cdp_interface {
 	sem_t n_sem;							/* semaphore used for locking on the neighbor list */
 	struct list_head neighbors;				/* list of cdpd neighbors (on this interface) */
 	struct list_head lh;					/* list of cdp interfaces */
-};
-
-/**
- * CDP global configuration settings (default values)
- */
-#define CFG_DFL_VERSION 0x02
-#define CFG_DFL_HOLDTIME 0xb4
-#define CFG_DFL_TIMER 0x3c
-
-/* CDP configuration parameters */
-struct cdp_configuration {
-	unsigned char	enabled;				/* enabled flag */
-	unsigned char 	version;				/* cdp version */
-	unsigned char 	holdtime;				/* cdp ttl (holdtime) in seconds */
-	unsigned char	timer;					/* rate at which packets are sent (in seconds) */
-	unsigned int	capabilities;			/* device capabilities */
-	char			software_version[255];	/* software version information */
-	char			platform[16];			/* platform information */
-	unsigned char	duplex;					/* duplex */
-};
-
-struct cdp_traffic_stats {
-	unsigned int	v1_in;
-	unsigned int	v2_in;
-	unsigned int	v1_out;
-	unsigned int	v2_out;
 };
 
 /* CDP neighbor heap (used for neighbor aging mechanism) */
