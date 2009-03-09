@@ -56,12 +56,6 @@
 /* the pid file of the cdp daemon */
 #define CDPD_PID_FILE "/var/run/cdpd.pid"
 
-/* integer to alphanumeric mapping */
-typedef struct {
-	const u_int16_t value;
-	const char *description;
-} description_table;
-
 /**
  * CDP Frame format:
  *
@@ -107,40 +101,33 @@ typedef struct {
 #define TYPE_LOCATION			0x0017
 
 /* description table for field types */
-static const description_table field_types[] = {
-	{ TYPE_DEVICE_ID,		"Device ID" },
-	{ TYPE_ADDRESS,			"Addresses" },
-	{ TYPE_PORT_ID,			"Port ID" },
-	{ TYPE_CAPABILITIES,	"Capabilities" },
-	{ TYPE_IOS_VERSION,		"Software version" },
-	{ TYPE_PLATFORM,		"Platform" },
-	{ TYPE_IP_PREFIX,		"IP Prefix/Gateway" },
-	{ TYPE_PROTOCOL_HELLO,	"Protocol Hello" },
-	{ TYPE_VTP_MGMT_DOMAIN, "VTP Management Domain" },
-	{ TYPE_NATIVE_VLAN,		"Native VLAN" },
-	{ TYPE_DUPLEX,			"Duplex" },
-	{ TYPE_VOIP_VLAN_REPLY, "VoIP VLAN Reply" },
-	{ TYPE_VOIP_VLAN_QUERY,	"VoIP VLAN Query" },
-	{ TYPE_MTU,				"MTU" },
-	{ TYPE_TRUST_BITMAP,	"Trust Bitmap" },
-	{ TYPE_UNTRUSTED_COS,	"Untrusted Port CoS" },
-	{ TYPE_SYSTEM_NAME,		"System Name" },
-	{ TYPE_SYSTEM_OID,		"System Object ID" },
-	{ TYPE_MGMT_ADDR, 		"Management Address" },
-	{ TYPE_LOCATION,		"Location" },
-	{ 0,					NULL },
-};
+#define FIELD_TYPES {\
+	{ TYPE_DEVICE_ID,		"Device ID" },\
+	{ TYPE_ADDRESS,			"Addresses" },\
+	{ TYPE_PORT_ID,			"Port ID" },\
+	{ TYPE_CAPABILITIES,	"Capabilities" },\
+	{ TYPE_IOS_VERSION,		"Software version" },\
+	{ TYPE_PLATFORM,		"Platform" },\
+	{ TYPE_IP_PREFIX,		"IP Prefix/Gateway" },\
+	{ TYPE_PROTOCOL_HELLO,	"Protocol Hello" },\
+	{ TYPE_VTP_MGMT_DOMAIN, "VTP Management Domain" },\
+	{ TYPE_NATIVE_VLAN,		"Native VLAN" },\
+	{ TYPE_DUPLEX,			"Duplex" },\
+	{ TYPE_VOIP_VLAN_REPLY, "VoIP VLAN Reply" },\
+	{ TYPE_VOIP_VLAN_QUERY,	"VoIP VLAN Query" },\
+	{ TYPE_MTU,				"MTU" },\
+	{ TYPE_TRUST_BITMAP,	"Trust Bitmap" },\
+	{ TYPE_UNTRUSTED_COS,	"Untrusted Port CoS" },\
+	{ TYPE_SYSTEM_NAME,		"System Name" },\
+	{ TYPE_SYSTEM_OID,		"System Object ID" },\
+	{ TYPE_MGMT_ADDR, 		"Management Address" },\
+	{ TYPE_LOCATION,		"Location" },\
+	{ 0,					NULL },\
+}
 
 /* possible values for the protocol type in address fields */
 #define PROTO_TYPE_NLPID		0x01
 #define PROTO_TYPE_802_2		0x02
-
-/* description table for protocol types */
-static const description_table proto_types[] = {
-	{ PROTO_TYPE_NLPID,		"NLPID" },
-	{ PROTO_TYPE_802_2,		"802.2" },
-	{ 0,					NULL },
-};
 
 /* possible values for the protocol value in address fields */
 #define PROTO_ISO_CLNS 			0x81  	/* protocol type 3D 1 */
@@ -153,52 +140,6 @@ static const description_table proto_types[] = {
 #define PROTO_BANYAN_VINES		0x80C4 	/* protocol type 3D 2 */
 #define PROTO_XNS				0x0600 	/* protocol type 3D 2 */
 #define PROTO_APOLLO_DOMAIN		0x8019 	/* protocol type 3D 2 */
-
-/* description table for protocol values */
-static const description_table proto_values[] = {
-	{ PROTO_ISO_CLNS,			"ISO CLNS" },
-	{ PROTO_IP,					"IPv4" },
-	{ PROTO_IPV6,				"IPv6" },
-	{ PROTO_DECNET_PHASE_IV,	"DECNET Phase IV" },
-	{ PROTO_APPLETALK,			"AppleTalk" },
-	{ PROTO_NOVELL_IPX,			"Novell IPX" },
-	{ PROTO_BANYAN_VINES,		"Banyan Vines" },
-	{ PROTO_XNS,				"XNS" },
-	{ PROTO_APOLLO_DOMAIN,		"Apollo Domain" },
-	{ 0,						NULL },
-};
-
-/* constants for device capabilities (capability masks) */
-#define CAP_L3R				0x01	/* device is a layer 3 router */
-#define CAP_L2TB			0x02	/* device is a layer 2 transparent bridge */
-#define CAP_L2SRB			0x04	/* device is a layer 2 source-route bridge */
-#define CAP_L2SW			0x08	/* device is a layer 2 switch (non-spanning tree) */
-#define CAP_L3HOST			0x10	/* device is a layer 3 (non routing) host */
-#define CAP_IGMP			0x20	/* device is IGMP capable */
-#define CAP_L1				0x40	/* device is a layer 1 repeater */
-
-/* description table for device capabilities */
-static const description_table device_capabilities_brief[] = {
-	{ CAP_L3R,				"R" },
-	{ CAP_L2TB,				"T" },
-	{ CAP_L2SRB,			"B" },
-	{ CAP_L2SW,				"S" },
-	{ CAP_L3HOST,			"H" },
-	{ CAP_IGMP,				"I" },
-	{ CAP_L1,				"r" },
-	{ 0,					NULL },
-};
-
-static const description_table device_capabilities[] = {
-	{ CAP_L3R,				"Router" },
-	{ CAP_L2TB,				"Trans-Bridge" },
-	{ CAP_L2SRB,			"Source-Route-Bridge" },
-	{ CAP_L2SW,				"Switch" },
-	{ CAP_L3HOST,			"Host" },
-	{ CAP_IGMP,				"IGMP" },
-	{ CAP_L1,				"Repeater" },
-	{ 0,					NULL },
-};
 
 /* CDP Frame Header */
 struct cdp_frame_header {

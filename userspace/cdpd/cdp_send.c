@@ -116,9 +116,9 @@ static int cdp_add_addr(unsigned char *buffer) {
 	buffer += sizeof(struct cdp_field);
 	*((unsigned int *)buffer) = htonl(1);
 	buffer += sizeof(unsigned int);
-	buffer[0] = 0x01;	   /* Protocol Type = NLPID */
-	buffer[1] =	0x01; 	   /* Protocol Length */
-	buffer[2] = PROTO_IP;  /* Protocol = IP */
+	buffer[0] = PROTO_TYPE_NLPID; /* Protocol Type = NLPID */
+	buffer[1] = 0x01;             /* Protocol Length */
+	buffer[2] = PROTO_IP;         /* Protocol = IP */
 	buffer += 3;
 	/* Address Length */
 	*((unsigned short *)buffer) = htons(sizeof(addr));

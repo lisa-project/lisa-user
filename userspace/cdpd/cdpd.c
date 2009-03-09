@@ -42,20 +42,18 @@ extern void sift_up(neighbor_heap_t *, int);
 extern void sift_down(neighbor_heap_t *, int, int);
 extern void *cdp_clean_loop(void *);			/* Entry point for the cdp neighbor cleaner thread */
 
+static const char *cdp_field_name(unsigned short type) {
+	struct {
+		unsigned short val;
+		const char *desc;
+	} fields[] = FIELD_TYPES;
+	int i;
 
-/* get the description string from a description table */
-#ifdef DEBUG
-static const char *get_description(unsigned short val, const description_table *table) {
-	unsigned short i = 0;
-
-	while (table[i].description) {
-		if (table[i].value == val)
+	for (i=0; fields[i].desc; i++)
+		if (fields[i].val == type)
 			break;
-		i++;
-	}
-	return table[i].description;
+	return fields[i].desc;
 }
-#endif
 
 /**
  * setup a switch socket.
@@ -244,10 +242,6 @@ static void do_initial_cfg(void) {
 	cdp_stats.v1_in = cdp_stats.v2_in = cdp_stats.v1_out = cdp_stats.v2_out = 0;
 }
 
-static inline void print_ipv4_addr(unsigned int addr) {
-	sys_dbg("%d.%d.%d.%d", addr >> 24, (addr >> 16) & 0xFF, (addr >> 8) & 0xFF, addr & 0xFF);
-}
-
 /**
  * Address Field Structure:
  * 
@@ -297,12 +291,15 @@ static void decode_address(char *field, unsigned int len, struct cdp_neighbor_in
 }
 
 static void print_capabilities(unsigned char cap) {
-	unsigned short i = 0;
+	struct {
+		unsigned char val;
+		const char *desc;
+	} capabilities[] = DEVICE_CAPABILITIES;
+	int i;
 
-	while (device_capabilities[i].description) {
-		if (cap & device_capabilities[i].value) 
-			sys_dbg("\t\t[%s]\n", device_capabilities[i].description);
-		i++;
+	for (i=0; capabilities[i].desc; i++) {
+		if (cap & capabilities[i].val)
+			sys_dbg("\t\t[%s]\n", capabilities[i].desc);
 	}
 }
 
@@ -385,7 +382,7 @@ static void decode_field(struct cdp_neighbor **ne, int type, int len, char *fiel
 		neighbor->info.native_vlan = ntohs(*((unsigned short *) field));
 		break;
 	default:
-		sys_dbg("\t\twe don't decode [%s].\n", get_description(type, field_types));
+		sys_dbg("\t\twe don't decode [%s].\n", cdp_field_name(type));
 	}
 }
 
@@ -441,20 +438,20 @@ static void print_cdp_neighbor(struct cdp_neighbor *neighbor) {
 
 	sys_dbg("CDP neighbor [%p] on %s\n", n, name);
 	sys_dbg("--------------------------------------\n");
-	sys_dbg("\t[%s]: '%s'\n", get_description(TYPE_DEVICE_ID, field_types), n->device_id);
-	sys_dbg("\t[%s] (%d):\n", get_description(TYPE_ADDRESS, field_types), n->num_addr);
+	sys_dbg("\t[%s]: '%s'\n", cdp_field_name(TYPE_DEVICE_ID), n->device_id);
+	sys_dbg("\t[%s] (%d):\n", cdp_field_name(TYPE_ADDRESS), n->num_addr);
 	for (i=0; i<n->num_addr; i++) {
 		sys_dbg("\t\t\t");
-		print_ipv4_addr(n->addr[i]);
+		sys_dbg("%u.%u.%u.%u", NIP_QUAD(n->addr[i]));
 		sys_dbg("\n");
 	}
-	sys_dbg("\t[%s]: '%s'\n", get_description(TYPE_PORT_ID, field_types), n->port_id);
-	sys_dbg("\t[%s]:\n", get_description(TYPE_CAPABILITIES, field_types));
+	sys_dbg("\t[%s]: '%s'\n", cdp_field_name(TYPE_PORT_ID), n->port_id);
+	sys_dbg("\t[%s]:\n", cdp_field_name(TYPE_CAPABILITIES));
 	print_capabilities(n->cap);
-	sys_dbg("\t[%s]: '%s'\n", get_description(TYPE_IOS_VERSION, field_types), n->software_version);
-	sys_dbg("\t[%s]: '%s'\n", get_description(TYPE_PLATFORM, field_types), n->platform);
-	sys_dbg("\t[%s]: '%s'\n", get_description(TYPE_VTP_MGMT_DOMAIN, field_types), n->vtp_mgmt_domain);
-	sys_dbg("\t[%s]:\n", get_description(TYPE_PROTOCOL_HELLO, field_types));
+	sys_dbg("\t[%s]: '%s'\n", cdp_field_name(TYPE_IOS_VERSION), n->software_version);
+	sys_dbg("\t[%s]: '%s'\n", cdp_field_name(TYPE_PLATFORM), n->platform);
+	sys_dbg("\t[%s]: '%s'\n", cdp_field_name(TYPE_VTP_MGMT_DOMAIN), n->vtp_mgmt_domain);
+	sys_dbg("\t[%s]:\n", cdp_field_name(TYPE_PROTOCOL_HELLO));
 	sys_dbg("\t\tOUI: 0x%02X%02X%02X\n", n->oui >> 16, (n->oui >> 8) & 0xFF,
 			n->oui &0xFF);
 	sys_dbg("\t\tProtocol ID: 0x%02X%02X\n", n->protocol_id >> 8,
@@ -465,8 +462,8 @@ static void print_cdp_neighbor(struct cdp_neighbor *neighbor) {
 		sys_dbg("%02X", n->payload[i]);
 	}
 	sys_dbg("\n");
-	sys_dbg("\t[%s]: %d\n", get_description(TYPE_DUPLEX, field_types), n->duplex);
-	sys_dbg("\t[%s]: %d\n", get_description(TYPE_NATIVE_VLAN, field_types), n->native_vlan);
+	sys_dbg("\t[%s]: %d\n", cdp_field_name(TYPE_DUPLEX), n->duplex);
+	sys_dbg("\t[%s]: %d\n", cdp_field_name(TYPE_NATIVE_VLAN), n->native_vlan);
 	sys_dbg("\n");
 
 	free(name);
@@ -515,7 +512,9 @@ static void cdp_recv_loop(void) {
 			sem_wait(&entry->n_sem);
 			dissect_packet(packet, &neighbor);
 			sem_post(&entry->n_sem);
+#ifdef DEBUG
 			print_cdp_neighbor(neighbor);
+#endif
 		}
 	}
 }

@@ -102,47 +102,6 @@ static int cdp_ipc_get_neighbors(char *cdpr, int if_index, char *device_id) {
 	return count;
 }
 
-static void cdp_ipc_show(struct cdp_show *sq, char *cdpr) {
-	memset(cdpr, 0, CDP_MAX_RESPONSE_SIZE);
-	sys_dbg("[ipc_listener]: ipc show query.\n");
-	sys_dbg("[ipc listener]: show type: %d\n", sq->type);
-	switch (sq->type) {
-	case CDP_SHOW_STATS:
-		memcpy(cdpr, &cdp_stats, sizeof(cdp_stats));
-		break;
-	case CDP_SHOW_INTF:
-		*((int *) cdpr) = cdp_ipc_get_interfaces(cdpr, sq->if_index);
-		break;
-	case CDP_SHOW_NEIGHBORS:
-		sys_dbg("[ipc listener]: interface: %d, device_id: %s, %d\n",
-				sq->if_index, sq->device_id, strlen(sq->device_id));
-		*((int *)cdpr) = cdp_ipc_get_neighbors(cdpr, sq->if_index,
-				strlen(sq->device_id)? sq->device_id :  NULL);
-		break;
-	}
-}
-
-static void cdp_ipc_adm(struct cdp_adm *aq, char *cdpr) {
-	memset(cdpr, 0, CDP_MAX_RESPONSE_SIZE);
-	sys_dbg("[ipc listener]: ipc adm query.\n");
-	switch (aq->type) {
-	case CDP_IF_ENABLE:
-		sys_dbg("[ipc listener]: Enable cdp on interface %d\n", aq->if_index);
-		cdpd_register_interface(aq->if_index);
-		break;
-	case CDP_IF_DISABLE:
-		sys_dbg("[ipc listener]: Disable cdp on interface %d\n", aq->if_index);
-		cdpd_unregister_interface(aq->if_index);
-		break;
-	case CDP_IF_STATUS:
-		sys_dbg("[ipc listener]: Get cdp status on interface %d\n", aq->if_index);
-		*((int *) cdpr) = cdpd_get_interface_status(aq->if_index);
-		break;
-	default:
-		sys_dbg("[ipc listener]: Unknown administrative command type %d.\n", aq->type);
-	}
-}
-
 static void cdp_ipc_send_response(struct cdp_request *m, char *r) {
 	char qname[32];
 	mqd_t sq;
@@ -210,13 +169,37 @@ void *cdp_ipc_listen(void *arg) {
 		sys_dbg("[ipc listener]: received message of type: %d\n", m->type);
 		sys_dbg("[ipc listener]: sender pid is: %d\n", m->pid);
 
+		memset(r, 0, CDP_MAX_RESPONSE_SIZE);
+
 		switch (m->type) {
-		case CDP_SHOW_QUERY:
-			cdp_ipc_show(&m->query.show, r);
+		case CDP_SHOW_STATS:
+			sys_dbg("%s: cdp show stats\n", __func__);
+			memcpy(r, &cdp_stats, sizeof(cdp_stats));
 			break;
-		case CDP_ADM_QUERY:
-			cdp_ipc_adm(&m->query.adm, r);
+		case CDP_SHOW_INTF:
+			sys_dbg("%s: cdp show intf, if_index=%d\n", __func__, m->if_index);
+			*((int *) r) = cdp_ipc_get_interfaces(r, m->if_index);
 			break;
+		case CDP_SHOW_NEIGHBORS:
+			sys_dbg("%s: cdp show neighbors, if_index=%d, device_id=%s\n",
+					__func__, m->if_index, strlen(m->device_id)? m->device_id : NULL);
+			*((int *)r) = cdp_ipc_get_neighbors(r, m->if_index,
+					strlen(m->device_id)? m->device_id :  NULL);
+			break;
+		case CDP_IF_ENABLE:
+			sys_dbg("%s: cdp if enable, if_index=%d\n", __func__, m->if_index);
+			cdpd_register_interface(m->if_index);
+			break;
+		case CDP_IF_DISABLE:
+			sys_dbg("%s: cdp if disable, if_index=%d\n", __func__, m->if_index);
+			cdpd_unregister_interface(m->if_index);
+			break;
+		case CDP_IF_STATUS:
+			sys_dbg("%s: cdp if status, if_index=%d\n", __func__, m->if_index);
+			*((int *) r) = cdpd_get_interface_status(m->if_index);
+			break;
+		default:
+			sys_dbg("%s: unknown message type %d\n", __func__, m->type);
 		}
 
 		/* send the response */

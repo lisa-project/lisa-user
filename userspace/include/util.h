@@ -28,6 +28,8 @@
 
 #define MAX_HOSTNAME 32
 
+#define NIP_QUAD(addr) (addr >> 24), ((addr >> 16) & 0xFF), ((addr >> 8) & 0xFF), (addr & 0xFF)
+
 void daemonize(void);
 void print_mac(FILE *out, void *buf, int size, char *(*get_if_name)(int, void*), void *priv);
 int buf_alloc_swcfgr(struct swcfgreq *swcfgr, int sock_fd);

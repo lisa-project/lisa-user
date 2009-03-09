@@ -32,63 +32,68 @@
 
 #include <linux/if.h>
 
-/* Message queues:
- *
- * By convention, the cdpd daemon listens for requests on queue lisa-cdp-0
+/* By convention, the cdpd daemon listens for requests on queue lisa-cdp-0
  * and returns responses to lisa-cdp-pid, where pid is the process id of
  * the requesting process. */
 #define CDP_QUEUE_NAME "/lisa-cdp-%d"
 
-#define CDP_MAX_RESPONSE_SIZE 4096
-
 #define CDP_CLIENT_TIMEOUT 3  		/* client receive timeout in seconds */
-
-/* cdp query types */
-#define CDP_SHOW_QUERY 0x01			/* show cdp command */
-#define CDP_ADM_QUERY  0x02			/* administrative query */
-
-/* show cdp command types */
-#define CDP_SHOW_NEIGHBORS 0x01     /* show cdp neighbors (with filtering options) */
-#define CDP_SHOW_STATS     0x02	    /* show cdp traffic */
-#define CDP_SHOW_INTF      0x03     /* show cdp registered interfaces */
-
-/* cdp administrative query types */
-#define CDP_IF_ENABLE	0x01		/* Enable cdp on an interface */
-#define CDP_IF_DISABLE	0x02		/* Disable cdp on an interface */
-#define CDP_IF_STATUS	0x03		/* Get cdp status on an interface */
-
-/**
- * show cdp ... command query
- */
-struct cdp_show {
-	unsigned char type;
-	/* filter by interface or device id for "show cdp neighbors" queries */
-	int if_index;		/* show cdp neighbors eth x */
-	char device_id[64];	/* show cdp entry */
-};
-
-/**
- * cdp adminsitrative query
- */
-struct cdp_adm {
-	unsigned char type;
-	int if_index;
-};
-
-/* cdp request structure */
-struct cdp_request {
-	int   type;       /* message type */
-	pid_t pid;        /* pid of the requesting process */
-	union {           /* request data */
-		struct cdp_show show;
-		struct cdp_adm  adm;
-	} query;
-};
+#define CDP_MAX_RESPONSE_SIZE 4096  /* maximum response message size */
 
 /* CDP global configuration settings default values */
 #define CDP_DFL_VERSION 0x02
 #define CDP_DFL_HOLDTIME 0xb4
 #define CDP_DFL_TIMER 0x3c
+
+/* Device capabilities */
+#define CAP_L3R				0x01	/* layer 3 router */
+#define CAP_L2TB			0x02	/* layer 2 transparent bridge */
+#define CAP_L2SRB			0x04	/* layer 2 source-route bridge */
+#define CAP_L2SW			0x08	/* layer 2 switch (non-spanning tree) */
+#define CAP_L3HOST			0x10	/* layer 3 (non routing) host */
+#define CAP_IGMP			0x20	/* IGMP capable */
+#define CAP_L1				0x40	/* layer 1 repeater */
+
+#define DEVICE_CAPABILITIES {\
+	{ CAP_L3R,				"Router" },\
+	{ CAP_L2TB,				"Trans-Bridge" },\
+	{ CAP_L2SRB,			"Source-Route-Bridge" },\
+	{ CAP_L2SW,				"Switch" },\
+	{ CAP_L3HOST,			"Host" },\
+	{ CAP_IGMP,				"IGMP" },\
+	{ CAP_L1,				"Repeater" },\
+	{ 0,					NULL },\
+}
+
+#define DEVICE_CAPABILITIES_BRIEF {\
+	{ CAP_L3R,              "R" },\
+	{ CAP_L2TB,             "T" },\
+	{ CAP_L2SRB,            "B" },\
+	{ CAP_L2SW,             "S" },\
+	{ CAP_L3HOST,           "H" },\
+	{ CAP_IGMP,             "I" },\
+	{ CAP_L1,               "r" },\
+	{ 0,                    NULL },\
+}
+
+
+/* cdp command types */
+enum {
+	CDP_SHOW_NEIGHBORS,
+	CDP_SHOW_STATS,
+	CDP_SHOW_INTF,
+	CDP_IF_ENABLE,
+	CDP_IF_DISABLE,
+	CDP_IF_STATUS
+};
+
+/* cdp request structure */
+struct cdp_request {
+	int type;			/* message type */
+	pid_t pid;			/* pid of the requesting process */
+	int if_index;		/* filter by interface index */
+	char device_id[64];	/* filter by cdp device id */
+};
 
 /* CDP configuration parameters */
 struct cdp_configuration {
@@ -144,8 +149,35 @@ struct cdp_session *cdp_session_start(void);
 /* Ends a cdp client session */
 void cdp_session_end(struct cdp_session *s);
 
+/* Sends a request message to the cdp daemon */
+#define cdp_session_send(session, req) \
+	({\
+	 int r = mq_send(session->sq, (const char *)&req, sizeof(req), 0); \
+	 r;\
+	 })
+
 /* Timed receive for a message from the client queue */
 int cdp_session_recv(struct cdp_session *s);
+
+/* Requests the list of cdp neighbors from the cdp daemon */
+int cdp_get_neighbors(struct cdp_session *session, int if_index, char *device_id);
+
+/* Returns the list of cdp enabled interfaces */
+int cdp_get_interfaces(struct cdp_session *session, int if_index);
+
+/* Detailed print of the neighbors from the cdp session response buffer */
+void cdp_print_neighbors_detail(struct cdp_session *session, FILE *out);
+
+/* Prints selective information about the neighbors in the cdp session
+ * response buffer
+ */
+void cdp_print_neighbors_filtered(struct cdp_session *session, FILE *out,
+		char proto, char version);
+
+/* Prints brief information about the neighbors in the cdp session
+ * response buffer
+ */
+void cdp_print_neighbors_brief(struct cdp_session *session, FILE *out);
 
 #define CDP_SESSION_OPEN(__ctx, __session) do {\
 	if (!SWCLI_CTX(__ctx)->cdp) {\
