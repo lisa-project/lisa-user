@@ -54,7 +54,11 @@
 #include "if_generic.h"
 
 /* the pid file of the cdp daemon */
+#ifdef DEBUG
+#define CDPD_PID_FILE "/tmp/cdpd.pid"
+#else
 #define CDPD_PID_FILE "/var/run/cdpd.pid"
+#endif
 
 /**
  * CDP Frame format:

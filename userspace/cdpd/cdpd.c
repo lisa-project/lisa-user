@@ -551,6 +551,9 @@ int main(int argc, char *argv[]) {
 	sigfillset(&signal_set);
 	pthread_sigmask(SIG_BLOCK, &signal_set, NULL);
 
+	/* initialize shared memory area */
+	shared_init();
+
 	/* initial cdp configuration */
 	do_initial_cfg();
 
@@ -573,7 +576,7 @@ int main(int argc, char *argv[]) {
 
 	/* create pid file */
 	if (!(pidfile = fopen(CDPD_PID_FILE, "w"))) {
-		sys_dbg("Failed to open pidfile. Why, oh why?\n");
+		sys_dbg("Failed to open pidfile %s\n", CDPD_PID_FILE);
 		exit(1);
 	}
 	fprintf(pidfile, "%d", getpid());

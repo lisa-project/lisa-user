@@ -165,6 +165,9 @@ int cdp_get_neighbors(struct cdp_session *session, int if_index, char *device_id
 /* Returns the list of cdp enabled interfaces */
 int cdp_get_interfaces(struct cdp_session *session, int if_index);
 
+/* Returns the cdp traffic statistics */
+int cdp_get_stats(struct cdp_session *session, struct cdp_traffic_stats *stats);
+
 /* Detailed print of the neighbors from the cdp session response buffer */
 void cdp_print_neighbors_detail(struct cdp_session *session, FILE *out);
 
@@ -184,11 +187,11 @@ void cdp_print_neighbors_brief(struct cdp_session *session, FILE *out);
 		__session = cdp_session_start();\
 		assert(__session);\
 	} else\
-		__session = SCLI_CTX(__ctx)->cdp;\
+		__session = SWCLI_CTX(__ctx)->cdp;\
 } while (0)
 
 #define CDP_SESSION_CLOSE(__ctx, __session) do {\
-	if (__session != SCLI_CTX(__ctx)->cdp) \
+	if (__session != SWCLI_CTX(__ctx)->cdp) \
 		cdp_session_end(__session);\
 } while (0)
 

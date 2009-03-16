@@ -124,6 +124,30 @@ int cdp_get_interfaces(struct cdp_session *session, int if_index)
 	return cdp_session_recv(session);
 }
 
+int cdp_get_stats(struct cdp_session *session, struct cdp_traffic_stats *stats)
+{
+	struct cdp_request m;
+	int err;
+
+	assert(session);
+	assert(stats);
+	memset(&m, 0, sizeof(m));
+	m.type = CDP_SHOW_STATS;
+	m.pid  = getpid();
+
+	if ((err = cdp_session_send(session, m)) < 0) {
+		perror("cdp_session_send");
+		return err;
+	}
+
+	if ((err = cdp_session_recv(session)) < 0)
+		return err;
+
+	stats = (struct cdp_traffic_stats *)session->response;
+
+	return err;
+}
+
 void cdp_print_neighbors_detail(struct cdp_session *session, FILE *out)
 {
 	char *ptr, buf[IFNAMSIZ];
