@@ -14,7 +14,6 @@ int cmd_sh_cdp(struct cli_context *ctx, int argc, char **argv, struct menu_node 
 				"\tSending a holdtime value of %d seconds\n"
 				"\tSending CDPv2 advertisements is %s\n",
 				cdp.timer, cdp.holdtime, cdp.version==2? "enabled" : "disabled");
-		fclose(out);
 	}
 
 	return 0;
@@ -69,7 +68,6 @@ int cmd_sh_cdp_holdtime(struct cli_context *ctx, int argc, char **argv, struct m
 	if (cdp.enabled) {
 		out =  ctx->out_open(ctx, 0);
 		fprintf(out, "%d secs\n", cdp.holdtime);
-		fclose(out);
 	}
 	return 0;
 }
@@ -171,6 +169,7 @@ int cmd_sh_cdp_timer(struct cli_context *ctx, int argc, char **argv, struct menu
 	if (cdp.enabled) {
 		out = ctx->out_open(ctx, 1);
 		fprintf(out, "%d secs\n", cdp.timer);
+		fclose(out);
 	}
 	return 0;
 }

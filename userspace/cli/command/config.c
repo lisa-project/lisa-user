@@ -1,16 +1,68 @@
 #include "swcli.h"
 
-int cmd_cdp_version(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
-int cmd_cdp_holdtime(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
-int cmd_cdp_timer(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
-int cmd_cdp_run(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
-int cmd_setenpw(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
-int cmd_setenpwlev(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
-
 extern struct menu_node menu_main;
 extern struct menu_node config_main;
 extern struct menu_node config_if_main;
 extern struct menu_node config_vlan_main;
+
+int cmd_cdp_v2(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
+{
+	struct cdp_configuration cdp;
+	int version = 2;
+
+	if (!strcmp(argv[0], "no"))
+		version = 1;
+
+	shared_get_cdp(&cdp);
+	if (cdp.enabled) {
+		cdp.version = version;
+		shared_set_cdp(&cdp);
+	}
+
+	return 0;
+}
+
+int cmd_cdp_holdtime(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
+{
+	struct cdp_configuration cdp;
+
+	shared_get_cdp(&cdp);
+	if (cdp.enabled) {
+		cdp.holdtime = atoi(argv[2]);
+		shared_set_cdp(&cdp);
+	}
+
+	return 0;
+}
+
+int cmd_cdp_timer(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) {
+	struct cdp_configuration cdp;
+
+	shared_get_cdp(&cdp);
+	if (cdp.enabled) {
+		cdp.timer = atoi(argv[2]);
+		shared_set_cdp(&cdp);
+	}
+
+	return 0;
+}
+
+int cmd_cdp_run(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
+{
+	struct cdp_configuration cdp;
+	int enabled = 1;
+
+	if (!strcmp(argv[0], "no"))
+		enabled = 0;
+	shared_get_cdp(&cdp);
+	cdp.enabled = enabled;
+	shared_set_cdp(&cdp);
+
+	return 0;
+}
+
+int cmd_setenpw(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
+int cmd_setenpwlev(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
 
 int cmd_end(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
@@ -286,8 +338,6 @@ int cmd_int_any(struct cli_context *ctx, int argc, char **argv, struct menu_node
 int cmd_linevty(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
 int cmd_set_aging(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
 int cmd_macstatic(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
-int cmd_no_cdp_v2(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
-int cmd_no_cdp_run(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
 int cmd_noensecret(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
 int cmd_noensecret_lev(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
 int cmd_nohostname(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }

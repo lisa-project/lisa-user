@@ -1,6 +1,6 @@
 #include "swcli.h"
 
-int cmd_cdp_version(struct cli_context *, int, char **, struct menu_node **);
+int cmd_cdp_v2(struct cli_context *, int, char **, struct menu_node **);
 int cmd_cdp_holdtime(struct cli_context *, int, char **, struct menu_node **);
 int cmd_cdp_timer(struct cli_context *, int, char **, struct menu_node **);
 int cmd_cdp_run(struct cli_context *, int, char **, struct menu_node **);
@@ -12,8 +12,6 @@ int cmd_int_any(struct cli_context *, int, char **, struct menu_node **);
 int cmd_linevty(struct cli_context *, int, char **, struct menu_node **);
 int cmd_set_aging(struct cli_context *, int, char **, struct menu_node **);
 int cmd_macstatic(struct cli_context *, int, char **, struct menu_node **);
-int cmd_no_cdp_v2(struct cli_context *, int, char **, struct menu_node **);
-int cmd_no_cdp_run(struct cli_context *, int, char **, struct menu_node **);
 int cmd_noensecret(struct cli_context *, int, char **, struct menu_node **);
 int cmd_noensecret_lev(struct cli_context *, int, char **, struct menu_node **);
 int cmd_nohostname(struct cli_context *, int, char **, struct menu_node **);
@@ -85,7 +83,7 @@ struct menu_node config_main = {
 					.help			= "CDP sends version-2 advertisements",
 					.mask			= CLI_MASK(PRIV(15)),
 					.tokenize	= NULL,
-					.run			= cmd_cdp_version,
+					.run			= cmd_cdp_v2,
 					.subtree	= NULL
 				},
 
@@ -94,7 +92,7 @@ struct menu_node config_main = {
 					.name			= "holdtime",
 					.help			= "Specify the holdtime (in sec) to be sent in packets",
 					.mask			= CLI_MASK(PRIV(15)),
-					.tokenize	= NULL,
+					.tokenize	= swcli_tokenize_number,
 					.run			= NULL,
 					.subtree	= (struct menu_node *[]) { /*{{{*/
 						/* #cdp holdtime <10-255> */
@@ -104,7 +102,8 @@ struct menu_node config_main = {
 							.mask			= CLI_MASK(PRIV(15)),
 							.tokenize	= NULL,
 							.run			= cmd_cdp_holdtime,
-							.subtree	= NULL
+							.subtree	= NULL,
+							.priv			= (int []) {VALID_LIMITS, 10, 255}
 						},
 
 						NULL
@@ -116,7 +115,7 @@ struct menu_node config_main = {
 					.name			= "timer",
 					.help			= "Specify the rate at which CDP packets are sent (in sec)",
 					.mask			= CLI_MASK(PRIV(15)),
-					.tokenize	= NULL,
+					.tokenize	= swcli_tokenize_number,
 					.run			= NULL,
 					.subtree	= (struct menu_node *[]) { /*{{{*/
 						/* #cdp timer <5-254> */
@@ -126,7 +125,8 @@ struct menu_node config_main = {
 							.mask			= CLI_MASK(PRIV(15)),
 							.tokenize	= NULL,
 							.run			= cmd_cdp_timer,
-							.subtree	= NULL
+							.subtree	= NULL,
+							.priv			= (int []) {VALID_LIMITS, 5, 254}
 						},
 
 						NULL
@@ -532,7 +532,7 @@ struct menu_node config_main = {
 							.help			= "CDP sends version-2 advertisements",
 							.mask			= CLI_MASK(PRIV(15)),
 							.tokenize	= NULL,
-							.run			= cmd_no_cdp_v2,
+							.run			= cmd_cdp_v2,
 							.subtree	= NULL
 						},
 
@@ -542,7 +542,7 @@ struct menu_node config_main = {
 							.help			= "",
 							.mask			= CLI_MASK(PRIV(15)),
 							.tokenize	= NULL,
-							.run			= cmd_no_cdp_run,
+							.run			= cmd_cdp_run,
 							.subtree	= NULL
 						},
 
