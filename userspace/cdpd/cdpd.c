@@ -219,12 +219,12 @@ static void do_initial_cfg(void) {
 	struct cdp_configuration cdp;
 	struct utsname u_name;
 
-	cdp.enabled = 1;					/* CDP is enabled by default */
-	cdp.version = CDP_DFL_VERSION;		/* CDPv2*/
-	cdp.holdtime = CDP_DFL_HOLDTIME;	/* 180 seconds */
-	cdp.timer = CDP_DFL_TIMER;			/* 60 seconds */
-	cdp.capabilities = CAP_L2SW;		/* advertise as a layer 2 (non-STP) switch */
+	shared_get_cdp(&cdp);
+
+	/* advertise as a layer 2 (non-STP) switch */
+	cdp.capabilities = CAP_L2SW;
 	cdp.duplex = 0x01;
+
 	/* get uname information and set software version and platform */
 	uname(&u_name);
 	memset(cdp.software_version, 0, sizeof(cdp.software_version));
@@ -482,7 +482,8 @@ static void cdp_recv_loop(void) {
 		FD_ZERO(&rdfs);
 		maxfd = -1;
 		list_for_each_entry_safe(entry, tmp, &registered_interfaces, lh) {
-			FD_SET((fd = entry->sw_sock_fd), &rdfs);
+			fd = entry->sw_sock_fd;
+			FD_SET(fd, &rdfs);
 			if (fd > maxfd)
 				maxfd = fd;
 		}
@@ -581,7 +582,6 @@ int main(int argc, char *argv[]) {
 	}
 	fprintf(pidfile, "%d", getpid());
 	fclose(pidfile);
-
 
 	/* cdp receiver loop */
 	cdp_recv_loop();

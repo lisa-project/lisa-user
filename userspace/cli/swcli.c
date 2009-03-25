@@ -12,6 +12,7 @@ int main(int argc, char **argv) {
 	RLSHELL_CTX(&ctx)->exit = 0;
 	RLSHELL_CTX(&ctx)->enable_ctrl_z = 0;
 	ctx.sock_fd = -1;
+	ctx.cdp = NULL;
 
 	shared_init();
 

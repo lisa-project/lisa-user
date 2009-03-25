@@ -87,6 +87,20 @@ static mm_ptr_t __shared_get_tag_if(char *tag) {
 	return MM_NULL;
 }
 
+static void shared_init_cdp(void)
+{
+	struct cdp_configuration cdp;
+
+	/* Initial default values for the cdp configuration */
+	cdp.enabled  = 1;                /* CDP is enabled by default */
+	cdp.version  = CDP_DFL_VERSION;  /* CDPv2*/
+	cdp.holdtime = CDP_DFL_HOLDTIME; /* 180 seconds */
+	cdp.timer    = CDP_DFL_TIMER;    /* 60 seconds */
+
+	/* store initial config into the shared memory */
+	shared_set_cdp(&cdp);
+}
+
 int shared_init(void) {
 	if (mm)
 		return 0;
@@ -98,6 +112,7 @@ int shared_init(void) {
 	if (mm->init) {
 		memset(SHM, 0, sizeof(struct shared));
 		MM_INIT_LIST_HEAD(mm, mm_ptr(mm, &SHM->if_tags));
+		shared_init_cdp();
 	}
 
 	return 0;
