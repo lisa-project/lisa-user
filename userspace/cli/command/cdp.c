@@ -1,4 +1,5 @@
 #include "swcli.h"
+#include "cdp.h"
 #include "cdp_client.h"
 
 int cmd_sh_cdp(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)

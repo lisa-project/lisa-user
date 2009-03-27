@@ -1,8 +1,5 @@
 #include "swcli.h"
-
-int cmd_setpw(struct cli_context *, int, char **, struct menu_node **);
-int cmd_exit(struct cli_context *, int, char **, struct menu_node **);
-int cmd_end(struct cli_context *, int, char **, struct menu_node **);
+#include "config_line.h"
 
 struct menu_node config_line_main = {
 	/* Root node, .name is used as prompt */

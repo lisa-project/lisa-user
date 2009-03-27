@@ -1,4 +1,5 @@
 #include "swcli.h"
+#include "main.h"
 
 /*                         show
  *                           |
@@ -37,8 +38,6 @@
  *                          BBB
  */
 
-int cmd_sh_mac_addr_t(struct cli_context *, int, char **, struct menu_node **);
-int cmd_sh_mac_age(struct cli_context *, int, char **, struct menu_node **);
 extern struct menu_node output_modifiers;
 
 static struct menu_node *vlan_subtree[] = {

@@ -1,7 +1,5 @@
 #include "swcli.h"
-
-int cmd_exit(struct cli_context *, int, char **, struct menu_node **);
-int cmd_namevlan(struct cli_context *, int, char **, struct menu_node **);
+#include "config_vlan.h"
 
 extern struct menu_node config_vlan;
 

@@ -1,4 +1,5 @@
 #include "swcli.h"
+#include "main.h"
 
 /*                         clear
  *                           |
@@ -32,8 +33,6 @@
  *                           |
  *                          BBB
  */
-
-int cmd_cl_mac_addr_t(struct cli_context *, int, char **, struct menu_node **);
 
 static struct menu_node vlan =
 VLAN_MENU_NODE(NULL, cmd_cl_mac_addr_t, NULL);

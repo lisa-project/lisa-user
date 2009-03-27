@@ -1,4 +1,5 @@
 #include "swcli.h"
+#include "config_vlan.h"
 
 int cmd_namevlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
