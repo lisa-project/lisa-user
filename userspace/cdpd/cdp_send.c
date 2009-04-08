@@ -81,7 +81,7 @@ static int cdp_frame_init(unsigned char *buffer, int len, int if_index) {
  * Add the device id field.
  */
 static int cdp_add_device_id(unsigned char *buffer) {
-	char hostname[MAX_HOSTNAME];
+	char hostname[HOST_NAME_MAX];
 	struct cdp_field *field;
 
 	gethostname(hostname, sizeof(hostname));

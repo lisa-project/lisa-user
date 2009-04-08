@@ -21,12 +21,7 @@
 
 #include <stdio.h>
 
-#define PAGE_SIZE 4096
-// FIXME it's better to determine it at compile time
-// by using an auxiliary test program and getpagesize() - for further
-// details, see man 2 getpagesize
-
-#define MAX_HOSTNAME 32
+#include <linux/net_switch.h>
 
 #define NIP_QUAD(addr) (addr >> 24), ((addr >> 16) & 0xFF), ((addr >> 8) & 0xFF), (addr & 0xFF)
 

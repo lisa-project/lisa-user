@@ -11,7 +11,7 @@ enum {
 	CMD_VLAN_NO
 };
 
-int cmd_cdp_if_enable(struct cli_context *, int, char **, struct menu_node **);
+int cmd_cdp_if_set(struct cli_context *, int, char **, struct menu_node **);
 int cmd_if_desc(struct cli_context *, int, char **, struct menu_node **);
 int cmd_du_auto(struct cli_context *, int, char **, struct menu_node **);
 int cmd_du_full(struct cli_context *, int, char **, struct menu_node **);
@@ -19,7 +19,6 @@ int cmd_du_half(struct cli_context *, int, char **, struct menu_node **);
 int cmd_end(struct cli_context *, int, char **, struct menu_node **);
 int cmd_exit(struct cli_context *, int, char **, struct menu_node **);
 int cmd_help(struct cli_context *, int, char **, struct menu_node **);
-int cmd_cdp_if_disable(struct cli_context *, int, char **, struct menu_node **);
 int cmd_noshutd(struct cli_context *, int, char **, struct menu_node **);
 int cmd_sp_auto(struct cli_context *, int, char **, struct menu_node **);
 int cmd_swport_off(struct cli_context *, int, char **, struct menu_node **);

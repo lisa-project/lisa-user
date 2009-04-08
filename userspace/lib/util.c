@@ -89,7 +89,8 @@ void print_mac(FILE *out, void *buf, int size, char *(*get_if_name)(int, void*),
 int buf_alloc_swcfgr(struct swcfgreq *swcfgr, int sock_fd)
 {
 	void *buf;
-	int size = PAGE_SIZE;
+	int page_size = sysconf(_SC_PAGE_SIZE);
+	int size = page_size;
 	int status;
 
 	buf = malloc(size);
@@ -106,7 +107,7 @@ int buf_alloc_swcfgr(struct swcfgreq *swcfgr, int sock_fd)
 		if (errno != ENOMEM)
 			return -errno;
 
-		size += PAGE_SIZE;
+		size += page_size;
 		buf = realloc(buf, size);
 		if (buf == NULL)
 			return -ENOMEM;

@@ -159,6 +159,9 @@ void cdp_session_end(struct cdp_session *s);
 /* Timed receive for a message from the client queue */
 int cdp_session_recv(struct cdp_session *s);
 
+/* Enables/disables cdp on an interface */
+int cdp_set_interface(struct cdp_session *session, int if_index, int enabled);
+
 /* Requests the list of cdp neighbors from the cdp daemon */
 int cdp_get_neighbors(struct cdp_session *session, int if_index, char *device_id);
 

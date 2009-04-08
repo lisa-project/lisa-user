@@ -70,7 +70,27 @@ static int parse_vlan_list(char *list, unsigned char *bmp) {
 	return 0;
 }
 
-int cmd_cdp_if_enable(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
+int cmd_cdp_if_set(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
+{
+	struct cdp_session *cdp;
+	struct cdp_configuration cfg;
+	struct swcli_context *uc = SWCLI_CTX(ctx);
+	int enable = 1;
+	int err;
+
+	shared_get_cdp(&cfg);
+	if (!cfg.enabled)
+		return 0;
+
+	if (!strcmp(argv[0], "no"))
+		enable = 0;
+
+	CDP_SESSION_OPEN(ctx, cdp);
+	err = cdp_set_interface(cdp, uc->ifindex, enable);
+	CDP_SESSION_CLOSE(ctx, cdp);
+
+	return err;
+}
 
 int cmd_if_desc(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
@@ -101,7 +121,6 @@ int cmd_if_desc(struct cli_context *ctx, int argc, char **argv, struct menu_node
 int cmd_du_auto(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
 int cmd_du_full(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
 int cmd_du_half(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
-int cmd_cdp_if_disable(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
 int cmd_sp_auto(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
 int cmd_swport_off(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
 int cmd_noacc_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }

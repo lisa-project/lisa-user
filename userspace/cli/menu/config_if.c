@@ -36,7 +36,7 @@ struct menu_node config_if_main = {
 					.help			= "Enable CDP on interface",
 					.mask			= CLI_MASK(PRIV(2)),
 					.tokenize	= NULL,
-					.run			= cmd_cdp_if_enable,
+					.run			= cmd_cdp_if_set,
 					.subtree	= NULL
 				},
 
@@ -221,7 +221,7 @@ struct menu_node config_if_main = {
 							.help			= "Enable CDP on interface",
 							.mask			= CLI_MASK(PRIV(2)),
 							.tokenize	= NULL,
-							.run			= cmd_cdp_if_disable,
+							.run			= cmd_cdp_if_set,
 							.subtree	= NULL
 						},
 
