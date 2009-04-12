@@ -166,7 +166,9 @@ static int use_if_ether(struct cli_context *ctx, char *name, int index, int swit
 	int status, sock_fd, ioctl_errno;
 	struct swcfgreq swcfgr;
 	struct swcli_context *uc = SWCLI_CTX(ctx);
+#if 0
 	struct cdp_session *cdp;
+#endif
 
 	SW_SOCK_OPEN(ctx, sock_fd);
 
@@ -202,9 +204,15 @@ static int use_if_ether(struct cli_context *ctx, char *name, int index, int swit
 		}
 	} else {
 		/* Enable CDP on this interface */
+		/* FIXME FIXME FIXME: we should _try_ to enable cdp
+		 * and if it fails return gracefully.
+		 * This will stay commented out until we fix it.
+		 */
+#if 0
 		CDP_SESSION_OPEN(ctx, cdp);
 		cdp_set_interface(cdp, index, 1);
 		CDP_SESSION_CLOSE(ctx, cdp);
+#endif
 	}
 
 	ctx->node_filter &= PRIV_FILTER(PRIV_MAX);
@@ -248,7 +256,9 @@ static int remove_if_ether(struct cli_context *ctx, char *name, int index, int s
 {
 	int sock_fd;
 	struct swcfgreq swcfgr;
+#if 0
 	struct cdp_session *cdp;
+#endif
 
 	SW_SOCK_OPEN(ctx, sock_fd);
 
@@ -264,9 +274,11 @@ static int remove_if_ether(struct cli_context *ctx, char *name, int index, int s
 	swcfgr.ifindex = index;
 
 	/* Disable CDP on this interface */
+#if 0
 	CDP_SESSION_OPEN(ctx, cdp);
 	cdp_set_interface(cdp, index, 0);
 	CDP_SESSION_CLOSE(ctx, cdp);
+#endif
 
 	ioctl(sock_fd, SIOCSWCFG, &swcfgr);
 	SW_SOCK_CLOSE(ctx, sock_fd);
@@ -446,7 +458,34 @@ int cmd_set_aging(struct cli_context *ctx, int argc, char **argv, struct menu_no
 
 int cmd_macstatic(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
-	swcli_dump_args(ctx, argc, argv, nodev);
+	struct swcfgreq swcfgr;
+	char ifname[IFNAMSIZ];
+	int sock_fd, status, cmd = SWCFG_MACSTATIC;
+
+	if (!strncmp(argv[0], "no", strlen(argv[0]))) {
+		cmd = SWCFG_DELMACSTATIC;
+		SHIFT_ARG(argc, argv, nodev);
+	}
+
+	if ((status = parse_mac(argv[2], swcfgr.ext.mac.addr))) {
+		EX_STATUS_REASON(ctx, "Error parsing mac address %s: %s", argv[2], strerror(status));
+		return CLI_EX_REJECTED;
+	}
+
+	if_name_ethernet(ifname, argv[6]);
+
+	SW_SOCK_OPEN(ctx, sock_fd);
+	swcfgr.cmd = cmd;
+	swcfgr.vlan = atoi(argv[4]);
+	swcfgr.ifindex = if_get_index(ifname, sock_fd);
+	status = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
+	SW_SOCK_CLOSE(ctx, sock_fd);
+
+	if (status) {
+		EX_STATUS_REASON_IOCTL(ctx, errno);
+		return CLI_EX_REJECTED;
+	}
+
 	return CLI_EX_OK;
 }
 

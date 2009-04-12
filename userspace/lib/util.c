@@ -63,6 +63,25 @@ void daemonize(void) {
 	dup(fd);
 }
 
+int parse_mac(const char *str, unsigned char *mac)
+{
+	int a, b, c, n;
+
+	if (sscanf(str, "%x.%x.%x%n", &a, &b, &c, &n) != 3)
+		return -EINVAL;
+	if (strlen(str) != n)
+		return -EINVAL;
+
+	mac[0] = (a & 0xff00) >> 8;
+	mac[1] = (a & 0x00ff) >> 0;
+	mac[2] = (b & 0xff00) >> 8;
+	mac[3] = (b & 0x00ff) >> 0;
+	mac[4] = (c & 0xff00) >> 8;
+	mac[5] = (c & 0x00ff) >> 0;
+
+	return 0;
+}
+
 void print_mac(FILE *out, void *buf, int size, char *(*get_if_name)(int, void*), void *priv)
 {
 	struct net_switch_mac *mac, *end =
