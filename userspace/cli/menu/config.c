@@ -1,8 +1,6 @@
 #include "swcli.h"
 #include "config.h"
 
-int dump_args(struct cli_context *, int, char **, struct menu_node **);
-
 static struct menu_node *if_subtree[] = {
 	IF_ETHER(NULL, cmd_int_any, NULL),
 	IF_VLAN(NULL, cmd_int_any, NULL),
@@ -11,6 +9,41 @@ static struct menu_node *if_subtree[] = {
 };
 
 struct menu_node config_interface = IF_MENU_NODE(if_subtree, "Select an interface to configure");
+
+static struct menu_node *eth_tree[] = {
+		IF_ETHER(NULL, cmd_macstatic, NULL, 15),
+		NULL
+};
+
+static struct menu_node *if_tree[] = {
+	 & (struct menu_node) IF_MENU_NODE(eth_tree, "interface", 15),
+	 NULL
+};
+
+static struct menu_node *vlan_tree[] = {
+		IF_VLAN(if_tree, NULL, NULL, 15),
+		NULL
+};
+
+struct menu_node mac_addr_table_static = {
+		.name			= "static",
+		.help			= "static keyword",
+		.mask			= CLI_MASK(PRIV(15)),
+		.tokenize	= swcli_tokenize_mac,
+		.run			= NULL,
+		.subtree  = (struct menu_node *[]) {
+				&(struct menu_node) {
+						.name			= "H.H.H",
+						.help			=	"48 bit mac address",
+						.mask			= CLI_MASK(PRIV(15)),
+						.tokenize = NULL,
+						.run			= NULL,
+						.subtree	= vlan_tree
+				},
+				NULL
+		}
+};
+
 
 // FIXME FIXME FIXME
 // #1 - Cisco accepts multiple vlans at the same time (vlan list, similar
@@ -407,86 +440,7 @@ struct menu_node config_main = {
 				},
 
 				/* #mac-address-table static */
-				& (struct menu_node){
-					.name			= "static",
-					.help			= "static keyword",
-					.mask			= CLI_MASK(PRIV(15)),
-					.tokenize	= NULL,
-					.run			= NULL,
-					.subtree	= (struct menu_node *[]) { /*{{{*/
-						/* #mac-address-table static H.H.H */
-						& (struct menu_node){
-							.name			= "H.H.H",
-							.help			= "48 bit mac address",
-							.mask			= CLI_MASK(PRIV(15)),
-							.tokenize	= NULL,
-							.run			= NULL,
-							.subtree	= (struct menu_node *[]) { /*{{{*/
-								/* #mac-address-table static H.H.H vlan */
-								& (struct menu_node){
-									.name			= "vlan",
-									.help			= "VLAN keyword",
-									.mask			= CLI_MASK(PRIV(15)),
-									.tokenize	= NULL,
-									.run			= NULL,
-									.subtree	= (struct menu_node *[]) { /*{{{*/
-										/* #mac-address-table static H.H.H vlan <1-1094> */
-										& (struct menu_node){
-											.name			= "<1-1094>",
-											.help			= "VLAN id of mac address table",
-											.mask			= CLI_MASK(PRIV(15)),
-											.tokenize	= NULL,
-											.run			= NULL,
-											.subtree	= (struct menu_node *[]) { /*{{{*/
-												/* #mac-address-table static H.H.H vlan <1-1094> interface */
-												& (struct menu_node){
-													.name			= "interface",
-													.help			= "interface",
-													.mask			= CLI_MASK(PRIV(15)),
-													.tokenize	= NULL,
-													.run			= NULL,
-													.subtree	= (struct menu_node *[]) { /*{{{*/
-														/* #mac-address-table static H.H.H vlan <1-1094> interface ethernet */
-														& (struct menu_node){
-															.name			= "ethernet",
-															.help			= "Ethernet IEEE 802.3",
-															.mask			= CLI_MASK(PRIV(15)),
-															.tokenize	= NULL,
-															.run			= NULL,
-															.subtree	= (struct menu_node *[]) { /*{{{*/
-																/* #mac-address-table static H.H.H vlan <1-1094> interface ethernet  */
-																& (struct menu_node){
-																	.name			= "",
-																	.help			= "Ethernet interface number",
-																	.mask			= CLI_MASK(PRIV(15)),
-																	.tokenize	= NULL,
-																	.run			= cmd_macstatic,
-																	.subtree	= NULL
-																},
-
-																NULL
-															} /*}}}*/
-														},
-
-														NULL
-													} /*}}}*/
-												},
-
-												NULL
-											} /*}}}*/
-										},
-
-										NULL
-									} /*}}}*/
-								},
-
-								NULL
-							} /*}}}*/
-						},
-
-						NULL
-					} /*}}}*/
-				},
+				&mac_addr_table_static,
 
 				NULL
 			} /*}}}*/
@@ -611,86 +565,7 @@ struct menu_node config_main = {
 						},
 
 						/* #no mac-address-table static */
-						& (struct menu_node){
-							.name			= "static",
-							.help			= "static keyword",
-							.mask			= CLI_MASK(PRIV(15)),
-							.tokenize	= NULL,
-							.run			= NULL,
-							.subtree	= (struct menu_node *[]) { /*{{{*/
-								/* #no mac-address-table static H.H.H */
-								& (struct menu_node){
-									.name			= "H.H.H",
-									.help			= "48 bit mac address",
-									.mask			= CLI_MASK(PRIV(15)),
-									.tokenize	= NULL,
-									.run			= NULL,
-									.subtree	= (struct menu_node *[]) { /*{{{*/
-										/* #no mac-address-table static H.H.H vlan */
-										& (struct menu_node){
-											.name			= "vlan",
-											.help			= "VLAN keyword",
-											.mask			= CLI_MASK(PRIV(15)),
-											.tokenize	= NULL,
-											.run			= NULL,
-											.subtree	= (struct menu_node *[]) { /*{{{*/
-												/* #no mac-address-table static H.H.H vlan <1-1094> */
-												& (struct menu_node){
-													.name			= "<1-1094>",
-													.help			= "VLAN id of mac address table",
-													.mask			= CLI_MASK(PRIV(15)),
-													.tokenize	= NULL,
-													.run			= NULL,
-													.subtree	= (struct menu_node *[]) { /*{{{*/
-														/* #no mac-address-table static H.H.H vlan <1-1094> interface */
-														& (struct menu_node){
-															.name			= "interface",
-															.help			= "interface",
-															.mask			= CLI_MASK(PRIV(15)),
-															.tokenize	= NULL,
-															.run			= NULL,
-															.subtree	= (struct menu_node *[]) { /*{{{*/
-																/* #no mac-address-table static H.H.H vlan <1-1094> interface ethernet */
-																& (struct menu_node){
-																	.name			= "ethernet",
-																	.help			= "Ethernet IEEE 802.3",
-																	.mask			= CLI_MASK(PRIV(15)),
-																	.tokenize	= NULL,
-																	.run			= NULL,
-																	.subtree	= (struct menu_node *[]) { /*{{{*/
-																		/* #no mac-address-table static H.H.H vlan <1-1094> interface ethernet  */
-																		& (struct menu_node){
-																			.name			= "",
-																			.help			= "Ethernet interface number",
-																			.mask			= CLI_MASK(PRIV(15)),
-																			.tokenize	= NULL,
-																			.run			= cmd_macstatic,
-																			.subtree	= NULL
-																		},
-
-																		NULL
-																	} /*}}}*/
-																},
-
-																NULL
-															} /*}}}*/
-														},
-
-														NULL
-													} /*}}}*/
-												},
-
-												NULL
-											} /*}}}*/
-										},
-
-										NULL
-									} /*}}}*/
-								},
-
-								NULL
-							} /*}}}*/
-						},
+						&mac_addr_table_static,
 
 						NULL
 					} /*}}}*/
