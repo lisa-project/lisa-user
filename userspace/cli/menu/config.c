@@ -25,7 +25,7 @@ static struct menu_node *vlan_tree[] = {
 		NULL
 };
 
-struct menu_node mac_addr_table_static = {
+static struct menu_node mac_addr_table_static = {
 		.name			= "static",
 		.help			= "static keyword",
 		.mask			= CLI_MASK(PRIV(15)),
