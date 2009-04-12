@@ -66,6 +66,9 @@ LIBSWCLI_SRCS += command/cdp.c
 # Common swcli stuff that does not fit in the 4 layers
 LIBSWCLI_SRCS += lib/swcli.c
 
+# Swcli tokenizers
+LIBSWCLI_SRCS += lib/tokenizers.c
+
 # Interface submenus
 LIBSWCLI_SRCS += lib/interface.c
 

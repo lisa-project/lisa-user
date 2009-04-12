@@ -157,7 +157,7 @@ struct menu_node config_main = {
 									.help			= "The UNENCRYPTED (cleartext) 'enable' secret",
 									.mask			= CLI_MASK(PRIV(15)),
 									.tokenize	= NULL,
-									.run			= dump_args, //cmd_setenpw,
+									.run			= cmd_setenpw,
 									.subtree	= NULL
 								},
 
@@ -170,7 +170,7 @@ struct menu_node config_main = {
 							.name			= "5",
 							.help			= "Specifies an ENCRYPTED secret will follow",
 							.mask			= CLI_MASK(PRIV(15)),
-							.tokenize	= NULL,
+							.tokenize	= swcli_tokenize_line,
 							.run			= NULL,
 							.subtree	= (struct menu_node *[]) { /*{{{*/
 								/* #enable secret 5 LINE */
@@ -179,7 +179,7 @@ struct menu_node config_main = {
 									.help			= "The ENCRYPTED 'enable' secret string",
 									.mask			= CLI_MASK(PRIV(15)),
 									.tokenize	= NULL,
-									.run			= cmd_setenpw,
+									.run			= cmd_setenpw_encrypted,
 									.subtree	= NULL
 								},
 
@@ -193,7 +193,7 @@ struct menu_node config_main = {
 							.help			= "The UNENCRYPTED (cleartext) 'enable' secret",
 							.mask			= CLI_MASK(PRIV(15)),
 							.tokenize	= NULL,
-							.run			= dump_args, //cmd_setenpw,
+							.run			= cmd_setenpw,
 							.subtree	= NULL
 						},
 
@@ -202,7 +202,7 @@ struct menu_node config_main = {
 							.name			= "level",
 							.help			= "Set exec level password",
 							.mask			= CLI_MASK(PRIV(15)),
-							.tokenize	= NULL,
+							.tokenize	= swcli_tokenize_number,
 							.run			= NULL,
 							.subtree	= (struct menu_node *[]) { /*{{{*/
 								/* #enable secret level <1-15> */
@@ -210,15 +210,16 @@ struct menu_node config_main = {
 									.name			= "<1-15>",
 									.help			= "Level number",
 									.mask			= CLI_MASK(PRIV(15)),
-									.tokenize	= NULL,
+									.tokenize	= swcli_tokenize_line_mixed,
 									.run			= NULL,
+									.priv			= (int []) {VALID_LIMITS, 1, 15},
 									.subtree	= (struct menu_node *[]) { /*{{{*/
 										/* #enable secret level <1-15> 0 */
 										& (struct menu_node){
 											.name			= "0",
 											.help			= "Specifies an UNENCRYPTED password will follow",
 											.mask			= CLI_MASK(PRIV(15)),
-											.tokenize	= NULL,
+											.tokenize	= swcli_tokenize_line,
 											.run			= NULL,
 											.subtree	= (struct menu_node *[]) { /*{{{*/
 												/* #enable secret level <1-15> 0 LINE */
@@ -227,7 +228,7 @@ struct menu_node config_main = {
 													.help			= "The UNENCRYPTED (cleartext) 'enable' secret",
 													.mask			= CLI_MASK(PRIV(15)),
 													.tokenize	= NULL,
-													.run			= cmd_setenpwlev,
+													.run			= cmd_setenpw,
 													.subtree	= NULL
 												},
 
@@ -240,7 +241,7 @@ struct menu_node config_main = {
 											.name			= "5",
 											.help			= "Specifies an ENCRYPTED secret will follow",
 											.mask			= CLI_MASK(PRIV(15)),
-											.tokenize	= NULL,
+											.tokenize	= swcli_tokenize_line,
 											.run			= NULL,
 											.subtree	= (struct menu_node *[]) { /*{{{*/
 												/* #enable secret level <1-15> 5 LINE */
@@ -249,7 +250,7 @@ struct menu_node config_main = {
 													.help			= "The ENCRYPTED 'enable' secret string",
 													.mask			= CLI_MASK(PRIV(15)),
 													.tokenize	= NULL,
-													.run			= cmd_setenpwlev,
+													.run			= cmd_setenpw_encrypted,
 													.subtree	= NULL
 												},
 
@@ -263,7 +264,7 @@ struct menu_node config_main = {
 											.help			= "The UNENCRYPTED (cleartext) 'enable' secret",
 											.mask			= CLI_MASK(PRIV(15)),
 											.tokenize	= NULL,
-											.run			= cmd_setenpwlev,
+											.run			= cmd_setenpw,
 											.subtree	= NULL
 										},
 
@@ -308,7 +309,7 @@ struct menu_node config_main = {
 			.name			= "hostname",
 			.help			= "Set system's network name",
 			.mask			= CLI_MASK(PRIV(15)),
-			.tokenize	= NULL,
+			.tokenize	= swcli_tokenize_line,
 			.run			= NULL,
 			.subtree	= (struct menu_node *[]) { /*{{{*/
 				/* #hostname WORD */
@@ -387,7 +388,7 @@ struct menu_node config_main = {
 					.name			= "aging-time",
 					.help			= "Set MAC address table entry maximum age",
 					.mask			= CLI_MASK(PRIV(15)),
-					.tokenize	= NULL,
+					.tokenize	= swcli_tokenize_number,
 					.run			= NULL,
 					.subtree	= (struct menu_node *[]) { /*{{{*/
 						/* #mac-address-table aging-time <10-1000000> */
@@ -397,7 +398,8 @@ struct menu_node config_main = {
 							.mask			= CLI_MASK(PRIV(15)),
 							.tokenize	= NULL,
 							.run			= cmd_set_aging,
-							.subtree	= NULL
+							.subtree	= NULL,
+							.priv			= (int []) {VALID_LIMITS, 10, 1000000}
 						},
 
 						NULL
@@ -551,7 +553,7 @@ struct menu_node config_main = {
 									.name			= "level",
 									.help			= "Set exec level password",
 									.mask			= CLI_MASK(PRIV(15)),
-									.tokenize	= NULL,
+									.tokenize	= swcli_tokenize_number,
 									.run			= NULL,
 									.subtree	= (struct menu_node *[]) { /*{{{*/
 										/* #no enable secret level <1-15> */
@@ -560,8 +562,9 @@ struct menu_node config_main = {
 											.help			= "Level number",
 											.mask			= CLI_MASK(PRIV(15)),
 											.tokenize	= NULL,
-											.run			= cmd_noensecret_lev,
-											.subtree	= NULL
+											.run			= cmd_noensecret,
+											.subtree	= NULL,
+											.priv			= (int []) {VALID_LIMITS, 1, 15}
 										},
 
 										NULL
@@ -582,7 +585,7 @@ struct menu_node config_main = {
 					.help			= "Set system's network name",
 					.mask			= CLI_MASK(PRIV(15)),
 					.tokenize	= NULL,
-					.run			= cmd_nohostname,
+					.run			= cmd_hostname,
 					.subtree	= NULL
 				},
 
@@ -603,7 +606,7 @@ struct menu_node config_main = {
 							.help			= "Set MAC address table entry maximum age",
 							.mask			= CLI_MASK(PRIV(15)),
 							.tokenize	= NULL,
-							.run			= cmd_set_noaging,
+							.run			= cmd_set_aging,
 							.subtree	= NULL
 						},
 

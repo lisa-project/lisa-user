@@ -25,8 +25,10 @@
 #include "cdp_client.h"
 #include "rlshell.h"
 #include "interface.h"
+#include "tokenizers.h"
 
 char *swcli_prompt(struct rlshell_context *ctx);
+int swcli_dump_args(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev);
 
 #define PRIV(x) ((uint32_t)1 << (x))
 #define VA_PRIV(NIL, priv, ...) PRIV(priv)
@@ -58,14 +60,6 @@ struct swcli_context {
 	if (__sock_fd != SWCLI_CTX(__ctx)->sock_fd)\
 		close(__sock_fd);\
 } while (0)
-
-// FIXME move these to an appropriate place (suggestion: userspace/cli/lib/cli.h?)
-int swcli_tokenize_line(struct cli_context *ctx, const char *buf, struct menu_node **tree, struct tokenize_out *out);
-int swcli_tokenize_number(struct cli_context *ctx, const char *buf, struct menu_node **tree, struct tokenize_out *out);
-int swcli_tokenize_mac(struct cli_context *ctx, const char *buf, struct menu_node **tree, struct tokenize_out *out);
-int swcli_tokenize_word(struct cli_context *ctx, const char *buf, struct menu_node **tree, struct tokenize_out *out);
-int swcli_tokenize_word_mixed(struct cli_context *ctx, const char *buf, struct menu_node **tree, struct tokenize_out *out);
-int swcli_tokenize_line_mixed(struct cli_context *ctx, const char *buf, struct menu_node **tree, struct tokenize_out *out);
 
 // FIXME move this to appropriate place
 #define default_vlan_name(__lvalue, __vlan) do {\

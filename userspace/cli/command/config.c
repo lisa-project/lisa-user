@@ -1,10 +1,14 @@
 #include "swcli.h"
 #include "config.h"
 
+#include <regex.h>
+
 extern struct menu_node menu_main;
 extern struct menu_node config_main;
 extern struct menu_node config_if_main;
 extern struct menu_node config_vlan_main;
+
+static char hostname_default[] = "Switch\0";
 
 int cmd_cdp_v2(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
@@ -20,7 +24,7 @@ int cmd_cdp_v2(struct cli_context *ctx, int argc, char **argv, struct menu_node 
 		shared_set_cdp(&cdp);
 	}
 
-	return 0;
+	return CLI_EX_OK;
 }
 
 int cmd_cdp_holdtime(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
@@ -33,10 +37,11 @@ int cmd_cdp_holdtime(struct cli_context *ctx, int argc, char **argv, struct menu
 		shared_set_cdp(&cdp);
 	}
 
-	return 0;
+	return CLI_EX_OK;
 }
 
-int cmd_cdp_timer(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) {
+int cmd_cdp_timer(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
+{
 	struct cdp_configuration cdp;
 
 	shared_get_cdp(&cdp);
@@ -45,7 +50,7 @@ int cmd_cdp_timer(struct cli_context *ctx, int argc, char **argv, struct menu_no
 		shared_set_cdp(&cdp);
 	}
 
-	return 0;
+	return CLI_EX_OK;
 }
 
 int cmd_cdp_run(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
@@ -59,11 +64,74 @@ int cmd_cdp_run(struct cli_context *ctx, int argc, char **argv, struct menu_node
 	cdp.enabled = enabled;
 	shared_set_cdp(&cdp);
 
-	return 0;
+	return CLI_EX_OK;
 }
 
-int cmd_setenpw(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
-int cmd_setenpwlev(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
+static int _cmd_setenpw(struct cli_context *ctx, int level, char *passwd)
+{
+	int err;
+	if ((err = shared_set_passwd(SHARED_AUTH_ENABLE, level, passwd))) {
+		EX_STATUS_REASON(ctx, "%s", strerror(err));
+		return CLI_EX_REJECTED;
+	}
+	return CLI_EX_OK;
+}
+
+int cmd_setenpw(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
+{
+	char *clear_pw = argv[argc - 1],
+		 *encrypted_pw;
+	const char salt_base[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789./";
+	char salt[] = "$1$....$\0";
+	int i, level = SW_MAX_ENABLE;
+
+	/* Clear text password; need to crypt() */
+	srandom(time(NULL) & 0xffffffffL);
+	for (i = 3; i < 7; i++)
+		salt[i] = salt_base[random() % 64];
+	encrypted_pw = crypt(clear_pw, salt);
+
+	if (argc > 4)
+		level = atoi(argv[3]);
+
+	return _cmd_setenpw(ctx, level, encrypted_pw);
+}
+
+int cmd_setenpw_encrypted(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
+{
+	FILE *out;
+	char *encrypted_pw = argv[argc - 1];
+	int status, level = SW_MAX_ENABLE;
+	regex_t regex;
+	regmatch_t result;
+
+	/* Encrypted password; need to check syntax */
+	status = regcomp(&regex,  "^\\$1\\$[a-zA-Z0-9\\./]{4}\\$[a-zA-Z0-9\\./]{22}$", REG_EXTENDED);
+	assert(!status);
+	if(regexec(&regex, *argv, 1, &result, 0)) {
+		out = ctx->out_open(ctx, 0);
+		fputs("ERROR: The secret you entered is not a valid encrypted secret.\n"
+				"To enter an UNENCRYPTED secret, do not specify type 5 encryption.\n"
+				"When you properly enter an UNENCRYPTED secret, it will be encrypted.\n\n",
+				out);
+		return CLI_EX_REJECTED;
+	}
+
+	if (argc > 4)
+		level = atoi(argv[3]);
+
+	return _cmd_setenpw(ctx, level, encrypted_pw);
+}
+
+int cmd_noensecret(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
+{
+	int level = SW_MAX_ENABLE;
+
+	if (argc == 5)
+		level = atoi(argv[4]);
+
+	return _cmd_setenpw(ctx, level, (char *)"\0");
+}
 
 int cmd_end(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
@@ -79,13 +147,26 @@ int cmd_exit(struct cli_context *ctx, int argc, char **argv, struct menu_node **
 	return CLI_EX_OK;
 }
 
-int cmd_hostname(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
+int cmd_hostname(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
+{
+	char *hostname = argv[1];
+
+	if (!strncmp(argv[0], "no", strlen(argv[0])))
+		hostname = hostname_default;
+
+	if (sethostname(hostname, strlen(hostname))) {
+		EX_STATUS_REASON(ctx, "%s", strerror(errno));
+		return CLI_EX_REJECTED;
+	}
+	return CLI_EX_OK;
+}
 
 static int use_if_ether(struct cli_context *ctx, char *name, int index, int switchport)
 {
 	int status, sock_fd, ioctl_errno;
 	struct swcfgreq swcfgr;
 	struct swcli_context *uc = SWCLI_CTX(ctx);
+	struct cdp_session *cdp;
 
 	SW_SOCK_OPEN(ctx, sock_fd);
 
@@ -121,7 +202,9 @@ static int use_if_ether(struct cli_context *ctx, char *name, int index, int swit
 		}
 	} else {
 		/* Enable CDP on this interface */
-		// FIXME cdp_adm_query(CDP_IF_ENABLE, ioctl_arg.if_name);
+		CDP_SESSION_OPEN(ctx, cdp);
+		cdp_set_interface(cdp, index, 1);
+		CDP_SESSION_CLOSE(ctx, cdp);
 	}
 
 	ctx->node_filter &= PRIV_FILTER(PRIV_MAX);
@@ -165,6 +248,7 @@ static int remove_if_ether(struct cli_context *ctx, char *name, int index, int s
 {
 	int sock_fd;
 	struct swcfgreq swcfgr;
+	struct cdp_session *cdp;
 
 	SW_SOCK_OPEN(ctx, sock_fd);
 
@@ -180,13 +264,9 @@ static int remove_if_ether(struct cli_context *ctx, char *name, int index, int s
 	swcfgr.ifindex = index;
 
 	/* Disable CDP on this interface */
-	//FIXME cdp_adm_query(CDP_IF_DISABLE, ioctl_arg.ifindex);
-	
-	/* FIXME nu avem un race aici? codul de kernel pentru socketzi
-	 * are nevoie ca device-ul sa fie port in switch => nu poate fi
-	 * scos portul pana nu se inchid toti socketzii; aici doar trimit
-	 * comanda prin ipc si dureaza pana cdpd inchide socketul.
-	 */
+	CDP_SESSION_OPEN(ctx, cdp);
+	cdp_set_interface(cdp, index, 0);
+	CDP_SESSION_CLOSE(ctx, cdp);
 
 	ioctl(sock_fd, SIOCSWCFG, &swcfgr);
 	SW_SOCK_CLOSE(ctx, sock_fd);
@@ -336,20 +416,46 @@ int cmd_int_any(struct cli_context *ctx, int argc, char **argv, struct menu_node
 			swcfgr.ext.switchport != SW_IF_ROUTED);
 }
 
-int cmd_linevty(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
-int cmd_set_aging(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
-int cmd_macstatic(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
-int cmd_noensecret(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
-int cmd_noensecret_lev(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
-int cmd_nohostname(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
-int cmd_set_noaging(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
-int cmd_novlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
+int cmd_linevty(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
+{
+	swcli_dump_args(ctx, argc, argv, nodev);
+	return CLI_EX_OK;
+}
+
+int cmd_set_aging(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
+{
+	struct swcfgreq swcfgr;
+	int sock_fd, status, nsec = SW_DEFAULT_AGE_TIME;
+
+	if (strncmp(argv[0], "no", strlen(argv[0])))
+		nsec = atoi(argv[2]);
+
+	SW_SOCK_OPEN(ctx, sock_fd);
+	swcfgr.cmd = SWCFG_SETAGETIME;
+	swcfgr.ext.nsec = nsec;
+	status = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
+	SW_SOCK_CLOSE(ctx, sock_fd);
+
+	if (status) {
+		EX_STATUS_REASON_IOCTL(ctx, errno);
+		return CLI_EX_REJECTED;
+	}
+
+	return CLI_EX_OK;
+}
+
+int cmd_macstatic(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
+{
+	swcli_dump_args(ctx, argc, argv, nodev);
+	return CLI_EX_OK;
+}
 
 int cmd_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
 	struct swcfgreq swcfgr;
 	int status, sock_fd, ioctl_errno;
 	struct swcli_context *uc = SWCLI_CTX(ctx);
+	FILE *out;
 
 	swcfgr.vlan = atoi(argv[argc - 1]);
 	if (strcmp(nodev[0]->name, "no")) {
@@ -362,13 +468,14 @@ int cmd_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **
 	}
 
 	SW_SOCK_OPEN(ctx, sock_fd);
-
 	status = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
 	ioctl_errno = errno;
 	SW_SOCK_CLOSE(ctx, sock_fd); /* this can overwrite ioctl errno */
 
-	if (status == -1 && ioctl_errno == EACCES)
-		printf("Default VLAN %d may not be deleted.\n", swcfgr.vlan); //FIXME output
+	if (status == -1 && ioctl_errno == EACCES) {
+		out = ctx->out_open(ctx, 0);
+		fprintf(out, "Default VLAN %d may not be deleted.\n", swcfgr.vlan);
+	}
 
 	if (swcfgr.cmd == SWCFG_ADDVLAN && (!status || ioctl_errno == EEXIST)) {
 		ctx->root = &config_vlan_main;
