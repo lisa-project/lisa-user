@@ -57,7 +57,8 @@ out_return:
 	return err;
 }
 
-static __inline__ void init_mac_filter(struct swcfgreq *swcfgr) {
+static __inline__ void init_mac_filter(struct swcfgreq *swcfgr)
+{
 	swcfgr->ifindex = 0;
 	memset(&swcfgr->ext.mac.addr, 0, ETH_ALEN);
 	swcfgr->ext.mac.type = SW_FDB_ANY;

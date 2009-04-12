@@ -10,7 +10,7 @@ struct menu_node config_line_main = {
 			.name			= "password",
 			.help			= "Set a password",
 			.mask			= CLI_MASK(PRIV(15)),
-			.tokenize	= NULL,
+			.tokenize	= swcli_tokenize_line_mixed,
 			.run			= NULL,
 			.subtree	= (struct menu_node *[]) { /*{{{*/
 				/* #password 0 */
@@ -18,7 +18,7 @@ struct menu_node config_line_main = {
 					.name			= "0",
 					.help			= "Specifies an UNENCRYPTED password will follow",
 					.mask			= CLI_MASK(PRIV(15)),
-					.tokenize	= NULL,
+					.tokenize	= swcli_tokenize_line,
 					.run			= NULL,
 					.subtree	= (struct menu_node *[]) { /*{{{*/
 						/* #password 0 LINE */

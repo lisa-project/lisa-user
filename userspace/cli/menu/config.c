@@ -375,7 +375,7 @@ struct menu_node config_main = {
 					.name			= "vty",
 					.help			= "Virtual terminal",
 					.mask			= CLI_MASK(PRIV(15)),
-					.tokenize	= NULL,
+					.tokenize	= swcli_tokenize_number,
 					.run			= NULL,
 					.subtree	= (struct menu_node *[]) { /*{{{*/
 						/* #line vty <0-15> */
@@ -383,8 +383,9 @@ struct menu_node config_main = {
 							.name			= "<0-15>",
 							.help			= "First Line number",
 							.mask			= CLI_MASK(PRIV(15)),
-							.tokenize	= NULL,
+							.tokenize	= swcli_tokenize_number,
 							.run			= NULL,
+							.priv			= (int []) {VALID_LIMITS, 0, 15},
 							.subtree	= (struct menu_node *[]) { /*{{{*/
 								/* #line vty <0-15>  */
 								& (struct menu_node){
@@ -393,7 +394,8 @@ struct menu_node config_main = {
 									.mask			= CLI_MASK(PRIV(15)),
 									.tokenize	= NULL,
 									.run			= cmd_linevty,
-									.subtree	= NULL
+									.subtree	= NULL,
+									.priv			= (int []) {VALID_LIMITS, 0, 15}
 								},
 
 								NULL

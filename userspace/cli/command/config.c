@@ -7,6 +7,7 @@ extern struct menu_node menu_main;
 extern struct menu_node config_main;
 extern struct menu_node config_if_main;
 extern struct menu_node config_vlan_main;
+extern struct menu_node config_line_main;
 
 static char hostname_default[] = "Switch\0";
 
@@ -428,9 +429,20 @@ int cmd_int_any(struct cli_context *ctx, int argc, char **argv, struct menu_node
 			swcfgr.ext.switchport != SW_IF_ROUTED);
 }
 
-int cmd_linevty(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
+int cmd_linevty(struct cli_context *__ctx, int argc, char **argv, struct menu_node **nodev)
 {
-	swcli_dump_args(ctx, argc, argv, nodev);
+	struct rlshell_context *ctx = (void *)__ctx;
+	int min, max;
+
+	min = atoi(argv[argc - 2]);
+	max = atoi(argv[argc - 1]);
+	if (min > max) {
+		EX_STATUS_REASON(ctx, "first line number %d > last line number %d",
+				min, max);
+		return CLI_EX_REJECTED;
+	}
+	ctx->cc.root = &config_line_main;
+	ctx->enable_ctrl_z = 1;
 	return CLI_EX_OK;
 }
 
