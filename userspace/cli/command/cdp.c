@@ -87,14 +87,20 @@ int cmd_sh_cdp_int(struct cli_context *ctx, int argc, char **argv, struct menu_n
 
 	if (argc > 3) {
 		if (!strncasecmp(nodev[3]->name, "netdev", strlen(nodev[3]->name))) {
-			SW_SOCK_OPEN(ctx, sock_fd);
+			if (SW_SOCK_OPEN(ctx, sock_fd) == -1) {
+				EX_STATUS_REASON(ctx, "%s", strerror(errno));
+				return CLI_EX_REJECTED;
+			}
 			if_index = if_get_index(argv[4], sock_fd);
 			SW_SOCK_CLOSE(ctx, sock_fd);
 		}
 		else if (!strncasecmp(nodev[3]->name, "ethernet", strlen(nodev[3]->name))) {
 			memset(buf, 0, sizeof(buf));
 			snprintf(buf, IFNAMSIZ, "eth%s", argv[4]);
-			SW_SOCK_OPEN(ctx, sock_fd);
+			if (SW_SOCK_OPEN(ctx, sock_fd) == -1) {
+				EX_STATUS_REASON(ctx, "%s", strerror(errno));
+				return CLI_EX_REJECTED;
+			}
 			if_index = if_get_index(buf, sock_fd);
 			SW_SOCK_CLOSE(ctx, sock_fd);
 		}

@@ -5,7 +5,8 @@
 #define is_digit(arg) ((arg) >= '0' && (arg) <= '9')
 // FIXME move is_digit() to .h
 
-static int parse_vlan_list(char *list, unsigned char *bmp) {
+static int parse_vlan_list(char *list, unsigned char *bmp)
+{
 	int state = 0;
 	int min, max;
 	char *last = list, *ptr;
@@ -111,7 +112,10 @@ int cmd_if_desc(struct cli_context *ctx, int argc, char **argv, struct menu_node
 		swcfgr.ext.iface_desc = (char *)"";
 	}
 
-	SW_SOCK_OPEN(ctx, sock_fd);
+	if (SW_SOCK_OPEN(ctx, sock_fd) == -1) {
+		EX_STATUS_REASON(ctx, "%s", strerror(errno));
+		return CLI_EX_REJECTED;
+	}
 	ioctl(sock_fd, SIOCSWCFG, &swcfgr);
 	SW_SOCK_CLOSE(ctx, sock_fd);
 
@@ -172,7 +176,10 @@ int cmd_trunk_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_n
 	swcfgr.ifindex = uc->ifindex;
 	swcfgr.ext.bmp = bmp;
 
-	SW_SOCK_OPEN(ctx, sock_fd);
+	if (SW_SOCK_OPEN(ctx, sock_fd) == -1) {
+		EX_STATUS_REASON(ctx, "%s", strerror(errno));
+		return CLI_EX_REJECTED;
+	}
 	ioctl(sock_fd, SIOCSWCFG, &swcfgr);
 	SW_SOCK_CLOSE(ctx, sock_fd);
 

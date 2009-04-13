@@ -171,7 +171,10 @@ static int use_if_ether(struct cli_context *ctx, char *name, int index, int swit
 	struct cdp_session *cdp;
 #endif
 
-	SW_SOCK_OPEN(ctx, sock_fd);
+	if (SW_SOCK_OPEN(ctx, sock_fd) == -1) {
+		EX_STATUS_REASON(ctx, "%s", strerror(errno));
+		return CLI_EX_REJECTED;
+	}
 
 	if (!index)
 		index = if_get_index(name, sock_fd);
@@ -231,7 +234,10 @@ static int use_if_vlan(struct cli_context *ctx, int vlan, int index)
 	struct swcfgreq swcfgr;
 	struct swcli_context *uc = SWCLI_CTX(ctx);
 
-	SW_SOCK_OPEN(ctx, sock_fd);
+	if (SW_SOCK_OPEN(ctx, sock_fd) == -1) {
+		EX_STATUS_REASON(ctx, "%s", strerror(errno));
+		return CLI_EX_REJECTED;
+	}
 
 	swcfgr.cmd = SWCFG_ADDVIF;
 	swcfgr.vlan = vlan;
@@ -261,7 +267,10 @@ static int remove_if_ether(struct cli_context *ctx, char *name, int index, int s
 	struct cdp_session *cdp;
 #endif
 
-	SW_SOCK_OPEN(ctx, sock_fd);
+	if (SW_SOCK_OPEN(ctx, sock_fd) == -1) {
+		EX_STATUS_REASON(ctx, "%s", strerror(errno));
+		return CLI_EX_REJECTED;
+	}
 
 	if (!index)
 		index = if_get_index(name, sock_fd);
@@ -292,7 +301,10 @@ static int remove_if_vlan(struct cli_context *ctx, int vlan, int index)
 	int status, sock_fd, ioctl_errno;
 	struct swcfgreq swcfgr;
 
-	SW_SOCK_OPEN(ctx, sock_fd);
+	if (SW_SOCK_OPEN(ctx, sock_fd) == -1) {
+		EX_STATUS_REASON(ctx, "%s", strerror(errno));
+		return CLI_EX_REJECTED;
+	}
 
 	swcfgr.cmd = SWCFG_DELVIF;
 	swcfgr.vlan = vlan;
@@ -335,7 +347,10 @@ static int cmd_no_int_any(struct cli_context *ctx, int argc, char **argv, struct
 
 	/* try to guess what netdev name means */
 
-	SW_SOCK_OPEN(ctx, sock_fd);
+	if (SW_SOCK_OPEN(ctx, sock_fd) == -1) {
+		EX_STATUS_REASON(ctx, "%s", strerror(errno));
+		return CLI_EX_REJECTED;
+	}
 
 	if (ioctl(sock_fd, SIOCGIFINDEX, &ifr)) {
 		SW_SOCK_CLOSE(ctx, sock_fd);
@@ -391,7 +406,10 @@ int cmd_int_any(struct cli_context *ctx, int argc, char **argv, struct menu_node
 
 	/* try to guess what netdev name means */
 
-	SW_SOCK_OPEN(ctx, sock_fd);
+	if (SW_SOCK_OPEN(ctx, sock_fd) == -1) {
+		EX_STATUS_REASON(ctx, "%s", strerror(errno));
+		return CLI_EX_REJECTED;
+	}
 
 	/* first test if the interface already exists; SIOCGIFINDEX works
 	 * on any socket type (see man (7) netdevice for details) */
@@ -454,7 +472,10 @@ int cmd_set_aging(struct cli_context *ctx, int argc, char **argv, struct menu_no
 	if (strncmp(argv[0], "no", strlen(argv[0])))
 		nsec = atoi(argv[2]);
 
-	SW_SOCK_OPEN(ctx, sock_fd);
+	if (SW_SOCK_OPEN(ctx, sock_fd) == -1) {
+		EX_STATUS_REASON(ctx, "%s", strerror(errno));
+		return CLI_EX_REJECTED;
+	}
 	swcfgr.cmd = SWCFG_SETAGETIME;
 	swcfgr.ext.nsec = nsec;
 	status = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
@@ -486,7 +507,10 @@ int cmd_macstatic(struct cli_context *ctx, int argc, char **argv, struct menu_no
 
 	if_name_ethernet(ifname, argv[6]);
 
-	SW_SOCK_OPEN(ctx, sock_fd);
+	if (SW_SOCK_OPEN(ctx, sock_fd) == -1) {
+		EX_STATUS_REASON(ctx, "%s", strerror(errno));
+		return CLI_EX_REJECTED;
+	}
 	swcfgr.cmd = cmd;
 	swcfgr.vlan = atoi(argv[4]);
 	swcfgr.ifindex = if_get_index(ifname, sock_fd);
@@ -518,7 +542,10 @@ int cmd_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **
 		swcfgr.cmd = SWCFG_DELVLAN;
 	}
 
-	SW_SOCK_OPEN(ctx, sock_fd);
+	if (SW_SOCK_OPEN(ctx, sock_fd) == -1) {
+		EX_STATUS_REASON(ctx, "%s", strerror(errno));
+		return CLI_EX_REJECTED;
+	}
 	status = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
 	ioctl_errno = errno;
 	SW_SOCK_CLOSE(ctx, sock_fd); /* this can overwrite ioctl errno */
