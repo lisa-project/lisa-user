@@ -167,9 +167,8 @@ static int use_if_ether(struct cli_context *ctx, char *name, int index, int swit
 	int status, sock_fd, ioctl_errno;
 	struct swcfgreq swcfgr;
 	struct swcli_context *uc = SWCLI_CTX(ctx);
-#if 0
 	struct cdp_session *cdp;
-#endif
+	FILE *out;
 
 	if (SW_SOCK_OPEN(ctx, sock_fd) == -1) {
 		EX_STATUS_REASON(ctx, "%s", strerror(errno));
@@ -207,16 +206,17 @@ static int use_if_ether(struct cli_context *ctx, char *name, int index, int swit
 			return CLI_EX_REJECTED;
 		}
 	} else {
-		/* Enable CDP on this interface */
-		/* FIXME FIXME FIXME: we should _try_ to enable cdp
-		 * and if it fails return gracefully.
-		 * This will stay commented out until we fix it.
-		 */
-#if 0
-		CDP_SESSION_OPEN(ctx, cdp);
-		cdp_set_interface(cdp, index, 1);
-		CDP_SESSION_CLOSE(ctx, cdp);
-#endif
+		/* Try to enable CDP on this interface */
+		do {
+			if (!CDP_SESSION_OPEN(ctx, cdp)) {
+				out = ctx->out_open(ctx, 0);
+				fprintf(out, "WARNING: failed to enable cdp on interface %s : %s\n",
+						name, strerror(errno));
+				break;
+			}
+			cdp_set_interface(cdp, index, 1);
+			CDP_SESSION_CLOSE(ctx, cdp);
+		} while (0);
 	}
 
 	ctx->node_filter &= PRIV_FILTER(PRIV_MAX);
@@ -263,9 +263,8 @@ static int remove_if_ether(struct cli_context *ctx, char *name, int index, int s
 {
 	int sock_fd;
 	struct swcfgreq swcfgr;
-#if 0
 	struct cdp_session *cdp;
-#endif
+	FILE *out;
 
 	if (SW_SOCK_OPEN(ctx, sock_fd) == -1) {
 		EX_STATUS_REASON(ctx, "%s", strerror(errno));
@@ -283,12 +282,17 @@ static int remove_if_ether(struct cli_context *ctx, char *name, int index, int s
 	swcfgr.cmd = SWCFG_DELIF;
 	swcfgr.ifindex = index;
 
-	/* Disable CDP on this interface */
-#if 0
-	CDP_SESSION_OPEN(ctx, cdp);
-	cdp_set_interface(cdp, index, 0);
-	CDP_SESSION_CLOSE(ctx, cdp);
-#endif
+	/* Try to disable CDP on this interface */
+	do {
+		if (!CDP_SESSION_OPEN(ctx, cdp)) {
+			out = ctx->out_open(ctx, 0);
+			fprintf(out, "WARNING: failed to disable cdp on interface %s: %s\n",
+					name, strerror(errno));
+			break;
+		}
+		cdp_set_interface(cdp, index, 0);
+		CDP_SESSION_CLOSE(ctx, cdp);
+	} while (0);
 
 	ioctl(sock_fd, SIOCSWCFG, &swcfgr);
 	SW_SOCK_CLOSE(ctx, sock_fd);

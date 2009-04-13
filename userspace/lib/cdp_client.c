@@ -12,9 +12,11 @@ struct cdp_session *cdp_session_start(void)
 	struct mq_attr attr;
 
 	/* Be paranoid about user input */
-	s = (struct cdp_session *)malloc(sizeof(struct cdp_session));
-	assert(s);
+	if (!(s = (struct cdp_session *)malloc(sizeof(struct cdp_session))))
+		return NULL;
+
 	memset(s, 0, sizeof(struct cdp_session));
+	s->sq = s->rq = -1;
 
 	/* Try to open the send message queue on which we send requests to cdpd */
 	memset(s->sq_name, 0, sizeof(s->sq_name));
@@ -55,10 +57,17 @@ void cdp_session_end(struct cdp_session *s)
 
 	if (s->response)
 		free(s->response);
-	mq_close(s->rq);
-	mq_unlink(s->rq_name);
-
-	return;
+	if (s->sq != -1)
+	{
+		mq_close(s->sq);
+		mq_unlink(s->sq_name);
+	}
+	if (s->rq != -1)
+	{
+		mq_close(s->rq);
+		mq_unlink(s->rq_name);
+	}
+	free(s);
 }
 
 int cdp_session_recv(struct cdp_session *s)

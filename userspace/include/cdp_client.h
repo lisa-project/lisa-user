@@ -185,13 +185,13 @@ void cdp_print_neighbors_filtered(struct cdp_session *session, FILE *out,
  */
 void cdp_print_neighbors_brief(struct cdp_session *session, FILE *out);
 
-#define CDP_SESSION_OPEN(__ctx, __session) do {\
+#define CDP_SESSION_OPEN(__ctx, __session) ({\
 	if (!SWCLI_CTX(__ctx)->cdp) {\
 		__session = cdp_session_start();\
-		assert(__session);\
 	} else\
 		__session = SWCLI_CTX(__ctx)->cdp;\
-} while (0)
+	__session;\
+})
 
 #define CDP_SESSION_CLOSE(__ctx, __session) do {\
 	if (__session != SWCLI_CTX(__ctx)->cdp) \

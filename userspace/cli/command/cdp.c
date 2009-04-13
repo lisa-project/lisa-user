@@ -41,7 +41,10 @@ int cmd_sh_cdp_entry(struct cli_context *ctx, int argc, char **argv, struct menu
 			entry = argv[i];
 	}
 
-	CDP_SESSION_OPEN(ctx, cdp);
+	if (!CDP_SESSION_OPEN(ctx, cdp)) {
+		EX_STATUS_REASON(ctx, "%s", strerror(errno));
+		return CLI_EX_REJECTED;
+	}
 
 	if ((err = cdp_get_neighbors(cdp, 0, entry)))
 		goto out_close;
@@ -108,7 +111,10 @@ int cmd_sh_cdp_int(struct cli_context *ctx, int argc, char **argv, struct menu_n
 			return -ENODEV;
 	}
 
-	CDP_SESSION_OPEN(ctx, cdp);
+	if (!CDP_SESSION_OPEN(ctx, cdp)) {
+		EX_STATUS_REASON(ctx, "%s", strerror(errno));
+		return CLI_EX_REJECTED;
+	}
 
 	if ((err = cdp_get_interfaces(cdp, if_index)))
 		goto out_close;
@@ -137,7 +143,10 @@ int cmd_sh_cdp_ne(struct cli_context *ctx, int argc, char **argv, struct menu_no
 	if (!cfg.enabled)
 		return 0;
 
-	CDP_SESSION_OPEN(ctx, cdp);
+	if (!CDP_SESSION_OPEN(ctx, cdp)) {
+		EX_STATUS_REASON(ctx, "%s", strerror(errno));
+		return CLI_EX_REJECTED;
+	}
 
 	if ((err = cdp_get_neighbors(cdp, 0, NULL)))
 		goto out_err;
@@ -193,7 +202,10 @@ int cmd_sh_cdp_traffic(struct cli_context *ctx, int argc, char **argv, struct me
 	if (!cfg.enabled)
 		return 0;
 
-	CDP_SESSION_OPEN(ctx, cdp);
+	if (!CDP_SESSION_OPEN(ctx, cdp)) {
+		EX_STATUS_REASON(ctx, "%s", strerror(errno));
+		return CLI_EX_REJECTED;
+	}
 
 	if ((err = cdp_get_stats(cdp, &stats)))
 		goto out_close;

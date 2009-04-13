@@ -86,7 +86,10 @@ int cmd_cdp_if_set(struct cli_context *ctx, int argc, char **argv, struct menu_n
 	if (!strcmp(argv[0], "no"))
 		enable = 0;
 
-	CDP_SESSION_OPEN(ctx, cdp);
+	if (!CDP_SESSION_OPEN(ctx, cdp)) {
+		EX_STATUS_REASON(ctx, "%s", strerror(errno));
+		return CLI_EX_REJECTED;
+	}
 	err = cdp_set_interface(cdp, uc->ifindex, enable);
 	CDP_SESSION_CLOSE(ctx, cdp);
 
