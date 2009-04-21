@@ -115,10 +115,7 @@ int cmd_if_desc(struct cli_context *ctx, int argc, char **argv, struct menu_node
 		swcfgr.ext.iface_desc = (char *)"";
 	}
 
-	if (SW_SOCK_OPEN(ctx, sock_fd) == -1) {
-		EX_STATUS_REASON(ctx, "%s", strerror(errno));
-		return CLI_EX_REJECTED;
-	}
+	SW_SOCK_OPEN(ctx, sock_fd);
 	ioctl(sock_fd, SIOCSWCFG, &swcfgr);
 	SW_SOCK_CLOSE(ctx, sock_fd);
 
@@ -179,10 +176,7 @@ int cmd_trunk_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_n
 	swcfgr.ifindex = uc->ifindex;
 	swcfgr.ext.bmp = bmp;
 
-	if (SW_SOCK_OPEN(ctx, sock_fd) == -1) {
-		EX_STATUS_REASON(ctx, "%s", strerror(errno));
-		return CLI_EX_REJECTED;
-	}
+	SW_SOCK_OPEN(ctx, sock_fd);
 	ioctl(sock_fd, SIOCSWCFG, &swcfgr);
 	SW_SOCK_CLOSE(ctx, sock_fd);
 

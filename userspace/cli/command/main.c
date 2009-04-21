@@ -147,10 +147,7 @@ int cmd_sh_mac_addr_t(struct cli_context *ctx, int argc, char **argv, struct men
 	};
 	char ifname[IFNAMSIZ];
 
-	if (SW_SOCK_OPEN(ctx, sock_fd) == -1) {
-		EX_STATUS_REASON(ctx, "%s", strerror(errno));
-		return CLI_EX_REJECTED;
-	}
+	SW_SOCK_OPEN(ctx, sock_fd);
 
 	assert(argc >= 2);
 	SHIFT_ARG(argc, argv, nodev, strcmp(nodev[1]->name, "mac") ? 2 : 3);
@@ -211,10 +208,7 @@ int cmd_cl_mac_addr_t(struct cli_context *ctx, int argc, char **argv, struct men
 		.cmd = SWCFG_DELMACDYN
 	};
 
-	if (SW_SOCK_OPEN(ctx, sock_fd) == -1) {
-		EX_STATUS_REASON(ctx, "%s", strerror(errno));
-		return CLI_EX_REJECTED;
-	}
+	SW_SOCK_OPEN(ctx, sock_fd);
 
 	assert(argc >= 2);
 	SHIFT_ARG(argc, argv, nodev, strcmp(nodev[1]->name, "mac") ? 2 : 3);

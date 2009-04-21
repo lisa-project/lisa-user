@@ -48,13 +48,17 @@ struct swcli_context {
 
 #define SWCLI_CTX(ctx) ((struct swcli_context *)(ctx))
 
-#define SW_SOCK_OPEN(__ctx, __sock_fd) ({\
-	if (SWCLI_CTX(__ctx)->sock_fd == -1) {\
-		__sock_fd =  socket(PF_SWITCH, SOCK_RAW, 0); \
-	} else\
+#define SW_SOCK_OPEN(__ctx, __sock_fd) do {\
+	if (SWCLI_CTX(__ctx)->sock_fd != -1) {\
 		__sock_fd = SWCLI_CTX(__ctx)->sock_fd;\
-	__sock_fd;\
-})
+		break;\
+	}\
+	__sock_fd = socket(PF_SWITCH, SOCK_RAW, 0); \
+	if (__sock_fd == -1) {\
+		EX_STATUS_REASON(__ctx, "%s", strerror(errno)); \
+		return CLI_EX_REJECTED; \
+	}\
+} while(0)
 
 #define SW_SOCK_CLOSE(__ctx, __sock_fd) do {\
 	if (__sock_fd != SWCLI_CTX(__ctx)->sock_fd)\

@@ -37,10 +37,7 @@ int cmd_ioctl_simple(struct cli_context *ctx, int argc, char **argv, struct menu
 
 	assert(argc);
 
-	if (SW_SOCK_OPEN(ctx, sock_fd) == -1) {
-		EX_STATUS_REASON(ctx, "%s", strerror(errno));
-		return CLI_EX_REJECTED;
-	}
+	SW_SOCK_OPEN(ctx, sock_fd);
 
 	for (rp = nodev[argc - 1]->priv; *rp; rp++) {
 		swcfgr = **rp;
