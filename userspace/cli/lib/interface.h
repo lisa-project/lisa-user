@@ -187,7 +187,7 @@ int if_parse_args(char **argv, struct menu_node **nodev, char *name, int *n);
 	}\
 \
 	if (!(__index = if_get_index(__name, __sock_fd))) {\
-		EX_STATUS_REASON(ctx, "interface %s does not exist", name);\
+		EX_STATUS_REASON(__ctx, "interface %s does not exist", name);\
 		return CLI_EX_REJECTED;\
 	}\
 } while (0)
@@ -195,4 +195,18 @@ int if_parse_args(char **argv, struct menu_node **nodev, char *name, int *n);
 #define if_args_to_ifindex(__ctx, __argv, __nodev, __sock_fd, __index, __type, __name...) \
 	__if_args_to_ifindex(__ctx, __argv, __nodev, __sock_fd, __index, __type, ##__name, NULL)
 
+#define if_get_type(__ctx, __sock_fd, __index, __name, __swcfgr) do {\
+	__swcfgr.cmd = SWCFG_GETIFTYPE;\
+	__swcfgr.ifindex = __index;\
+	if (ioctl(__sock_fd, SIOCSWCFG, &__swcfgr)) {\
+		EX_STATUS_REASON_IOCTL(__ctx, errno);\
+		SW_SOCK_CLOSE(__ctx, __sock_fd);\
+		return CLI_EX_REJECTED;\
+	}\
+	if (__swcfgr.ext.switchport == SW_IF_NONE) {\
+		EX_STATUS_REASON(__ctx, "interface %s not in switch", __name);\
+		SW_SOCK_CLOSE(__ctx, __sock_fd);\
+		return CLI_EX_REJECTED;\
+	}\
+} while(0)
 #endif
