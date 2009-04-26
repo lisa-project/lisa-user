@@ -75,7 +75,7 @@
 	.run		= NULL,\
 	.subtree	= (struct menu_node *[]) {\
 		& (struct menu_node) {\
-			.name		= "<1-1094>",\
+			.name		= "<1-4094>",\
 			.help		= "Vlan number",\
 			.mask		= CLI_MASK(VA_PRIV(NIL, ##__priv, 1)),\
 			.tokenize	= __tokenize,\
@@ -97,7 +97,7 @@
 	.priv		= (void *)1,\
 	.subtree	= (struct menu_node *[]) {\
 		& (struct menu_node) {\
-			.name		= "<1-1094>",\
+			.name		= "<1-4094>",\
 			.help		= "Vlan interface number",\
 			.mask		= CLI_MASK(VA_PRIV(NIL, ##__priv, 1)),\
 			.tokenize	= __tokenize,\
