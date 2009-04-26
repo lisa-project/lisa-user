@@ -1,6 +1,8 @@
 #include "swcli.h"
 #include "exec.h"
 
+#include <linux/ethtool.h>
+
 extern struct menu_node config_main;
 
 int swcli_output_modifiers_run(struct cli_context *ctx, int argc, char **argv,
@@ -251,7 +253,174 @@ int cmd_history(struct cli_context *ctx, int argc, char **argv, struct menu_node
 	return 0;
 }
 
-int cmd_sh_int(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
+/*
+ * FIXME: other options we may want to check ...
+ *
+ * Ethtool ioctls:
+ * 		ETHTOOL_GTXCSUM
+ * 		ETHTOOL_GSG
+ * 		ETHTOOL_GTSO
+ * 		ETHTOOL_GUFO
+ * 		ETHTOOL_GGSO
+ * 		ETHTOOL_GGRO
+ *
+ * Generic socket ioctls:
+ *		SIOCGIFADDR
+ *		SIOCGIFBRDADDR
+ *		SIOCGIFNETMASK
+ *		SIOCGIFMETRIC
+ */
+static int show_interfaces(struct cli_context *ctx, int sock_fd, struct if_map *map)
+{
+	struct ethtool_cmd settings;
+	struct ethtool_drvinfo drv;
+	struct ethtool_pauseparam pause;
+	struct ethtool_value value;
+	struct ethtool_perm_addr *epaddr;
+	struct net_switch_dev *dev;
+	struct ifreq ifr;
+	int i, nstats;
+	FILE *out;
+
+	out = ctx->out_open(ctx, 1);
+	for (i=0; i<map->size && (dev = &map->dev[i]); i++) {
+		fprintf(out, "Interface %s, type=%d, index=%d\n",
+				dev->name, dev->type, dev->ifindex);
+		strcpy(ifr.ifr_name, dev->name);
+		/* Link status */
+		value.cmd = ETHTOOL_GLINK;
+		ifr.ifr_data = &value;
+		if (!ioctl(sock_fd, SIOCETHTOOL, &ifr)) {
+			fprintf(out, "\tLink detected: %s\n", value.data? "yes" : "no");
+		}
+		/* Interface status */
+		if (!ioctl(sock_fd, SIOCGIFFLAGS, &ifr))
+			fprintf(out, "\tInterface status: %s\n", ifr.ifr_flags & IFF_UP? "up" : "down");
+		/* Hardware address */
+		if (!ioctl(sock_fd, SIOCGIFHWADDR, &ifr)) {
+			unsigned char *buf = (unsigned char *)ifr.ifr_hwaddr.sa_data;
+			fprintf(out, "\tHardware address: %02x:%02x:%02x:%02x:%02x:%02x\n",
+					buf[0], buf[1],
+					buf[2], buf[3],
+					buf[4], buf[5]);
+		}
+		/* Permanent address */
+		epaddr = (struct ethtool_perm_addr *)alloca(
+				sizeof(struct ethtool_perm_addr) +  ETH_ALEN);
+		epaddr->cmd = ETHTOOL_GPERMADDR;
+		epaddr->size = ETH_ALEN;
+		ifr.ifr_data = epaddr;
+		if (!ioctl(sock_fd, SIOCETHTOOL, &ifr))
+			fprintf(out, "\tPermanent address: %02x:%02x:%02x:%02x:%02x:%02x\n",
+					epaddr->data[0], epaddr->data[1], epaddr->data[2],
+					epaddr->data[3], epaddr->data[4], epaddr->data[5]);
+		/* MTU */
+		if (!ioctl(sock_fd, SIOCGIFMTU, &ifr))
+			fprintf(out, "\tMTU: %d\n", ifr.ifr_mtu);
+		/* Flow control parameters */
+		pause.cmd = ETHTOOL_GPAUSEPARAM;
+		ifr.ifr_data = &pause;
+		if (!ioctl(sock_fd, SIOCETHTOOL, &ifr))
+			fprintf(out, "\tPause param: autoneg: %d, rx_pause: %d, tx_pause: %d\n",
+					pause.autoneg, pause.rx_pause, pause.tx_pause);
+		/* Interface settings */
+		settings.cmd = ETHTOOL_GSET;
+		ifr.ifr_data = &settings;
+		if (!ioctl(sock_fd, SIOCETHTOOL, &ifr)) {
+			fprintf(out, "\tSupported = 0x%04x\n"
+					"\tAdvertising = 0x%04x\n"
+					"\tSpeed = %d\n"
+					"\tDuplex = %d\n"
+					"\tAuto = %d\n",
+					settings.supported,
+					settings.advertising,
+					settings.speed,
+					settings.duplex,
+					settings.autoneg);
+		}
+		/* Driver information */
+		drv.cmd = ETHTOOL_GDRVINFO;
+		ifr.ifr_data = &drv;
+		nstats = -1;
+		if (!ioctl(sock_fd, SIOCETHTOOL, &ifr)) {
+			fprintf(out, "\tDriver: %s, version: %s, fw_version: %s, bus: %s\n",
+					drv.driver, drv.version, drv.fw_version, drv.bus_info);
+			nstats = drv.n_stats;
+		}
+		/* NIC specific statistics counters */
+		do {
+			struct ethtool_stats *hwstats;
+			struct ethtool_gstrings *strings;
+			int j;
+
+			if (nstats < 0)
+				break;
+			/* Get hardware specific statistics strings */
+			strings = (struct ethtool_gstrings *)alloca(
+					sizeof(struct ethtool_gstrings) + nstats * ETH_GSTRING_LEN);
+			strings->cmd = ETHTOOL_GSTRINGS;
+			strings->string_set = ETH_SS_STATS;
+			ifr.ifr_data = strings;
+			if (ioctl(sock_fd, SIOCETHTOOL, &ifr)) {
+				fprintf(out, "ETHTOOL_GSTRINGS failed: %s\n", strerror(errno));
+				break;
+			}
+
+			/* Hardware specific statistics values */
+			hwstats = (struct ethtool_stats *)alloca(
+					sizeof(struct ethtool_stats) + nstats * sizeof(uint64_t));
+			hwstats->cmd = ETHTOOL_GSTATS;
+			ifr.ifr_data = hwstats;
+			if (ioctl(sock_fd, SIOCETHTOOL, &ifr)) {
+				fprintf(out, "ETHTOOL_GSTATS failed: %s\n", strerror(errno));
+				break;
+			}
+
+			/* Display statistics values */
+			fprintf(out, "\tNIC statistics:\n");
+			for (j=0; j<nstats; j++) {
+				fprintf(out, "\t\t%.*s: %llu\n",
+						ETH_GSTRING_LEN,
+						&strings->data[j * ETH_GSTRING_LEN],
+						hwstats->data[j]);
+			}
+		} while (0);
+
+	}
+	fclose(out);
+
+	return 0;
+}
+
+int cmd_sh_int(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
+{
+	int sock_fd, err = CLI_EX_OK;
+	struct net_switch_dev dev;
+	struct if_map if_map;
+	struct swcfgreq swcfgr;
+
+	SW_SOCK_OPEN(ctx, sock_fd);
+
+	if_map_init(&if_map);
+	if (argc > 2) {
+		SHIFT_ARG(argc, argv, nodev, 2);
+		if_args_to_ifindex(ctx, argv, nodev, sock_fd, dev.ifindex, dev.type, dev.name);
+		if_get_type(ctx, sock_fd, dev.ifindex, dev.name, swcfgr);
+		dev.type = swcfgr.ext.switchport;
+		dev.vlan = swcfgr.vlan;
+		if_map.dev = &dev;
+		if_map.size = 1;
+	}
+	else
+		if_map_fetch(&if_map, SW_IF_SWITCHED | SW_IF_ROUTED | SW_IF_VIF, sock_fd);
+
+	err = show_interfaces(ctx, sock_fd, &if_map);
+
+	SW_SOCK_CLOSE(ctx, sock_fd);
+
+	return err;
+}
+
 int cmd_sh_ip(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
 int cmd_sh_addr(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
 int cmd_sh_mac_age(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}

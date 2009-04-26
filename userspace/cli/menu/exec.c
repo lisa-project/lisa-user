@@ -578,6 +578,9 @@ struct menu_node menu_main = {
 						/* #show interfaces vlan */
 						IF_VLAN(sh_int_subtree, cmd_sh_int, NULL),
 
+						/* #show interfaces netdev */
+						IF_NETDEV(sh_int_subtree, cmd_sh_int, NULL),
+
 						/* #show interfaces | */
 						&output_modifiers,
 
