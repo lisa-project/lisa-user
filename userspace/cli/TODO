@@ -8,7 +8,6 @@ disable
 disable <1-15> 
 enable 
 enable <1-15> 
-help 
 ping WORD 
 reload 
 show cdp interface 
@@ -38,7 +37,6 @@ write memory
 duplex auto 
 duplex full 
 duplex half 
-help 
 no cdp enable 
 no description 
 no duplex 

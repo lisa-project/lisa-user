@@ -11,6 +11,7 @@ int cmd_help(struct cli_context *, int, char **, struct menu_node **);
 int cmd_ping(struct cli_context *, int, char **, struct menu_node **);
 int cmd_reload(struct cli_context *, int, char **, struct menu_node **);
 int cmd_history(struct cli_context *, int, char **, struct menu_node **);
+int cmd_sh_clock(struct cli_context *, int , char **, struct menu_node **);
 int cmd_sh_int(struct cli_context *, int, char **, struct menu_node **);
 int cmd_sh_ip(struct cli_context *, int, char **, struct menu_node **);
 int cmd_sh_addr(struct cli_context *, int, char **, struct menu_node **);

@@ -236,7 +236,28 @@ int cmd_quit(struct cli_context *__ctx, int argc, char **argv, struct menu_node 
 	return 0;
 }
 
-int cmd_help(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
+
+int cmd_help(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
+{
+	FILE *out;
+
+	out = ctx->out_open(ctx, 0);
+	fprintf(out,
+		"Help may be requested at any point in a command by entering\n"
+		"a question mark '?'.  If nothing matches, the help list will\n"
+		"be empty and you must backup until entering a '?' shows the\n"
+		"available options.\n"
+		"Two styles of help are provided:\n"
+		"1. Full help is available when you are ready to enter a\n"
+		"   command argument (e.g. 'show ?') and describes each possible\n"
+		"   argument.\n"
+		"2. Partial help is provided when an abbreviated argument is entered\n"
+		"   and you want to know what arguments match the input\n"
+		"   (e.g. 'show pr?'.)\n\n"
+			);
+	fflush(out);
+	return 0;
+}
 int cmd_ping(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
 int cmd_reload(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
 
@@ -250,6 +271,23 @@ int cmd_history(struct cli_context *ctx, int argc, char **argv, struct menu_node
 		fprintf(out, "%d\n", i);
 	fflush(out);
 	fclose(out);
+	return 0;
+}
+
+int cmd_sh_clock(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
+{
+	FILE *out;
+
+	out = ctx->out_open(ctx,0);
+	//--------------------------
+	time_t rawtime;
+	struct tm * timeinfo;
+
+	time ( &rawtime );
+	timeinfo = localtime ( &rawtime );
+	//--------------------------
+	fprintf(out,"%s",asctime(timeinfo));
+	fflush(out);
 	return 0;
 }
 

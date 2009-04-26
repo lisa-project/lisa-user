@@ -316,7 +316,7 @@ struct menu_node menu_main = {
 					.help			= "Display the system clock",
 					.mask			= CLI_MASK(PRIV(1)),
 					.tokenize	= NULL,
-					.run			= NULL,
+					.run			= cmd_sh_clock,
 					.subtree	= NULL
 				},
 
