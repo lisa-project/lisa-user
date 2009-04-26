@@ -183,11 +183,13 @@ int if_parse_args(char **argv, struct menu_node **nodev, char *name, int *n);
 			EX_STATUS_REASON(__ctx, "invalid interface name");\
 		else \
 			(__ctx)->ex_status.reason = NULL;\
+		SW_SOCK_CLOSE(__ctx, __sock_fd);\
 		return CLI_EX_REJECTED;\
 	}\
 \
-	if (!(__index = if_get_index(__name, __sock_fd))) {\
+	if (!(__index = if_get_index(name, __sock_fd))) {\
 		EX_STATUS_REASON(__ctx, "interface %s does not exist", name);\
+		SW_SOCK_CLOSE(__ctx, __sock_fd);\
 		return CLI_EX_REJECTED;\
 	}\
 } while (0)

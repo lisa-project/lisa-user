@@ -657,11 +657,13 @@ struct menu_node menu_main = {
 							.run			= NULL,
 							.subtree	= (struct menu_node *[]) { /*{{{*/
 								/* #show running-config interface ethernet */
-								IF_ETHER(output_modifiers_subtree, cmd_sh_run_if, NULL),
-								IF_NETDEV(output_modifiers_subtree, cmd_sh_run_if, NULL),
+								IF_ETHER(output_modifiers_subtree, cmd_show_run, NULL),
+
+								/* #show running-config interface netdev */
+								IF_NETDEV(output_modifiers_subtree, cmd_show_run, NULL),
 
 								/* #show running-config interface vlan */
-								IF_VLAN(output_modifiers_subtree, cmd_sh_run_if, NULL),
+								IF_VLAN(output_modifiers_subtree, cmd_show_run, NULL),
 
 								NULL
 							} /*}}}*/
