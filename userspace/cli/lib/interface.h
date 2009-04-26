@@ -171,4 +171,28 @@ int if_tok_if(struct cli_context *ctx, const char *buf,
  */
 int if_parse_args(char **argv, struct menu_node **nodev, char *name, int *n);
 
+#define __if_args_to_ifindex(__ctx, __argv, __nodev, __sock_fd, __index, __type, __name, ...) do {\
+	int n;\
+	char __if_tmp_name[IFNAMSIZ];\
+	char *name = (__name) ? (__name) : &__if_tmp_name[0];\
+\
+	__type = if_parse_args(__argv, __nodev, name, &n);\
+\
+	if (__type == IF_T_ERROR) {\
+		if (n == -1)\
+			EX_STATUS_REASON(__ctx, "invalid interface name");\
+		else \
+			(__ctx)->ex_status.reason = NULL;\
+		return CLI_EX_REJECTED;\
+	}\
+\
+	if (!(__index = if_get_index(__name, __sock_fd))) {\
+		EX_STATUS_REASON(ctx, "interface %s does not exist", name);\
+		return CLI_EX_REJECTED;\
+	}\
+} while (0)
+
+#define if_args_to_ifindex(__ctx, __argv, __nodev, __sock_fd, __index, __type, __name...) \
+	__if_args_to_ifindex(__ctx, __argv, __nodev, __sock_fd, __index, __type, ##__name, NULL)
+
 #endif

@@ -102,28 +102,10 @@ static int parse_mac_filter(struct swcfgreq *swcfgr, struct cli_context *ctx, in
 		return 0;
 	
 	if (!strcmp(nodev[0]->name, "interface")) {
-		char __name[IFNAMSIZ];
-		int n;
-		char *name = ifname ? ifname : &__name[0];
-
 		assert(argc >= 3);
 		SHIFT_ARG(argc, argv, nodev);
 
-		status = if_parse_args(argv, nodev, name, &n);
-
-		if (status == IF_T_ERROR) {
-			if (n == -1)
-				EX_STATUS_REASON(ctx, "invalid interface name");
-			else 
-				ctx->ex_status.reason = NULL;
-			return CLI_EX_REJECTED;
-		}
-		
-		if (!(swcfgr->ifindex = if_get_index(name, sock_fd))) {
-			EX_STATUS_REASON(ctx, "interface %s does not exist", name);
-			return CLI_EX_REJECTED;
-		}
-
+		if_args_to_ifindex(ctx, argv, nodev, sock_fd, swcfgr->ifindex, status, ifname);
 		SHIFT_ARG(argc, argv, nodev, 2);
 	}
 
@@ -279,6 +261,16 @@ int cmd_show_priv(struct cli_context *ctx, int argc, char **argv, struct menu_no
 
 int cmd_show_run(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
+	FILE *out;
+
+	if (argc >= 3 && !strcmp(nodev[2]->name, "interface")) {
+		/* show config for a specific interface */
+	}
+
+	out = ctx->out_open(ctx, 1);
+	fprintf(out, "Building configuration...\n");
+	fflush(out);
+	fclose(out);
 	return CLI_EX_OK;
 }
 
