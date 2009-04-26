@@ -16,7 +16,7 @@ int cmd_cdp_v2(struct cli_context *ctx, int argc, char **argv, struct menu_node 
 	struct cdp_configuration cdp;
 	int version = 2;
 
-	if (!strcmp(argv[0], "no"))
+	if (!strcmp(nodev[0]->name, "no"))
 		version = 1;
 
 	shared_get_cdp(&cdp);
@@ -59,7 +59,7 @@ int cmd_cdp_run(struct cli_context *ctx, int argc, char **argv, struct menu_node
 	struct cdp_configuration cdp;
 	int enabled = 1;
 
-	if (!strcmp(argv[0], "no"))
+	if (!strcmp(nodev[0]->name, "no"))
 		enabled = 0;
 	shared_get_cdp(&cdp);
 	cdp.enabled = enabled;
@@ -152,7 +152,7 @@ int cmd_hostname(struct cli_context *ctx, int argc, char **argv, struct menu_nod
 {
 	char *hostname = argv[1];
 
-	if (!strncmp(argv[0], "no", strlen(argv[0])))
+	if (!strcmp(nodev[0]->name, "no"))
 		hostname = hostname_default;
 
 	if (sethostname(hostname, strlen(hostname))) {
@@ -455,7 +455,7 @@ int cmd_set_aging(struct cli_context *ctx, int argc, char **argv, struct menu_no
 	struct swcfgreq swcfgr;
 	int sock_fd, status, nsec = SW_DEFAULT_AGE_TIME;
 
-	if (strncmp(argv[0], "no", strlen(argv[0])))
+	if (strcmp(nodev[0]->name, "no"))
 		nsec = atoi(argv[2]);
 
 	SW_SOCK_OPEN(ctx, sock_fd);
@@ -478,7 +478,7 @@ int cmd_macstatic(struct cli_context *ctx, int argc, char **argv, struct menu_no
 	char ifname[IFNAMSIZ];
 	int sock_fd, status, cmd = SWCFG_MACSTATIC;
 
-	if (!strncmp(argv[0], "no", strlen(argv[0]))) {
+	if (!strcmp(nodev[0]->name, "no")) {
 		cmd = SWCFG_DELMACSTATIC;
 		SHIFT_ARG(argc, argv, nodev);
 	}

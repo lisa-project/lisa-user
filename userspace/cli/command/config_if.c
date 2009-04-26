@@ -83,7 +83,7 @@ int cmd_cdp_if_set(struct cli_context *ctx, int argc, char **argv, struct menu_n
 	if (!cfg.enabled)
 		return 0;
 
-	if (!strcmp(argv[0], "no"))
+	if (!strcmp(nodev[0]->name, "no"))
 		enable = 0;
 
 	if (!CDP_SESSION_OPEN(ctx, cdp)) {
