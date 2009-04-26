@@ -14,7 +14,10 @@ int main(int argc, char **argv) {
 	ctx.sock_fd = -1;
 	ctx.cdp = NULL;
 
-	shared_init();
+	if (shared_init() < 0) {
+		perror("shared_init");
+		return -1;
+	}
 
 	rlshell_main(RLSHELL_CTX(&ctx));
 
