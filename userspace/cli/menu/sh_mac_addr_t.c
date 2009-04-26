@@ -1,5 +1,5 @@
 #include "swcli.h"
-#include "main.h"
+#include "exec.h"
 
 /*                         show
  *                           |

@@ -24,8 +24,8 @@ LIBSWCLI_SRCS = cli.c
 # Readline CLI Abstraction
 LIBSWCLI_SRCS += rlshell.c
 
-# LiSA Main Menu Tree
-LIBSWCLI_SRCS += menu/main.c
+# LiSA Exec Menu Tree
+LIBSWCLI_SRCS += menu/exec.c
 
 # LiSA Configure Menu Tree
 LIBSWCLI_SRCS += menu/config.c
@@ -45,8 +45,8 @@ LIBSWCLI_SRCS += menu/cl_mac_addr_t.c
 # LiSA "show mac-address-table" Menu Tree
 LIBSWCLI_SRCS += menu/sh_mac_addr_t.c
 
-# LiSA Command Handlers
-LIBSWCLI_SRCS += command/main.c
+# LiSA Exec Command Handlers
+LIBSWCLI_SRCS += command/exec.c
 
 # LiSA Configure Command Handlers
 LIBSWCLI_SRCS += command/config.c

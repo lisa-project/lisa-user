@@ -1,5 +1,5 @@
 #include "swcli.h"
-#include "main.h"
+#include "exec.h"
 
 extern struct menu_node config_main;
 
