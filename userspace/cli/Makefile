@@ -5,7 +5,8 @@ INC		= $(TOP_DIR)/../linux-2.6/include \
 		  $(TOP_DIR)/include \
 		  $(TOP_DIR)/cli \
 		  $(TOP_DIR)/cli/lib \
-		  $(TOP_DIR)/cli/command
+		  $(TOP_DIR)/cli/command \
+		  $(TOP_DIR)/cli/cfgbuild
 DEF		= _GNU_SOURCE CONFIG_CLI_TESTING
 
 ifndef DIST
@@ -62,6 +63,9 @@ LIBSWCLI_SRCS += command/config_vlan.c
 
 # LiSA CDP Configuration Command Handlers
 LIBSWCLI_SRCS += command/cdp.c
+
+# Query LiSA Running Configuration and Build Config Commands
+LIBSWCLI_SRCS += cfgbuild/cfgbuild.c
 
 # Common swcli stuff that does not fit in the 4 layers
 LIBSWCLI_SRCS += lib/swcli.c

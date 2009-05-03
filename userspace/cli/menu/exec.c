@@ -1,6 +1,7 @@
 #include "swcli.h"
 #include "cdp.h"
 #include "exec.h"
+#include "cfgbuild.h"
 
 extern struct menu_node *show_mac_addr_t[];
 extern struct menu_node *clear_mac_addr_t[];

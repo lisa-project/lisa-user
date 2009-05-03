@@ -355,7 +355,7 @@ struct menu_node config_if_main = {
 									.help			= "Set VLAN when interface is in access mode",
 									.mask			= CLI_MASK(PRIV(1)),
 									.tokenize	= NULL,
-									.run			= cmd_noacc_vlan,
+									.run			= cmd_acc_vlan,
 									.subtree	= NULL
 								},
 
@@ -495,7 +495,7 @@ struct menu_node config_if_main = {
 							.name			= "vlan",
 							.help			= "Set VLAN when interface is in access mode",
 							.mask			= CLI_MASK(PRIV(1)),
-							.tokenize	= NULL,
+							.tokenize	= swcli_tokenize_number,
 							.run			= NULL,
 							.subtree	= (struct menu_node *[]) { /*{{{*/
 								/* #switchport access vlan <1-1094> */
@@ -505,6 +505,7 @@ struct menu_node config_if_main = {
 									.mask			= CLI_MASK(PRIV(1)),
 									.tokenize	= NULL,
 									.run			= cmd_acc_vlan,
+									.priv			= (int []) {VALID_LIMITS, 1, 4094},
 									.subtree	= NULL
 								},
 

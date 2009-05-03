@@ -47,7 +47,8 @@ static __inline__ int if_name_generic(char *name, const char *type, const char *
  * returned. On error, -1 is returned.
  */
 int if_parse_generic(const char *name, const char *type);
-#define if_parse_vlan(name) if_parse_generic(name, "vlan");
+#define if_parse_ethernet(name) if_parse_generic(name, "eth")
+#define if_parse_vlan(name) if_parse_generic(name, "vlan")
 
 int if_get_index(const char *name, int sock_fd);
 

@@ -127,7 +127,6 @@ int cmd_du_full(struct cli_context *ctx, int argc, char **argv, struct menu_node
 int cmd_du_half(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
 int cmd_sp_auto(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
 int cmd_swport_off(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
-int cmd_noacc_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
 
 int cmd_trunk_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 { 
@@ -183,11 +182,51 @@ int cmd_trunk_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_n
 	return CLI_EX_OK;
 }
 
-int cmd_nomode(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
+int cmd_nomode(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
+{
+	struct swcfgreq swcfgr;
+	struct swcli_context *uc = SWCLI_CTX(ctx);
+	int sock_fd;
+
+	SW_SOCK_OPEN(ctx, sock_fd);
+
+	swcfgr.cmd = SWCFG_SETTRUNK;
+	swcfgr.ifindex = uc->ifindex;
+	swcfgr.ext.trunk = 0;
+	ioctl(sock_fd, SIOCSWCFG, &swcfgr);
+
+	swcfgr.cmd = SWCFG_SETACCESS;
+	swcfgr.ext.access = 0;
+	ioctl(sock_fd, SIOCSWCFG, &swcfgr);
+
+	SW_SOCK_CLOSE(ctx, sock_fd);
+
+	return CLI_EX_OK;
+}
+
 int cmd_sp_10(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
 int cmd_sp_100(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
 int cmd_swport_on(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
-int cmd_acc_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
+
+int cmd_acc_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
+{
+	struct swcfgreq swcfgr;
+	struct swcli_context *uc = SWCLI_CTX(ctx);
+	int sock_fd;
+
+	SW_SOCK_OPEN(ctx, sock_fd);
+
+	swcfgr.cmd = SWCFG_SETPORTVLAN;
+	swcfgr.ifindex = uc->ifindex;
+	swcfgr.vlan = 1;
+	if (strcmp(nodev[0]->name, "no"))
+		swcfgr.vlan = atoi(argv[3]);
+	ioctl(sock_fd, SIOCSWCFG, &swcfgr);
+
+	SW_SOCK_CLOSE(ctx, sock_fd);
+
+	return CLI_EX_OK;
+}
 
 int count_mask_bits(uint32_t n_mask)
 {

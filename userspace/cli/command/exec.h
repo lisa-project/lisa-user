@@ -16,12 +16,10 @@ int cmd_sh_ip(struct cli_context *, int, char **, struct menu_node **);
 int cmd_sh_addr(struct cli_context *, int, char **, struct menu_node **);
 int cmd_sh_mac_age(struct cli_context *, int, char **, struct menu_node **);
 int cmd_show_priv(struct cli_context *, int, char **, struct menu_node **);
-int cmd_show_run(struct cli_context *, int, char **, struct menu_node **);
 int cmd_show_start(struct cli_context *, int, char **, struct menu_node **);
 int cmd_show_ver(struct cli_context *, int, char **, struct menu_node **);
 int cmd_show_vlan(struct cli_context *, int, char **, struct menu_node **);
 int cmd_trace(struct cli_context *, int, char **, struct menu_node **);
-int cmd_wrme(struct cli_context *, int, char **, struct menu_node **);
 
 int cmd_sh_mac_addr_t(struct cli_context *, int, char **, struct menu_node **);
 int cmd_cl_mac_addr_t(struct cli_context *, int, char **, struct menu_node **);

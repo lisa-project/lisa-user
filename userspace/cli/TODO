@@ -45,13 +45,10 @@ no duplex
 no ip address 
 no speed 
 no switchport 
-no switchport access vlan 
-no switchport mode 
 speed 10 
 speed 100 
 speed auto 
 switchport 
-switchport access vlan <1-1094> 
 
 (config-line)#
 password 0 LINE 
