@@ -158,25 +158,41 @@ int build_config_interface(struct cli_context *ctx, FILE *out, struct net_switch
 	return CLI_EX_OK;
 }
 
-int build_config_global(struct cli_context *ctx, FILE *out, int sock_fd)
+/*
+ * tagged_if
+ *     Whether to open a separate config file for tagged interfaces (1)
+ *     or use the already provided stream in *out (0).
+ */
+int build_config_global(struct cli_context *ctx, FILE *out, int tagged_if)
 {
 	struct if_map if_map;
-	int status, i;
+	int status, i, sock_fd;
 
 	if_map_init(&if_map);
 
 	SW_SOCK_OPEN(ctx, sock_fd);
-
 
 	/* physical interfaces and VIFs */
 	status = if_map_fetch(&if_map, SW_IF_SWITCHED | SW_IF_ROUTED | SW_IF_VIF, sock_fd);
 	assert(!status); // FIXME if not null, status is an error code (i.e. errno) so we can use EX_STATUS_PERROR
 
 	for (i = 0; i < if_map.size; i++) {
-		build_config_interface(ctx, out, &if_map.dev[i], 1);
-		fprintf(out, "!\n");
-	}
+		FILE *if_out = out;
+		char tag[SW_MAX_TAG + 1];
+		char path[PATH_MAX];
 
+		if (tagged_if && !shared_get_if_tag(if_map.dev[i].ifindex, tag)) {
+			status = snprintf(path, sizeof(path), "%s/%s", SW_TAGS_FILE, tag);
+			assert (status < sizeof(path)); // FIXME
+
+			if_out = fopen(path, "w+");
+			assert(if_out != NULL); // FIXME
+		}
+		build_config_interface(ctx, if_out, &if_map.dev[i], !tagged_if);
+		fprintf(out, "!\n");
+		if (if_out != out)
+			fclose(if_out);
+	}
 
 	SW_SOCK_CLOSE(ctx, sock_fd);
 	free(if_map.dev);
@@ -221,7 +237,7 @@ static __inline__ int __cmd_show_run(struct cli_context *ctx, int argc, char **a
 	fflush(out);
 
 	ret = nsdev.ifindex ? build_config_interface(ctx, tmp_out, &nsdev, 1) :
-		build_config_global(ctx, tmp_out, sock_fd);
+		build_config_global(ctx, tmp_out, 0);
 
 	if (!ret) {
 		unsigned char buf[4096];
@@ -255,6 +271,36 @@ int cmd_show_run(struct cli_context *ctx, int argc, char **argv, struct menu_nod
 
 	SWCLI_CTX(ctx)->sock_fd = save_fd;
 	SW_SOCK_CLOSE(ctx, sock_fd);
+
+	return ret;
+}
+
+int cmd_write_mem(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
+{
+	FILE *cfg, *out;
+	int ret, sock_fd, save_fd = SWCLI_CTX(ctx)->sock_fd;
+
+	cfg = fopen(SW_CONFIG_FILE, "w+");
+	if (cfg == NULL) {
+		EX_STATUS_PERROR(ctx, "fopen failed");
+		return CLI_EX_REJECTED;
+	}
+
+	SW_SOCK_OPEN(ctx, sock_fd);
+	SWCLI_CTX(ctx)->sock_fd = sock_fd;
+	/* This is a trick to always prevent downstack functions from
+	 * opening a new sock_fd or closing the existing one */
+
+	out = ctx->out_open(ctx, 0);
+	fprintf(out, "Building configuration...\n");
+	fflush(out);
+
+	ret = build_config_global(ctx, cfg, 1);
+
+	SWCLI_CTX(ctx)->sock_fd = save_fd;
+	SW_SOCK_CLOSE(ctx, sock_fd);
+	fprintf(out, "\nCurrent configuration : %ld bytes\n", ftell(cfg));
+	fclose(cfg);
 
 	return ret;
 }

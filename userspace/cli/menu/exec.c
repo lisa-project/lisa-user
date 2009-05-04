@@ -794,7 +794,7 @@ struct menu_node menu_main = {
 					.help			= "Write to NV memory",
 					.mask			= CLI_MASK(PRIV(15)),
 					.tokenize	= NULL,
-					.run			= cmd_wrme,
+					.run			= cmd_write_mem,
 					.subtree	= NULL
 				},
 

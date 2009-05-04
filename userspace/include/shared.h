@@ -22,8 +22,8 @@
 
 #include "cdp_client.h"
 
-#define SW_CONFIG_FILE	"/etc/lisa/config.text";
-#define SW_TAGS_FILE	"/etc/lisa/tags";
+#define SW_CONFIG_FILE	"/etc/lisa/config.text"
+#define SW_TAGS_FILE	"/etc/lisa/tags"
 
 #define SW_MAX_VTY		15
 #define SW_MAX_ENABLE	15
