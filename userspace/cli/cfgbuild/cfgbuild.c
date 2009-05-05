@@ -158,6 +158,25 @@ int build_config_interface(struct cli_context *ctx, FILE *out, struct net_switch
 	return CLI_EX_OK;
 }
 
+struct write_enable_secret_priv {
+	FILE *out;
+	int level;
+};
+
+static int write_enable_secret(char *pw, void *__priv)
+{
+	struct write_enable_secret_priv *priv = __priv;
+
+	if (*pw == '\0')
+		return 0;
+
+	if (priv->level == SW_MAX_ENABLE)
+		fprintf(priv->out, "enable secret 5 %s\n", pw);
+	else
+		fprintf(priv->out, "enable secret level %d 5 %s\n", priv->level, pw);
+	return 0;
+}
+
 /*
  * tagged_if
  *     Whether to open a separate config file for tagged interfaces (1)
@@ -166,11 +185,53 @@ int build_config_interface(struct cli_context *ctx, FILE *out, struct net_switch
 int build_config_global(struct cli_context *ctx, FILE *out, int tagged_if)
 {
 	struct if_map if_map;
-	int status, i, sock_fd;
+	int status, i, j, sock_fd;
+	char hostname[128];
+	struct swcfgreq swcfgr;
 
 	if_map_init(&if_map);
 
 	SW_SOCK_OPEN(ctx, sock_fd);
+
+	/* hostname */
+	gethostname(hostname, sizeof(hostname));
+	hostname[sizeof(hostname) - 1] = '\0'; /* paranoia :P */
+	fprintf(out, "!\nhostname %s\n", hostname);
+
+	/* enable secrets */
+	fputs("!\n", out);
+	for(i = 1; i <= SW_MAX_ENABLE; i++) {
+		struct write_enable_secret_priv priv = {
+			.out = out,
+			.level = i
+		};
+
+		shared_auth(SHARED_AUTH_ENABLE, i, write_enable_secret, &priv);
+	}
+
+	/* vlans (aka replacement for vlan database) */
+	swcfgr.cmd = SWCFG_GETVDB;
+	status = buf_alloc_swcfgr(&swcfgr, sock_fd);
+	assert(status > 0); // FIXME
+
+	status /= sizeof(struct net_switch_vdb);
+	for (i = 0, j = 0; i < status; i++) {
+		struct net_switch_vdb *entry =
+			(struct net_switch_vdb *)swcfgr.buf.addr + i;
+		char vlan_name[9];
+
+		if(sw_is_default_vlan(entry->vlan))
+			continue;
+		fprintf(out, "!\nvlan %d\n", entry->vlan);
+		__default_vlan_name(vlan_name, entry->vlan);
+		if (strcmp(entry->name, vlan_name))
+			fprintf(out, " name %s\n", entry->name);
+		j++;
+	}
+#ifdef USE_EXIT_IN_CONF
+	if (j)
+		fprintf(out, "exit\n");
+#endif
 
 	/* physical interfaces and VIFs */
 	status = if_map_fetch(&if_map, SW_IF_SWITCHED | SW_IF_ROUTED | SW_IF_VIF, sock_fd);
