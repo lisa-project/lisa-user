@@ -12,6 +12,7 @@ struct menu_node config_interface = IF_MENU_NODE(if_subtree, "Select an interfac
 
 static struct menu_node *eth_tree[] = {
 		IF_ETHER(NULL, cmd_macstatic, NULL, 15),
+		IF_NETDEV(NULL, cmd_macstatic, NULL, 15),
 		NULL
 };
 
@@ -21,7 +22,7 @@ static struct menu_node *if_tree[] = {
 };
 
 static struct menu_node *vlan_tree[] = {
-		IF_VLAN(if_tree, NULL, NULL, 15),
+		& (struct menu_node) VLAN_MENU_NODE(if_tree, NULL, NULL, 15),
 		NULL
 };
 

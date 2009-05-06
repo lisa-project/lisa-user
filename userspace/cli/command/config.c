@@ -474,12 +474,13 @@ int cmd_set_aging(struct cli_context *ctx, int argc, char **argv, struct menu_no
 
 int cmd_macstatic(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
-	struct swcfgreq swcfgr;
-	char ifname[IFNAMSIZ];
-	int sock_fd, status, cmd = SWCFG_MACSTATIC;
+	struct swcfgreq swcfgr = {
+		.cmd = SWCFG_MACSTATIC
+	};
+	int sock_fd, status;
 
 	if (!strcmp(nodev[0]->name, "no")) {
-		cmd = SWCFG_DELMACSTATIC;
+		swcfgr.cmd = SWCFG_DELMACSTATIC;
 		SHIFT_ARG(argc, argv, nodev);
 	}
 
@@ -488,13 +489,11 @@ int cmd_macstatic(struct cli_context *ctx, int argc, char **argv, struct menu_no
 		return CLI_EX_REJECTED;
 	}
 
-	if_name_ethernet(ifname, argv[6]);
-
 	SW_SOCK_OPEN(ctx, sock_fd);
 
-	swcfgr.cmd = cmd;
 	swcfgr.vlan = atoi(argv[4]);
-	swcfgr.ifindex = if_get_index(ifname, sock_fd);
+	SHIFT_ARG(argc, argv, nodev, 6);
+	if_args_to_ifindex(ctx, argv, nodev, sock_fd, swcfgr.ifindex, status);
 	status = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
 	SW_SOCK_CLOSE(ctx, sock_fd);
 

@@ -95,4 +95,12 @@ static __inline__ int __shift_arg(int *argc, char ***argv, struct menu_node ***n
 
 int cmd_ioctl_simple(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev);
 
+static __inline__ void init_mac_filter(struct swcfgreq *swcfgr)
+{
+	swcfgr->ifindex = 0;
+	memset(&swcfgr->ext.mac.addr, 0, ETH_ALEN);
+	swcfgr->ext.mac.type = SW_FDB_ANY;
+	swcfgr->vlan = 0;
+}
+
 #endif

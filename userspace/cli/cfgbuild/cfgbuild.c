@@ -49,6 +49,30 @@ static __inline__ void list_vlans(FILE *out, unsigned char *bmp)
 	fputc('\n', out);
 }
 
+static char *canonical_if_name(struct net_switch_dev *nsdev)
+{
+	char *ret = NULL;
+	int n, status = -1;
+
+	if (nsdev == NULL)
+		return NULL;
+
+	switch (nsdev->type) {
+	case SW_IF_SWITCHED:
+	case SW_IF_ROUTED:
+		if ((n = if_parse_ethernet(nsdev->name)) >= 0)
+			status = asprintf(&ret, "Ethernet %d", n);
+		else
+			status = asprintf(&ret, "netdev %s", nsdev->name);
+		break;
+	case SW_IF_VIF:
+		status = asprintf(&ret, "vlan %d", nsdev->vlan);
+		break;
+	}
+
+	return status == -1 ? NULL : ret;
+}
+
 int build_config_interface(struct cli_context *ctx, FILE *out, struct net_switch_dev *nsdev, int if_cmd)
 {
 	int sock_fd, status;
@@ -60,20 +84,9 @@ int build_config_interface(struct cli_context *ctx, FILE *out, struct net_switch
 	SW_SOCK_OPEN(ctx, sock_fd);
 
 	if (if_cmd) {
-		int n;
-
-		switch (nsdev->type) {
-		case SW_IF_SWITCHED:
-		case SW_IF_ROUTED:
-			if ((n = if_parse_ethernet(nsdev->name)) >= 0)
-				fprintf(out, "!\ninterface Ethernet %d\n", n);
-			else
-				fprintf(out, "!\ninterface netdev %s\n", nsdev->name);
-			break;
-		case SW_IF_VIF:
-			fprintf(out, "!\ninterface vlan %d\n", nsdev->vlan);
-			break;
-		}
+		char *name = canonical_if_name(nsdev);
+		fprintf(out, "!\ninterface %s\n", name);
+		free(name);
 	}
 
 	switch (nsdev->type) {
@@ -254,6 +267,34 @@ int build_config_global(struct cli_context *ctx, FILE *out, int tagged_if)
 		if (if_out != out)
 			fclose(if_out);
 	}
+
+	/* static macs */
+	status = if_map_init_ifindex_hash(&if_map);
+	assert(!status);
+
+	init_mac_filter(&swcfgr);
+	swcfgr.cmd = SWCFG_GETMAC;
+	swcfgr.ext.mac.type = SW_FDB_STATIC;
+
+	status = buf_alloc_swcfgr(&swcfgr, sock_fd);
+	assert(status >= 0); // FIXME
+
+	status /= sizeof(struct net_switch_mac);
+	for (i = 0; i < status; i++) {
+		struct net_switch_mac *mac =
+			(struct net_switch_mac *)swcfgr.buf.addr + i;
+		unsigned char *addr = &mac->addr[0];
+		char *if_name = canonical_if_name(if_map_lookup_ifindex(&if_map, mac->ifindex, sock_fd));
+
+		fprintf(out, "mac-address-table static "
+				"%02hhx%02hhx.%02hhx%02hhx.%02hhx%02hhx "
+				"vlan %d interface %s\n",
+				addr[0], addr[1], addr[2], addr[3], addr[4], addr[5],
+				mac->vlan, if_name);
+		free(if_name);
+	}
+	free(swcfgr.buf.addr);
+	if_map_cleanup(&if_map);
 
 	SW_SOCK_CLOSE(ctx, sock_fd);
 	free(if_map.dev);

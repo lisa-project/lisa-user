@@ -59,14 +59,6 @@ out_return:
 	return err;
 }
 
-static __inline__ void init_mac_filter(struct swcfgreq *swcfgr)
-{
-	swcfgr->ifindex = 0;
-	memset(&swcfgr->ext.mac.addr, 0, ETH_ALEN);
-	swcfgr->ext.mac.type = SW_FDB_ANY;
-	swcfgr->vlan = 0;
-}
-
 static int parse_mac_filter(struct swcfgreq *swcfgr, struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev, int sock_fd, char *ifname)
 {
 	int status;
