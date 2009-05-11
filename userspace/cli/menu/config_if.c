@@ -80,7 +80,7 @@ struct menu_node config_if_main = {
 					.help			= "Enable AUTO duplex configuration",
 					.mask			= CLI_MASK(PRIV(2)),
 					.tokenize	= NULL,
-					.run			= cmd_du_auto,
+					.run			= cmd_speed_duplex,
 					.subtree	= NULL
 				},
 
@@ -90,7 +90,7 @@ struct menu_node config_if_main = {
 					.help			= "Force full duplex operation",
 					.mask			= CLI_MASK(PRIV(2)),
 					.tokenize	= NULL,
-					.run			= cmd_du_full,
+					.run			= cmd_speed_duplex,
 					.subtree	= NULL
 				},
 
@@ -100,7 +100,7 @@ struct menu_node config_if_main = {
 					.help			= "Force half-duplex operation",
 					.mask			= CLI_MASK(PRIV(2)),
 					.tokenize	= NULL,
-					.run			= cmd_du_half,
+					.run			= cmd_speed_duplex,
 					.subtree	= NULL
 				},
 
@@ -245,7 +245,7 @@ struct menu_node config_if_main = {
 					.help			= "Configure duplex operation.",
 					.mask			= CLI_MASK(PRIV(2)),
 					.tokenize	= NULL,
-					.run			= cmd_du_auto,
+					.run			= cmd_speed_duplex,
 					.subtree	= NULL
 				},
 
@@ -329,7 +329,7 @@ struct menu_node config_if_main = {
 					.help			= "Configure speed operation.",
 					.mask			= CLI_MASK(PRIV(2)),
 					.tokenize	= NULL,
-					.run			= cmd_sp_auto,
+					.run			= cmd_speed_duplex,
 					.subtree	= NULL
 				},
 
@@ -446,7 +446,7 @@ struct menu_node config_if_main = {
 					.help			= "Force 10 Mbps operation",
 					.mask			= CLI_MASK(PRIV(2)),
 					.tokenize	= NULL,
-					.run			= cmd_sp_10,
+					.run			= cmd_speed_duplex,
 					.subtree	= NULL
 				},
 
@@ -456,7 +456,7 @@ struct menu_node config_if_main = {
 					.help			= "Force 100 Mbps operation",
 					.mask			= CLI_MASK(PRIV(2)),
 					.tokenize	= NULL,
-					.run			= cmd_sp_100,
+					.run			= cmd_speed_duplex,
 					.subtree	= NULL
 				},
 
@@ -466,7 +466,7 @@ struct menu_node config_if_main = {
 					.help			= "Enable AUTO speed configuration",
 					.mask			= CLI_MASK(PRIV(2)),
 					.tokenize	= NULL,
-					.run			= cmd_sp_auto,
+					.run			= cmd_speed_duplex,
 					.subtree	= NULL
 				},
 

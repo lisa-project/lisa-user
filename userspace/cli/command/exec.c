@@ -354,9 +354,7 @@ static int show_interfaces(struct cli_context *ctx, int sock_fd, struct if_map *
 			fprintf(out, "\tPause param: autoneg: %d, rx_pause: %d, tx_pause: %d\n",
 					pause.autoneg, pause.rx_pause, pause.tx_pause);
 		/* Interface settings */
-		settings.cmd = ETHTOOL_GSET;
-		ifr.ifr_data = &settings;
-		if (!ioctl(sock_fd, SIOCETHTOOL, &ifr)) {
+		if (!if_get_settings(dev->ifindex, sock_fd, &settings)) {
 			fprintf(out, "\tSupported = 0x%04x\n"
 					"\tAdvertising = 0x%04x\n"
 					"\tSpeed = %d\n"

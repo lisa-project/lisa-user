@@ -236,3 +236,20 @@ int if_map_fetch(struct if_map *map, int type, int sock_fd)
 	map->size = status / sizeof(struct net_switch_dev);
 	return 0;
 }
+
+int if_settings_cmd(int ifindex, int cmd, int sock_fd, struct ethtool_cmd *settings)
+{
+	struct ifreq ifr;
+
+	assert(sock_fd != -1);
+	assert(settings != NULL);
+
+	if (cmd != ETHTOOL_GSET && cmd != ETHTOOL_SSET)
+		return -EINVAL;
+
+	memset(&ifr, 0, sizeof(ifr));
+	if_get_name(ifindex, sock_fd, ifr.ifr_name);
+	ifr.ifr_data = settings;
+	settings->cmd = cmd;
+	return ioctl(sock_fd, SIOCETHTOOL, &ifr);
+}

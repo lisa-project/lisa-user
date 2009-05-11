@@ -12,6 +12,8 @@
 #include <linux/if.h>
 #include <linux/netdevice.h>
 #include <linux/net_switch.h>
+#include <linux/sockios.h>
+#include <linux/ethtool.h>
 
 #include "netlink.h"
 #include "list.h"
@@ -110,6 +112,10 @@ static __inline__ void if_map_init(struct if_map *map)
 struct net_switch_dev *if_map_lookup_ifindex(struct if_map *map, int ifindex, int sock_fd);
 int if_map_init_ifindex_hash(struct if_map *map);
 int if_map_fetch(struct if_map *map, int type, int sock_fd);
+int if_settings_cmd(int ifindex, int cmd, int sock_fd, struct ethtool_cmd *settings);
+
+#define if_get_settings(ifindex, sock_fd, settings) if_settings_cmd(ifindex, ETHTOOL_GSET, sock_fd, settings)
+#define if_set_settings(ifindex, sock_fd, settings) if_settings_cmd(ifindex, ETHTOOL_SSET, sock_fd, settings)
 
 struct if_map_priv {
 	struct if_map *map;

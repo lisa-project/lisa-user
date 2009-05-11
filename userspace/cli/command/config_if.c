@@ -122,10 +122,48 @@ int cmd_if_desc(struct cli_context *ctx, int argc, char **argv, struct menu_node
 	return CLI_EX_OK;
 }
 
-int cmd_du_auto(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
-int cmd_du_full(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
-int cmd_du_half(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
-int cmd_sp_auto(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
+int cmd_speed_duplex(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
+{
+	struct swcli_context *uc = SWCLI_CTX(ctx);
+	struct ethtool_cmd settings;
+	int sock_fd;
+
+	SW_SOCK_OPEN(ctx, sock_fd);
+
+	/* Get current interface settings */
+	if (if_get_settings(uc->ifindex, sock_fd, &settings)) {
+		SW_SOCK_CLOSE(ctx, sock_fd);
+		EX_STATUS_REASON_IOCTL(ctx, errno);
+		return CLI_EX_REJECTED;
+	}
+
+	/*
+	 * Full/half duplex is forced and autonegotiation disabled unless the
+	 * command is 'no duplex' or 'duplex auto'.
+	 * Speed is forced to the specified value and autonegotiation disabled
+	 * unless the command is 'no speed' or 'speed auto'.
+	 */
+	settings.autoneg = 1;
+	if (strcmp(nodev[0]->name, "no") && strcmp(nodev[1]->name, "auto")) {
+		settings.autoneg = 0;
+		if (!strcmp(nodev[0]->name, "speed"))
+			settings.speed = atoi(nodev[1]->name);
+		else if (!strcmp(nodev[0]->name, "duplex"))
+			settings.duplex = !strcmp(nodev[1]->name, "full");
+	}
+
+	/* Apply changed settings */
+	if (if_set_settings(uc->ifindex, sock_fd, &settings)) {
+		SW_SOCK_CLOSE(ctx, sock_fd);
+		EX_STATUS_REASON_IOCTL(ctx, errno);
+		return CLI_EX_REJECTED;
+	}
+
+	SW_SOCK_CLOSE(ctx, sock_fd);
+
+	return CLI_EX_OK;
+}
+
 int cmd_swport_off(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
 
 int cmd_trunk_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
@@ -204,8 +242,6 @@ int cmd_nomode(struct cli_context *ctx, int argc, char **argv, struct menu_node 
 	return CLI_EX_OK;
 }
 
-int cmd_sp_10(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
-int cmd_sp_100(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
 int cmd_swport_on(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
 
 int cmd_acc_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
