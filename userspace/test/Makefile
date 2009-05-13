@@ -4,7 +4,7 @@ CGLAGS	= -g
 INC	= $(TOP_DIR)/../linux-2.6/include \
 	  $(TOP_DIR)/include
 
-SRCS	= pktgen.c pktrecv.c test_sock.c
+SRCS	= pktgen.c pktrecv.c test_sock.c mcast_recv.c mcast_send.c
 TARGETS	= $(SRCS:.c=)
 
 all: $(TARGETS)
