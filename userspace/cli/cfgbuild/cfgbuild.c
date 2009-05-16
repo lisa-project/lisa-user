@@ -224,6 +224,8 @@ int build_config_global(struct cli_context *ctx, FILE *out, int tagged_if)
 
 	/* vlans (aka replacement for vlan database) */
 	swcfgr.cmd = SWCFG_GETVDB;
+	swcfgr.vlan = 0;
+	swcfgr.ext.vlan_desc = NULL;
 	status = buf_alloc_swcfgr(&swcfgr, sock_fd);
 	assert(status > 0); // FIXME
 
