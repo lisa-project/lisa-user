@@ -1,3 +1,9 @@
 *.o
 *.so
 .*.swp
+userspace/rstp/test_sock
+userspace/tools/filter
+userspace/tools/login
+userspace/tools/reboot
+userspace/tools/swctl
+
