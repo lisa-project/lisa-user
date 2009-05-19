@@ -140,7 +140,7 @@ int cmd_sh_mac_addr_t(struct cli_context *ctx, int argc, char **argv, struct men
 			ret = CLI_EX_REJECTED;
 			break;
 		default:
-			EX_STATUS_REASON_IOCTL(ctx, status);
+			EX_STATUS_REASON_IOCTL(ctx, -status);
 			ret = CLI_EX_WARNING;
 			break;
 		}
@@ -459,7 +459,150 @@ int cmd_show_priv(struct cli_context *ctx, int argc, char **argv, struct menu_no
 
 int cmd_show_start(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
 int cmd_show_ver(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
-int cmd_show_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
+
+int cmd_show_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
+{
+	struct swcfgreq swcfgr = {
+		.buf.addr = NULL,
+		.cmd = SWCFG_GETVDB,
+		.vlan = 0,
+		.ext.vlan_desc = NULL
+	};
+	int sock_fd = -1, status;
+	int ret = CLI_EX_OK;
+	const char *dash =
+		"---------------------------------------"
+		"---------------------------------------";
+	const char *fmt1 = "%-4s %-32s %-9s %s\n";
+	const char *fmt2 = "%-4d %-32s %-9s %s\n";
+	const char *fmt3 = "%47s %s\n";
+	FILE *out = NULL;
+	size_t dlen = strlen(dash);
+	struct if_map if_map;
+	int i, j;
+
+	assert(argc >= 2); /* show vlan */
+	SHIFT_ARG(argc, argv, nodev, 2);
+
+	if (argc && !strcmp(nodev[0]->name, "id")) {
+		assert(argc >= 2);
+		swcfgr.vlan = atoi(argv[1]);
+	}
+
+	if (argc && !strcmp(nodev[0]->name, "name")) {
+		assert(argc >= 2);
+		swcfgr.ext.vlan_desc = argv[1];
+	}
+
+	SW_SOCK_OPEN(ctx, sock_fd);
+
+	if_map_init(&if_map);
+	status = if_map_fetch(&if_map, SW_IF_SWITCHED, sock_fd);
+	assert(!status); // FIXME if not null, status is an error code (i.e. errno) so we can use EX_STATUS_PERROR
+	status = if_map_init_ifindex_hash(&if_map);
+	assert(!status);
+
+	status = buf_alloc_swcfgr(&swcfgr, sock_fd);
+
+	if (status < 0) {
+		EX_STATUS_REASON_IOCTL(ctx, -status);
+		ret = CLI_EX_REJECTED;
+		goto out_clean;
+	}
+
+	if (!status && swcfgr.vlan) {
+		EX_STATUS_REASON(ctx, "VLAN id %d not found in current VLAN database\n", swcfgr.vlan);
+		ret = CLI_EX_WARNING;
+		goto out_clean;
+	}
+
+	if (!status && swcfgr.ext.vlan_desc != NULL) {
+		EX_STATUS_REASON(ctx, "VLAN %s not found in current VLAN database\n", swcfgr.ext.vlan_desc);
+		ret = CLI_EX_WARNING;
+		goto out_clean;
+	}
+
+	out = ctx->out_open(ctx, 1);
+
+	fprintf(out, fmt1, "VLAN", "Name", "Status", "Ports");
+#define DASHES(x) (dash + dlen - (x))
+	fprintf(out, fmt1, DASHES(4), DASHES(32), DASHES(9), DASHES(31));
+#undef DASHES
+
+	status /= sizeof(struct net_switch_vdb);
+	for (i = 0; i < status; i++) {
+		struct net_switch_vdb *entry =
+			&((struct net_switch_vdb *)swcfgr.buf.addr)[i];
+		int vlan = entry->vlan;
+		struct swcfgreq vlif_swcfgr = {
+			.cmd = SWCFG_GETVLANIFS,
+			.vlan = vlan
+		};
+		int vlif_no = buf_alloc_swcfgr(&vlif_swcfgr, sock_fd);
+		struct net_switch_dev *nsdev;
+		char buf[32] = {'\0'};
+		int bufoff = 0;
+		int firstline = 1;
+
+		/* FIXME kernel module should tell us whether vlan is "active"
+		 * or "act/unsup" */
+#define print_buf \
+		do {\
+			if (firstline) {\
+				fprintf(out, fmt2, vlan, entry->name,\
+						vlan >= 1002 && vlan <= 1005 ? "act/unsup" : "active",\
+						buf);\
+			} else {\
+				fprintf(out, fmt3, "", buf);\
+			}\
+		} while(0)
+
+		/* if (vlif_no < 0) perror("getvlanif"); */
+		assert(vlif_no >= 0);
+
+		vlif_no /= sizeof(int);
+		for (j = 0; j < vlif_no; j++) {
+			int ifindex = ((int *)vlif_swcfgr.buf.addr)[j];
+			int tmp;
+
+			nsdev = if_map_lookup_ifindex(&if_map, ifindex, sock_fd);
+
+			//fprintf(out, "\nqqq - %s - qqq\n", nsdev->name);
+			if (bufoff + (tmp = strlen(nsdev->name)) + (bufoff ? 2 : 0) < sizeof(buf)) {
+				if (bufoff) {
+					buf[bufoff++] = ',';
+					buf[bufoff++] = ' ';
+				}
+				strcpy(&buf[bufoff], nsdev->name);
+				bufoff += tmp;
+				continue;
+			}
+
+			print_buf;
+			firstline = 0;
+			tmp = strlen(nsdev->name);
+			strcpy(&buf[0], nsdev->name);
+			bufoff = tmp;
+		}
+		if (firstline || bufoff)
+			print_buf;
+
+		free(vlif_swcfgr.buf.addr);
+	}
+
+out_clean:
+	if_map_cleanup(&if_map);
+	if (if_map.dev != NULL)
+		free(if_map.dev);
+	if (sock_fd != -1)
+		SW_SOCK_CLOSE(ctx, sock_fd);
+	if (out != NULL)
+		fclose(out);
+	if (swcfgr.buf.addr != NULL)
+		free(swcfgr.buf.addr);
+	return ret;
+}
+
 int cmd_trace(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
 int cmd_wrme(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
 

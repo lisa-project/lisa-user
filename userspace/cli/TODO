@@ -28,24 +28,15 @@ show running-config interface netdev WORD
 show running-config interface vlan <1-1094> 
 show startup-config 
 show version 
-show vlan 
 show vlan brief 
 traceroute WORD 
 write memory 
 
 (config-if)#
-duplex auto 
-duplex full 
-duplex half 
 no cdp enable 
 no description 
-no duplex 
 no ip address 
-no speed 
 no switchport 
-speed 10 
-speed 100 
-speed auto 
 switchport 
 
 (config-line)#

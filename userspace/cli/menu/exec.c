@@ -738,6 +738,57 @@ struct menu_node menu_main = {
 							} /*}}}*/
 						},
 
+						/* #show vlan id */
+						& (struct menu_node){
+							.name			= "id",
+							.help			= "VTP VLAN status by VLAN id",
+							.mask			= CLI_MASK(PRIV(1)),
+							.tokenize	= swcli_tokenize_number,
+							.run			= NULL,
+							.subtree	= (struct menu_node *[]) { /*{{{*/
+								/* #show vlan id <1-4094> */
+								& (struct menu_node) {
+									.name			= "<1-4094>",
+									.help			= "A VTP VLAN number",
+									.mask			= CLI_MASK(PRIV(1)),
+									.tokenize	= NULL,
+									.run			= cmd_show_vlan,
+									.priv			= (int []) {VALID_LIMITS, 1, 4094},
+									.subtree	= (struct menu_node *[]) { /*{{{*/
+										/* #show vlan id <1-4094> | */
+										&output_modifiers,
+										NULL
+									} /*}}}*/
+								},
+								NULL
+							} /*}}}*/
+						},
+
+						/* #show vlan name */
+						& (struct menu_node){
+							.name			= "name",
+							.help			= "VTP VLAN status by VLAN name",
+							.mask			= CLI_MASK(PRIV(1)),
+							.tokenize	= swcli_tokenize_word,
+							.run			= cmd_show_vlan,
+							.subtree	= (struct menu_node *[]) { /*{{{*/
+								/* #show vlan name WORD */
+								& (struct menu_node) {
+									.name			= "WORD",
+									.help			= "A VTP VLAN name",
+									.mask			= CLI_MASK(PRIV(1)),
+									.tokenize	= NULL,
+									.run			= cmd_show_vlan,
+									.subtree	= (struct menu_node *[]) { /*{{{*/
+										/* #show vlan name WORD | */
+										&output_modifiers,
+										NULL
+									} /*}}}*/
+								},
+								NULL
+							} /*}}}*/
+						},
+
 						/* #show vlan | */
 						&output_modifiers,
 						NULL
