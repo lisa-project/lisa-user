@@ -450,6 +450,49 @@ int cmd_sh_int(struct cli_context *ctx, int argc, char **argv, struct menu_node 
 }
 
 int cmd_sh_ip(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
+
+int cmd_sh_ip_igmps(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
+{
+
+	FILE *out;
+	char name[10] = ""; 
+
+	SHIFT_ARG(argc, argv, nodev,4);
+	if(argc)
+		strcpy(name,argv[1]);
+	out = ctx->out_open(ctx, 1);
+	fprintf(out,"IGMP_SNOOPING %s\n ", name);
+	fflush(out);
+	return 0;
+}
+
+int cmd_sh_ip_igmps_mrouter(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
+{
+	FILE *out;
+	char name[10] = ""; 
+
+	SHIFT_ARG(argc, argv, nodev,5);
+	if(argc){
+		strcpy(name,"Vlan ");
+		strcat(name,argv[1]);
+	}
+	out = ctx->out_open(ctx, 1);
+	fprintf(out,"IGMP_SNOOPING mrouter %s\n ", name);
+	fflush(out);
+	return 0;
+}
+
+int cmd_sh_ip_igmps_groups(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
+{
+	FILE *out;
+
+	SHIFT_ARG(argc, argv, nodev,5);
+	out = ctx->out_open(ctx, 1);
+	fprintf(out,"IGMP_SNOOPING groups %s\n ", nodev[0]->name);
+	fflush(out);
+	return 0;
+}
+
 int cmd_sh_addr(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
 int cmd_sh_mac_age(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
 int cmd_sh_mac_eth(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}

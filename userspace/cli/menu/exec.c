@@ -93,6 +93,46 @@ static struct menu_node cdp_ne_det = {
 	} /*}}}*/
 };
 
+static struct menu_node sh_ip_igmps_count = {
+	.name			= "count",
+	.help			= "Show count",
+	.mask			= CLI_MASK(PRIV(1)),
+	.tokenize	= NULL,
+	.run			= cmd_sh_ip_igmps_groups,
+	.subtree	= (struct menu_node *[]) { /*{{{*/
+		&output_modifiers,
+		NULL
+	} /*}}}*/
+};
+
+
+static struct menu_node sh_ip_igmps_user = {
+	.name			= "user",
+	.help			= "User configured group information",
+	.mask			= CLI_MASK(PRIV(1)),
+	.tokenize	= NULL,
+	.run			= cmd_sh_ip_igmps_groups,
+	.subtree	= (struct menu_node *[]) { /*{{{*/
+		&sh_ip_igmps_count,
+		&output_modifiers,
+		NULL
+	} /*}}}*/
+};
+
+static struct menu_node sh_ip_igmps_dynamic = {
+	.name			= "dynamic",
+	.help			= "IGMP Snooping learned group information",
+	.mask			= CLI_MASK(PRIV(1)),
+	.tokenize	= NULL,
+	.run			= cmd_sh_ip_igmps_groups,
+	.subtree	= (struct menu_node *[]) { /*{{{*/
+		&sh_ip_igmps_count,
+		&output_modifiers,
+		NULL
+	} /*}}}*/
+};
+
+
 static struct menu_node *cdp_ne_if_subtree[] = {
 	&cdp_ne_det,
 	&output_modifiers,
@@ -596,7 +636,130 @@ struct menu_node menu_main = {
 					.mask			= CLI_MASK(PRIV(1)),
 					.tokenize	= NULL,
 					.run			= cmd_sh_ip,
-					.subtree	= NULL
+					.subtree	= (struct menu_node *[]) { /*{{{*/
+						/* #show ip igmp */
+						& (struct menu_node){
+							.name			= "igmp",
+							.help			= "IGMP Information",
+							.mask			= CLI_MASK(PRIV(1)),
+							.tokenize	= NULL,
+							.run			= NULL,
+							.subtree	= (struct menu_node *[]) { /*{{{*/
+								/* #show ip igmp snooping */
+								& (struct menu_node){
+									.name			= "snooping",
+									.help			= "Snooping info on LiSA Vlans",
+									.mask			= CLI_MASK(PRIV(1)),
+									.tokenize	= NULL,
+									.run			= cmd_sh_ip_igmps,
+									.subtree	= (struct menu_node *[]) { /*{{{*/
+										/* #show ip igmp snooping groups */
+										& (struct menu_node){
+											.name			= "groups",
+											.help			= "Show group information",
+											.mask			= CLI_MASK(PRIV(1)),
+											.tokenize	= NULL,
+											.run			= cmd_sh_ip_igmps_groups,
+											.subtree	= (struct menu_node *[]) { /*{{{*/
+												&sh_ip_igmps_count,
+												&sh_ip_igmps_dynamic,
+												&sh_ip_igmps_user,
+												/* #show ip igmp snooping groups vlan */
+												& (struct menu_node){
+													.name			= "vlan",
+													.help			= "Show group information by vlan",
+													.mask			= CLI_MASK(PRIV(1)),
+													.tokenize	= swcli_tokenize_number,
+													.run			= NULL,
+													.subtree	= (struct menu_node *[]) { /*{{{*/
+														/* #show ip igmp snooping groups vlan [x]*/
+														& (struct menu_node){
+															.name			= "<1-4094>",
+															.help			= "Vlan number",
+															.mask			= CLI_MASK(PRIV(1)),
+															.tokenize	= NULL,
+															.run			= cmd_sh_ip_igmps_groups,
+															.priv			= (int []) {VALID_LIMITS, 1, 4094}, 
+															.subtree	= NULL
+														},
+
+														NULL
+													} /*}}}*/
+												},
+												&output_modifiers,
+												NULL
+											} /*}}}*/
+										},
+
+										/* #show ip igmp snooping mrouter */
+										& (struct menu_node){
+											.name			= "mrouter",
+											.help			= "Show routers on LiSA Vlans",
+											.mask			= CLI_MASK(PRIV(1)),
+											.tokenize	= NULL,
+											.run			= cmd_sh_ip_igmps_mrouter,
+											.subtree	= (struct menu_node *[]) { /*{{{*/
+												& (struct menu_node){
+													.name			= "vlan",
+													.help			= "Snooping info in a LiSA Vlan",
+													.mask			= CLI_MASK(PRIV(1)),
+													.tokenize	= swcli_tokenize_number,
+													.run			= NULL,
+													.subtree	= (struct menu_node *[]) { /*{{{*/
+														/* #show ip igmp snooping mrouter vlan [x]*/
+														& (struct menu_node){
+															.name			= "<1-4094>",
+															.help			= "Vlan number",
+															.mask			= CLI_MASK(PRIV(1)),
+															.tokenize	= NULL,
+															.run			= cmd_sh_ip_igmps_mrouter,
+															.priv			= (int []) {VALID_LIMITS, 1, 4094}, 
+															.subtree	= NULL
+														},
+
+														NULL
+													} /*}}}*/
+												},
+
+												&output_modifiers,
+												NULL
+											} /*}}}*/
+										},
+
+										/* #show ip igmp snooping vlan */
+										& (struct menu_node){
+											.name			= "vlan",
+											.help			= "Snooping info in a LiSA Vlan",
+											.mask			= CLI_MASK(PRIV(1)),
+											.tokenize	= swcli_tokenize_number,
+											.run			= NULL,
+											.subtree	= (struct menu_node *[]) { /*{{{*/
+												/* #show ip igmp snooping vlan [x]*/
+												& (struct menu_node){
+													.name			= "<1-4094>",
+													.help			= "Vlan number",
+													.mask			= CLI_MASK(PRIV(1)),
+													.tokenize	= NULL,
+													.run			= cmd_sh_ip_igmps,
+													.priv			= (int []) {VALID_LIMITS, 1, 4094}, 
+													.subtree	= NULL
+												},
+
+												NULL
+											} /*}}}*/
+										},
+
+										&output_modifiers,
+										NULL
+									} /*}}}*/
+								},
+
+								NULL
+							} /*}}}*/
+						},
+
+						NULL
+					} /*}}}*/
 				},
 
 				/* #show mac */
