@@ -539,3 +539,32 @@ int cmd_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **
 	
 	return CLI_EX_OK;
 }
+
+int cmd_add_mrouter(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
+{
+	int sock_fd, iftype;
+	FILE *out;
+	struct swcfgreq swcfgr;
+	unsigned char bmp[SW_VLAN_BMP_NO];
+
+	out = ctx->out_open(ctx, 1);
+	memset(bmp, 0, SW_VLAN_BMP_NO);
+
+	SHIFT_ARG(argc, argv, nodev,4); //vlan
+	swcfgr.vlan = atoi(argv[0]);
+	fprintf(out,"IGMP_SNOOPING vlan  %s\n", argv[0]);
+
+	SHIFT_ARG(argc, argv, nodev,3);
+	SW_SOCK_OPEN(ctx,sock_fd);
+	if_args_to_ifindex(ctx, argv, nodev, sock_fd, swcfgr.ifindex, iftype);
+	SHIFT_ARG(argc, argv, nodev,1); //interface
+	fprintf(out,"IGMP_SNOOPING eth  %s\n", argv[0]);
+	fflush(out);
+
+	swcfgr.cmd = SWCFG_ADDMROUTER;
+
+	ioctl(sock_fd, SIOCSWCFG, &swcfgr);
+	SW_SOCK_CLOSE(ctx, sock_fd);
+
+	return CLI_EX_OK;
+}

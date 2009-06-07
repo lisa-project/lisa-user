@@ -455,8 +455,9 @@ int cmd_sh_ip_igmps(struct cli_context *ctx, int argc, char **argv, struct menu_
 {
 
 	FILE *out;
-	char name[10] = ""; 
+	char name[10];
 
+	strcpy(name,"");
 	SHIFT_ARG(argc, argv, nodev,4);
 	if(argc)
 		strcpy(name,argv[1]);
@@ -469,17 +470,59 @@ int cmd_sh_ip_igmps(struct cli_context *ctx, int argc, char **argv, struct menu_
 int cmd_sh_ip_igmps_mrouter(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
 	FILE *out;
-	char name[10] = ""; 
+	char name[10];
+	int ret = CLI_EX_OK, sock_fd = -1, i;
+	struct sdummy {
+		int vlan;
+		int ifid;
+	};
+	struct sdummy dummy;
+
+	struct swcfgreq swcfgr = {
+		.cmd = SWCFG_GETMROUTERS,
+		.vlan = 0
+	}; 
+
+	const char *dash =
+		"---------------------------------------"
+		"---------------------------------------";
+	const char *fmt1 = "%-4s    %s\n";
+	const char *fmt2 = "%-4d    %s(static)\n";
+	size_t dlen = strlen(dash);
 
 	SHIFT_ARG(argc, argv, nodev,5);
 	if(argc){
-		strcpy(name,"Vlan ");
-		strcat(name,argv[1]);
+		strcpy(name,argv[0]); //"Vlan"
+		strcat(name,argv[1]); // vlanId
+		swcfgr.vlan = atoi(argv[1]);
+	}else{
+		strcpy(name,"");
 	}
 	out = ctx->out_open(ctx, 1);
-	fprintf(out,"IGMP_SNOOPING mrouter %s\n ", name);
+	fprintf(out,"IGMP_SNOOPING mrouter %s\n", name);
+
+
+	SW_SOCK_OPEN(ctx, sock_fd);
+	int vlif_no = buf_alloc_swcfgr(&swcfgr, sock_fd);
+	vlif_no /= sizeof(dummy);
+	fprintf(out, "count: %d \n", vlif_no);
+	char ifname[IFNAMSIZ];
+
+	fprintf(out, fmt1, "Vlan", "Ports");
+#define DASHES(x) (dash + dlen - (x))
+	fprintf(out, fmt1, DASHES(4),DASHES(8));
+#undef DASHES
+
+	for (i = 0; i < vlif_no; i++) {
+		struct sdummy *entry = 
+			&((struct sdummy *)swcfgr.buf.addr)[i];
+		if_get_name(entry->ifid, sock_fd, ifname);
+		fprintf(out, fmt2, entry->vlan, ifname);
+	}
+	SW_SOCK_CLOSE(ctx, sock_fd);
+
 	fflush(out);
-	return 0;
+	return ret;
 }
 
 int cmd_sh_ip_igmps_groups(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)

@@ -1,5 +1,6 @@
 #include "swcli.h"
 #include "config_if.h"
+#include "tokenizers.h"
 
 extern struct menu_node config_interface;
 
@@ -49,7 +50,7 @@ struct menu_node config_if_main = {
 			.name			= "description",
 			.help			= "Interface specific description",
 			.mask			= CLI_MASK(PRIV(2)),
-			.tokenize	= NULL,
+			.tokenize	= swcli_tokenize_line,
 			.run			= NULL,
 			.subtree	= (struct menu_node *[]) { /*{{{*/
 				/* #description LINE */

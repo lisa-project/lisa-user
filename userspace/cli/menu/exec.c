@@ -679,7 +679,7 @@ struct menu_node menu_main = {
 															.mask			= CLI_MASK(PRIV(1)),
 															.tokenize	= NULL,
 															.run			= cmd_sh_ip_igmps_groups,
-															.priv			= (int []) {VALID_LIMITS, 1, 4094}, 
+															.priv			= (int []) {VALID_LIMITS, 1, 4094},
 															.subtree	= NULL
 														},
 
