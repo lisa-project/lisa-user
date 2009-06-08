@@ -276,7 +276,7 @@ int build_config_global(struct cli_context *ctx, FILE *out, int tagged_if)
 
 	init_mac_filter(&swcfgr);
 	swcfgr.cmd = SWCFG_GETMAC;
-	swcfgr.ext.mac.type = SW_FDB_STATIC;
+	swcfgr.ext.mac.type = SW_FDB_MAC_STATIC;
 
 	status = buf_alloc_swcfgr(&swcfgr, sock_fd);
 	assert(status >= 0); // FIXME

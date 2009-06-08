@@ -70,13 +70,13 @@ static int parse_mac_filter(struct swcfgreq *swcfgr, struct cli_context *ctx, in
 
 	do {
 		if (!strcmp(nodev[0]->name, "static")) {
-			swcfgr->ext.mac.type = SW_FDB_STATIC;
+			swcfgr->ext.mac.type = SW_FDB_MAC_STATIC;
 			SHIFT_ARG(argc, argv, nodev);
 			break;
 		}
 
 		if (!strcmp(nodev[0]->name, "dynamic")) {
-			swcfgr->ext.mac.type = SW_FDB_DYN;
+			swcfgr->ext.mac.type = SW_FDB_MAC_DYNAMIC;
 			SHIFT_ARG(argc, argv, nodev);
 			break;
 		}
