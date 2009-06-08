@@ -5,10 +5,16 @@
 #define is_digit(arg) ((arg) >= '0' && (arg) <= '9')
 // FIXME move is_digit() to .h
 
+extern struct menu_node menu_main;
+extern struct menu_node config_main;
+extern struct menu_node config_if_main;
+extern struct menu_node config_vlan_main;
+extern struct menu_node config_line_main;
+
 static int parse_vlan_list(char *list, unsigned char *bmp)
 {
 	int state = 0;
-	int min, max;
+	int min = 0, max;
 	char *last = list, *ptr;
 
 	memset(bmp, 0xff, SW_VLAN_BMP_NO);
@@ -68,6 +74,87 @@ static int parse_vlan_list(char *list, unsigned char *bmp)
 		}
 		break;
 	}
+	return 0;
+}
+
+int cmd_channel_group(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
+{
+	int status, sock_fd, ioctl_errno, logical_index = atoi(argv[1]);
+	struct swcfgreq swcfgr;
+	struct ifreq ifr;
+	struct swcli_context *uc = SWCLI_CTX(ctx);
+	char *the_command, *bond_name;
+	char *start_command = strdup("modprobe -o bond");
+	char *end_command = strdup(" bonding mode=802.3ad miimon=100 lacp_rate=fast updelay=100 downdelay=100");
+
+	char *if_name = calloc(IFNAMSIZ, 1);
+	the_command = (char *) calloc(strlen(start_command) + 5 + strlen(end_command), sizeof(char));
+	
+	SW_SOCK_OPEN(ctx, sock_fd);
+
+	if_get_name(uc->ifindex, sock_fd, if_name);
+
+	SW_SOCK_OPEN(ctx, sock_fd);
+	swcfgr.cmd = SWCFG_ISCHANNEL;
+	swcfgr.channel_logical = logical_index;
+	status = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
+	ioctl_errno = errno;
+	SW_SOCK_CLOSE(ctx, sock_fd); /* this can overwrite ioctl errno */
+
+	if (status)
+		goto enslave;
+
+	SW_SOCK_OPEN(ctx, sock_fd);
+	swcfgr.cmd = SWCFG_ADDCHANNEL;
+	swcfgr.channel_logical = logical_index;
+	status = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
+	ioctl_errno = errno;
+	SW_SOCK_CLOSE(ctx, sock_fd); /* this can overwrite ioctl errno */
+
+	if (status)
+	{
+		EX_STATUS_REASON_IOCTL(ctx, ioctl_errno);
+		return CLI_EX_REJECTED;
+	};
+
+	strcat(the_command, start_command);
+	sprintf(the_command + strlen(the_command), "%d", swcfgr.channel_physical);
+	strcat(the_command, end_command);
+	
+	system(the_command);
+	// printf("%s\n", the_command);	
+
+enslave:
+	bond_name = (char *) calloc(10, sizeof(char));
+	strcpy(bond_name, "bond");
+	sprintf(bond_name + strlen(bond_name), "%d", swcfgr.channel_physical);
+	
+	strcpy(ifr.ifr_name, bond_name);
+
+	SW_SOCK_OPEN(ctx, sock_fd);
+
+	ioctl(sock_fd, SIOCGIFINDEX, &ifr);
+	SW_SOCK_CLOSE(ctx, sock_fd);
+	
+	/*
+	ctx->node_filter &= PRIV_FILTER(PRIV_MAX);
+	ctx->node_filter |= IFF_CHANNEL;
+	ctx->root = &config_if_main;
+	uc->ifindex = ifr.ifr_ifindex;
+	uc->vlan = -1;
+	*/
+	
+	use_if_ether(ctx, bond_name, ifr.ifr_ifindex, 1);
+
+	memset(the_command, '\0', sizeof(the_command));
+
+	strcpy(the_command, "ifenslave ");
+	strcpy(the_command + strlen(the_command), bond_name);
+	strcpy(the_command + strlen(the_command), " ");
+	strcpy(the_command + strlen(the_command), if_name);
+
+	system(the_command);
+		
 	return 0;
 }
 

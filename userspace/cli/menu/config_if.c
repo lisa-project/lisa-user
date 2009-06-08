@@ -19,9 +19,11 @@ int swcli_tokenize_ip(struct cli_context *ctx, const char *buf,
 #define VLAN_WORD(__priv) & (struct menu_node) VLAN_WORD_MENU_NODE(__priv)
 
 struct menu_node config_if_main = {
+
 	/* Root node, .name is used as prompt */
 	.name			= "config-if",
 	.subtree	= (struct menu_node *[]) {
+		
 		/* #cdp */
 		& (struct menu_node){
 			.name			= "cdp",
@@ -42,6 +44,28 @@ struct menu_node config_if_main = {
 
 				NULL
 			} /*}}}*/
+		},
+
+		/* #channel-group */
+		& (struct menu_node){
+			.name 			= "channel-group",
+			.help			= "Etherchannel configuration",
+			.mask			= CLI_MASK(PRIV(2), IFF_SWITCHED),
+			.tokenize	= swcli_tokenize_number,
+			.run			= NULL,
+			.subtree 	= (struct menu_node *[]) {
+				/* #channel-group <number> */
+				& (struct menu_node){
+					.name 			= "<0-100>",
+					.help			= "Etherchannel interface number",
+					.mask			= CLI_MASK(PRIV(2)),
+					.tokenize	= NULL,
+					.run			= cmd_channel_group,
+					.priv		= (int []) {VALID_LIMITS, 0, 100},
+					.subtree	= NULL
+				},
+				NULL
+			}	
 		},
 
 		/* #description */

@@ -11,6 +11,9 @@ extern struct menu_node config_line_main;
 
 static char hostname_default[] = "Switch\0";
 
+int use_if_ether(struct cli_context *ctx, char *name, int index, int switchport);
+
+
 int cmd_cdp_v2(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
 	struct cdp_configuration cdp;
@@ -162,7 +165,139 @@ int cmd_hostname(struct cli_context *ctx, int argc, char **argv, struct menu_nod
 	return CLI_EX_OK;
 }
 
-static int use_if_ether(struct cli_context *ctx, char *name, int index, int switchport)
+int is_channel(struct cli_context *ctx, int logical_index)
+{
+	int status, sock_fd;
+	struct swcfgreq swcfgr;
+
+	SW_SOCK_OPEN(ctx, sock_fd);
+
+	swcfgr.cmd = SWCFG_ISCHANNEL;
+	swcfgr.channel_logical = logical_index;
+	status = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
+
+	SW_SOCK_CLOSE(ctx, sock_fd);
+
+	if (status)
+		return swcfgr.channel_physical;
+
+	return -1;
+}
+
+int add_channel(struct cli_context *ctx, int logical_index)
+{
+	int status, sock_fd, ioctl_errno;
+	struct swcfgreq swcfgr;
+	char *the_command, *bond_name;
+	char *start_command;
+	char *end_command;
+
+	SW_SOCK_OPEN(ctx, sock_fd);
+	swcfgr.cmd = SWCFG_ADDCHANNEL;
+	swcfgr.channel_logical = logical_index;
+	status = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
+	ioctl_errno = errno;
+	SW_SOCK_CLOSE(ctx, sock_fd);
+
+	switch (ioctl_errno)
+	{
+		case ENOMEM:
+			fprintf(stderr, "There is no memory available\n");
+			return -1;
+		case EINVAL:
+			fprintf(stderr, "The maximum number of port-channel interfaces has been reached\n");
+			return -1;
+	};
+
+	start_command = strdup("modprobe -o bond");
+	end_command = strdup(" bonding mode=802.3ad miimon=100 lacp_rate=fast updelay=100 downdelay=100");
+
+	the_command = (char *) calloc(strlen(start_command) + 5 + strlen(end_command), sizeof(char));
+	strcat(the_command, start_command);
+	sprintf(the_command + strlen(the_command), "%d", swcfgr.channel_physical);
+	strcat(the_command, end_command);
+
+	if (system(the_command))
+	{
+		printf("Module could not be inserted\n");
+		return -1;
+	};
+
+	printf("Interface created\n");
+
+	return swcfgr.channel_physical;
+}
+
+
+int use_if_channel(struct cli_context *ctx, char *name, int logical_index)
+{
+	int status, sock_fd, ioctl_errno, physical;
+	struct swcfgreq swcfgr;
+	struct ifreq ifr;
+	struct swcli_context *uc = SWCLI_CTX(ctx);
+	char *the_command, *bond_name;
+	char *start_command = strdup("modprobe -o bond");
+	char *end_command = strdup(" bonding mode=802.3ad miimon=100 lacp_rate=fast updelay=100 downdelay=100");
+
+	if (is_channel(ctx, logical_index) >= 0)
+	{
+		printf("interfața există\n");
+		return CLI_EX_OK;
+	};
+
+	printf("interfața nu există\n");
+
+	/*
+	SW_SOCK_OPEN(ctx, sock_fd);
+	swcfgr.cmd = SWCFG_ADDCHANNEL;
+	swcfgr.channel_logical = logical_index;
+	status = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
+	ioctl_errno = errno;
+	SW_SOCK_CLOSE(ctx, sock_fd);
+
+	if (status)
+	{
+		EX_STATUS_REASON_IOCTL(ctx, ioctl_errno);
+		return CLI_EX_REJECTED;
+	};
+
+	the_command = (char *) calloc(strlen(start_command) + 5 + strlen(end_command), sizeof(char));
+	strcat(the_command, start_command);
+	sprintf(the_command + strlen(the_command), "%d", swcfgr.channel_physical);
+	strcat(the_command, end_command);
+	
+	system(the_command);
+	// printf("%s\n", the_command);	
+
+	*/
+
+	physical = add_channel(ctx, logical_index);
+
+	if (physical < 0)
+		return CLI_EX_REJECTED;
+
+	bond_name = (char *) calloc(10, sizeof(char));
+	strcpy(bond_name, "bond");
+	sprintf(bond_name + strlen(bond_name), "%d", physical);
+	
+	strcpy(ifr.ifr_name, bond_name);
+
+	SW_SOCK_OPEN(ctx, sock_fd);
+	ioctl(sock_fd, SIOCGIFINDEX, &ifr);
+	SW_SOCK_CLOSE(ctx, sock_fd);
+
+	ctx->node_filter &= PRIV_FILTER(PRIV_MAX);
+	ctx->node_filter |= IFF_CHANNEL;
+	ctx->root = &config_if_main;
+	uc->ifindex = ifr.ifr_ifindex;
+	uc->vlan = -1;
+
+	// printf("%s %d\n", bond_name, ifr.ifr_ifindex);
+
+	return use_if_ether(ctx, bond_name, ifr.ifr_ifindex, 1);
+}
+
+int use_if_ether(struct cli_context *ctx, char *name, int index, int switchport)
 {
 	int status, sock_fd, ioctl_errno;
 	struct swcfgreq swcfgr;
@@ -381,6 +516,8 @@ int cmd_int_any(struct cli_context *ctx, int argc, char **argv, struct menu_node
 		return use_if_ether(ctx, ifr.ifr_name, 0, 1);
 	case IF_T_VLAN:
 		return use_if_vlan(ctx, n, 0);
+	case IF_T_CHANNEL:
+		return use_if_channel(ctx, ifr.ifr_name, n);
 	}
 
 	if (status == IF_T_ERROR && n == -1) {
@@ -428,6 +565,8 @@ int cmd_int_any(struct cli_context *ctx, int argc, char **argv, struct menu_node
 
 	if (swcfgr.ext.switchport == SW_IF_VIF)
 		return use_if_vlan(ctx, swcfgr.vlan, ifr.ifr_ifindex);
+
+	printf("%s %d\n", ifr.ifr_name, ifr.ifr_ifindex);
 
 	return use_if_ether(ctx, ifr.ifr_name, ifr.ifr_ifindex,
 			swcfgr.ext.switchport != SW_IF_ROUTED);

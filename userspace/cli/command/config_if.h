@@ -11,6 +11,8 @@ enum {
 	CMD_VLAN_NO
 };
 
+int cmd_channel_group(struct cli_context *, int, char **, struct menu_node **);
+
 int cmd_cdp_if_set(struct cli_context *, int, char **, struct menu_node **);
 int cmd_if_desc(struct cli_context *, int, char **, struct menu_node **);
 int cmd_speed_duplex(struct cli_context *, int, char **, struct menu_node **);

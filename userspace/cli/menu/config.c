@@ -5,6 +5,7 @@ static struct menu_node *if_subtree[] = {
 	IF_ETHER(NULL, cmd_int_any, NULL),
 	IF_VLAN(NULL, cmd_int_any, NULL),
 	IF_NETDEV(NULL, cmd_int_any, NULL),
+	IF_CHANNEL(NULL, cmd_int_any, NULL),
 	NULL
 };
 

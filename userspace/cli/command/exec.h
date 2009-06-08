@@ -25,4 +25,8 @@ int cmd_trace(struct cli_context *, int, char **, struct menu_node **);
 int cmd_sh_mac_addr_t(struct cli_context *, int, char **, struct menu_node **);
 int cmd_cl_mac_addr_t(struct cli_context *, int, char **, struct menu_node **);
 
+int cmd_sh_etherchannel(struct cli_context *, int, char **, struct menu_node **);
+int cmd_sh_etherchannel_no(struct cli_context *, int, char **, struct menu_node **);
+
+
 #endif

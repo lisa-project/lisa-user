@@ -48,6 +48,13 @@ int if_parse_args(char **argv, struct menu_node **nodev, char *name, int *n)
 			break;
 		}
 
+		if (!strcmp(nodev[0]->name, "Port-channel"))
+		{
+			__n = if_name_channel(name, argv[1]);
+			ret = IF_T_CHANNEL;
+			break;
+		}
+
 		if (strcmp(nodev[0]->name, "netdev")) {
 			__n = 0;
 			ret = IF_T_ERROR;

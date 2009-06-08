@@ -45,6 +45,29 @@
 }
 #define IF_ETHER(...) & (struct menu_node) IF_ETHER_MENU_NODE(__VA_ARGS__)
 
+#define IF_CHANNEL_MENU_NODE(__subtree, __run, __tokenize, __priv...) {\
+        .name           = "Port-channel",\
+        .help           = "Ethernet Channel",\
+        .mask           = CLI_MASK(VA_PRIV(NIL, ##__priv, 1)),\
+        .tokenize       = swcli_tokenize_number,\
+        .run            = NULL,\
+        .priv           = (void *)1,\
+        .subtree        = (struct menu_node *[]) {\
+                & (struct menu_node) {\
+                        .name           = "<0-100>",\
+                        .help           = "Port-channel interface number",\
+                        .mask           = CLI_MASK(VA_PRIV(NIL, ##__priv, 1)),\
+                        .tokenize       = __tokenize,\
+                        .run            = __run,\
+                        .priv           = (int []) {VALID_LIMITS, 0, 100},\
+                        .subtree        = __subtree\
+                },\
+                \
+                NULL\
+        }\
+}
+#define IF_CHANNEL(...) & (struct menu_node) IF_CHANNEL_MENU_NODE(__VA_ARGS__)
+
 #define IF_NETDEV_MENU_NODE(__subtree, __run, __tokenize, __priv...) {\
 	.name		= "netdev",\
 	.help		= "Linux NetDev",\
@@ -137,13 +160,15 @@ enum {
 	IF_T_ERROR,
 	IF_T_ETHERNET,
 	IF_T_VLAN,
+	IF_T_CHANNEL,
 	IF_T_NETDEV
 };
 
 /* interface type filters; must not collide with PRIV mask filter */
-#define IFF_SWITCHED	((uint32_t)1 << PRIV_SHIFT)
+#define IFF_SWITCHED		((uint32_t)1 << PRIV_SHIFT)
 #define IFF_ROUTED		((uint32_t)2 << PRIV_SHIFT)
 #define IFF_VIF			((uint32_t)4 << PRIV_SHIFT)
+#define IFF_CHANNEL		((uint32_t)8 << PRIV_SHIFT)
 
 /* Interface type/identifier tokenizer. It calls the standard cli
  * tokenizer, but adds logic to make input like "eth1" be treated as

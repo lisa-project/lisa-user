@@ -18,6 +18,9 @@
 #include <linux/net_switch.h>
 #include <linux/sockios.h>
 
+#include <linux/if_bonding.h>
+#include <linux/if_ether.h>
+
 #include "swsock.h"
 #include "util.h"
 #include "shared.h"
@@ -26,6 +29,8 @@
 #include "rlshell.h"
 #include "interface.h"
 #include "tokenizers.h"
+
+#include <command/bonding.h>
 
 char *swcli_prompt(struct rlshell_context *ctx);
 int swcli_dump_args(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev);
@@ -102,5 +107,9 @@ static __inline__ void init_mac_filter(struct swcfgreq *swcfgr)
 	swcfgr->ext.mac.type = SW_FDB_ANY;
 	swcfgr->vlan = 0;
 }
+
+int use_if_channel(struct cli_context *, char *, int);
+int use_if_ether(struct cli_context *ctx, char *name, int index, int switchport);
+
 
 #endif

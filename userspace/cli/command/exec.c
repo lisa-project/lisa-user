@@ -5,6 +5,57 @@
 
 extern struct menu_node config_main;
 
+
+
+
+int cmd_sh_etherchannel(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
+{
+	int skfd, i, res;
+	struct ifreq ifr;
+
+	/* Open a basic socket */
+	if ((skfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
+	{
+		perror("socket");
+		return CLI_EX_REJECTED;
+	};
+
+	printf("\n");
+	ifr.ifr_data = malloc(1000);
+	for (i = 0; i <= 100; i++)
+	{
+		res = is_channel(ctx, i);
+		if (res >= 0)
+		{
+			printf("-------------------- Port-channel %d --------------------- \n", i);
+			sprintf(ifr.ifr_name, "bond%d", res);
+			if (ioctl(skfd, SIOCBONDGETFULLINFO, &ifr) < 0)
+			{
+				perror("ioctl");
+				printf("Could not get the driver info\n");
+				return CLI_EX_OK;
+			};
+			printf("%s\n", (char *) ifr.ifr_data);
+		};
+	};
+
+	close(skfd);
+
+	return CLI_EX_OK;
+};
+
+int cmd_sh_etherchannel_no(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
+{
+	printf("sh etherchannel_no\n");
+
+	return CLI_EX_OK;
+
+};
+
+
+
+
+
 int swcli_output_modifiers_run(struct cli_context *ctx, int argc, char **argv,
 		struct menu_node **nodev)
 {

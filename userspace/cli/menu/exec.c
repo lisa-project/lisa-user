@@ -551,6 +551,29 @@ struct menu_node menu_main = {
 					} /*}}}*/
 				},
 
+				/* #show etherchannel */
+				& (struct menu_node){
+					.name			= "etherchannel",
+					.help			= "Etherchannel interface",
+					.mask			= CLI_MASK(PRIV(1)),
+					.tokenize		= swcli_tokenize_number,
+					.run			= cmd_sh_etherchannel,
+					.subtree	= (struct menu_node *[]) { /*{{{*/
+						/* #show etherchannel <0-100> */
+						& (struct menu_node){
+							.name			= "<0-100>",
+							.help			= "Interface number",
+							.mask			= CLI_MASK(PRIV(1)),
+							.tokenize		= NULL,
+							.run			= cmd_sh_etherchannel_no,
+							.priv			= (int []) {VALID_LIMITS, 0, 100},
+							.subtree		= NULL
+						},
+						NULL
+					}	
+				},
+
+
 				/* #show history */
 				& (struct menu_node){
 					.name			= "history",

@@ -40,6 +40,7 @@ static __inline__ int if_name_generic(char *name, const char *type, const char *
 }
 #define if_name_ethernet(name, num) if_name_generic(name, "eth", num)
 #define if_name_vlan(name, num) if_name_generic(name, "vlan", num)
+#define if_name_channel(name, num) if_name_generic(name, "po", num)
 
 /* Parse a linux netdevice name with a generic structure of "type"
  * immediately followed by "numeric identifier" (e.g. "eth1").
