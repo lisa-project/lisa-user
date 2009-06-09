@@ -472,11 +472,7 @@ int cmd_sh_ip_igmps_mrouter(struct cli_context *ctx, int argc, char **argv, stru
 	FILE *out;
 	char name[10];
 	int ret = CLI_EX_OK, sock_fd = -1, i;
-	struct sdummy {
-		int vlan;
-		int ifid;
-	};
-	struct sdummy dummy;
+	struct net_switch_mrouter dummy;
 
 	struct swcfgreq swcfgr = {
 		.cmd = SWCFG_GETMROUTERS,
@@ -499,13 +495,10 @@ int cmd_sh_ip_igmps_mrouter(struct cli_context *ctx, int argc, char **argv, stru
 		strcpy(name,"");
 	}
 	out = ctx->out_open(ctx, 1);
-	fprintf(out,"IGMP_SNOOPING mrouter %s\n", name);
-
 
 	SW_SOCK_OPEN(ctx, sock_fd);
 	int vlif_no = buf_alloc_swcfgr(&swcfgr, sock_fd);
 	vlif_no /= sizeof(dummy);
-	fprintf(out, "count: %d \n", vlif_no);
 	char ifname[IFNAMSIZ];
 
 	fprintf(out, fmt1, "Vlan", "Ports");
@@ -514,9 +507,9 @@ int cmd_sh_ip_igmps_mrouter(struct cli_context *ctx, int argc, char **argv, stru
 #undef DASHES
 
 	for (i = 0; i < vlif_no; i++) {
-		struct sdummy *entry = 
-			&((struct sdummy *)swcfgr.buf.addr)[i];
-		if_get_name(entry->ifid, sock_fd, ifname);
+		struct net_switch_mrouter *entry = 
+			&((struct net_switch_mrouter *)swcfgr.buf.addr)[i];
+		if_get_name(entry->ifindex, sock_fd, ifname);
 		fprintf(out, fmt2, entry->vlan, ifname);
 	}
 	SW_SOCK_CLOSE(ctx, sock_fd);
