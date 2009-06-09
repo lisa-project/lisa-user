@@ -518,15 +518,142 @@ int cmd_sh_ip_igmps_mrouter(struct cli_context *ctx, int argc, char **argv, stru
 	return ret;
 }
 
+/* IGMP group list entry. Each vlan has list of IGMP groups */
+struct igmp_group_entry {
+	uint32_t addr;
+	unsigned char is_user;
+	struct list_head lh;
+	struct list_head interfaces;
+};
+
+/* Interface list entry. Each IGMP group has a list of interfaces
+ * (either subscribers or mrouters).
+ */
+struct if_list_entry {
+	int ifindex;
+	struct list_head lh;
+};
+
 int cmd_sh_ip_igmps_groups(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
+	int ret = CLI_EX_OK;
+	int i, status, sock_fd;
+	struct list_head igmp_groups[SW_MAX_VLAN];
+	struct igmp_group_entry *group;
+	struct if_list_entry *ife;
+	struct swcfgreq swcfgr = {
+		.cmd = SWCFG_GETMAC,
+		.ext.mac.type = SW_FDB_IGMP_ANY,
+		.ifindex = 0,
+		.vlan = 0
+	};
 	FILE *out;
 
-	SHIFT_ARG(argc, argv, nodev,5);
+	swcli_dump_args(ctx, argc, argv, nodev);
+
+	SW_SOCK_OPEN(ctx, sock_fd);
+
+	for (i=0; i<SW_MAX_VLAN; i++)
+		INIT_LIST_HEAD(&igmp_groups[i]);
+
+	/* Get the fdb entries corresponding to dynamic/user defined IGMP groups */
+	if ((status = buf_alloc_swcfgr(&swcfgr, sock_fd)) < 0) {
+		EX_STATUS_REASON_IOCTL(ctx, -status);
+		ret = CLI_EX_WARNING;
+		goto out_clean;
+	}
+
+#define igmp_group_addr(mac) (ntohl(*(uint32_t *)&(mac)[2]))
+	status /= sizeof(struct net_switch_mac);
+	for (i = 0; i<status; i++) {
+		struct net_switch_mac *fdb_entry = (struct net_switch_mac *)swcfgr.buf.addr + i;
+		uint32_t group_addr = igmp_group_addr(fdb_entry->addr);
+		int found = 0;
+
+		list_for_each_entry(group, &igmp_groups[fdb_entry->vlan], lh)
+			if (group->addr == group_addr) {
+				found = 1;
+				break;
+			}
+		if (!found) {
+			if (!(group = malloc(sizeof(struct igmp_group_entry)))) {
+				EX_STATUS_REASON(ctx, strerror(ENOMEM));
+				goto out_clean;
+			}
+			group->addr = group_addr;
+			group->is_user = fdb_entry->type & SW_FDB_STATIC;
+			INIT_LIST_HEAD(&group->interfaces);
+			list_add_tail(&group->lh, &igmp_groups[fdb_entry->vlan]);
+		}
+		if (!(ife = malloc(sizeof(struct if_list_entry)))) {
+			EX_STATUS_REASON(ctx, strerror(ENOMEM));
+			goto out_clean;
+		}
+		ife->ifindex = fdb_entry->ifindex;
+		list_add_tail(&ife->lh, &group->interfaces);
+	}
+	free(swcfgr.buf.addr);
+
+	/* Get the mrouters list */
+	swcfgr.cmd = SWCFG_GETMROUTERS;
+	if ((status = buf_alloc_swcfgr(&swcfgr, sock_fd)) < 0) {
+		EX_STATUS_REASON_IOCTL(ctx, -status);
+		ret = CLI_EX_WARNING;
+		goto out_clean;
+	}
+
+	status /= sizeof(struct net_switch_mrouter);
+	for (i=0; i<status; i++) {
+		struct net_switch_mrouter *mrouter = (struct net_switch_mrouter *)swcfgr.buf.addr + i;
+
+		list_for_each_entry(group, &igmp_groups[mrouter->vlan], lh) {
+			int found = 0;
+			list_for_each_entry(ife, &group->interfaces, lh)
+				if (ife->ifindex == mrouter->ifindex) {
+					found = 1;
+					break;
+				}
+			if (found)
+				continue;
+			if (!(ife = malloc(sizeof(struct if_list_entry)))) {
+				EX_STATUS_REASON(ctx, strerror(ENOMEM));
+				goto out_clean;
+			}
+			ife->ifindex = mrouter->ifindex;
+			list_add_tail(&ife->lh, &group->interfaces);
+		}
+	}
+
+	/* Print IGMP groups */
 	out = ctx->out_open(ctx, 1);
-	fprintf(out,"IGMP_SNOOPING groups %s\n ", nodev[0]->name);
-	fflush(out);
-	return 0;
+	for (i=0; i<SW_MAX_VLAN; i++) {
+		list_for_each_entry(group, &igmp_groups[i], lh) {
+			fprintf(out, "vlan=%d, group_addr=0x%08x\n", i, group->addr);
+			list_for_each_entry(ife, &group->interfaces, lh) {
+				fprintf(out, "\tifindex=%d\n", ife->ifindex);
+			}
+		}
+	}
+	fclose(out);
+
+out_clean:
+	for (i=0; i<SW_MAX_VLAN; i++) {
+		struct igmp_group_entry *group_tmp;
+		struct if_list_entry *ife_tmp;
+		list_for_each_entry_safe(group, group_tmp, &igmp_groups[i], lh) {
+			list_for_each_entry_safe(ife, ife_tmp, &group->interfaces, lh) {
+				list_del(&ife->lh);
+				free(ife);
+			}
+			list_del(&group->lh);
+			free(group);
+		}
+	}
+	if (swcfgr.buf.addr != NULL)
+		free(swcfgr.buf.addr);
+	SW_SOCK_CLOSE(ctx, sock_fd);
+
+	return ret;
 }
 
 int cmd_sh_addr(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
