@@ -137,11 +137,12 @@ struct menu_node config_main = {
 															.name			= "interface",
 															.help			= "next-hop interface to mrouter",
 															.mask			= CLI_MASK(PRIV(1)),
-															.tokenize	= NULL,
+															.tokenize	= if_tok_if,
 															.run			= NULL,
 															.subtree	= (struct menu_node *[]) { /*{{{*/
 																/* #ip igmp snooping vlan <number> mrouter interface Ethernet <number>*/
 																IF_ETHER(NULL, cmd_add_mrouter, NULL),
+																IF_NETDEV(NULL, cmd_add_mrouter, NULL),
 
 																NULL
 															} /*}}}*/
@@ -638,6 +639,97 @@ struct menu_node config_main = {
 
 				/* #no interface */
 				&config_interface,
+
+				/* #no ip */
+				& (struct menu_node){
+					.name			= "ip",
+					.help			= "Global IP configuration subcommands",
+					.mask			= CLI_MASK(PRIV(2)),
+					.tokenize	= NULL,
+					.run			= NULL,
+					.subtree	= (struct menu_node *[]) { /*{{{*/
+						/* #no ip igmp */
+						& (struct menu_node){
+							.name			= "igmp",
+							.help			= "IGMP global configuration",
+							.mask			= CLI_MASK(PRIV(2)),
+							.tokenize	= NULL,
+							.run			= NULL,
+							.subtree	= (struct menu_node *[]) { /*{{{*/
+								/* #no ip igmp snooping */
+								& (struct menu_node){
+									.name			= "snooping",
+									.help			= "Global IGMP Snooping enable for LiSA Vlans",
+									.mask			= CLI_MASK(PRIV(2)),
+									.tokenize	= NULL,
+									.run			= NULL,
+									.subtree	= (struct menu_node *[]) { /*{{{*/
+										/* #no ip igmp snooping vlan*/
+										& (struct menu_node){
+											.name			= "vlan",
+											.help			= "IGMP Snooping enable for LiSA VLAN",
+											.mask			= CLI_MASK(PRIV(2)),
+											.tokenize	= swcli_tokenize_number,
+											.run			= NULL,
+											.subtree	= (struct menu_node *[]) { /*{{{*/
+												/* #no ip igmp snooping vlan <number>*/
+												& (struct menu_node){
+													.name			= "<1-4094>",
+													.help			= "Vlan number",
+													.mask			= CLI_MASK(PRIV(1)),
+													.tokenize	= NULL,
+													.run			= NULL,
+													.priv			= (int []) {VALID_LIMITS, 1, 4094}, 
+													.subtree	= (struct menu_node *[]) { /*{{{*/
+														/* #no ip igmp snooping vlan <number> mrouter*/
+														& (struct menu_node){
+															.name			= "mrouter",
+															.help			= "Configure an L2 port as a multicast router port",
+															.mask			= CLI_MASK(PRIV(1)),
+															.tokenize	= NULL,
+															.run			= NULL,
+															.subtree	= (struct menu_node *[]) { /*{{{*/
+																/* #no ip igmp snooping vlan <number> mrouter interface*/
+																& (struct menu_node){
+																	.name			= "interface",
+																	.help			= "next-hop interface to mrouter",
+																	.mask			= CLI_MASK(PRIV(1)),
+																	.tokenize	= if_tok_if,
+																	.run			= NULL,
+																	.subtree	= (struct menu_node *[]) { /*{{{*/
+																		/* #no ip igmp snooping vlan <number> mrouter interface Ethernet <number>*/
+																		IF_ETHER(NULL, cmd_add_mrouter, NULL),
+																		IF_NETDEV(NULL, cmd_add_mrouter, NULL),
+
+																		NULL
+																	} /*}}}*/
+																},
+
+																NULL
+															} /*}}}*/
+														},
+
+														NULL
+													} /*}}}*/
+												},
+
+												NULL
+											} /*}}}*/
+
+										},
+
+										NULL
+									} /*}}}*/
+
+								},
+
+								NULL
+							} /*}}}*/
+						},
+
+						NULL
+					} /*}}}*/
+				},
 
 				/* #no mac-address-table */
 				& (struct menu_node){

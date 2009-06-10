@@ -543,7 +543,15 @@ int cmd_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **
 int cmd_add_mrouter(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
 	int sock_fd, iftype, status, ioctl_errno;
-	struct swcfgreq swcfgr;
+	struct swcfgreq swcfgr = {
+		.cmd = SWCFG_SETMROUTER,
+		.ext.mrouter = 1
+	};
+
+	if (!strcmp(nodev[0]->name, "no")) {
+		swcfgr.ext.mrouter = 0;
+		SHIFT_ARG(argc, argv, nodev);
+	}
 
 	SHIFT_ARG(argc, argv, nodev, 4);
 	swcfgr.vlan = atoi(argv[0]);
@@ -552,8 +560,6 @@ int cmd_add_mrouter(struct cli_context *ctx, int argc, char **argv, struct menu_
 	SW_SOCK_OPEN(ctx, sock_fd);
 	if_args_to_ifindex(ctx, argv, nodev, sock_fd, swcfgr.ifindex, iftype);
 	SHIFT_ARG(argc, argv, nodev);
-
-	swcfgr.cmd = SWCFG_ADDMROUTER;
 
 	status = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
 	ioctl_errno = errno;
