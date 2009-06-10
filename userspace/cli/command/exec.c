@@ -14,6 +14,40 @@ static const char *dash =
 /* Get a null-terminated string (char *) of x dashes */
 #define DASHES(x) (dash + DASH_LENGTH - (x))
 
+#define MAX_COMMA_BUFFER_LEN 80
+struct comma_buffer {
+	char str[MAX_COMMA_BUFFER_LEN];
+	int offset;
+	int size;
+};
+#define COMMA_BUFFER_INIT(__size) { \
+	.str = {'\0'}, \
+	.offset = 0, \
+	.size = (__size) \
+}
+static inline int comma_buffer_append(struct comma_buffer *buf, const char *str)
+{
+	size_t str_len = strlen(str);
+	if (buf->offset + str_len + (buf->offset ? 2 : 0) >= buf->size)
+		return -ENOMEM;
+	if (buf->offset) {
+		buf->str[buf->offset++] = ',';
+		buf->str[buf->offset++] = ' ';
+	}
+	strcpy(&buf->str[buf->offset], str);
+	buf->offset += str_len;
+	return 0;
+}
+static inline int comma_buffer_reset(struct comma_buffer *buf, const char *str)
+{
+	size_t str_len = strlen(str);
+	if (str_len >= buf->size)
+		return -ENOMEM;
+	strcpy(&buf->str[0], str);
+	buf->offset = str_len;
+	return 0;
+}
+
 int swcli_output_modifiers_run(struct cli_context *ctx, int argc, char **argv,
 		struct menu_node **nodev)
 {
@@ -740,8 +774,7 @@ int cmd_show_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_no
 		};
 		int vlif_no = buf_alloc_swcfgr(&vlif_swcfgr, sock_fd);
 		struct net_switch_dev *nsdev;
-		char buf[32] = {'\0'};
-		int bufoff = 0;
+		struct comma_buffer buf = COMMA_BUFFER_INIT(32);
 		int firstline = 1;
 
 		/* FIXME kernel module should tell us whether vlan is "active"
@@ -751,9 +784,9 @@ int cmd_show_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_no
 			if (firstline) {\
 				fprintf(out, fmt2, vlan, entry->name,\
 						vlan >= 1002 && vlan <= 1005 ? "act/unsup" : "active",\
-						buf);\
+						buf.str);\
 			} else {\
-				fprintf(out, fmt3, "", buf);\
+				fprintf(out, fmt3, "", buf.str);\
 			}\
 		} while(0)
 
@@ -767,25 +800,14 @@ int cmd_show_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_no
 
 			nsdev = if_map_lookup_ifindex(&if_map, ifindex, sock_fd);
 
-			//fprintf(out, "\nqqq - %s - qqq\n", nsdev->name);
-			if (bufoff + (tmp = strlen(nsdev->name)) + (bufoff ? 2 : 0) < sizeof(buf)) {
-				if (bufoff) {
-					buf[bufoff++] = ',';
-					buf[bufoff++] = ' ';
-				}
-				strcpy(&buf[bufoff], nsdev->name);
-				bufoff += tmp;
-				continue;
+			if (comma_buffer_append(&buf, nsdev->name)) {
+				print_buf;
+				firstline = 0;
+				tmp = comma_buffer_reset(&buf, nsdev->name);
+				assert(!tmp);
 			}
-
-			print_buf;
-			firstline = 0;
-			tmp = strlen(nsdev->name);
-			strcpy(&buf[0], nsdev->name);
-			bufoff = tmp;
 		}
-		if (firstline || bufoff)
-			print_buf;
+		print_buf;
 
 		free(vlif_swcfgr.buf.addr);
 	}
