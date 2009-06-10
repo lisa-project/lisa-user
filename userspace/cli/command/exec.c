@@ -5,6 +5,15 @@
 
 extern struct menu_node config_main;
 
+/* Dash stuff used for pretty printing of tables */
+static const char *dash =
+"---------------------------------------"
+"---------------------------------------";
+/* Dash length must match the number of dashes in the string above */
+#define DASH_LENGTH 78
+/* Get a null-terminated string (char *) of x dashes */
+#define DASHES(x) (dash + DASH_LENGTH - (x))
+
 int swcli_output_modifiers_run(struct cli_context *ctx, int argc, char **argv,
 		struct menu_node **nodev)
 {
@@ -470,7 +479,6 @@ int cmd_sh_ip_igmps(struct cli_context *ctx, int argc, char **argv, struct menu_
 int cmd_sh_ip_igmps_mrouter(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
 	FILE *out;
-	char name[10];
 	int ret = CLI_EX_OK, sock_fd = -1, i;
 	struct net_switch_mrouter dummy;
 
@@ -479,32 +487,24 @@ int cmd_sh_ip_igmps_mrouter(struct cli_context *ctx, int argc, char **argv, stru
 		.vlan = 0
 	}; 
 
-	const char *dash =
-		"---------------------------------------"
-		"---------------------------------------";
 	const char *fmt1 = "%-4s    %s\n";
-	const char *fmt2 = "%-4d    %s(static)\n";
-	size_t dlen = strlen(dash);
+	const char *fmt2 = "%4d    %s(static)\n";
+	char ifname[IFNAMSIZ];
+	int vlif_no;
 
-	SHIFT_ARG(argc, argv, nodev,5);
-	if(argc){
-		strcpy(name,argv[0]); //"Vlan"
-		strcat(name,argv[1]); // vlanId
+	SHIFT_ARG(argc, argv, nodev, 5);
+	if (argc) {
+		assert(argc > 1);
 		swcfgr.vlan = atoi(argv[1]);
-	}else{
-		strcpy(name,"");
 	}
 	out = ctx->out_open(ctx, 1);
 
 	SW_SOCK_OPEN(ctx, sock_fd);
-	int vlif_no = buf_alloc_swcfgr(&swcfgr, sock_fd);
+	vlif_no = buf_alloc_swcfgr(&swcfgr, sock_fd);
 	vlif_no /= sizeof(dummy);
-	char ifname[IFNAMSIZ];
 
 	fprintf(out, fmt1, "Vlan", "Ports");
-#define DASHES(x) (dash + dlen - (x))
-	fprintf(out, fmt1, DASHES(4),DASHES(8));
-#undef DASHES
+	fprintf(out, fmt1, DASHES(4), DASHES(8));
 
 	for (i = 0; i < vlif_no; i++) {
 		struct net_switch_mrouter *entry = 
@@ -514,7 +514,7 @@ int cmd_sh_ip_igmps_mrouter(struct cli_context *ctx, int argc, char **argv, stru
 	}
 	SW_SOCK_CLOSE(ctx, sock_fd);
 
-	fflush(out);
+	fclose(out);
 	return ret;
 }
 
@@ -676,14 +676,10 @@ int cmd_show_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_no
 	};
 	int sock_fd = -1, status;
 	int ret = CLI_EX_OK;
-	const char *dash =
-		"---------------------------------------"
-		"---------------------------------------";
 	const char *fmt1 = "%-4s %-32s %-9s %s\n";
 	const char *fmt2 = "%-4d %-32s %-9s %s\n";
 	const char *fmt3 = "%47s %s\n";
 	FILE *out = NULL;
-	size_t dlen = strlen(dash);
 	struct if_map if_map;
 	int i, j;
 
@@ -731,9 +727,7 @@ int cmd_show_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_no
 	out = ctx->out_open(ctx, 1);
 
 	fprintf(out, fmt1, "VLAN", "Name", "Status", "Ports");
-#define DASHES(x) (dash + dlen - (x))
 	fprintf(out, fmt1, DASHES(4), DASHES(32), DASHES(9), DASHES(31));
-#undef DASHES
 
 	status /= sizeof(struct net_switch_vdb);
 	for (i = 0; i < status; i++) {
