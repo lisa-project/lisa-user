@@ -555,7 +555,7 @@ int cmd_sh_ip_igmps_mrouter(struct cli_context *ctx, int argc, char **argv, stru
 /* IGMP group list entry. Each vlan has list of IGMP groups */
 struct igmp_group_entry {
 	uint32_t addr;
-	unsigned char is_user;
+	int type;
 	struct list_head lh;
 	struct list_head interfaces;
 };
@@ -567,6 +567,35 @@ struct if_list_entry {
 	int ifindex;
 	struct list_head lh;
 };
+
+enum {
+	IGMP_GROUP_DYNAMIC = 0,
+	IGMP_GROUP_USER = 1,
+	IGMP_GROUP_ANY = -1
+};
+
+int delete_igmp_groups(struct list_head *igmp_groups, int type)
+{
+	struct igmp_group_entry *group, *group_tmp;
+	struct if_list_entry *ife, *ife_tmp;
+	int i, count = 0;
+
+	for (i=0; i<SW_MAX_VLAN; i++) {
+		list_for_each_entry_safe(group, group_tmp, &igmp_groups[i], lh) {
+			if (type != IGMP_GROUP_ANY && group->type != type)
+				continue;
+			list_for_each_entry_safe(ife, ife_tmp, &group->interfaces, lh) {
+				list_del(&ife->lh);
+				free(ife);
+			}
+			list_del(&group->lh);
+			free(group);
+			count++;
+		}
+	}
+
+	return count;
+}
 
 int cmd_sh_ip_igmps_groups(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
@@ -582,8 +611,20 @@ int cmd_sh_ip_igmps_groups(struct cli_context *ctx, int argc, char **argv, struc
 		.vlan = 0
 	};
 	FILE *out;
+	const char *fmt1 = "%-10s%-18s%-12s%-12s%s\n";
+	const char *fmt2 = "%-10d%-18s%-12s%-12s%s\n";
+	const char *fmt3 = "%48s%s\n";
+	struct if_map if_map;
+	int display_count = 0;
+	int group_count = 0;
+	const char *group_type = "";
 
-	swcli_dump_args(ctx, argc, argv, nodev);
+	if (!strcmp(nodev[argc - 1]->name, "count")) {
+		display_count = 1;
+		argc--;
+	}
+
+	if_map_init(&if_map);
 
 	SW_SOCK_OPEN(ctx, sock_fd);
 
@@ -597,7 +638,7 @@ int cmd_sh_ip_igmps_groups(struct cli_context *ctx, int argc, char **argv, struc
 		goto out_clean;
 	}
 
-#define igmp_group_addr(mac) (ntohl(*(uint32_t *)&(mac)[2]))
+#define igmp_group_addr(mac) (*(uint32_t *)&(mac)[2])
 	status /= sizeof(struct net_switch_mac);
 	for (i = 0; i<status; i++) {
 		struct net_switch_mac *fdb_entry = (struct net_switch_mac *)swcfgr.buf.addr + i;
@@ -615,10 +656,12 @@ int cmd_sh_ip_igmps_groups(struct cli_context *ctx, int argc, char **argv, struc
 				goto out_clean;
 			}
 			group->addr = group_addr;
-			group->is_user = fdb_entry->type & SW_FDB_STATIC;
+			group->type = IGMP_GROUP_DYNAMIC;
 			INIT_LIST_HEAD(&group->interfaces);
 			list_add_tail(&group->lh, &igmp_groups[fdb_entry->vlan]);
+			group_count++;
 		}
+		group->type = (fdb_entry->type & SW_FDB_STATIC) ? IGMP_GROUP_USER : group->type;
 		if (!(ife = malloc(sizeof(struct if_list_entry)))) {
 			EX_STATUS_REASON(ctx, strerror(ENOMEM));
 			goto out_clean;
@@ -626,6 +669,32 @@ int cmd_sh_ip_igmps_groups(struct cli_context *ctx, int argc, char **argv, struc
 		ife->ifindex = fdb_entry->ifindex;
 		list_add_tail(&ife->lh, &group->interfaces);
 	}
+
+	/* Because of the nature of "static" groups (at least one static entry)
+	 * we cannot use kernel filter on pseudo fdb entries. Moreover, if group
+	 * is static, we must also display dynamic entries (interfaces). So
+	 * build our group list, then apply filter ourselves if necessary.
+	 */
+	if (!strcmp(nodev[argc - 1]->name, "dynamic")) {
+		group_type = " IGMP learned";
+		group_count -= delete_igmp_groups(igmp_groups, IGMP_GROUP_USER);
+	} else if (!strcmp(nodev[argc - 1]->name, "user")) {
+		group_type = " static";
+		group_count -= delete_igmp_groups(igmp_groups, IGMP_GROUP_DYNAMIC);
+	}
+
+	if (display_count) {
+		out = ctx->out_open(ctx, 0);
+		fprintf(out, "Total number of%s multicast groups: %d\n\n",
+				group_type, group_count);
+		goto out_clean;
+	}
+
+	/* If no pseudo fdb entries present, neither display anything,
+	   nor query mrouter ports */
+	if (!group_count)
+		goto out_clean;
+
 	free(swcfgr.buf.addr);
 
 	/* Get the mrouters list */
@@ -658,31 +727,52 @@ int cmd_sh_ip_igmps_groups(struct cli_context *ctx, int argc, char **argv, struc
 		}
 	}
 
+	/* Build ifindex => ifname hash */
+	status = if_map_fetch(&if_map, SW_IF_SWITCHED, sock_fd);
+	assert(!status); // FIXME if not null, status is an error code (i.e. errno) so we can use EX_STATUS_PERROR
+	status = if_map_init_ifindex_hash(&if_map);
+	assert(!status);
+
 	/* Print IGMP groups */
 	out = ctx->out_open(ctx, 1);
+	fprintf(out, fmt1, "Vlan", "Group", "Type", "Version", "Port List");
+	fprintf(out, "%s\n", DASHES(63));
 	for (i=0; i<SW_MAX_VLAN; i++) {
 		list_for_each_entry(group, &igmp_groups[i], lh) {
-			fprintf(out, "vlan=%d, group_addr=0x%08x\n", i, group->addr);
+			struct net_switch_dev *nsdev;
+			char *group_addr = inet_ntoa(*(struct in_addr*)&group->addr);
+			int firstline = 1;
+			struct comma_buffer buf = COMMA_BUFFER_INIT(24);
+#define print_buf \
+			do {\
+				if (firstline) {\
+					fprintf(out, fmt2, i, group_addr,\
+							group->type == IGMP_GROUP_USER ? "user" : "igmp", "v2",\
+							buf.str);\
+				} else {\
+					fprintf(out, fmt3, "", buf.str);\
+				}\
+			} while(0)
 			list_for_each_entry(ife, &group->interfaces, lh) {
-				fprintf(out, "\tifindex=%d\n", ife->ifindex);
+				nsdev = if_map_lookup_ifindex(&if_map, ife->ifindex, sock_fd);
+				if (comma_buffer_append(&buf, nsdev->name)) {
+					print_buf;
+					firstline = 0;
+					status = comma_buffer_reset(&buf, nsdev->name);
+					assert(!status);
+				}
 			}
+			print_buf;
+#undef print_buf
 		}
 	}
 	fclose(out);
 
 out_clean:
-	for (i=0; i<SW_MAX_VLAN; i++) {
-		struct igmp_group_entry *group_tmp;
-		struct if_list_entry *ife_tmp;
-		list_for_each_entry_safe(group, group_tmp, &igmp_groups[i], lh) {
-			list_for_each_entry_safe(ife, ife_tmp, &group->interfaces, lh) {
-				list_del(&ife->lh);
-				free(ife);
-			}
-			list_del(&group->lh);
-			free(group);
-		}
-	}
+	if_map_cleanup(&if_map);
+	if (if_map.dev != NULL)
+		free(if_map.dev);
+	delete_igmp_groups(igmp_groups, IGMP_GROUP_ANY);
 	if (swcfgr.buf.addr != NULL)
 		free(swcfgr.buf.addr);
 	SW_SOCK_CLOSE(ctx, sock_fd);
@@ -810,6 +900,7 @@ int cmd_show_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_no
 		print_buf;
 
 		free(vlif_swcfgr.buf.addr);
+#undef print_buf
 	}
 
 out_clean:
