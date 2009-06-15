@@ -58,12 +58,8 @@ void cdp_session_end(struct cdp_session *s)
 	if (s->response)
 		free(s->response);
 	if (s->sq != -1)
-	{
 		mq_close(s->sq);
-		mq_unlink(s->sq_name);
-	}
-	if (s->rq != -1)
-	{
+	if (s->rq != -1) {
 		mq_close(s->rq);
 		mq_unlink(s->rq_name);
 	}
