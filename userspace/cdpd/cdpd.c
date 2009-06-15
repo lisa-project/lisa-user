@@ -35,13 +35,6 @@ extern int hend, heap_size;						/* heap end, heap allocated size */
 extern sem_t nheap_sem;							/* neighbor heap semaphore */
 extern char cdp_queue_name[32];					/* the IPC queue id */
 
-extern void *cdp_send_loop(void *);				/* Entry point for the sender thread (cdp_send.c) */
-extern void *cdp_ipc_listen(void *);			/* Entry point for the ipc listener thread (cdp_configuration.c) */
-/* functions exported from cdp_aging.c */
-extern void sift_up(neighbor_heap_t *, int);
-extern void sift_down(neighbor_heap_t *, int, int);
-extern void *cdp_clean_loop(void *);			/* Entry point for the cdp neighbor cleaner thread */
-
 static const char *cdp_field_name(unsigned short type) {
 	struct {
 		unsigned short val;
