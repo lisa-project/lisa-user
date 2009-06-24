@@ -105,7 +105,7 @@ struct menu_node config_main = {
 							.help			= "Global IGMP Snooping enable for LiSA Vlans",
 							.mask			= CLI_MASK(PRIV(2)),
 							.tokenize	= NULL,
-							.run			= NULL,
+							.run			= cmd_ip_igmp_snooping,
 							.subtree	= (struct menu_node *[]) { /*{{{*/
 								/* #ip igmp snooping vlan*/
 								& (struct menu_node){
@@ -121,7 +121,7 @@ struct menu_node config_main = {
 											.help			= "Vlan number",
 											.mask			= CLI_MASK(PRIV(1)),
 											.tokenize	= NULL,
-											.run			= NULL,
+											.run			= cmd_ip_igmp_snooping,
 											.priv			= (int []) {VALID_LIMITS, 1, 4094}, 
 											.subtree	= (struct menu_node *[]) { /*{{{*/
 												/* #ip igmp snooping vlan <number> mrouter*/
@@ -662,7 +662,7 @@ struct menu_node config_main = {
 									.help			= "Global IGMP Snooping enable for LiSA Vlans",
 									.mask			= CLI_MASK(PRIV(2)),
 									.tokenize	= NULL,
-									.run			= NULL,
+									.run			= cmd_ip_igmp_snooping,
 									.subtree	= (struct menu_node *[]) { /*{{{*/
 										/* #no ip igmp snooping vlan*/
 										& (struct menu_node){
@@ -678,7 +678,7 @@ struct menu_node config_main = {
 													.help			= "Vlan number",
 													.mask			= CLI_MASK(PRIV(1)),
 													.tokenize	= NULL,
-													.run			= NULL,
+													.run			= cmd_ip_igmp_snooping,
 													.priv			= (int []) {VALID_LIMITS, 1, 4094}, 
 													.subtree	= (struct menu_node *[]) { /*{{{*/
 														/* #no ip igmp snooping vlan <number> mrouter*/

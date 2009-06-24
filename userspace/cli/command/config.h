@@ -16,5 +16,6 @@ int cmd_macstatic(struct cli_context *, int, char **, struct menu_node **);
 int cmd_noensecret(struct cli_context *, int, char **, struct menu_node **);
 int cmd_vlan(struct cli_context *, int, char **, struct menu_node **);
 int cmd_add_mrouter(struct cli_context *, int, char **, struct menu_node **);
+int cmd_ip_igmp_snooping(struct cli_context *, int, char **, struct menu_node **);
 
 #endif

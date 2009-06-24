@@ -572,3 +572,36 @@ int cmd_add_mrouter(struct cli_context *ctx, int argc, char **argv, struct menu_
 
 	return CLI_EX_OK;
 }
+
+int cmd_ip_igmp_snooping(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
+{
+	/* #<no> ip igmp snooping <vlan <number>>*/
+	int sock_fd, status, ioctl_errno;
+	struct swcfgreq swcfgr = {
+		.cmd = SWCFG_SETIGMPS,
+		.vlan = 0,
+		.ext.snooping = 1
+	};
+
+	if (!strcmp(nodev[0]->name, "no")) {
+		swcfgr.ext.snooping = 0;
+		SHIFT_ARG(argc, argv, nodev);
+	}
+
+	if(argc >= 5){
+		swcfgr.vlan = atoi(argv[4]);
+	}
+
+	SW_SOCK_OPEN(ctx, sock_fd);
+
+	status = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
+	ioctl_errno = errno;
+	SW_SOCK_CLOSE(ctx, sock_fd);
+
+	if (status == -1) {
+		EX_STATUS_REASON_IOCTL(ctx, ioctl_errno);
+		return CLI_EX_REJECTED;
+	}
+
+	return CLI_EX_OK;
+}
