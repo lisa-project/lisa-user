@@ -19,8 +19,6 @@ show interfaces Ethernet <0-24>
 show interfaces vlan <1-1094> 
 show ip interfaces
 show ip interfaces brief
-show mac address-table aging-time 
-show mac-address-table aging-time 
 show privilege 
 show running-config 
 show running-config interface Ethernet <0-24> 

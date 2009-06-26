@@ -298,6 +298,17 @@ int build_config_global(struct cli_context *ctx, FILE *out, int tagged_if)
 	free(swcfgr.buf.addr);
 	if_map_cleanup(&if_map);
 
+	/* fdb mac aging time */
+	swcfgr.cmd = SWCFG_GETAGETIME;
+	status = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
+	assert(status != -1);
+	if (swcfgr.ext.nsec != SW_DEFAULT_AGE_TIME)
+		fprintf(out, "mac-address-table aging-time %d\n!\n", swcfgr.ext.nsec);
+
+	/* cdp global settings TODO */
+
+	/* line vty stuff TODO */
+
 	SW_SOCK_CLOSE(ctx, sock_fd);
 	free(if_map.dev);
 	return CLI_EX_OK;

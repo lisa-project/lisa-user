@@ -781,7 +781,26 @@ out_clean:
 }
 
 int cmd_sh_addr(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
-int cmd_sh_mac_age(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
+
+int cmd_sh_mac_age(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
+{
+	struct swcfgreq swcfgr = {
+		.cmd = SWCFG_GETAGETIME
+	};
+	int sock_fd, status;
+	FILE *out;
+
+	SW_SOCK_OPEN(ctx, sock_fd);
+	status = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
+	assert(status != -1);
+	SW_SOCK_CLOSE(ctx, sock_fd);
+
+	out = ctx->out_open(ctx, 0);
+	fprintf(out, "%d\n", swcfgr.ext.nsec);
+
+	return CLI_EX_OK;
+}
+
 int cmd_sh_mac_eth(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
 int cmd_sh_mac_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
 int cmd_show_priv(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
