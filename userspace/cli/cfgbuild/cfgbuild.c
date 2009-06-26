@@ -73,6 +73,7 @@ static char *canonical_if_name(struct net_switch_dev *nsdev)
 	return status == -1 ? NULL : ret;
 }
 
+#define nbit2mask(nbit)	(htonl(nbit ? (~((uint32_t)0)) ^ ((((uint32_t)1) << (32 - nbit)) - 1) : 0))
 int build_config_interface(struct cli_context *ctx, FILE *out, struct net_switch_dev *nsdev, int if_cmd)
 {
 	int sock_fd, status;
@@ -167,6 +168,57 @@ int build_config_interface(struct cli_context *ctx, FILE *out, struct net_switch
 	}
 	*/
 
+	/* ip address */
+	do {
+		LIST_HEAD(addrl);
+		struct if_addr *if_addr;
+		struct ifreq ifr;
+		int ins = socket(AF_INET, SOCK_DGRAM, 0);
+		struct in_addr mask;
+
+		assert(ins != -1);
+
+		if (nsdev->type != SW_IF_VIF && nsdev->type != SW_IF_ROUTED)
+			break;
+		if (if_get_addr(nsdev->ifindex, AF_INET, &addrl, NULL))
+			break;
+		if (list_empty(&addrl)) {
+			fprintf(out, " no ip address\n");
+			break;
+		}
+
+		assert(strlen(nsdev->name) < IFNAMSIZ);
+		strcpy(ifr.ifr_name, nsdev->name);
+
+		status = ioctl(ins, SIOCGIFADDR, &ifr);
+		assert(!status);
+
+		/* we can't tell the prefix length from SIOCGIFADDR result and we
+		 * don't know if primary address comes first in addrl, so walk
+		 * addrl twice: first time print primary address, then dump all
+		 * other addresses
+		 */
+
+		list_for_each_entry(if_addr, &addrl, lh) {
+			if (((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr.s_addr != if_addr->inet.s_addr)
+				continue;
+			mask.s_addr = nbit2mask(if_addr->prefixlen);
+			fprintf(out, " ip address %s", inet_ntoa(if_addr->inet));
+			fprintf(out, " %s\n", inet_ntoa(mask));
+		}
+
+		list_for_each_entry(if_addr, &addrl, lh) {
+			if (((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr.s_addr == if_addr->inet.s_addr)
+				continue;
+			mask.s_addr = nbit2mask(if_addr->prefixlen);
+			fprintf(out, " ip address %s", inet_ntoa(if_addr->inet));
+			fprintf(out, " %s secondary\n", inet_ntoa(mask));
+		}
+
+		close(ins);
+		list_free(&addrl, struct if_addr, lh);
+	} while (0);
+
 	SW_SOCK_CLOSE(ctx, sock_fd);
 	return CLI_EX_OK;
 }
@@ -256,6 +308,7 @@ int build_config_global(struct cli_context *ctx, FILE *out, int tagged_if)
 		FILE *if_out = out;
 		char tag[SW_MAX_TAG + 1];
 		char path[PATH_MAX];
+		int if_cmd = 1;
 
 		if (tagged_if && !shared_get_if_tag(if_map.dev[i].ifindex, tag)) {
 			status = snprintf(path, sizeof(path), "%s/%s", SW_TAGS_FILE, tag);
@@ -263,8 +316,10 @@ int build_config_global(struct cli_context *ctx, FILE *out, int tagged_if)
 
 			if_out = fopen(path, "w+");
 			assert(if_out != NULL); // FIXME
+
+			if_cmd = 0;
 		}
-		build_config_interface(ctx, if_out, &if_map.dev[i], !tagged_if);
+		build_config_interface(ctx, if_out, &if_map.dev[i], if_cmd);
 		fprintf(out, "!\n");
 		if (if_out != out)
 			fclose(if_out);

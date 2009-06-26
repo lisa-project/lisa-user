@@ -295,8 +295,19 @@ int cmd_ip(struct cli_context *ctx, int argc, char **argv, struct menu_node **no
 		SHIFT_ARG(argc, argv, nodev);
 	}
 
+	if (argc <= 2) {
+		/* remove all addresses ("no ip address") */
+		assert(cmd == RTM_DELADDR);
+		if (if_get_addr(uc->ifindex, AF_INET, &addrl, NULL))
+			goto out_cleanup;
+		list_for_each_entry(if_addr, &addrl, lh) {
+			if_change_addr(cmd, if_addr->ifindex, if_addr->inet, if_addr->prefixlen, 0, NULL);
+			// FIXME check return value of if_change_addr()
+		}
+		goto out_cleanup;
+	}
+
 	/* skip next 2 args (ip address) */
-	assert(argc > 2);
 	SHIFT_ARG(argc, argv, nodev, 2);
 	assert(argc >= 2);
 
