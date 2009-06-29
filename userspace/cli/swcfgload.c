@@ -22,78 +22,14 @@
 #include <stdio.h>
 #include <linux/limits.h>
 
-#include "climain.h"
-#include "shared.h"
-#include "config.h"
-#include "cdp_client.h"
-#include "swsock.h"
+#include "swcli.h"
+extern struct menu_node config_main;
 
-extern int sock_fd;
-extern sw_command_root_t *cmd_root;
-extern int priv;
-extern sw_execution_state_t exec_state;
-extern sw_completion_state_t cmpl_state;
-
-int cdp_enabled = 0;
-char cdp_queue_name[32], our_queue_name[32];
-mqd_t sq, rq;
-
-FILE *out;
-
-int swcfgload_exec(sw_execution_state_t *exc) {
-	
-	if (exc->num >= exc->size) {
-		exc->func_args = realloc(exc->func_args,
-				(exc->size + 1) *sizeof(char *));
-		assert(exc->func_args);
-		exc->size ++;
-	}
-	exc->func_args[exc->num++] = NULL;
-
-	exc->func(out, exc->func_args);
-	return 0;
-	/* FIXME make exc->func (all handlers) return a status code;
-	 * useful for example for loading interface configuration
-	 * from /etc/lisa/tags to know if the "interface <if_name>"
-	 * command failed (and abort the process)
-	 */
-}
-
-int swcfgload_exec_cmd(char *cmd) {
-	int ret;
-	
-	init_exec_state(&exec_state);
-	ret = parse_command(strdup(cmd), lookup_token);
-	
-	if (ret <= 0) {
-		fprintf(stderr, "Parse Error. Extra input at offset %d "
-				"in command: '%s'\n", abs(ret), cmd);
-		exit(1);
-	}
-
-	if (ret > 1 || (exec_state.runnable & NA)) {
-		fprintf(stderr, "Ambiguous command: '%s'\n", cmd);
-		exit(1);
-	}
-
-	if (!(exec_state.runnable & RUN)) {
-		fprintf(stderr, "Incomplete command: '%s'\n", cmd);
-		exit(1);
-	}
-
-	if (exec_state.func == NULL) {
-		fprintf(stderr, "Warning: Unimplemented command: '%s'\n", cmd);
-		return 1;
-	}
-
-	return swcfgload_exec(&exec_state);
-}
-
-int load_main_config(void) {
+int load_main_config(struct swcli_context *ctx) {
 	FILE *fp;
 	char cmd[1024];	
 
-	if ((fp = fopen(config_file, "r")) == NULL) {
+	if ((fp = fopen(SW_CONFIG_FILE, "r")) == NULL) {
 		return 1;
 	}
 
@@ -101,18 +37,16 @@ int load_main_config(void) {
 		cmd[strlen(cmd) - 1] = '\0'; /* FIXME we don't crash, but it's ugly */
 		if (cmd[0] == '!')
 			continue;
-#ifndef USE_EXIT_IN_CONF
 		if (cmd[0] != ' ')
-			cmd_root = &command_root_config;
-#endif
-		swcfgload_exec_cmd(cmd);
+			CLI_CTX(ctx)->root = &config_main;
+		rlshell_exec(RLSHELL_CTX(ctx), cmd);
 	}
 
 	fclose(fp);
 	return 0;
 }
 
-int load_tag_config(int argc, char **argv, int silent) {
+int load_tag_config(struct swcli_context *ctx, int argc, char **argv, int silent) {
 	/* argv[0] is if_name;
 	 * argv[1] is tag_name;
 	 * argv[2] is description, if argc > 2.
@@ -122,12 +56,12 @@ int load_tag_config(int argc, char **argv, int silent) {
 	char cmd[1024];	
 	char path[PATH_MAX];
 
-	if (snprintf(cmd, sizeof(cmd), "interface %s", argv[0]) > sizeof(cmd)) {
+	if (snprintf(cmd, sizeof(cmd), "interface netdev %s", argv[0]) > sizeof(cmd)) {
 		fprintf(stderr, "Invalid interface: %s\n", argv[0]);
 		return 1;
 	}
 
-	if (snprintf(path, sizeof(path), "%s/%s", config_tags_path, argv[1]) > sizeof(path)) {
+	if (snprintf(path, sizeof(path), "%s/%s", SW_TAGS_FILE, argv[1]) > sizeof(path)) {
 		fprintf(stderr, "Invalid tag: %s\n", argv[1]);
 		return 1;
 	}
@@ -139,7 +73,7 @@ int load_tag_config(int argc, char **argv, int silent) {
 		return 1;
 	}
 
-	if (swcfgload_exec_cmd(cmd)) {
+	if (rlshell_exec(RLSHELL_CTX(ctx), cmd)) {
 		/* FIXME maybe we get more detailed information from
 		 * command exit status (which now is not implemented at all :P)
 		 */
@@ -153,7 +87,7 @@ int load_tag_config(int argc, char **argv, int silent) {
 			break;
 		if (snprintf(cmd, sizeof(cmd), "description %s", argv[2]) < sizeof(cmd))
 			break;
-		swcfgload_exec_cmd(cmd);
+		rlshell_exec(RLSHELL_CTX(ctx), cmd);
 	} while (0);
 		
 
@@ -161,14 +95,9 @@ int load_tag_config(int argc, char **argv, int silent) {
 		cmd[strlen(cmd) - 1] = '\0'; /* FIXME we don't crash, but it's ugly */
 		if (cmd[0] == '!')
 			continue;
-#ifdef USE_EXIT_IN_CONF
-		if (!strncmp(cmd, "exit", 4))
-			break;
-#else
 		if (cmd[0] != ' ')
 			break;
-#endif
-		swcfgload_exec_cmd(cmd);
+		rlshell_exec(RLSHELL_CTX(ctx), cmd);
 	}
 
 	fclose(fp);
@@ -176,8 +105,9 @@ int load_tag_config(int argc, char **argv, int silent) {
 }
 
 int main(int argc, char **argv) {
-	int status, ret, opt, load_main = 0, silent = 0, out_help = 0;
+	int ret, opt, load_main = 0, silent = 0, out_help = 0;
 	char *myself = argv[0];
+	struct swcli_context ctx;
 
 	while ((opt = getopt(argc, argv, "msh")) != -1) {
 		switch (opt) {
@@ -211,33 +141,31 @@ int main(int argc, char **argv) {
 				"    Load configuration in %s/<tag_name> into interface\n"
 				"    <if_name> and optionally assign description <description>\n"
 				"    to the interface <if_name>.\n",
-				myself, config_file, myself, config_tags_path);
+				myself, SW_CONFIG_FILE, myself, SW_TAGS_FILE);
 		return 1;
 	}
 
-	priv = 15;
-	
-	status = cfg_init();
-	assert(!status);
+	CLI_CTX(&ctx)->node_filter = PRIV_FILTER(15);
+	CLI_CTX(&ctx)->root = &config_main;
+	CLI_CTX(&ctx)->out_open = cli_out_open;
+	ctx.sock_fd = -1;
+	ctx.cdp = NULL;
 
-	out = fopen("/dev/null", "w");
-	assert(out);
-	
-	sock_fd = socket(PF_SWITCH, SOCK_RAW, 0);
-	if (sock_fd ==  -1) {
+	if (shared_init() < 0) {
+		perror("shared_init");
+		return -1;
+	}
+
+	ctx.sock_fd = socket(PF_SWITCH, SOCK_RAW, 0);
+	if (ctx.sock_fd ==  -1) {
 		perror("socket");
 		return 1;
 	}
 
-	cdp_init_ipc(&cdp_s);
+	ret = load_main ? load_main_config(&ctx) :
+		load_tag_config(&ctx, argc, argv, silent);
 
-	cmd_root = &command_root_config;
-	ret = load_main ? load_main_config() :
-		load_tag_config(argc, argv, silent);
-
-	fclose(out);
-	cdp_destroy_ipc(&cdp_s);
-	close(sock_fd);
+	close(ctx.sock_fd);
 
 	return ret;
 }

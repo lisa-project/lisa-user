@@ -295,10 +295,6 @@ int build_config_global(struct cli_context *ctx, FILE *out, int tagged_if)
 			fprintf(out, " name %s\n", entry->name);
 		j++;
 	}
-#ifdef USE_EXIT_IN_CONF
-	if (j)
-		fprintf(out, "exit\n");
-#endif
 
 	/* physical interfaces and VIFs */
 	status = if_map_fetch(&if_map, SW_IF_SWITCHED | SW_IF_ROUTED | SW_IF_VIF, sock_fd);

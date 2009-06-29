@@ -53,5 +53,6 @@ enum {
 
 int rlshell_main(struct rlshell_context *ctx);
 struct rlshell_context *rlshell_get_context(void);
+int rlshell_exec(struct rlshell_context *ctx, char *buf);
 
 #endif

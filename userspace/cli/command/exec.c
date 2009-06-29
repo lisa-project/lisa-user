@@ -908,6 +908,7 @@ int cmd_show_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_no
 			int tmp;
 
 			nsdev = if_map_lookup_ifindex(&if_map, ifindex, sock_fd);
+			assert(nsdev);
 
 			if (comma_buffer_append(&buf, nsdev->name)) {
 				print_buf;
@@ -936,5 +937,3 @@ out_clean:
 }
 
 int cmd_trace(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
-int cmd_wrme(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
-

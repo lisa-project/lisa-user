@@ -15,10 +15,6 @@ FILTER_PATH	:= \"$(shell pwd)/../tools/filter\"
 DEF		+= LOGIN_PATH=$(LOGIN_PATH) FILTER_PATH=$(FILTER_PATH)
 endif
 
-ifdef USE_EXIT_IN_CONF
-DEF		+= USE_EXIT_IN_CONF
-endif
-
 # CLI Parser
 LIBSWCLI_SRCS = cli.c
 
@@ -78,12 +74,13 @@ LIBSWCLI_SRCS += lib/interface.c
 
 SRCS          = $(LIBSWCLI_SRCS) \
 				swcli.c \
+				swcfgload.c \
 				filter.c \
 				list_commands.c
 LIBSWCLI_OBJS = $(LIBSWCLI_SRCS:.c=.o)
 
 # Targets linked with libswcli
-LIBSWCLI_TARGETS = swcli list_commands
+LIBSWCLI_TARGETS = swcli swcfgload list_commands
 
 # All targets
 TARGETS	= libswcli.so $(LIBSWCLI_TARGETS)
