@@ -80,6 +80,7 @@ int build_config_interface(struct cli_context *ctx, FILE *out, struct net_switch
 	unsigned char bmp[SW_VLAN_BMP_NO];
 	char desc[SW_MAX_PORT_DESC];
 	int need_trunk_vlans = 1;
+	struct cdp_session *cdp;
 	struct swcfgreq swcfgr;
 
 	SW_SOCK_OPEN(ctx, sock_fd);
@@ -168,6 +169,13 @@ int build_config_interface(struct cli_context *ctx, FILE *out, struct net_switch
 	}
 	*/
 
+	/* per interface cdp status (enabled/disabled). by default cdp is enabled. */
+	if (CDP_SESSION_OPEN(ctx, cdp)) {
+		if (!cdp_is_enabled(cdp, nsdev->ifindex))
+			fprintf(out, " no cdp enable\n");
+		CDP_SESSION_CLOSE(ctx, cdp);
+	}
+
 	/* ip address */
 	do {
 		LIST_HEAD(addrl);
@@ -250,6 +258,7 @@ static int write_enable_secret(char *pw, void *__priv)
 int build_config_global(struct cli_context *ctx, FILE *out, int tagged_if)
 {
 	struct if_map if_map;
+	struct cdp_configuration cdp;
 	int status, i, j, sock_fd;
 	char hostname[128];
 	struct swcfgreq swcfgr;
@@ -356,7 +365,16 @@ int build_config_global(struct cli_context *ctx, FILE *out, int tagged_if)
 	if (swcfgr.ext.nsec != SW_DEFAULT_AGE_TIME)
 		fprintf(out, "mac-address-table aging-time %d\n!\n", swcfgr.ext.nsec);
 
-	/* cdp global settings TODO */
+	/* cdp global settings */
+	shared_get_cdp(&cdp);
+	if (!cdp.enabled)
+		fprintf(out, "no cdp run\n");
+	if (cdp.version != CDP_DFL_VERSION)
+		fprintf(out, "no cdp advertise-v2\n");
+	if (cdp.timer != CDP_DFL_TIMER)
+		fprintf(out, "cdp timer %d\n", cdp.timer);
+	if (cdp.holdtime != CDP_DFL_HOLDTIME)
+		fprintf(out, "cdp holdtime %d\n", cdp.holdtime);
 
 	/* line vty stuff TODO */
 

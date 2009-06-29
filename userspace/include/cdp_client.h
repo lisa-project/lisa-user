@@ -159,6 +159,9 @@ void cdp_session_end(struct cdp_session *s);
 /* Timed receive for a message from the client queue */
 int cdp_session_recv(struct cdp_session *s);
 
+/* Returns 1 if cdp is enabled on the interface, 0 otherwise */
+int cdp_is_enabled(struct cdp_session *sessino, int if_index);
+
 /* Enables/disables cdp on an interface */
 int cdp_set_interface(struct cdp_session *session, int if_index, int enabled);
 

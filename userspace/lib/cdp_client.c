@@ -86,6 +86,30 @@ int cdp_session_recv(struct cdp_session *s)
 	return err;
 }
 
+int cdp_is_enabled(struct cdp_session *session, int if_index)
+{
+	struct cdp_request m;
+	int err;
+
+	assert(session);
+	memset(&m, 0, sizeof(m));
+	m.type = CDP_IF_STATUS;
+	m.pid = getpid();
+	m.if_index = if_index;
+
+	if ((err = cdp_session_send(session, m)) < 0) {
+		perror("cdp_session_send");
+		return err;
+	}
+
+	if ((err = cdp_session_recv(session)) < 0) {
+		perror("cdp_session_recv");
+		return err;
+	}
+
+	return *((int *)session->response);
+}
+
 int cdp_set_interface(struct cdp_session *session, int if_index, int enabled)
 {
 	struct cdp_request m;
