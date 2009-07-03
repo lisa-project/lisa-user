@@ -1,0 +1,38 @@
+--- kernel.spec.orig	2008-06-27 22:43:50.000000000 +0300
++++ kernel.spec	2008-07-10 14:23:41.000000000 +0300
+@@ -12,7 +12,7 @@
+ # that the kernel isn't the stock distribution kernel, for example,
+ # by setting the define to ".local" or ".bz123456"
+ #
+-#% define buildid .local
++%define buildid .lisa1
+ 
+ # fedora_build defines which build revision of this kernel version we're
+ # building. Rather than incrementing forever, as with the prior versioning
+@@ -681,6 +681,8 @@
+ # usb video
+ Patch2400: linux-2.6-uvcvideo.patch
+ 
++# LiSA
++Patch5500: linux-2.6-lisa.patch
+ %endif
+ 
+ BuildRoot: %{_tmppath}/kernel-%{KVERREL}-root-%{_target_cpu}
+@@ -1226,6 +1228,9 @@
+ # usb video
+ ApplyPatch linux-2.6-uvcvideo.patch
+ 
++# LiSA
++ApplyPatch linux-2.6-lisa.patch
++
+ # ---------- below all scheduled for 2.6.25 -----------------
+ 
+ # SELinux perf patches
+@@ -1257,6 +1262,7 @@
+ for i in *.config
+ do
+   mv $i .config
++  echo "CONFIG_SWITCH=m" >> .config
+   Arch=`head -1 .config | cut -b 3-`
+   make ARCH=$Arch %{oldconfig_target} > /dev/null
+   echo "# $Arch" > configs/$i
