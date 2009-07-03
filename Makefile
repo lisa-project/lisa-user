@@ -33,7 +33,7 @@ endif
 
 tarball: patch
 	mkdir $(NAME)
-	./depend.sh | xargs cp -t $(NAME) --parents
+	./depend.sh $(NAME)
 	cp -r userspace scripts dist README* INSTALL LICENSE Makefile *.sh rpm $(NAME)
 	cd $(NAME)/userspace && make clean
 	mv $(PATCH) $(NAME)

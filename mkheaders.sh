@@ -30,18 +30,16 @@ gpl
 echo "#ifndef _SWSOCK_H"
 echo "#define _SWSOCK_H"
 echo
-grep "^#define AF_SWITCH" $BASEPATH/linux-2.6/include/linux/socket.h
-grep "^#define PF_SWITCH" $BASEPATH/linux-2.6/include/linux/socket.h
+grep "^#define AF_SWITCH" $1
+grep "^#define PF_SWITCH" $1
 echo
 echo "#endif"
 
 }
 
-BASEPATH="`dirname $0`"
-
 case "$1" in
 swsock.h)
-	do_swsock
+	do_swsock $2/linux/socket.h
 	;;
 *)
 	echo "Unknown header"

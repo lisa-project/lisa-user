@@ -3,7 +3,8 @@ TOP_DIR = ..
 CFLAGS  = -fPIC -g
 LDFLAGS = -lpthread -lm -lrt
 
-INC 	= $(TOP_DIR)/../linux-2.6/include \
+include $(TOP_DIR)/scripts/Makefile.includes
+INC 	= $(LINUX_INC) \
 	  $(TOP_DIR)/include
 DEF	= _XOPEN_SOURCE=500 \
 	  DEBUG

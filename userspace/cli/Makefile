@@ -1,7 +1,9 @@
 TOP_DIR		:= $(shell pwd)/../
 CFLAGS		= -fPIC -g
 # LDFLAGS		= -L. -lswcli -lrt
-INC		= $(TOP_DIR)/../linux-2.6/include \
+
+include $(TOP_DIR)/scripts/Makefile.includes
+INC		= $(LINUX_INC) \
 		  $(TOP_DIR)/include \
 		  $(TOP_DIR)/cli \
 		  $(TOP_DIR)/cli/lib \

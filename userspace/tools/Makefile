@@ -2,7 +2,8 @@ TOP_DIR = ..
 
 CFLAGS	=
 LDFLAGS = -lcrypt
-INC	= $(TOP_DIR)/../linux-2.6/include \
+include $(TOP_DIR)/scripts/Makefile.includes
+INC	= $(LINUX_INC) \
 	  $(TOP_DIR)/include
 
 SRCS	= filter.c login.c swctl.c reboot.c

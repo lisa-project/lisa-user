@@ -1,0 +1,5 @@
+ifdef LINUX_DIR
+LINUX_INC := $(shell readlink -f $(LINUX_DIR)/include)
+else
+LINUX_INC := $(TOP_DIR)/../linux-2.6/include
+endif

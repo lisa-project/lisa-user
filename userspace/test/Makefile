@@ -1,7 +1,8 @@
 TOP_DIR = ..
 
 CGLAGS	= -g
-INC	= $(TOP_DIR)/../linux-2.6/include \
+include $(TOP_DIR)/scripts/Makefile.includes
+INC	= $(LINUX_INC) \
 	  $(TOP_DIR)/include
 
 SRCS	= pktgen.c pktrecv.c test_sock.c mcast_recv.c mcast_send.c
