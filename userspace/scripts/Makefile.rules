@@ -1,5 +1,5 @@
 $(DEPS): %.d : %.c
-	$(QUIET_CC)$(CC) $(CFLAGS) $(addprefix -I, $(INC)) $(addprefix -D, $(DEF)) -MD -o $*.o -c $<
+	$(QUIET_DEP)$(CC) $(CFLAGS) $(addprefix -I, $(INC)) $(addprefix -D, $(DEF)) -MM -o $*.d -c $<
 
 $(OBJS): %.o : %.c
 	$(QUIET_CC)$(CC) $(CFLAGS) $(addprefix -I, $(INC)) $(addprefix -D, $(DEF)) -c $< -o $@

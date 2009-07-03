@@ -75,7 +75,6 @@ LIBSWCLI_SRCS += lib/interface.c
 SRCS          = $(LIBSWCLI_SRCS) \
 				swcli.c \
 				swcfgload.c \
-				filter.c \
 				list_commands.c
 LIBSWCLI_OBJS = $(LIBSWCLI_SRCS:.c=.o)
 
@@ -89,6 +88,8 @@ all: $(TARGETS)
 
 include $(TOP_DIR)/scripts/Makefile.variables
 include $(TOP_DIR)/scripts/Makefile.rules
+
+dep: $(DEPS)
 
 libswcli.so: $(LIBSWCLI_OBJS)
 	$(Q)$(MAKE) -C $(TOP_DIR)/lib

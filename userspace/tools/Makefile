@@ -15,6 +15,8 @@ all: $(TARGETS)
 include $(TOP_DIR)/scripts/Makefile.variables
 include $(TOP_DIR)/scripts/Makefile.rules
 
+dep: $(DEPS)
+
 swctl: swctl.o
 	$(Q) $(MAKE) -C $(TOP_DIR)/lib
 	$(QUIET_LD)$(CC) $(LDFLAGS) -o $@ $^ ../lib/if_generic.o ../lib/netlink.o ../lib/util.o \

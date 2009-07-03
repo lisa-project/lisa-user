@@ -10,6 +10,8 @@ SUBDIRS = \
 	$(TOP_DIR)/cdpd    \
 	$(TOP_DIR)/test
 
+DEPFILE = lisa.dep
+
 all:
 	$(Q) for subdir in $(SUBDIRS) ; \
 	do \
@@ -21,6 +23,15 @@ clean:
 	do \
 		make -C $${subdir} $@ ; \
 	done
+	$(Q)-rm -f $(DEPFILE)
+
+dep:
+	$(Q) for subdir in $(SUBDIRS) ; \
+	do \
+		make -C $${subdir} $@ ; \
+	done
+	$(Q)-touch $(DEPFILE)
+	$(Q)-find . -name '*.d' -exec cat {} >> $(DEPFILE) \;
 
 install: all
 	install -m 755 -D cdpd/cdpd $(ROOT)/usr/sbin/cdpd

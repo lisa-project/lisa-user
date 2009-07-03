@@ -10,10 +10,11 @@ LD = $(CROSS_COMPILE)ld
 V		= @
 Q		= $(V:1=)
 QUIET_CC	= $(Q:@=@echo   '       CC      '$(@:.d=.o);)
+QUIET_DEP	= $(Q:@=@echo   '       DEP     '$(@:.d=.d);)
 QUIET_LD	= $(Q:@=@echo   '       LD      '$@;)
 
 OBJS = $(SRCS:.c=.o)
 DEPS = $(SRCS:.c=.d)
 
-PHONY += default all clean install
+PHONY += default all dep clean install
 .PHONY: $(PHONY)

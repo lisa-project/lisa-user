@@ -12,5 +12,7 @@ all: $(TARGETS)
 include $(TOP_DIR)/scripts/Makefile.variables
 include $(TOP_DIR)/scripts/Makefile.rules
 
+dep: $(DEPS)
+
 $(TARGETS): % : %.o
 	$(QUIET_LD)$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^

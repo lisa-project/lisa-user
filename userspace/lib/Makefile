@@ -10,4 +10,7 @@ include $(TOP_DIR)/scripts/Makefile.variables
 include $(TOP_DIR)/scripts/Makefile.rules
 
 .DEFAULT_GOAL = all
+
 all: $(OBJS)
+
+dep: $(DEPS)
