@@ -1,6 +1,6 @@
 MAKEFLAGS += --no-builtin-rules --no-print-directory
 
-CFLAGS += -O3 -Wall -Wstrict-prototypes -Wwrite-strings
+CFLAGS += -O3 -fno-strict-aliasing -Wall -Wstrict-prototypes -Wwrite-strings
 
 CC = $(CROSS_COMPILE)gcc
 AS = $(CROSS_COMPILE)as
