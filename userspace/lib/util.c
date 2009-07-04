@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <termios.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -132,4 +133,19 @@ int buf_alloc_swcfgr(struct swcfgreq *swcfgr, int sock_fd)
 		if (buf == NULL)
 			return -ENOMEM;
 	} while (1);
+}
+
+int read_key(void) {
+	int ret;
+	struct termios t_old, t_new;
+
+	tcgetattr(0, &t_old);
+	t_new = t_old;
+	t_new.c_lflag = ~ICANON;
+	t_new.c_cc[VTIME] = 0;
+	t_new.c_cc[VMIN] = 1;
+	tcsetattr(0, TCSANOW, &t_new);
+	ret = getchar();
+	tcsetattr(0, TCSANOW, &t_old);
+	return ret;
 }

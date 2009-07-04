@@ -29,5 +29,6 @@ void daemonize(void);
 int parse_mac(const char *str, unsigned char *mac);
 void print_mac(FILE *out, void *buf, int size, char *(*get_if_name)(int, void*), void *priv);
 int buf_alloc_swcfgr(struct swcfgreq *swcfgr, int sock_fd);
+int read_key(void);
 
 #endif
