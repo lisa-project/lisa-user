@@ -53,7 +53,7 @@ static int checkpass(int retries)
 	return i < retries;
 }
 
-int main(int argc, char **argv)
+int main(int argc, char *argv[])
 {
 	struct swcli_context ctx;
 	char hostname[HOST_NAME_MAX];

@@ -78,11 +78,12 @@ SRCS          = $(LIBSWCLI_SRCS) \
 				swcli.c \
 				swcfgload.c \
 				swlogin.c \
+				swcon.c \
 				list_commands.c
 LIBSWCLI_OBJS = $(LIBSWCLI_SRCS:.c=.o)
 
 # Targets linked with libswcli
-LIBSWCLI_TARGETS = swcli swcfgload swlogin list_commands
+LIBSWCLI_TARGETS = swcli swcfgload swlogin swcon list_commands
 
 # All targets
 TARGETS	= libswcli.so $(LIBSWCLI_TARGETS)

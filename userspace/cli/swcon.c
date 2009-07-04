@@ -19,13 +19,35 @@
 
 #include <stdio.h>
 #include <unistd.h>
+#include <limits.h>
+#include <readline/readline.h>
 
-#include "climain.h"
-#include "command.h"
+#include "swcli.h"
 
-int main(int argc, char **argv) {
-	char hostname[MAX_HOSTNAME];
+extern struct menu_node menu_main;
+
+static void redisplay_void(void) {}
+
+static int waitcr(void)
+{
+	rl_voidfunc_t *old_redisplay = rl_redisplay_function;
+
+	rl_redisplay_function = redisplay_void;
+	readline(NULL);
+	rl_redisplay_function = old_redisplay;
+	return 0;
+}
+
+int main(int argc, char *argv[])
+{
+	struct swcli_context ctx;
+	char hostname[HOST_NAME_MAX];
 	
+	if (shared_init() < 0) {
+		perror("shared_init");
+		return -1;
+	}
+
 	gethostname(hostname, sizeof(hostname));
 	hostname[sizeof(hostname) - 1] = '\0';
 	printf(
@@ -35,8 +57,23 @@ int main(int argc, char **argv) {
 			"Press RETURN to get started."
 			"\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n",
 			hostname);
-	cfg_waitcr();
-	console_session = 1;
-	climain();
+	waitcr();
+
+	/* FIXME: enable should behave differently when the cli is invoked from
+	 * console, i.e. it should not warn the user that no password is set.
+	 * In the old cli this was done by setting a global flag:
+	 * console_session = 1;
+	 */
+	CLI_CTX(&ctx)->node_filter = PRIV_FILTER(1);
+	CLI_CTX(&ctx)->root = &menu_main;
+	CLI_CTX(&ctx)->out_open = cli_out_open;
+	RLSHELL_CTX(&ctx)->prompt = swcli_prompt;
+	RLSHELL_CTX(&ctx)->exit = 0;
+	RLSHELL_CTX(&ctx)->enable_ctrl_z = 0;
+	ctx.sock_fd = -1;
+	ctx.cdp = NULL;
+
+	rlshell_main(RLSHELL_CTX(&ctx));
+
 	return 0;
 }
