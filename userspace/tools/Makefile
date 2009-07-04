@@ -6,9 +6,9 @@ include $(TOP_DIR)/scripts/Makefile.includes
 INC	= $(LINUX_INC) \
 	  $(TOP_DIR)/include
 
-SRCS	= filter.c login.c swctl.c reboot.c
+SRCS	= filter.c login.c swctl.c swclid.c reboot.c
 
-SIMPLE_TARGETS = filter login reboot
+SIMPLE_TARGETS = filter login reboot swclid
 TARGETS = $(SIMPLE_TARGETS) swctl
 
 all: $(TARGETS)
