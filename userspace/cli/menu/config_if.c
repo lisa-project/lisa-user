@@ -340,7 +340,7 @@ struct menu_node config_if_main = {
 					.help			= "Set switching mode characteristics",
 					.mask			= CLI_MASK(PRIV(2)),
 					.tokenize	= NULL,
-					.run			= cmd_swport_off,
+					.run			= cmd_swport,
 					.subtree	= (struct menu_node *[]) { /*{{{*/
 						/* #no switchport access */
 						& (struct menu_node){
@@ -481,7 +481,7 @@ struct menu_node config_if_main = {
 			.help			= "Set switching mode characteristics",
 			.mask			= CLI_MASK(PRIV(2), IFF_SWITCHED | IFF_ROUTED),
 			.tokenize	= NULL,
-			.run			= cmd_swport_on,
+			.run			= cmd_swport,
 			.subtree	= (struct menu_node *[]) { /*{{{*/
 				/* #switchport access */
 				& (struct menu_node){

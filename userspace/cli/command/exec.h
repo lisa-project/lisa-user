@@ -17,7 +17,6 @@ int cmd_sh_ip(struct cli_context *, int, char **, struct menu_node **);
 int cmd_sh_ip_igmps(struct cli_context *, int, char **, struct menu_node **);
 int cmd_sh_ip_igmps_mrouter(struct cli_context *, int, char **, struct menu_node **);
 int cmd_sh_ip_igmps_groups(struct cli_context *, int, char **, struct menu_node **);
-int cmd_sh_addr(struct cli_context *, int, char **, struct menu_node **);
 int cmd_sh_mac_age(struct cli_context *, int, char **, struct menu_node **);
 int cmd_show_priv(struct cli_context *, int, char **, struct menu_node **);
 int cmd_show_start(struct cli_context *, int, char **, struct menu_node **);

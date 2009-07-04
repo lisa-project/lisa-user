@@ -164,8 +164,6 @@ int cmd_speed_duplex(struct cli_context *ctx, int argc, char **argv, struct menu
 	return CLI_EX_OK;
 }
 
-int cmd_swport_off(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
-
 int cmd_trunk_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 { 
 	int parse_vlan_err = 0, i, sock_fd;
@@ -241,8 +239,6 @@ int cmd_nomode(struct cli_context *ctx, int argc, char **argv, struct menu_node 
 
 	return CLI_EX_OK;
 }
-
-int cmd_swport_on(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }
 
 int cmd_acc_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
@@ -461,3 +457,6 @@ out_cleanup:
 	list_free(&addrl, struct if_addr, lh);
 	return ret;
 }
+
+/* FIXME: unimplemented command */
+int cmd_swport(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev) { return 0; }

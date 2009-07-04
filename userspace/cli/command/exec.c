@@ -1,6 +1,8 @@
 #include "swcli.h"
 #include "exec.h"
 
+#include <readline/readline.h>
+#include <readline/history.h>
 #include <linux/ethtool.h>
 
 extern struct menu_node config_main;
@@ -260,14 +262,10 @@ int cmd_conf_t(struct cli_context *__ctx, int argc, char **argv, struct menu_nod
 	return 0;
 }
 
-int cmd_disable(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
-int cmd_enable(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
-
 int cmd_quit(struct cli_context *__ctx, int argc, char **argv, struct menu_node **nodev) {
 	struct rlshell_context *ctx = (void *)__ctx;
 
 	ctx->exit = 1;
-	swcli_dump_args(__ctx, argc, argv, nodev);
 	return 0;
 }
 
@@ -293,36 +291,36 @@ int cmd_help(struct cli_context *ctx, int argc, char **argv, struct menu_node **
 	fflush(out);
 	return 0;
 }
-int cmd_ping(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
-int cmd_reload(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
 
 int cmd_history(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
 	FILE *out;
+	HIST_ENTRY **history;
+	HIST_ENTRY *entry;
 	int i;
 
-	out = ctx->out_open(ctx, 1);
-	for (i=0; i<1000; i++)
-		fprintf(out, "%d\n", i);
-	fflush(out);
-	fclose(out);
+	out = ctx->out_open(ctx, 0);
+	history = history_list();
+	if (history) {
+		for (i = 0; (entry = history[i]); i++) {
+			fprintf(out, "   %s\n", entry->line);
+		}
+	}
 	return 0;
 }
 
 int cmd_sh_clock(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
 	FILE *out;
-
-	out = ctx->out_open(ctx,0);
-	//--------------------------
 	time_t rawtime;
 	struct tm * timeinfo;
 
-	time ( &rawtime );
-	timeinfo = localtime ( &rawtime );
-	//--------------------------
+	out = ctx->out_open(ctx,0);
+	time (&rawtime);
+	timeinfo = localtime (&rawtime);
 	fprintf(out,"%s",asctime(timeinfo));
 	fflush(out);
+
 	return 0;
 }
 
@@ -491,8 +489,6 @@ int cmd_sh_int(struct cli_context *ctx, int argc, char **argv, struct menu_node 
 
 	return err;
 }
-
-int cmd_sh_ip(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
 
 int cmd_sh_ip_igmps(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
@@ -780,8 +776,6 @@ out_clean:
 	return ret;
 }
 
-int cmd_sh_addr(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
-
 int cmd_sh_mac_age(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
 	struct swcfgreq swcfgr = {
@@ -800,14 +794,6 @@ int cmd_sh_mac_age(struct cli_context *ctx, int argc, char **argv, struct menu_n
 
 	return CLI_EX_OK;
 }
-
-int cmd_sh_mac_eth(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
-int cmd_sh_mac_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
-int cmd_show_priv(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
-
-
-int cmd_show_start(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
-int cmd_show_ver(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
 
 int cmd_show_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
@@ -936,4 +922,13 @@ out_clean:
 	return ret;
 }
 
+/* FIXME: unimplemented commands */
+int cmd_show_priv(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
+int cmd_show_start(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
+int cmd_show_ver(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
+int cmd_sh_ip(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
+int cmd_disable(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
+int cmd_enable(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
+int cmd_ping(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
 int cmd_trace(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
+int cmd_reload(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
