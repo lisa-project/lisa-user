@@ -1,17 +1,15 @@
-%define date_version 2008.07.14
-%define kernel_version 2.6.25
-
 Summary: Network Multilayer Switching on Linux
 Name: lisa
-Version: %{date_version}_%{kernel_version}
+Version: %{lisa_version}_%{kernel_version}
 Release: 1%{?dist}
 Group: Applications/System
-Source: http://lisa.ines.ro/download/tarball/lisa-%{date_version}.tar.gz
+Source: http://lisa.ines.ro/download/tarball/lisa-%{lisa_version}.tar.gz
 URL:    http://lisa.ines.ro
 
 License: GPL
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
-BuildRequires: ncurses-devel
+Requires: kernel = %{kernel_version}
+BuildRequires: ncurses-devel readline-devel
 
 %description
 LISA stands for LInux Switching Appliance. It's a project that aims at

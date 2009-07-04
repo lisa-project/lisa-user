@@ -1,10 +1,16 @@
 NAME := lisa
+
+MAJOR := 2
+MINOR := 0
+PATCH := 1
+
+VERSION := $(MAJOR).$(MINOR).$(PATCH)
+
 PWD := $(shell pwd)
 PATCH := $(PWD)/linux-2.6-lisa.patch
-VERSION := $(shell grep '^%define date_version ' rpm/lisa.spec | sed 's/^%define date_version \(.*\)$$/\1/')
 RPMDIR := $(shell rpm --eval %{_topdir})
 
-.PHONY: all dist distopt package patch user rpm install
+.PHONY: all dist distopt package patch user rpm install tarball
 
 all:
 	@echo "This makefile accepts the following targets:"
@@ -31,12 +37,11 @@ else
 	OPT=true ./mkdist.sh $(DST)
 endif
 
-tarball: patch
+tarball:
 	mkdir $(NAME)
+	cd userspace && make clean
 	./depend.sh $(NAME)
 	cp -r userspace scripts dist README* INSTALL LICENSE Makefile *.sh rpm $(NAME)
-	cd $(NAME)/userspace && make clean
-	mv $(PATCH) $(NAME)
 	tar czvf $(NAME).tar.gz $(NAME)
 	rm -rf $(NAME)
 
@@ -57,4 +62,4 @@ install:
 rpm:
 	cp -f rpm/$(NAME).spec $(RPMDIR)/SPECS
 	cp -f $(NAME).tar.gz $(RPMDIR)/SOURCES/$(NAME)-$(VERSION).tar.gz
-	rpmbuild -ba $(RPMDIR)/SPECS/$(NAME).spec
+	rpmbuild --define "lisa_version $(VERSION)" --define "kernel_version $(shell ./kver.sh)" -ba $(RPMDIR)/SPECS/$(NAME).spec

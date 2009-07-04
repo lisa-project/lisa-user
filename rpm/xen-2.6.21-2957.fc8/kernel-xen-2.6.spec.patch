@@ -1,15 +1,15 @@
---- kernel.spec.orig	2008-03-20 20:42:00.000000000 +0200
-+++ kernel.spec	2008-06-26 17:38:22.000000000 +0300
+--- kernel.spec.orig	2008-02-18 17:55:14.000000000 +0200
++++ kernel.spec	2008-02-18 17:54:23.000000000 +0200
 @@ -15,7 +15,7 @@
  # that the kernel isn't the stock distribution kernel, for example,
  # by setting the define to ".local" or ".bz123456"
  #
 -#% define buildid .local
-+%define buildid .lisa1
++%define buildid .lisa%{lisa_version}
  
  # fedora_build defines which build revision of this kernel version we're
  # building. Rather than incrementing forever, as with the prior versioning
-@@ -932,6 +932,9 @@
+@@ -920,6 +920,9 @@
  Patch5000: linux-2.6-firewire.patch
  Patch5001: linux-2.6-firewire-be32-fix.patch
  
@@ -19,7 +19,7 @@
  # Security:
  
  # CVE-2008-0600 (bug #432517)
-@@ -1714,6 +1717,9 @@
+@@ -1699,6 +1702,9 @@
  %patch5000 -p1
  %patch5001 -p1
  
@@ -29,7 +29,7 @@
  # security:
  %patch6000 -p1
  
-@@ -1755,6 +1761,7 @@
+@@ -1740,6 +1746,7 @@
  for i in *.config
  do
    mv $i .config

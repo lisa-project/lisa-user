@@ -5,7 +5,7 @@
  # by setting the define to ".local" or ".bz123456"
  #
 -#% define buildid
-+%define buildid .lisa3
++%define buildid .lisa%{lisa_version}
  #
  %define sublevel 18
  %define kversion 2.6.%{sublevel}

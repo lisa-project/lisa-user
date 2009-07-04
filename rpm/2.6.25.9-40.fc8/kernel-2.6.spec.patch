@@ -5,7 +5,7 @@
  # by setting the define to ".local" or ".bz123456"
  #
 -#% define buildid .local
-+%define buildid .lisa1
++%define buildid .lisa%{lisa_version}
  
  # fedora_build defines which build revision of this kernel version we're
  # building. Rather than incrementing forever, as with the prior versioning

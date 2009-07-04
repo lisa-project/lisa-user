@@ -36,12 +36,12 @@ dep:
 install: all
 	install -m 755 -D cdpd/cdpd $(ROOT)/usr/sbin/cdpd
 	install -m 755 -D tools/filter $(ROOT)/bin/filter
+	install -m 755 -D tools/swclid $(ROOT)/usr/sbin/swclid
 ifneq ($(ROOT),)
 	install -m 755 -D tools/reboot $(ROOT)/bin/reboot
 endif
 	install -m 755 -D cli/swcfgload $(ROOT)/usr/sbin/swcfgload
 	install -m 755 -D cli/swcli $(ROOT)/usr/sbin/swcli
-	install -m 755 -D cli/swclid $(ROOT)/usr/sbin/swclid
 	install -m 755 -D cli/swcon $(ROOT)/usr/sbin/swcon
 	install -m 755 -D cli/swlogin $(ROOT)/usr/sbin/swlogin
 	install -m 755 -D cli/libswcli.so $(ROOT)/usr/lib/libswcli.so
