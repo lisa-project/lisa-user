@@ -19,24 +19,50 @@
 
 #include <stdio.h>
 #include <unistd.h>
+#include <readline/readline.h>
 
-#include "climain.h"
+#include "swcli.h"
 #include "shared.h"
 
-static int password_valid(char *pw, void *arg) {
-	int ret;
+extern struct menu_node menu_main;
 
-	cfg_lock();
-	ret = !strcmp(pw, CFG->vty[0].passwd);
-	cfg_unlock();
-	return ret;
+static int password_valid(char *pw, void *priv)
+{
+	return !strcmp(pw, (char *)priv);
 }
 
-int max_attempts = 3;
+static void redisplay_password(void)
+{
+	fprintf(rl_outstream, "\rPassword: ");
+	fflush(rl_outstream);
+}
 
-int main(int argc, char **argv) {
-	char hostname[MAX_HOSTNAME];
+static int checkpass(int retries)
+{
+	rl_voidfunc_t *old_redisplay = rl_redisplay_function;
+	char *pw;
+	int i;
+
+	rl_redisplay_function = redisplay_password;
+	for (i = 0; i < retries; i++) {
+		pw = readline(NULL);
+		if (shared_auth(SHARED_AUTH_VTY, 0, password_valid, pw))
+			break;
+	}
+	rl_redisplay_function = old_redisplay;
+	return i < retries;
+}
+
+int main(int argc, char **argv)
+{
+	struct swcli_context ctx;
+	char hostname[HOST_NAME_MAX];
 	
+	if (shared_init() < 0) {
+		perror("shared_init");
+		return -1;
+	}
+
 	gethostname(hostname, sizeof(hostname));
 	hostname[sizeof(hostname) - 1] = '\0';
 	printf("\r\n%s line %d", hostname, 1);
@@ -44,12 +70,22 @@ int main(int argc, char **argv) {
 	printf("\r\n\r\n");
 	fflush(stdout);
 
-	cfg_init();
-	if(cfg_checkpass(max_attempts, password_valid, NULL)) {
-		climain();
-		return 0;
+#define MAX_ATTEMPTS 3
+	if (!checkpass(MAX_ATTEMPTS)) {
+		printf("%% Bad passwords\r\n");
+		return 1;
 	}
 
-	printf("%% Bad passwords\r\n");
-	return 1;
+	CLI_CTX(&ctx)->node_filter = PRIV_FILTER(1);
+	CLI_CTX(&ctx)->root = &menu_main;
+	CLI_CTX(&ctx)->out_open = cli_out_open;
+	RLSHELL_CTX(&ctx)->prompt = swcli_prompt;
+	RLSHELL_CTX(&ctx)->exit = 0;
+	RLSHELL_CTX(&ctx)->enable_ctrl_z = 0;
+	ctx.sock_fd = -1;
+	ctx.cdp = NULL;
+
+	rlshell_main(RLSHELL_CTX(&ctx));
+
+	return 0;
 }
