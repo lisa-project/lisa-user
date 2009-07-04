@@ -922,8 +922,38 @@ out_clean:
 	return ret;
 }
 
+int cmd_reload(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
+{
+	FILE *out;
+	int key;
+
+	out = ctx->out_open(ctx, 0);
+	fputs("Proceed with reload? [confirm]", out);
+	fflush(out);
+	key = read_key();
+	if(key != 'y' && key != 'Y' && key != '\n') {
+		fputc('\n', out);
+		return 0;
+	}
+	system("reboot &> /dev/null");
+	/* delay returning so that the prompt doesn't get displayed again */
+	sleep(5);
+	return 0;
+}
+
+int cmd_show_priv(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
+{
+	uint32_t filter, priv;
+	FILE *out;
+
+	filter = (ctx->node_filter & PRIV_FILTER(PRIV_MAX)) + 1;
+	for (priv = 0; filter != 1; filter >>= 1, priv++);
+	out = ctx->out_open(ctx, 0);
+	fprintf(out, "Current privilege level is %d\n", priv - 1);
+	return 0;
+}
+
 /* FIXME: unimplemented commands */
-int cmd_show_priv(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
 int cmd_show_start(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
 int cmd_show_ver(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
 int cmd_sh_ip(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
@@ -931,4 +961,3 @@ int cmd_disable(struct cli_context *ctx, int argc, char **argv, struct menu_node
 int cmd_enable(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
 int cmd_ping(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
 int cmd_trace(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
-int cmd_reload(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev){return 0;}
