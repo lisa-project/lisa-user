@@ -283,6 +283,29 @@ int build_config_global(struct cli_context *ctx, FILE *out, int tagged_if)
 		shared_auth(SHARED_AUTH_ENABLE, i, write_enable_secret, &priv);
 	}
 
+	/* TODO: IGMP snooping static mrouter configuration */
+	fprintf(out, "!\n");
+
+	/* IGMP snooping global flag */
+	swcfgr.cmd = SWCFG_GETIGMPS;
+	swcfgr.buf.addr = NULL;
+	status = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
+	assert(status == 0); // FIXME
+	if (swcfgr.ext.snooping) {
+		unsigned char map[SW_VLAN_BMP_NO];
+
+		swcfgr.buf.addr = (void *)&map[0];
+		status = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
+		assert(status == 0); // FIXME
+
+		for (i = SW_MIN_VLAN; i <= SW_MAX_VLAN; i++) {
+			if (sw_bitmap_test(map, i))
+				fprintf(out, "no ip igmp snooping vlan %d\n", i);
+		}
+	} else {
+		fprintf(out, "no ip igmp snooping\n");
+	}
+
 	/* vlans (aka replacement for vlan database) */
 	swcfgr.cmd = SWCFG_GETVDB;
 	swcfgr.vlan = 0;
