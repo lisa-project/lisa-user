@@ -62,4 +62,4 @@ install:
 rpm:
 	cp -f rpm/$(NAME).spec $(RPMDIR)/SPECS
 	cp -f $(NAME).tar.gz $(RPMDIR)/SOURCES/$(NAME)-$(VERSION).tar.gz
-	rpmbuild --define "lisa_version $(VERSION)" --define "kernel_version $(shell ./kver.sh)" -ba $(RPMDIR)/SPECS/$(NAME).spec
+	rpmbuild --define "lisa_version $(VERSION)" --define "lisa_kapi_version $(shell ./kver.sh)" -ba $(RPMDIR)/SPECS/$(NAME).spec

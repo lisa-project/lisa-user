@@ -1,6 +1,6 @@
 Summary: Network Multilayer Switching on Linux
 Name: lisa
-Version: %{lisa_version}_%{kernel_version}
+Version: %{lisa_version}_%{expand:%%(echo %{lisa_kapi_version} | sed 's/-.*//')}
 Release: 1%{?dist}
 Group: Applications/System
 Source: http://lisa.ines.ro/download/tarball/lisa-%{lisa_version}.tar.gz
@@ -8,7 +8,7 @@ URL:    http://lisa.ines.ro
 
 License: GPL
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
-Requires: kernel = %{kernel_version}
+Requires: kernel-lisa-api = %{lisa_kapi_version}
 BuildRequires: ncurses-devel readline-devel
 
 %description

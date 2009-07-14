@@ -15,4 +15,6 @@ version=`grep '^VERSION' $makefile | sed 's/^.*= *\([0-9]\+\).*/\1/'`
 patchlevel=`grep '^PATCHLEVEL' $makefile | sed 's/^.*= *\([0-9]\+\).*/\1/'`
 sublevel=`grep '^SUBLEVEL' $makefile | sed 's/^.*= *\([0-9]\+\).*/\1/'`
 
-echo $version.$patchlevel.$sublevel
+kapi_major=`grep '^LISA_KAPI_MAJOR' $LINUX_DIR/net/switch/Makefile | sed 's/^.*= *\([0-9]\+\).*/\1/'`
+kapi_minor=`grep '^LISA_KAPI_MINOR' $LINUX_DIR/net/switch/Makefile | sed 's/^.*= *\([0-9]\+\).*/\1/'`
+echo $version.$patchlevel.$sublevel-$kapi_major.$kapi_minor
