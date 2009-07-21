@@ -1,15 +1,23 @@
 --- kernel-2.6.spec.orig	2009-05-25 00:22:12.000000000 +0300
-+++ kernel-2.6.spec	2009-07-03 17:57:59.000000000 +0300
++++ kernel-2.6.spec	2009-07-15 18:00:55.000000000 +0300
 @@ -66,7 +66,7 @@
  # that the kernel isn't the stock distribution kernel, for example,
  # by setting the define to ".local" or ".bz123456"
  #
 -#% define buildid
-+%define buildid .lisa%{lisa_version}
++%define buildid .lisa%{lisa_kapi_major}.%{lisa_kapi_minor}.%{lisa_kapi_patch}
  #
  %define sublevel 18
  %define kversion 2.6.%{sublevel}
-@@ -772,6 +772,9 @@
+@@ -323,6 +323,7 @@
+ Provides: kernel = %{version}
+ Provides: kernel-drm = 4.3.0
+ Provides: kernel-%{_target_cpu} = %{rpmversion}-%{release}
++Provides: kernel-lisa-api = %{version}-%{lisa_kapi_major}.%{lisa_kapi_minor}
+ Prereq: %{kernel_prereq}
+ Conflicts: %{kernel_dot_org_conflicts}
+ Conflicts: %{package_conflicts}
+@@ -772,6 +773,9 @@
  # Wireless driver
  Patch2801: linux-2.6-wireless-ipw2200-1_2_0-update.patch
  
@@ -19,7 +27,7 @@
  #
  # 10000 to 20000 is for stuff that has to come last due to the
  # amount of drivers they touch. But only these should go here.
-@@ -2113,7 +2116,7 @@
+@@ -2113,7 +2117,7 @@
  Patch22260: linux-2.6-s390-qeth-skb-sg-support-for-large-incoming-msgs.patch
  Patch22261: linux-2.6-s390-cleanup-scsi-dumper-code.patch
  Patch22262: linux-2.6-s390-z-vm-unit-record-device-driver.patch
@@ -28,7 +36,7 @@
  Patch22264: linux-2.6-s390-cleanup-scsi-dumper-code-part-2.patch
  Patch22265: linux-2.6-s390-support-for-z-vm-diag-2fc.patch
  Patch22266: linux-2.6-s390-z-vm-monitor-stream-state-2.patch
-@@ -2861,7 +2864,7 @@
+@@ -2861,7 +2865,7 @@
  Patch23017: linux-2.6-firewire-latest-upstream-snapshot-for-rhel-5-3.patch
  Patch23018: linux-2.6-x86_64-gart-iommu-alignment-fixes.patch
  Patch23019: linux-2.6-x86_64-amd-iommu-driver-support.patch
@@ -37,7 +45,7 @@
  Patch23021: linux-2.6-ide-fix-issue-when-appending-data-on-an-existing-dvd.patch
  Patch23022: linux-2.6-block-performance-fix-for-too-many-physical-devices.patch
  Patch23023: linux-2.6-firmware-fix-ibft-offset-calculation.patch
-@@ -4175,6 +4178,9 @@
+@@ -4175,6 +4179,9 @@
  # be merged upstream
  #
  
@@ -47,7 +55,7 @@
  #
  # final stuff
  #
-@@ -6160,7 +6166,7 @@
+@@ -6160,7 +6167,7 @@
  %patch23017 -p1
  %patch23018 -p1
  %patch23019 -p1
@@ -56,7 +64,7 @@
  %patch23021 -p1
  %patch23022 -p1
  %patch23023 -p1
-@@ -6753,6 +6759,7 @@
+@@ -6753,6 +6760,7 @@
  for i in *.config
  do
    mv $i .config
