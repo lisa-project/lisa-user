@@ -1,3 +1,3 @@
 [submodule "linux-2.6"]
 	path = linux-2.6
-	url = git://lisa.ines.ro/linux-2.6.git
+	url = git://lisa.mindbit.ro/linux-2.6.git
