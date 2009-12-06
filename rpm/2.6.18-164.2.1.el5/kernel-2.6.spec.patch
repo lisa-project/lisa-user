@@ -1,0 +1,101 @@
+--- kernel-2.6.spec.orig	2009-11-03 22:53:00.000000000 +0200
++++ kernel.spec	2009-12-06 14:29:14.000000000 +0200
+@@ -70,7 +70,7 @@
+ # that the kernel isn't the stock distribution kernel, for example,
+ # by setting the define to ".local" or ".bz123456"
+ #
+-#% define buildid
++%define buildid .lisa%{lisa_kapi_major}.%{lisa_kapi_minor}.%{lisa_kapi_patch}
+ #
+ %define sublevel 18
+ %define kversion 2.6.%{sublevel}
+@@ -336,6 +336,7 @@
+ Provides: kernel = %{version}
+ Provides: kernel-drm = 4.3.0
+ Provides: kernel-%{_target_cpu} = %{rpmversion}-%{release}
++Provides: kernel-lisa-api = %{version}-%{lisa_kapi_major}.%{lisa_kapi_minor}
+ Prereq: %{kernel_prereq}
+ Conflicts: %{kernel_dot_org_conflicts}
+ Conflicts: %{package_conflicts}
+@@ -789,6 +790,9 @@
+ # Wireless driver
+ Patch2801: linux-2.6-wireless-ipw2200-1_2_0-update.patch
+ 
++# LiSA
++Patch6000: linux-2.6-lisa.patch
++
+ #
+ # 10000 to 20000 is for stuff that has to come last due to the
+ # amount of drivers they touch. But only these should go here.
+@@ -2192,7 +2196,7 @@
+ Patch22260: linux-2.6-s390-qeth-skb-sg-support-for-large-incoming-msgs.patch
+ Patch22261: linux-2.6-s390-cleanup-scsi-dumper-code.patch
+ Patch22262: linux-2.6-s390-z-vm-unit-record-device-driver.patch
+-Patch22263: linux-2.6-s390-af_iucv-protocol-support.patch
++Patch22263: linux-2.6-s390-af_iucv-protocol-support__lisa.patch
+ Patch22264: linux-2.6-s390-cleanup-scsi-dumper-code-part-2.patch
+ Patch22265: linux-2.6-s390-support-for-z-vm-diag-2fc.patch
+ Patch22266: linux-2.6-s390-z-vm-monitor-stream-state-2.patch
+@@ -2940,7 +2944,7 @@
+ Patch23017: linux-2.6-firewire-latest-upstream-snapshot-for-rhel-5-3.patch
+ Patch23018: linux-2.6-x86_64-gart-iommu-alignment-fixes.patch
+ Patch23019: linux-2.6-x86_64-amd-iommu-driver-support.patch
+-Patch23020: linux-2.6-misc-fix-kernel-builds-on-modern-userland.patch
++#Patch23020: linux-2.6-misc-fix-kernel-builds-on-modern-userland.patch
+ Patch23021: linux-2.6-ide-fix-issue-when-appending-data-on-an-existing-dvd.patch
+ Patch23022: linux-2.6-block-performance-fix-for-too-many-physical-devices.patch
+ Patch23023: linux-2.6-firmware-fix-ibft-offset-calculation.patch
+@@ -4000,7 +4004,7 @@
+ Patch24078: linux-2.6-mm-fork-vs-fast-gup-race-fix.patch
+ Patch24079: linux-2.6-crypto-print-self-test-success-notices-in-fips-mode.patch
+ Patch24080: linux-2.6-crypto-add-ctr-test-vectors.patch
+-Patch24081: linux-2.6-net-tun-add-packet-accounting.patch
++Patch24081: linux-2.6-net-tun-add-packet-accounting__lisa.patch
+ Patch24082: linux-2.6-x86_64-clean-up-time-c.patch
+ Patch24083: linux-2.6-i386-untangle-xtime_lock-vs-update_process_times.patch
+ Patch24084: linux-2.6-x86-scale-cyc_2_nsec-according-to-cpu-frequency.patch
+@@ -4124,7 +4128,7 @@
+ Patch24202: linux-2.6-x86-nmi-add-intel-cpu-0x6f4-to-perfctr1-workaround.patch
+ Patch24203: linux-2.6-nfs-v4-r-w-perms-for-user-do-not-work-on-client.patch
+ Patch24204: linux-2.6-net-netxen-add-gro-support.patch
+-Patch24205: linux-2.6-revert-net-tun-add-packet-accounting.patch
++Patch24205: linux-2.6-revert-net-tun-add-packet-accounting__lisa.patch
+ Patch24206: linux-2.6-fs-vfs-skip-i_clear-state-inodes-in-drop_pagecache_sb.patch
+ Patch24207: linux-2.6-crypto-testmgr-dynamically-allocate-xbuf-and-axbuf.patch
+ Patch24208: linux-2.6-net-igb-and-igbvf-return-from-napi-poll-correctly.patch
+@@ -4138,7 +4142,7 @@
+ Patch24216: linux-2.6-revert-net-avoid-extra-wakeups-in-wait_for_packet.patch
+ Patch24217: linux-2.6-ata-sata_sx4-fixup-interrupt-and-exception-handling.patch
+ Patch24218: linux-2.6-sched-fix-cond_resched_softirq-offset.patch
+-Patch24219: linux-2.6-re-apply-net-tun-add-packet-accounting.patch
++Patch24219: linux-2.6-re-apply-net-tun-add-packet-accounting__lisa.patch
+ Patch24220: linux-2.6-net-tun-only-wake-up-writers.patch
+ Patch24221: linux-2.6-net-skb_copy_datagram_from_iovec.patch
+ Patch24222: linux-2.6-tun-use-non-linear-packets-where-possible.patch
+@@ -5148,6 +5152,9 @@
+ # be merged upstream
+ #
+ 
++# LiSA
++%patch6000 -p1
++
+ #
+ # final stuff
+ #
+@@ -7133,7 +7140,7 @@
+ %patch23017 -p1
+ %patch23018 -p1
+ %patch23019 -p1
+-%patch23020 -p1
++#%patch23020 -p1
+ %patch23021 -p1
+ %patch23022 -p1
+ %patch23023 -p1
+@@ -8627,6 +8634,7 @@
+ for i in *.config
+ do
+   mv $i .config
++  echo "CONFIG_SWITCH=m" >> .config
+   Arch=`head -1 .config | cut -b 3-`
+   make ARCH=$Arch nonint_oldconfig > /dev/null
+   echo "# $Arch" > configs/$i

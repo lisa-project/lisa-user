@@ -1,0 +1,470 @@
+From: Herbert Xu <herbert.xu@redhat.com>
+Date: Wed, 6 May 2009 11:37:16 +0800
+Subject: [net] tun: add packet accounting
+Message-id: 20090506033716.GA27876@gondor.apana.org.au
+O-Subject: Re: [RHEL5.4 PATCH] tun: Add packet accounting
+Bugzilla: 495863
+RH-Acked-by: Neil Horman <nhorman@redhat.com>
+RH-Acked-by: Michael S. Tsirkin <mst@redhat.com>
+
+Hi:
+
+RHEL5.4 BZ #495863
+
+We need to add packet accounting to the tun driver so that users
+such as virtio-net gets congestion feedback which is necessary to
+prevent packet loss for protocols lacking congestion conctrol (such
+as UDP) when used in a guest.
+
+This is a backport of the following upstream patches:
+
+commit 33dccbb050bbe35b88ca8cf1228dcf3e4d4b3554
+Author: Herbert Xu <herbert@gondor.apana.org.au>
+Date:   Thu Feb 5 21:25:32 2009 -0800
+
+    tun: Limit amount of queued packets per device
+
+    Unlike a normal socket path, the tuntap device send path does
+    not have any accounting.  This means that the user-space sender
+    may be able to pin down arbitrary amounts of kernel memory by
+    continuing to send data to an end-point that is congested.
+
+    Even when this isn't an issue because of limited queueing at
+    most end points, this can also be a problem because its only
+    response to congestion is packet loss.  That is, when those
+    local queues at the end-point fills up, the tuntap device will
+    start wasting system time because it will continue to send
+    data there which simply gets dropped straight away.
+
+    Of course one could argue that everybody should do congestion
+    control end-to-end, unfortunately there are people in this world
+    still hooked on UDP, and they don't appear to be going away
+    anywhere fast.  In fact, we've always helped them by performing
+    accounting in our UDP code, the sole purpose of which is to
+    provide congestion feedback other than through packet loss.
+
+    This patch attempts to apply the same bandaid to the tuntap device.
+    It creates a pseudo-socket object which is used to account our
+    packets just as a normal socket does for UDP.  Of course things
+    are a little complex because we're actually reinjecting traffic
+    back into the stack rather than out of the stack.
+
+    The stack complexities however should have been resolved by preceding
+    patches.  So this one can simply start using skb_set_owner_w.
+
+    For now the accounting is essentially disabled by default for
+    backwards compatibility.  In particular, we set the cap to INT_MAX.
+    This is so that existing applications don't get confused by the
+    sudden arrival EAGAIN errors.
+
+    In future we may wish (or be forced to) do this by default.
+
+    Signed-off-by: Herbert Xu <herbert@gondor.apana.org.au>
+    Signed-off-by: David S. Miller <davem@davemloft.net>
+
+commit 4cc7f68d65558f683c702d4fe3a5aac4c5227b97
+Author: Herbert Xu <herbert@gondor.apana.org.au>
+Date:   Wed Feb 4 16:55:54 2009 -0800
+
+    net: Reexport sock_alloc_send_pskb
+
+    The function sock_alloc_send_pskb is completely useless if not
+    exported since most of the code in it won't be used as is.  In
+    fact, this code has already been duplicated in the tun driver.
+
+    Now that we need accounting in the tun driver, we can in fact
+    use this function as is.  So this patch marks it for export again.
+
+    Signed-off-by: Herbert Xu <herbert@gondor.apana.org.au>
+    Signed-off-by: David S. Miller <davem@davemloft.net>
+
+commit 9a279bcbe347496799711155ed41a89bc40f79c5
+Author: Herbert Xu <herbert@gondor.apana.org.au>
+Date:   Wed Feb 4 16:55:27 2009 -0800
+
+    net: Partially allow skb destructors to be used on receive path
+
+    As it currently stands, skb destructors are forbidden on the
+    receive path because the protocol end-points will overwrite
+    any existing destructor with their own.
+
+    This is the reason why we have to call skb_orphan in the loopback
+    driver before we reinject the packet back into the stack, thus
+    creating a period during which loopback traffic isn't charged
+    to any socket.
+
+    With virtualisation, we have a similar problem in that traffic
+    is reinjected into the stack without being associated with any
+    socket entity, thus providing no natural congestion push-back
+    for those poor folks still stuck with UDP.
+
+    Now had we been consistent in telling them that UDP simply has
+    no congestion feedback, I could just fob them off.  Unfortunately,
+    we appear to have gone to some length in catering for this on
+    the standard UDP path, with skb/socket accounting so that has
+    created a very unhealthy dependency.
+
+    Alas habits are difficult to break out of, so we may just have
+    to allow skb destructors on the receive path.
+
+    It turns out that making skb destructors useable on the receive path
+    isn't as easy as it seems.  For instance, simply adding skb_orphan
+    to skb_set_owner_r isn't enough.  This is because we assume all
+    over the IP stack that skb->sk is an IP socket if present.
+
+    The new transparent proxy code goes one step further and assumes
+    that skb->sk is the receiving socket if present.
+
+    Now all of this can be dealt with by adding simple checks such
+    as only treating skb->sk as an IP socket if skb->sk->sk_family
+    matches.  However, it turns out that for bridging at least we
+    don't need to do all of this work.
+
+    This is of interest because most virtualisation setups use bridging
+    so we don't actually go through the IP stack on the host (with
+    the exception of our old nemesis the bridge netfilter, but that's
+    easily taken care of).
+
+    So this patch simply adds skb_orphan to the point just before we
+    enter the IP stack, but after we've gone through the bridge on the
+    receive path.  It also adds an skb_orphan to the one place in
+    netfilter that touches skb->sk/skb->destructor, that is, tproxy.
+
+    One word of caution, because of the internal code structure, anyone
+    wishing to deploy this must use skb_set_owner_w as opposed to
+    skb_set_owner_r since many functions that create a new skb from
+    an existing one will invoke skb_set_owner_w on the new skb.
+
+    Signed-off-by: Herbert Xu <herbert@gondor.apana.org.au>
+    Signed-off-by: David S. Miller <davem@davemloft.net>
+
+diff --git a/drivers/net/tun.c b/drivers/net/tun.c
+index 9a35086..3a4afe0 100644
+--- a/drivers/net/tun.c
++++ b/drivers/net/tun.c
+@@ -59,10 +59,16 @@
+ #include <linux/if_tun.h>
+ #include <linux/crc32.h>
+ #include <linux/virtio_net.h>
++#include <net/sock.h>
+ 
+ #include <asm/system.h>
+ #include <asm/uaccess.h>
+ 
++struct tun_sock {
++	struct sock		sk;
++	struct tun_struct	*tun;
++};
++
+ #ifdef TUN_DEBUG
+ static int debug;
+ #endif
+@@ -72,6 +78,11 @@ static int debug;
+ static LIST_HEAD(tun_dev_list);
+ static struct ethtool_ops tun_ethtool_ops;
+ 
++static inline struct tun_sock *tun_sk(struct sock *sk)
++{
++	return container_of(sk, struct tun_sock, sk);
++}
++
+ /* Net device open. */
+ static int tun_net_open(struct net_device *dev)
+ {
+@@ -223,7 +234,8 @@ static void tun_net_init(struct net_device *dev)
+ static unsigned int tun_chr_poll(struct file *file, poll_table * wait)
+ {  
+ 	struct tun_struct *tun = file->private_data;
+-	unsigned int mask = POLLOUT | POLLWRNORM;
++	struct sock *sk = tun->sk;
++	unsigned int mask = 0;
+ 
+ 	if (!tun)
+ 		return -EBADFD;
+@@ -235,11 +247,44 @@ static unsigned int tun_chr_poll(struct file *file, poll_table * wait)
+ 	if (!skb_queue_empty(&tun->readq))
+ 		mask |= POLLIN | POLLRDNORM;
+ 
++	if (sock_writeable(sk) ||
++	    (!test_and_set_bit(SOCK_ASYNC_NOSPACE, &sk->sk_socket->flags) &&
++	     sock_writeable(sk)))
++		mask |= POLLOUT | POLLWRNORM;
++
+ 	return mask;
+ }
+ 
++/* prepad is the amount to reserve at front.  len is length after that.
++ * linear is a hint as to how much to copy (usually headers). */
++static inline struct sk_buff *tun_alloc_skb(struct tun_struct *tun,
++					    size_t prepad, size_t len,
++					    size_t linear, int noblock)
++{
++	struct sock *sk = tun->sk;
++	struct sk_buff *skb;
++	int err;
++
++	/* Always linear for now. */
++	linear = len;
++
++	skb = sock_alloc_send_pskb(sk, prepad + linear, len - linear, noblock,
++				   &err);
++	if (!skb)
++		return ERR_PTR(err);
++
++	skb_reserve(skb, prepad);
++	skb_put(skb, linear);
++	skb->data_len = len - linear;
++	skb->len += len - linear;
++
++	return skb;
++}
++
+ /* Get packet from user space buffer */
+-static __inline__ ssize_t tun_get_user(struct tun_struct *tun, struct iovec *iv, size_t count)
++static __inline__ ssize_t tun_get_user(struct tun_struct *tun,
++				       struct iovec *iv, size_t count,
++				       int noblock)
+ {
+ 	struct tun_pi pi = { 0, __constant_htons(ETH_P_IP) };
+ 	struct sk_buff *skb;
+@@ -268,16 +313,13 @@ static __inline__ ssize_t tun_get_user(struct tun_struct *tun, struct iovec *iv,
+ 	if ((tun->flags & TUN_TYPE_MASK) == TUN_TAP_DEV)
+ 		align = NET_IP_ALIGN;
+  
+-	if (!(skb = alloc_skb(len + align, GFP_KERNEL))) {
+-		tun->stats.rx_dropped++;
+-		return -ENOMEM;
++	skb = tun_alloc_skb(tun, align, len, gso.hdr_len, noblock);
++	if (IS_ERR(skb)) {
++		if (PTR_ERR(skb) != -EAGAIN)
++			tun->stats.rx_dropped++;
++		return PTR_ERR(skb);
+ 	}
+ 
+-	if (align)
+-		skb_reserve(skb, align);
+-
+-	skb_put(skb, len);
+-
+ 	if (gso.flags & VIRTIO_NET_HDR_F_NEEDS_CSUM) {
+ 		unsigned int csum = 0;
+ 
+@@ -392,7 +434,8 @@ static ssize_t tun_chr_writev(struct file * file, const struct iovec *iv,
+ 
+ 	DBG(KERN_INFO "%s: tun_chr_write %ld\n", tun->dev->name, count);
+ 
+-	return tun_get_user(tun, (struct iovec *) iv, iov_total(iv, count));
++	return tun_get_user(tun, (struct iovec *) iv, iov_total(iv, count),
++			    file->f_flags & O_NONBLOCK);
+ }
+ 
+ /* Write */
+@@ -591,8 +634,37 @@ static struct tun_struct *tun_get_by_name(const char *name)
+ 	return NULL;
+ }
+ 
++static void tun_sock_write_space(struct sock *sk)
++{
++	struct tun_struct *tun;
++
++	if (!sock_writeable(sk))
++		return;
++
++	if (sk->sk_sleep && waitqueue_active(sk->sk_sleep))
++		wake_up_interruptible_sync(sk->sk_sleep);
++
++	if (!test_and_clear_bit(SOCK_ASYNC_NOSPACE, &sk->sk_socket->flags))
++		return;
++
++	tun = container_of(sk, struct tun_sock, sk)->tun;
++	kill_fasync(&tun->fasync, SIGIO, POLL_OUT);
++}
++
++static void tun_sock_destruct(struct sock *sk)
++{
++	dev_put(container_of(sk, struct tun_sock, sk)->tun->dev);
++}
++
++static struct proto tun_proto = {
++	.name		= "tun",
++	.owner		= THIS_MODULE,
++	.obj_size	= sizeof(struct tun_sock),
++};
++
+ static int tun_set_iff(struct file *file, struct ifreq *ifr)
+ {
++	struct sock *sk;
+ 	struct tun_struct *tun;
+ 	struct net_device *dev;
+ 	int err;
+@@ -648,17 +720,33 @@ static int tun_set_iff(struct file *file, struct ifreq *ifr)
+ 		get_random_bytes(tun->dev_addr + sizeof(u16), 4);
+ 		memset(tun->chr_filter, 0, sizeof tun->chr_filter);
+ 
++		err = -ENOMEM;
++		sk = sk_alloc(AF_UNSPEC, GFP_KERNEL, &tun_proto, 1);
++		if (!sk)
++			goto err_free_dev;
++
++		/* This ref count is for tun->sk. */
++		dev_hold(dev);
++		sock_init_data(&tun->socket, sk);
++		sk->sk_write_space = tun_sock_write_space;
++		sk->sk_destruct = tun_sock_destruct;
++		sk->sk_sndbuf = INT_MAX;
++		sk->sk_sleep = &tun->read_wait;
++
++		tun->sk = sk;
++		container_of(sk, struct tun_sock, sk)->tun = tun;
++
+ 		tun_net_init(dev);
+ 
+ 		if (strchr(dev->name, '%')) {
+ 			err = dev_alloc_name(dev, dev->name);
+ 			if (err < 0)
+-				goto err_free_dev;
++				goto err_free_sk;
+ 		}
+ 
+ 		err = register_netdevice(tun->dev);
+ 		if (err < 0)
+-			goto err_free_dev;
++			goto err_free_sk;
+ 	
+ 		list_add(&tun->list, &tun_dev_list);
+ 	}
+@@ -682,6 +770,8 @@ static int tun_set_iff(struct file *file, struct ifreq *ifr)
+ 	strcpy(ifr->ifr_name, tun->dev->name);
+ 	return 0;
+ 
++ err_free_sk:
++	sock_put(sk);
+  err_free_dev:
+ 	free_netdev(dev);
+  failed:
+@@ -764,6 +854,7 @@ static int tun_chr_ioctl(struct inode *inode, struct file *file,
+ 	struct tun_struct *tun = file->private_data;
+ 	void __user* argp = (void __user*)arg;
+ 	struct ifreq ifr;
++	int sndbuf;
+ 	int ret;
+ 
+ 	if (cmd == TUNSETIFF || _IOC_TYPE(cmd) == 0x89)
+@@ -919,6 +1010,21 @@ static int tun_chr_ioctl(struct inode *inode, struct file *file,
+ 				(u8)ifr.ifr_hwaddr.sa_data[4], (u8)ifr.ifr_hwaddr.sa_data[5]);
+ 		return 0;
+ 
++	case TUNGETSNDBUF:
++		sndbuf = tun->sk->sk_sndbuf;
++		if (copy_to_user(argp, &sndbuf, sizeof(sndbuf)))
++			ret = -EFAULT;
++		break;
++
++	case TUNSETSNDBUF:
++		if (copy_from_user(&sndbuf, argp, sizeof(sndbuf))) {
++			ret = -EFAULT;
++			break;
++		}
++
++		tun->sk->sk_sndbuf = sndbuf;
++		break;
++
+ 	default:
+ 		return -EINVAL;
+ 	};
+@@ -979,6 +1085,7 @@ static int tun_chr_close(struct inode *inode, struct file *file)
+ 
+ 	if (!(tun->flags & TUN_PERSIST)) {
+ 		list_del(&tun->list);
++		sock_put(tun->sk);
+ 		unregister_netdevice(tun->dev);
+ 	}
+ 
+diff --git a/include/linux/if_tun.h b/include/linux/if_tun.h
+index 6860229..25660dd 100644
+--- a/include/linux/if_tun.h
++++ b/include/linux/if_tun.h
+@@ -23,6 +23,8 @@
+ 
+ #ifdef __KERNEL__
+ 
++#include <linux/net.h>
++
+ #ifdef TUN_DEBUG
+ #define DBG  if(tun->debug)printk
+ #define DBG1 if(debug==2)printk
+@@ -45,6 +47,9 @@ struct tun_struct {
+ 
+ 	struct fasync_struct    *fasync;
+ 
++	struct sock		*sk;
++	struct socket		socket;
++
+ 	unsigned long if_flags;
+ 	u8 dev_addr[ETH_ALEN];
+ 	u32 chr_filter[2];
+@@ -82,6 +87,8 @@ struct tun_struct {
+ #define TUNGETFEATURES _IOR('T', 207, unsigned int)
+ #define TUNSETOFFLOAD _IOW('T', 208, unsigned int)
+ #define TUNGETIFF      _IOR('T', 210, unsigned int)
++#define TUNGETSNDBUF  _IOR('T', 211, int)
++#define TUNSETSNDBUF  _IOW('T', 212, int)
+ 
+ /* TUNSETIFF ifr flags */
+ #define IFF_TUN		0x0001
+diff --git a/include/net/sock.h b/include/net/sock.h
+index c74d782..091750b 100644
+--- a/include/net/sock.h
++++ b/include/net/sock.h
+@@ -858,6 +858,11 @@ extern struct sk_buff 		*sock_alloc_send_skb(struct sock *sk,
+ 						     unsigned long size,
+ 						     int noblock,
+ 						     int *errcode);
++extern struct sk_buff 		*sock_alloc_send_pskb(struct sock *sk,
++						      unsigned long header_len,
++						      unsigned long data_len,
++						      int noblock,
++						      int *errcode);
+ extern void *sock_kmalloc(struct sock *sk, int size,
+ 			  gfp_t priority);
+ extern void sock_kfree_s(struct sock *sk, void *mem, int size);
+--- linux-2.6.18.i686/net/core/dev.c.orig	2009-12-06 14:02:28.000000000 +0200
++++ linux-2.6.18.i686/net/core/dev.c	2009-12-06 14:05:35.000000000 +0200
+@@ -1953,6 +1953,8 @@
+ 	if (handle_switch(&skb, &pt_prev, &ret, orig_dev))
+ 		goto out;
+ 
++	skb_orphan(skb);
++
+ 	/* Protocol-specific handlers are called here. This list is also
+ 	   traversed unsing post-processing of elements. Note that we might
+ 	   have a "previous element" left from the generic handlers list.
+diff --git a/net/core/sock.c b/net/core/sock.c
+index 4bb1732..418c6cd 100644
+--- a/net/core/sock.c
++++ b/net/core/sock.c
+@@ -1151,10 +1151,9 @@ static long sock_wait_for_wmem(struct sock * sk, long timeo)
+  *	Generic send/receive buffer handlers
+  */
+ 
+-static struct sk_buff *sock_alloc_send_pskb(struct sock *sk,
+-					    unsigned long header_len,
+-					    unsigned long data_len,
+-					    int noblock, int *errcode)
++struct sk_buff *sock_alloc_send_pskb(struct sock *sk, unsigned long header_len,
++				     unsigned long data_len, int noblock,
++				     int *errcode)
+ {
+ 	struct sk_buff *skb;
+ 	gfp_t gfp_mask;
+@@ -1234,8 +1233,9 @@ failure:
+ 	*errcode = err;
+ 	return NULL;
+ }
++EXPORT_SYMBOL(sock_alloc_send_pskb);
+ 
+-struct sk_buff *sock_alloc_send_skb(struct sock *sk, unsigned long size, 
++struct sk_buff *sock_alloc_send_skb(struct sock *sk, unsigned long size,
+ 				    int noblock, int *errcode)
+ {
+ 	return sock_alloc_send_pskb(sk, size, 0, noblock, errcode);
