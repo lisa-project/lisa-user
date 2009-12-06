@@ -46,7 +46,7 @@ int cmd_sh_cdp_entry(struct cli_context *ctx, int argc, char **argv, struct menu
 		return CLI_EX_REJECTED;
 	}
 
-	if ((err = cdp_get_neighbors(cdp, 0, entry)))
+	if ((err = cdp_get_neighbors(cdp, 0, entry)) < 0)
 		goto out_close;
 
 	out = ctx->out_open(ctx, 1);
@@ -110,7 +110,7 @@ int cmd_sh_cdp_int(struct cli_context *ctx, int argc, char **argv, struct menu_n
 		return CLI_EX_REJECTED;
 	}
 
-	if ((err = cdp_get_interfaces(cdp, if_index)))
+	if ((err = cdp_get_interfaces(cdp, if_index)) < 0)
 		goto out_close;
 
 	out = ctx->out_open(ctx, 1);
@@ -130,24 +130,46 @@ int cmd_sh_cdp_ne(struct cli_context *ctx, int argc, char **argv, struct menu_no
 {
 	struct cdp_configuration cfg;
 	struct cdp_session *cdp;
+	char buf[IFNAMSIZ];
+	int err, if_index = 0, sock_fd;
 	FILE *out;
-	int err;
 
 	shared_get_cdp(&cfg);
 	if (!cfg.enabled)
 		return 0;
 
+	if (argc > 3) {
+		if (!strcmp(nodev[3]->name, "netdev")) {
+			SW_SOCK_OPEN(ctx, sock_fd);
+			if_index = if_get_index(argv[4], sock_fd);
+			SW_SOCK_CLOSE(ctx, sock_fd);
+		}
+		else if (!strcmp(nodev[3]->name, "Ethernet")) {
+			memset(buf, 0, sizeof(buf));
+			snprintf(buf, IFNAMSIZ, "eth%s", argv[4]);
+			SW_SOCK_OPEN(ctx, sock_fd);
+			if_index = if_get_index(buf, sock_fd);
+			SW_SOCK_CLOSE(ctx, sock_fd);
+		}
+		else if (strcmp(nodev[3]->name, "detail")) {
+			EX_STATUS_REASON(ctx, "%s", strerror(ENODEV));
+			return CLI_EX_REJECTED;
+		}
+	}
 	if (!CDP_SESSION_OPEN(ctx, cdp)) {
 		EX_STATUS_REASON(ctx, "%s", strerror(errno));
 		return CLI_EX_REJECTED;
 	}
 
-	if ((err = cdp_get_neighbors(cdp, 0, NULL)))
+	if ((err = cdp_get_neighbors(cdp, if_index, NULL)) < 0)
 		goto out_err;
 
 	out = ctx->out_open(ctx, 1);
 
-	cdp_print_neighbors_brief(cdp, out);
+	if (!strcmp(nodev[argc - 1]->name, "detail"))
+		cdp_print_neighbors_detail(cdp, out);
+	else
+		cdp_print_neighbors_brief(cdp, out);
 
 	fclose(out);
 out_err:
@@ -201,7 +223,7 @@ int cmd_sh_cdp_traffic(struct cli_context *ctx, int argc, char **argv, struct me
 		return CLI_EX_REJECTED;
 	}
 
-	if ((err = cdp_get_stats(cdp, &stats)))
+	if ((err = cdp_get_stats(cdp, &stats)) < 0)
 		goto out_close;
 
 	out = ctx->out_open(ctx, 1);
