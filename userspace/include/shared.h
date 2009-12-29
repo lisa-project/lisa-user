@@ -21,6 +21,7 @@
 #define _SHARED_H
 
 #include "cdp_client.h"
+#include "rstp_client.h"
 
 #define SW_CONFIG_FILE	"/etc/lisa/config.text"
 #define SW_TAGS_FILE	"/etc/lisa/tags"
@@ -76,5 +77,11 @@ void shared_set_cdp(struct cdp_configuration *cdp);
 
 /* Gets the cdp global configuration */
 void shared_get_cdp(struct cdp_configuration *cdp);
+
+/* Sets the RSTP global configuration */
+void shared_set_rstp(struct rstp_configuration *rstp);
+
+/* Gets the RSTP global configuration */
+void shared_get_rstp(struct rstp_configuration *rstp);
 
 #endif

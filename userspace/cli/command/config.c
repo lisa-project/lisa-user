@@ -11,6 +11,20 @@ extern struct menu_node config_line_main;
 
 static char hostname_default[] = "Switch\0";
 
+int cmd_rstp_run(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
+{
+	struct rstp_configuration rstp;
+	int enabled = 1;
+
+	if (!strcmp(nodev[0]->name, "no"))
+		enabled = 0;
+	shared_get_rstp(&rstp);
+	rstp.enabled = enabled;
+	shared_set_rstp(&rstp);
+
+	return CLI_EX_OK;
+}
+
 int cmd_cdp_v2(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
 	struct cdp_configuration cdp;

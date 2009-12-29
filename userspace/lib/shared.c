@@ -38,6 +38,8 @@ struct shared {
 	} vty[SW_MAX_VTY + 1];
 	/* CDP configuration */
 	struct cdp_configuration cdp;
+	/* RSTP configuration */
+	struct rstp_configuration rstp;
 	/* List of interface tags */
 	struct mm_list_head if_tags;
 };
@@ -87,6 +89,33 @@ static mm_ptr_t __shared_get_tag_if(char *tag) {
 	return MM_NULL;
 }
 
+static void shared_init_rstp(void)
+{
+	struct rstp_configuration rstp;
+	//TODO get proper MAC address
+	unsigned char addr[6] = {0x00,0xE0,0x81,0xB1,0xC0,0x38};
+	unsigned short defaultPriority = 32768;
+
+	rstp.enabled = 0;
+
+	memcpy(&rstp.BridgeIdentifier.bridge_priority, &defaultPriority, 2);
+	memcpy(&rstp.BridgeIdentifier.bridge_address, addr, 6);
+
+	memset(&rstp.BridgePriority, 0, sizeof(struct priority_vector));
+	memcpy(&rstp.BridgePriority.root_bridge_id, &rstp.BridgeIdentifier, sizeof(struct bridge_id));
+	memcpy(&rstp.BridgePriority.designated_bridge_id, &rstp.BridgeIdentifier, sizeof(struct bridge_id));
+
+	rstp.BridgeTimes.MessageAge = 0;
+	rstp.BridgeTimes.MaxAge = 20;
+	rstp.BridgeTimes.ForwardDelay = 15;
+	rstp.BridgeTimes.HelloTime = 2;
+
+	rstp.ForceProtocolVersion = 2;
+
+	/* store initial config into the shared memory */
+	shared_set_rstp(&rstp);
+}
+
 static void shared_init_cdp(void)
 {
 	struct cdp_configuration cdp;
@@ -113,6 +142,7 @@ int shared_init(void) {
 		memset(SHM, 0, sizeof(struct shared));
 		MM_INIT_LIST_HEAD(mm, mm_ptr(mm, &SHM->if_tags));
 		shared_init_cdp();
+		shared_init_rstp();
 	}
 
 	return 0;
@@ -268,5 +298,21 @@ void shared_get_cdp(struct cdp_configuration *cdp)
 	assert(cdp);
 	mm_lock(mm);
 	memcpy(cdp, &SHM->cdp, sizeof(struct cdp_configuration));
+	mm_unlock(mm);
+}
+
+void shared_set_rstp(struct rstp_configuration *rstp)
+{
+	assert(rstp);
+	mm_lock(mm);
+	memcpy(&SHM->rstp, rstp, sizeof(struct rstp_configuration));
+	mm_unlock(mm);
+}
+
+void shared_get_rstp(struct rstp_configuration *rstp)
+{
+	assert(rstp);
+	mm_lock(mm);
+	memcpy(rstp, &SHM->rstp, sizeof(struct rstp_configuration));
 	mm_unlock(mm);
 }

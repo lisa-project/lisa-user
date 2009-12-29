@@ -1,25 +1,28 @@
 #ifndef _RSTP_BPDU_H__
 #define _RSTP_BPDU_H__
 
-#define MIN_BPDU                7
-#define BPDU_L_SAP              0x42
-#define LLC_UI                  0x03
-#define BPDU_PROTOCOL_ID        0x0000
-#define BPDU_VERSION_ID         0x00
-#define BPDU_VERSION_RAPID_ID   0x02
-
-#define BPDU_TOPO_CHANGE_TYPE   0x80
-#define BPDU_CONFIG_TYPE        0x00
+#define BPDU_TCN		0x80
+#define BPDU_CONFIG             0x00
 #define BPDU_RSTP               0x02
 
-#define TOLPLOGY_CHANGE_BIT     0x01
+#define TOPOLOGY_CHANGE_BIT     0x01
 #define PROPOSAL_BIT            0x02
-#define PORT_ROLE_OFFS          2   /* 0x04 & 0x08 */
-#define PORT_ROLE_MASK          (0x03 << PORT_ROLE_OFFS)
+#define PORT_ROLE_MASK          0x0C
 #define LEARN_BIT               0x10
 #define FORWARD_BIT             0x20
 #define AGREEMENT_BIT           0x40
-#define TOLPLOGY_CHANGE_ACK_BIT 0x80
+#define TOPOLOGY_CHANGE_ACK_BIT 0x80
+
+#define RSTP_DISABLED		0x00
+
+#define ROLE_DISABLED		0x00
+
+#define ROLE_UNKNOWN		0x00
+#define ROLE_ALTERNATE_BACKUP	0x04
+#define ROLE_ROOT		0x08
+#define ROLE_DESIGNATED		0x0C
+#define ROLE_ALTERNATE		0x05
+#define ROLE_BACKUP		0x06
 
 struct mac_header_t {
 	unsigned char dst_mac[6];
@@ -51,12 +54,12 @@ struct bpdu_body_t {
 	unsigned char forward_delay[2];
 } __attribute__ ((packed));
 
-struct stp_bpdu_t {
-	struct mac_header_t mac;
-	struct eth_header_t  eth;
-	struct bpdu_header_t hdr;
-	struct bpdu_body_t body;
-	unsigned char ver_1_len[2];
+struct bpdu_t {
+	struct mac_header_t mac; //12
+	struct eth_header_t eth; //5
+	struct bpdu_header_t hdr; //4
+	struct bpdu_body_t body; //31
+	unsigned char ver_1_len; //2
 } __attribute__ ((packed));
 
 #endif

@@ -1,6 +1,7 @@
 #ifndef _CONFIG_H
 #define _CONFIG_H
 
+int cmd_rstp_run(struct cli_context *, int, char **, struct menu_node **);
 int cmd_cdp_v2(struct cli_context *, int, char **, struct menu_node **);
 int cmd_cdp_holdtime(struct cli_context *, int, char **, struct menu_node **);
 int cmd_cdp_timer(struct cli_context *, int, char **, struct menu_node **);

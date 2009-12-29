@@ -23,6 +23,7 @@
 #include "shared.h"
 #include "cli.h"
 #include "cdp_client.h"
+#include "rstp_client.h"
 #include "rlshell.h"
 #include "interface.h"
 #include "tokenizers.h"
@@ -44,6 +45,7 @@ struct swcli_context {
 	int vlan;
 	int sock_fd;
 	struct cdp_session *cdp;
+	struct rstp_session *rstp;
 };
 
 #define SWCLI_CTX(ctx) ((struct swcli_context *)(ctx))

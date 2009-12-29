@@ -1,8 +1,35 @@
 #include <stdio.h>
 #include "rstp_bpdu.h"
+#include "vector.h"
+#include "rstp.h"
 #include <arpa/inet.h>
 
-void dissect_frame(struct stp_bpdu_t * stpframe)
+void
+print_vector(struct priority_vector4 *vec)
+{
+	Dprintf("ROOT_BRIDGE_ID %02x%02x.%02x:%02x:%02x:%02x:%02x:%02x\n",
+		vec->root_bridge_id.bridge_priority[0],
+		vec->root_bridge_id.bridge_priority[1],
+		vec->root_bridge_id.bridge_address[0],
+		vec->root_bridge_id.bridge_address[1],
+		vec->root_bridge_id.bridge_address[2],
+		vec->root_bridge_id.bridge_address[3],
+		vec->root_bridge_id.bridge_address[4],
+		vec->root_bridge_id.bridge_address[5]);
+	Dprintf("ROOT_PATH_COST %d\n", *(unsigned int *)vec->root_path_cost);
+	Dprintf("DESIGNATED_BRIDGE_ID %02x%02x.%02x:%02x:%02x:%02x:%02x:%02x\n",
+		vec->designated_bridge_id.bridge_priority[0],
+		vec->designated_bridge_id.bridge_priority[1],
+		vec->designated_bridge_id.bridge_address[0],
+		vec->designated_bridge_id.bridge_address[1],
+		vec->designated_bridge_id.bridge_address[2],
+		vec->designated_bridge_id.bridge_address[3],
+		vec->designated_bridge_id.bridge_address[4],
+		vec->designated_bridge_id.bridge_address[5]);
+	Dprintf("DESIGNATED_PORT_ID %02x%02x\n\n", vec->designated_port_id[0], vec->designated_port_id[1]);
+}
+
+void dissect_frame(struct bpdu_t * stpframe)
 {
 	printf("*** MAC HEADER ***\n");
 	printf("Destination MAC: %02x:%02x:%02x:%02x:%02x:%02x\n",

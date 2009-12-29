@@ -71,6 +71,34 @@ static int parse_vlan_list(char *list, unsigned char *bmp)
 	return 0;
 }
 
+int cmd_rstp_if_set(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
+{
+	struct rstp_session *rstp;
+	struct rstp_configuration cfg;
+	struct swcli_context *uc = SWCLI_CTX(ctx);
+	int enable = 1;
+	int err;
+
+	shared_get_rstp(&cfg);
+	if (!cfg.enabled)
+		return 0;
+
+	if (!strcmp(nodev[0]->name, "no"))
+		enable = 0;
+
+	if (!RSTP_SESSION_OPEN(ctx, rstp)) {
+		EX_STATUS_REASON(ctx, "%s", strerror(errno));
+		return CLI_EX_REJECTED;
+	}
+
+	//uc->rstp = rstp;
+
+	err = rstp_set_interface(rstp, uc->ifindex, enable);
+	RSTP_SESSION_CLOSE(ctx, rstp);
+
+	return err;
+}
+
 int cmd_cdp_if_set(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
 	struct cdp_session *cdp;

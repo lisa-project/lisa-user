@@ -23,6 +23,29 @@ struct menu_node config_if_main = {
 	/* Root node, .name is used as prompt */
 	.name			= "config-if",
 	.subtree	= (struct menu_node *[]) {
+
+		/* #rstp */
+		& (struct menu_node){
+			.name			=	"rstp",
+			.help			=	"RSTP interface subcommands",
+			.mask			=	CLI_MASK(PRIV(2), IFF_SWITCHED),
+			.tokenize	= NULL,
+			.run			= NULL,
+			.subtree	= (struct menu_node *[]) {
+				/* #rstp enable */
+				&	(struct menu_node){
+					.name			= "enable",
+					.help			= "Enable RSTP on interface",
+					.mask			= CLI_MASK(PRIV(2)),
+					.tokenize	=	NULL,
+					.run			= cmd_rstp_if_set,
+					.subtree	= NULL
+				},
+
+				NULL
+			}
+		},
+
 		/* #cdp */
 		& (struct menu_node){
 			.name			= "cdp",
@@ -208,6 +231,29 @@ struct menu_node config_if_main = {
 			.tokenize	= NULL,
 			.run			= NULL,
 			.subtree	= (struct menu_node *[]) { /*{{{*/
+
+				/* #no rstp */
+				& (struct menu_node){
+					.name			= "rstp",
+					.help			= "RSTP interface subcommands",
+					.mask			= CLI_MASK(PRIV(2)),
+					.tokenize	= NULL,
+					.run			= NULL,
+					.subtree	= (struct menu_node *[]) { /*{{{*/
+						/* #no rstp enable */
+						& (struct menu_node){
+							.name			= "enable",
+							.help			= "Enable RSTP on interface",
+							.mask			= CLI_MASK(PRIV(2)),
+							.tokenize	= NULL,
+							.run			= cmd_rstp_if_set,
+							.subtree	= NULL
+						},
+
+						NULL
+					} /*}}}*/
+				},
+
 				/* #no cdp */
 				& (struct menu_node){
 					.name			= "cdp",

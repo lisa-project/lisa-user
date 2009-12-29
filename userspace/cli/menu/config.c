@@ -174,6 +174,28 @@ struct menu_node config_main = {
 			} /*}}}*/
 		},
 
+		/* #rstp */
+		& (struct menu_node){
+			.name			= "rstp",
+			.help			= "Global RSTP configuration subcommands",
+			.mask			= CLI_MASK(PRIV(15)),
+			.tokenize	= NULL,
+			.run			= NULL,
+			.subtree	= (struct menu_node *[]) { /*{{{*/
+				/* #rstp run */
+				& (struct menu_node){
+					.name			= "run",
+					.help			= "",
+					.mask			= CLI_MASK(PRIV(15)),
+					.tokenize	= NULL,
+					.run			= cmd_rstp_run,
+					.subtree	= NULL
+				},
+
+				NULL
+			} /*}}}*/
+		},
+
 		/* #cdp */
 		& (struct menu_node){
 			.name			= "cdp",
@@ -251,6 +273,8 @@ struct menu_node config_main = {
 				NULL
 			} /*}}}*/
 		},
+
+
 
 		/* #enable */
 		& (struct menu_node){
@@ -548,6 +572,28 @@ struct menu_node config_main = {
 			.tokenize	= NULL,
 			.run			= NULL,
 			.subtree	= (struct menu_node *[]) { /*{{{*/
+				/* #no rstp */
+				& (struct menu_node){
+					.name			= "rstp",
+					.help			= "Global RSTP configuration subcommands",
+					.mask			= CLI_MASK(PRIV(15)),
+					.tokenize	= NULL,
+					.run			= NULL,
+					.subtree	= (struct menu_node *[]) { /*{{{*/
+						/* #no rstp run */
+						& (struct menu_node){
+							.name			= "run",
+							.help			= "",
+							.mask			= CLI_MASK(PRIV(15)),
+							.tokenize	= NULL,
+							.run			= cmd_rstp_run,
+							.subtree	= NULL
+						},
+
+						NULL
+					} /*}}}*/
+				},
+
 				/* #no cdp */
 				& (struct menu_node){
 					.name			= "cdp",
