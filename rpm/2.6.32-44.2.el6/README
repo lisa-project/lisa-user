@@ -1,0 +1,20 @@
+This patch is intended for the kernel src.rpm supplied with Beta2
+version of the RHEL 6 distribution.
+
+The stock src.rpm (and pre-compiled kernel packages) have a problem in
+the raid456 module. There is an option than enables a new, multithreaded
+model, and it's enabled by default. The multithreaded model seems to be
+highly unstable, spawning a large number of threads and causing a huge
+load without actually doing anything.
+
+Although this is not related to LiSA in any way, one of the 2 provided
+patches disables the multithread option for the raid456 model. If you're
+building kernel packages and intend to use them in a raid5 setup (like I
+did), then you most probably want to build the packages without the
+multithread model.
+
+The kernel-2.6.spec.patch file contains the normal LiSA patch, which has
+nothing to do with the raid456 model.
+
+The kernel-2.6.spec-raid456.patch also disables CONFIG_MULTICORE_RAID456
+in the default kernel config, making the raid456 module usable.

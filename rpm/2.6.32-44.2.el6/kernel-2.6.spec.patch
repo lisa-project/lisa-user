@@ -1,0 +1,46 @@
+--- kernel.spec.orig	2011-02-10 11:57:02.607585057 +0200
++++ kernel.spec	2011-02-12 14:32:30.989245183 +0200
+@@ -15,6 +15,7 @@
+ # by setting the define to ".local" or ".bz123456"
+ #
+ # % define buildid .local
++%define buildid .lisa%{lisa_kapi_major}.%{lisa_kapi_minor}.%{lisa_kapi_patch}.build3
+ 
+ %define rhel 1
+ %if %{rhel}
+@@ -474,6 +475,7 @@
+ Provides: kernel-drm-nouveau = 16\
+ Provides: kernel-modeset = 1\
+ Provides: kernel-uname-r = %{KVERREL}%{?1:.%{1}}\
++Provides: kernel-lisa-api = 2.6.%{base_sublevel}-%{lisa_kapi_major}.%{lisa_kapi_minor}\
+ Requires(pre): %{kernel_prereq}\
+ Requires(pre): %{initrd_prereq}\
+ Requires(post): /sbin/new-kernel-pkg\
+@@ -3505,6 +3507,9 @@
+ Patch3135: virt-stop-vpit-before-irq_routing-freed.patch
+ Patch3136: virt-KVM-MMU-fix-conflict-access-permissions-in-direct-sp.patch
+ 
++# LiSA
++Patch5500: linux-2.6-lisa.patch
++
+ # empty final patch file to facilitate testing of kernel patches
+ Patch99999: linux-kernel-test.patch
+ 
+@@ -6685,6 +6694,9 @@
+ ApplyPatch virt-stop-vpit-before-irq_routing-freed.patch
+ ApplyPatch virt-KVM-MMU-fix-conflict-access-permissions-in-direct-sp.patch
+ 
++# LiSA
++ApplyPatch linux-2.6-lisa.patch
++
+ ApplyOptionalPatch linux-kernel-test.patch
+ 
+ # Any further pre-build tree manipulations happen here.
+@@ -6711,6 +6723,7 @@
+ for i in *.config
+ do
+   mv $i .config
++  echo "CONFIG_SWITCH=m" >> .config
+   Arch=`head -1 .config | cut -b 3-`
+   make ARCH=$Arch %{oldconfig_target} > /dev/null
+   echo "# $Arch" > configs/$i
