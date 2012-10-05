@@ -10,5 +10,5 @@ include $(TOP_DIR)/scripts/Makefile.rules
 
 dep: all
 
-swsock.h: $(TOP_DIR)/../linux-2.6/include/linux/socket.h
+swsock.h: $(LINUX_INC)/linux/socket.h
 	$(Q)../../mkheaders.sh swsock.h $(LINUX_INC) > swsock.h
