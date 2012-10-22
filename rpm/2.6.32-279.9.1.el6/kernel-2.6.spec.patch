@@ -1,0 +1,48 @@
+--- kernel.spec.orig	2012-09-25 22:38:08.000000000 +0300
++++ kernel.spec	2012-10-05 18:33:45.063578119 +0300
+@@ -16,6 +16,7 @@
+ # by setting the define to ".local" or ".bz123456"
+ #
+ # % define buildid .local
++%define buildid .lisa%{lisa_kapi_major}.%{lisa_kapi_minor}.%{lisa_kapi_patch}.build3
+ 
+ %define rhel 1
+ %if %{rhel}
+@@ -471,6 +472,7 @@
+ Provides: kernel-drm-nouveau = 16\
+ Provides: kernel-modeset = 1\
+ Provides: kernel-uname-r = %{KVERREL}%{?1:.%{1}}\
++Provides: kernel-lisa-api = 2.6.%{base_sublevel}-%{lisa_kapi_major}.%{lisa_kapi_minor}\
+ Requires(pre): %{kernel_prereq}\
+ Requires(pre): %{initrd_prereq}\
+ Requires(post): /sbin/new-kernel-pkg\
+@@ -608,6 +610,10 @@
+ Source85: config-ia64-generic-rhel
+ Source86: config-x86_64-debug-rhel
+ 
++# LiSA
++Patch5500: linux-2.6-lisa.patch
++Patch5501: linux-2.6-lisa-el6.patch
++
+ # empty final patch file to facilitate testing of kernel patches
+ Patch999999: linux-kernel-test.patch
+ 
+@@ -919,6 +925,10 @@
+ # Dynamically generate kernel .config files from config-* files
+ make -f %{SOURCE20} VERSION=%{version} configs
+ 
++# LiSA
++ApplyPatch linux-2.6-lisa.patch
++ApplyPatch linux-2.6-lisa-el6.patch
++
+ ApplyOptionalPatch linux-kernel-test.patch
+ 
+ # Any further pre-build tree manipulations happen here.
+@@ -945,6 +955,7 @@
+ for i in *.config
+ do
+   mv $i .config
++  echo "CONFIG_SWITCH=m" >> .config
+   Arch=`head -1 .config | cut -b 3-`
+   make ARCH=$Arch %{oldconfig_target} > /dev/null
+   echo "# $Arch" > configs/$i
