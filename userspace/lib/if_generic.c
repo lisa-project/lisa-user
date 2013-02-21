@@ -1,3 +1,5 @@
+// define _GNU_SOURCE supresses the warning for asprintf
+#define _GNU_SOURCE
 #include <sys/ioctl.h>
 
 #include "if_generic.h"
@@ -39,6 +41,56 @@ int if_get_index(const char *name, int sock_fd)
 
 	return ret;
 }
+
+char *canonical_if_name(struct net_switch_dev *nsdev)
+{
+	char *ret = NULL;
+	int n, status = -1;
+
+	if (nsdev == NULL)
+		return NULL;
+
+	switch (nsdev->type) {
+	case SW_IF_SWITCHED:
+	case SW_IF_ROUTED:
+		if ((n = if_parse_ethernet(nsdev->name)) >= 0)
+			status = asprintf(&ret, "Ethernet %d", n);
+		else
+			status = asprintf(&ret, "netdev %s", nsdev->name);
+		break;
+	case SW_IF_VIF:
+		status = asprintf(&ret, "vlan %d", nsdev->vlan);
+		break;
+	}
+
+	return status == -1 ? NULL : ret;
+}
+
+char *short_if_name(struct net_switch_dev *nsdev)
+{
+	char *ret = NULL;
+	int n, status = -1;
+
+	if (nsdev == NULL)
+		return NULL;
+
+	switch (nsdev->type) {
+	case SW_IF_SWITCHED:
+	case SW_IF_ROUTED:
+		if ((n = if_parse_ethernet(nsdev->name)) >= 0)
+			status = asprintf(&ret, "Et%d", n);
+		else
+			status = asprintf(&ret, "net%s", nsdev->name);
+		break;
+	case SW_IF_VIF:
+		status = asprintf(&ret, "vlan %d", nsdev->vlan);
+		break;
+	}
+
+	return status == -1 ? NULL : ret;
+}
+
+
 
 char *if_get_name(int if_index, int sock_fd, char *name)
 {

@@ -49,30 +49,6 @@ static __inline__ void list_vlans(FILE *out, unsigned char *bmp)
 	fputc('\n', out);
 }
 
-static char *canonical_if_name(struct net_switch_dev *nsdev)
-{
-	char *ret = NULL;
-	int n, status = -1;
-
-	if (nsdev == NULL)
-		return NULL;
-
-	switch (nsdev->type) {
-	case SW_IF_SWITCHED:
-	case SW_IF_ROUTED:
-		if ((n = if_parse_ethernet(nsdev->name)) >= 0)
-			status = asprintf(&ret, "Ethernet %d", n);
-		else
-			status = asprintf(&ret, "netdev %s", nsdev->name);
-		break;
-	case SW_IF_VIF:
-		status = asprintf(&ret, "vlan %d", nsdev->vlan);
-		break;
-	}
-
-	return status == -1 ? NULL : ret;
-}
-
 #define nbit2mask(nbit)	(htonl(nbit ? (~((uint32_t)0)) ^ ((((uint32_t)1) << (32 - nbit)) - 1) : 0))
 int build_config_interface(struct cli_context *ctx, FILE *out, struct net_switch_dev *nsdev, int if_cmd)
 {

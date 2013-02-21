@@ -18,6 +18,9 @@
 #include "netlink.h"
 #include "list.h"
 
+/* Maximum size of interface name in short format: strlen("net ")+IFNAMSIZ */
+#define MAXSIZ_IFNAMSH (4 + IFNAMSIZ)
+
 /* Build a linux netdevice name with a generic structure of "type"
  * immediately followed by "numeric identifier" (e.g. "eth1").
  *
@@ -53,6 +56,10 @@ int if_parse_generic(const char *name, const char *type);
 #define if_parse_vlan(name) if_parse_generic(name, "vlan")
 
 int if_get_index(const char *name, int sock_fd);
+
+char *canonical_if_name(struct net_switch_dev *nsdev);
+
+char *short_if_name(struct net_switch_dev *nsdev);
 
 char *if_get_name(int if_index, int sock_fd, char *name);
 
