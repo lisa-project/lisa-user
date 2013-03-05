@@ -80,7 +80,7 @@ char *short_if_name(struct net_switch_dev *nsdev)
 		if ((n = if_parse_ethernet(nsdev->name)) >= 0)
 			status = asprintf(&ret, "Et%d", n);
 		else
-			status = asprintf(&ret, "net%s", nsdev->name);
+			status = asprintf(&ret, "net %s", nsdev->name);
 		break;
 	case SW_IF_VIF:
 		status = asprintf(&ret, "vlan %d", nsdev->vlan);

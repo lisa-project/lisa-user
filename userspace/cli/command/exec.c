@@ -49,12 +49,8 @@ static inline int comma_buffer_reset(struct comma_buffer *buf, const char *str)
 	buf->offset = str_len;
 	return 0;
 }
-static inline int cmpstr(void const *str1, void const *str2)
-{
-	char const *s1 = (char const *)str1;
-	char const *s2 = (char const *)str2;
-
-	return strcmp(s1, s2);
+static inline int cmpstr(const void *a, const void *b) {
+	return strcmp(*(const char **) a, *(const char **)b);
 }
 
 int swcli_output_modifiers_run(struct cli_context *ctx, int argc, char **argv,
@@ -897,16 +893,17 @@ int cmd_show_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_no
 
 		vlif_no /= sizeof(int);
 		/* Sort interface names and print them comma separated. */
-		char names[vlif_no][MAXSIZ_IFNAMSH];
+		char **names = (char**)malloc(vlif_no * sizeof(char*));
+		assert(names != NULL);
 		for (j = 0; j < vlif_no; j++) {
 			int ifindex = ((int *)vlif_swcfgr.buf.addr)[j];
 
 			nsdev = if_map_lookup_ifindex(&if_map, ifindex, sock_fd);
 			assert(nsdev);
 
-			strcpy(names[j], short_if_name(nsdev));
+			names[j] = short_if_name(nsdev);
 		}
-		qsort(names, vlif_no, MAXSIZ_IFNAMSH * sizeof(char), cmpstr);
+		qsort(names, vlif_no, sizeof(char*), cmpstr);
 		for (j = 0; j < vlif_no; j++) {
 			if (comma_buffer_append(&buf, names[j])) {
 				int tmp;
@@ -916,10 +913,12 @@ int cmd_show_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_no
 				tmp = comma_buffer_reset(&buf, names[j]);
 				assert(!tmp);
 			}
+			free(names[j]);
 		}
 		print_buf;
 
 		free(vlif_swcfgr.buf.addr);
+		free(names);
 #undef print_buf
 	}
 

@@ -18,9 +18,6 @@
 #include "netlink.h"
 #include "list.h"
 
-/* Maximum size of interface name in short format: strlen("net ")+IFNAMSIZ */
-#define MAXSIZ_IFNAMSH (4 + IFNAMSIZ)
-
 /* Build a linux netdevice name with a generic structure of "type"
  * immediately followed by "numeric identifier" (e.g. "eth1").
  *
