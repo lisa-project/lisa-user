@@ -2,9 +2,6 @@
 #include "netlink.h"
 #include "config_if.h"
 
-#define is_digit(arg) ((arg) >= '0' && (arg) <= '9')
-// FIXME move is_digit() to .h
-
 static int parse_vlan_list(char *list, unsigned char *bmp)
 {
 	int state = 0;

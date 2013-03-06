@@ -11,6 +11,8 @@ enum {
 	CMD_VLAN_NO
 };
 
+#define is_digit(arg) ((arg) >= '0' && (arg) <= '9')
+
 int cmd_rstp_if_set(struct cli_context *, int, char **, struct menu_node **);
 int cmd_cdp_if_set(struct cli_context *, int, char **, struct menu_node **);
 int cmd_if_desc(struct cli_context *, int, char **, struct menu_node **);
