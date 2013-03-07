@@ -300,7 +300,7 @@ int count_mask_bits(uint32_t n_mask)
 
 int cmd_ip(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
-	int ret = CLI_EX_OK;
+	int ret = CLI_EX_OK, remove_succeeded = 0;
 	int cmd = RTM_NEWADDR;
 	int sock_fd = -1, secondary = 0;
 	int has_primary, status, addr_cnt = 0;
@@ -322,10 +322,17 @@ int cmd_ip(struct cli_context *ctx, int argc, char **argv, struct menu_node **no
 		if (if_get_addr(uc->ifindex, AF_INET, &addrl, NULL))
 			goto out_cleanup;
 		list_for_each_entry(if_addr, &addrl, lh) {
+			addr_cnt++;
 			if (if_change_addr(cmd, if_addr->ifindex, if_addr->inet, if_addr->prefixlen, 0, NULL) < 0) {
-				ret = CLI_EX_REJECTED;
-				goto out_cleanup;
+				EX_STATUS_REASON(ctx, "Failed to remove address %s", inet_ntoa(if_addr->inet));
+				ret = CLI_EX_WARNING;
 			}
+			else
+				remove_succeeded = 1;
+		}
+		if (!remove_succeeded && addr_cnt) {
+			EX_STATUS_REASON(ctx, "No address removed.");
+			ret = CLI_EX_REJECTED;
 		}
 		goto out_cleanup;
 	}
