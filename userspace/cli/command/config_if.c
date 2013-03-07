@@ -305,7 +305,7 @@ int cmd_ip(struct cli_context *ctx, int argc, char **argv, struct menu_node **no
 	int sock_fd = -1, secondary = 0;
 	int has_primary, status, addr_cnt = 0;
 	struct ifreq ifr;
-    struct swcli_context *uc = SWCLI_CTX(ctx);
+	struct swcli_context *uc = SWCLI_CTX(ctx);
 	struct in_addr addr, mask;
 	int mask_len;
 	LIST_HEAD(addrl);
@@ -322,8 +322,10 @@ int cmd_ip(struct cli_context *ctx, int argc, char **argv, struct menu_node **no
 		if (if_get_addr(uc->ifindex, AF_INET, &addrl, NULL))
 			goto out_cleanup;
 		list_for_each_entry(if_addr, &addrl, lh) {
-			if_change_addr(cmd, if_addr->ifindex, if_addr->inet, if_addr->prefixlen, 0, NULL);
-			// FIXME check return value of if_change_addr()
+			if (if_change_addr(cmd, if_addr->ifindex, if_addr->inet, if_addr->prefixlen, 0, NULL) < 0) {
+				ret = CLI_EX_REJECTED;
+				goto out_cleanup;
+			}
 		}
 		goto out_cleanup;
 	}
