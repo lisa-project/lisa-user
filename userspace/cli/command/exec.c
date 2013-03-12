@@ -164,6 +164,7 @@ static int parse_mac_filter(struct swcfgreq *swcfgr, struct cli_context *ctx, in
 
 int cmd_sh_mac_addr_t(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
+	FILE *out;
 	int ret = CLI_EX_OK;
 	int status, sock_fd;
 	struct swcfgreq swcfgr = {
@@ -212,8 +213,10 @@ int cmd_sh_mac_addr_t(struct cli_context *ctx, int argc, char **argv, struct men
 			assert(!status);
 		}
 
-		// FIXME open output
-		print_mac(stdout, swcfgr.buf.addr, size, if_map_print_mac, &priv);
+		out = ctx->out_open(ctx, 1);
+		print_mac(out, swcfgr.buf.addr, size, if_map_print_mac, &priv);
+		fflush(out);
+		fclose(out);
 
 		if_map_cleanup(&if_map);
 	}
@@ -246,7 +249,7 @@ int cmd_cl_mac_addr_t(struct cli_context *ctx, int argc, char **argv, struct men
 	SW_SOCK_CLOSE(ctx, sock_fd); /* this can overwrite ioctl errno */
 
 	if (status == -1) {
-		EX_STATUS_REASON(CTX, "MAC address could not be removed\n"
+		EX_STATUS_REASON(ctx, "MAC address could not be removed\n"
 				"Address not found\n\n");
 		return CLI_EX_WARNING;
 	}
