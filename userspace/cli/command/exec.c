@@ -246,10 +246,9 @@ int cmd_cl_mac_addr_t(struct cli_context *ctx, int argc, char **argv, struct men
 	SW_SOCK_CLOSE(ctx, sock_fd); /* this can overwrite ioctl errno */
 
 	if (status == -1) {
-		// FIXME output
-		fprintf(stdout, "MAC address could not be removed\n"
+		EX_STATUS_REASON(CTX, "MAC address could not be removed\n"
 				"Address not found\n\n");
-		fflush(stdout);
+		return CLI_EX_WARNING;
 	}
 
 	return 0;
