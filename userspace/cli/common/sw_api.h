@@ -2,44 +2,47 @@
 #define _SW_API_H
 
 struct switch_operations {
-	int (*if_add) (struct switch_operations *, int, int);
-	int (*if_remove) (struct switch_operations *, int);
-	int (*if_set_mode) (struct switch_operations *, int, int);
-	int (*if_set_port_vlan) (struct switch_operations *, int, int);
-	int (*if_get_config) (struct switch_operations *, int, unsigned char *, char *);
-	int (*if_get_type) (struct switch_operations *, int, int *, int *);
-	int (*if_enable) (struct switch_operations *, int);
-	int (*if_disable) (struct switch_operations *, int);
-	int (*if_clear_mac) (struct switch_operations *, int);
-	int (*if_add_trunk_vlans) (struct switch_operations *, int, char *);
-	int (*if_set_trunk_vlans) (struct switch_operations *, int, char *);
-	int (*if_del_trunk_vlans) (struct switch_operations *, int, char *);
-	int (*get_if_list) (struct switch_operations *, int, char *);
-	int (*set_if_description) (struct switch_operations *, int, char *);
+	int (*if_add) (int, int);
+	int (*if_remove) (int);
+	int (*if_set_mode) (int, int);
+	int (*if_set_port_vlan) (int, int);
+	int (*if_get_config) (int, unsigned char *, char *);
+	int (*if_get_type) (int, int *, int *);
+	int (*if_enable) (int);
+	int (*if_disable) (int);
+	int (*if_clear_mac) (int);
+	int (*if_add_trunk_vlans) (int, char *);
+	int (*if_set_trunk_vlans) (int, char *);
+	int (*if_del_trunk_vlans) (int, char *);
+	int (*get_if_list) (int, char *);
+	int (*set_if_description) (int, char *);
 
-	int (*vlan_add) (struct switch_operations *, int, char *);
-	int (*vlan_del) (struct switch_operations *, int);
-	int (*vlan_rename) (struct switch_operations *, int, char *);
-	int (*vlan_port_add) (struct switch_operations *, int, int);
-	int (*vlan_port_del) (struct switch_operations *, int, int);
-	int (*vlan_set_mac_static) (struct switch_operations *, int, int, unsigned char *);
-	int (*vlan_del_mac_static) (struct switch_operations *, int, int, unsigned char *);
-	int (*get_vlan_interfaces) (struct switch_operations *, int, char *);
+	int (*vlan_add) (int, char *);
+	int (*vlan_del) (int);
+	int (*vlan_rename) (int, char *);
+	int (*vlan_port_add) (int, int);
+	int (*vlan_port_del) (int, int);
+	int (*vlan_set_mac_static) (int, int, unsigned char *);
+	int (*vlan_del_mac_static) (int, int, unsigned char *);
+	int (*get_vlan_interfaces) (int, char *);
 
-	int (*igmp_enable) (struct switch_operations *, int);
-	int (*igmp_disable) (struct switch_operations *, int);
-	int (*igmps_get) (struct switch_operations *, char *, int *);
+	int (*igmp_enable) (int);
+	int (*igmp_disable) (int);
+	int (*igmps_get) (char *, int *);
 
-	int (*get_vdb) (struct switch_operations *, char *, int, char *);
-	int (*mrouter_set) (struct switch_operations *, int);
-	int (*mrouter_reset) (struct switch_operations *, int);
-	int (*mrouters_get) (struct switch_operations *, int, char *);
-	int (*get_mac) (struct switch_operations *, int, char *, int, int);
-	int (*get_age_time) (struct switch_operations *, int *);
-	int (*set_age_time) (struct switch_operations *, int);
-	int (*vif_add) (struct switch_operations *, int, int *);
-	int (*vif_del) (struct switch_operations *, int);
-	int (*del_mac_dynamic) (struct switch_operations *, int, int);
+	int (*get_vdb) (char *, int, char *);
+	int (*mrouter_set) (int);
+	int (*mrouter_reset) (int);
+	int (*mrouters_get) (int, char *);
+	int (*get_mac) (int, char *, int, int);
+	int (*get_age_time) (int *);
+	int (*set_age_time) (int);
+	int (*vif_add) (int, int *);
+	int (*vif_del) (int);
+	int (*del_mac_dynamic) (int, int);
+
+	/* Error code returned by different implementations */
+	int errno;
 };
 
 /* command: SWCFG_ADDIF */
