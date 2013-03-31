@@ -227,10 +227,10 @@ int main(int argc, char **argv) {
 			usage();
 			return 0;
 		}
-		user_arg.cmd = SWCFG_RENAMEVLAN;
-		user_arg.vlan = atoi(argv[2]);
-		user_arg.ext.vlan_desc = argv[3];
-		status = ioctl(sock, SIOCSWCFG, &user_arg);
+		status = shared_init();
+		assert(!status);
+
+		status = shared_set_vlan_desc(atoi(argv[2]), argv[3]);
 		if (status)
 			perror("chvlan failed");
 		return 0;	
