@@ -33,6 +33,7 @@
 #define SW_SECRET_LEN 	30
 
 #define SW_MAX_TAG		40
+#define SW_MAX_VLAN_NAME	31
 
 /* Identifiers for the types of passwords stored in the
  * shared memory area
@@ -71,6 +72,18 @@ int shared_get_if_tag(int if_index, char *tag);
  * successfull, 1 if interface had no tag assigned.
  */
 int shared_set_if_tag(int if_index, char *tag, int *other_if);
+
+/* lookup vlan arg0 and put description into arg1; return 0 if
+ * vlan has a description, 1 otherwise
+ */
+int shared_get_vlan_desc(int vlan_id, char *desc);
+
+/* If arg1 is null, delete description for vlan arg0, otherwise set
+ * arg1 as description for vlan arg0.
+ *
+ * return 0 if successful, 1 if setting description failed
+ */
+int shared_set_vlan_desc(int vlan_id, char *desc);
 
 /* Sets the cdp global configuration */
 void shared_set_cdp(struct cdp_configuration *cdp);

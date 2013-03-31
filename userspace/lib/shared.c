@@ -42,11 +42,19 @@ struct shared {
 	struct rstp_configuration rstp;
 	/* List of interface tags */
 	struct mm_list_head if_tags;
+	/* List of vlan descriptions */
+	struct mm_list_head vlan_descs;
 };
 
 struct if_tag {
 	int if_index;
 	char tag[SW_MAX_TAG + 1];
+	struct mm_list_head lh;
+};
+
+struct vlan_desc {
+	int vlan_id;
+	char desc[SW_MAX_VLAN_NAME + 1];
 	struct mm_list_head lh;
 };
 
@@ -87,6 +95,29 @@ static mm_ptr_t __shared_get_tag_if(char *tag) {
 	}
 
 	return MM_NULL;
+}
+
+static mm_ptr_t __shared_get_vlan_desc(int vlan_id) {
+	mm_ptr_t ret;
+
+	mm_list_for_each(mm, ret, mm_ptr(mm, &SHM->vlan_descs)) {
+		struct vlan_desc *desc =
+			mm_addr(mm, mm_list_entry(ret, struct vlan_desc, lh));
+		if (desc->vlan_id == vlan_id)
+			return ret;
+	}
+
+	return MM_NULL;
+}
+
+static int __shared_del_vlan_desc(int vlan_id) {
+	mm_ptr_t lh = __shared_get_vlan_desc(vlan_id);
+
+	if (MM_NULL == lh)
+		return 1;
+	mm_list_del(mm, lh);
+	mm_free(mm, mm_list_entry(lh, struct vlan_desc, lh));
+	return 0;
 }
 
 static void shared_init_rstp(void)
@@ -133,13 +164,13 @@ static void shared_init_cdp(void)
 int shared_init(void) {
 	if (mm)
 		return 0;
-
 	mm = mm_create("lisa", sizeof(struct shared), 4096);
 	if (!mm)
 		return  -1;
 
 	if (mm->init) {
 		memset(SHM, 0, sizeof(struct shared));
+		MM_INIT_LIST_HEAD(mm, mm_ptr(mm, &SHM->vlan_descs));
 		MM_INIT_LIST_HEAD(mm, mm_ptr(mm, &SHM->if_tags));
 		shared_init_cdp();
 		shared_init_rstp();
@@ -280,6 +311,63 @@ int shared_set_if_tag(int if_index, char *tag, int *other_if) {
 	strncpy(s_tag->tag, tag, SW_MAX_TAG);
 	s_tag->tag[SW_MAX_TAG] = '\0';
 	mm_list_add(mm, mm_ptr(mm, &s_tag->lh), mm_ptr(mm, &SHM->if_tags));
+
+	mm_unlock(mm);
+	return 0;
+}
+
+int shared_get_vlan_desc(int vlan_id, char *desc) {
+	mm_ptr_t ptr;
+	struct vlan_desc *s_desc;
+
+	mm_lock(mm);
+	ptr = __shared_get_vlan_desc(vlan_id);
+	if (MM_NULL == ptr) {
+		mm_unlock(mm);
+		desc = NULL;
+		return 1;
+	}
+	s_desc = mm_addr(mm, mm_list_entry(ptr, struct vlan_desc, lh));
+	desc = strdup(s_desc->desc);
+
+	mm_unlock(mm);
+	return 0;
+}
+
+
+int shared_set_vlan_desc(int vlan_id, char *desc) {
+	mm_ptr_t lh, mm_s_desc;
+	struct vlan_desc *s_desc;
+	int ret;
+
+	mm_lock(mm);
+
+	if (NULL == desc) {
+		ret = __shared_del_vlan_desc(vlan_id);
+		mm_unlock(mm);
+		return ret;
+	}
+	lh = __shared_get_vlan_desc(vlan_id);
+	if (MM_NULL != lh) {
+		s_desc = mm_addr(mm, mm_list_entry(lh, struct vlan_desc, lh));
+		strncpy(s_desc->desc, desc, SW_MAX_VLAN_NAME);
+		s_desc->desc[SW_MAX_VLAN_NAME] = '\0';
+		mm_unlock(mm);
+		return 0;
+	}
+
+	mm_s_desc = mm_alloc(mm, sizeof(struct vlan_desc));
+	/* first save mm pointer obtained from mm_alloc, then compute s_desc
+	 * pointer, because mm_alloc() can change mm->area if the shm area
+	 * is extended (refer to README.mm for details) */
+	s_desc = mm_addr(mm, mm_s_desc);
+	if (NULL == s_desc)
+		return 1;
+
+	s_desc->vlan_id = vlan_id;
+	strncpy(s_desc->desc, desc, SW_MAX_VLAN_NAME);
+	s_desc->desc[SW_MAX_VLAN_NAME] = '\0';
+	mm_list_add(mm, mm_ptr(mm, &s_desc->lh), mm_ptr(mm, &SHM->vlan_descs));
 
 	mm_unlock(mm);
 	return 0;
