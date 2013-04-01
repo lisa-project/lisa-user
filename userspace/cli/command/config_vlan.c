@@ -5,7 +5,6 @@ int cmd_namevlan(struct cli_context *ctx, int argc, char **argv, struct menu_nod
 {
 	struct swcli_context *uc = SWCLI_CTX(ctx);
 	int status;
-	int u_rename = 0;
 
 	assert(argc);
 
@@ -13,7 +12,6 @@ int cmd_namevlan(struct cli_context *ctx, int argc, char **argv, struct menu_nod
 		/* vlan is renamed by user */
 		assert(argc >= 2);
 		status = shared_set_vlan_desc(uc->vlan, argv[1]);
-		u_rename = 1;
 	} else {
 		/* vlan name is set to default */
 		status = shared_set_vlan_desc(uc->vlan, NULL);

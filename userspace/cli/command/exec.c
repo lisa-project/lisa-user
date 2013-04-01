@@ -813,7 +813,7 @@ int cmd_show_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_no
 	const char *fmt1 = "%-4s %-32s %-9s %s\n";
 	const char *fmt2 = "%-4d %-32s %-9s %s\n";
 	const char *fmt3 = "%47s %s\n";
-	char *vlan_name = NULL;
+	char vlan_name[SW_MAX_TAG + 1];
 	FILE *out = NULL;
 	struct if_map if_map;
 	int i, j;
@@ -878,7 +878,8 @@ int cmd_show_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_no
 		struct comma_buffer buf = COMMA_BUFFER_INIT(32);
 		int firstline = 1;
 
-		shared_get_vlan_desc(vlan, vlan_name); //TODO check return value
+		if (shared_get_vlan_desc(vlan, vlan_name))
+			__default_vlan_name(vlan_name, vlan);
 		/* FIXME kernel module should tell us whether vlan is "active"
 		 * or "act/unsup" */
 #define print_buf \
@@ -891,7 +892,6 @@ int cmd_show_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_no
 				fprintf(out, fmt3, "", buf.str);\
 			}\
 		} while(0)
-		free(vlan_name);
 		/* if (vlif_no < 0) perror("getvlanif"); */
 		assert(vlif_no >= 0);
 

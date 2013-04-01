@@ -328,9 +328,10 @@ int shared_get_vlan_desc(int vlan_id, char *desc) {
 		return 1;
 	}
 	s_desc = mm_addr(mm, mm_list_entry(ptr, struct vlan_desc, lh));
-	desc = strdup(s_desc->desc);
+	strcpy(desc, s_desc->desc);
 
 	mm_unlock(mm);
+
 	return 0;
 }
 
