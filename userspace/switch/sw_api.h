@@ -1,19 +1,21 @@
 #ifndef _SW_API_H
 #define _SW_API_H
 
+#include "list.h"
+
 #define ETH_ALEN	6
 
-struct net_switch_mrouter_e {
+struct net_switch_mrouter {
 	int ifindex;
 	int vlan;
-	struct net_switch_mrouter_e *next;
+	struct list_head lh;
 };
-struct net_switch_mac_e {
+struct net_switch_mac {
 	unsigned char addr[ETH_ALEN];
 	unsigned char type;
 	int vlan;
 	int ifindex;
-	struct net_switch_mac_e *next;
+	struct list_head lh;
 };
 
 struct switch_operations {
@@ -86,9 +88,9 @@ struct switch_operations {
 
 	int (*mrouter_set) (struct switch_operations *sw_ops, int vlan, int ifindex);
 	int (*mrouter_reset) (struct switch_operations *sw_ops, int vlan, int ifindex);
-	int (*mrouters_get) (struct switch_operations *sw_ops, int vlan, struct net_switch_mrouter_e *mrouters);
+	int (*mrouters_get) (struct switch_operations *sw_ops, int vlan, struct net_switch_mrouter *mrouters);
 
-	int (*get_mac) (struct switch_operations *sw_ops, int ifindex, int vlan, int mac_type, struct net_switch_mac_e *macs);
+	int (*get_mac) (struct switch_operations *sw_ops, int ifindex, int vlan, int mac_type, struct net_switch_mac *macs);
 
 	int (*get_age_time) (struct switch_operations *sw_ops, int *age_time);
 	int (*set_age_time) (struct switch_operations *sw_ops, int age_time);
@@ -98,7 +100,7 @@ struct switch_operations {
 
 
 	/* Error code returned by different implementations */
-	int errno;
+	int sw_errno;
 };
 
 #endif
