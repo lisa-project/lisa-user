@@ -114,7 +114,7 @@ static int __shared_del_vlan_desc(int vlan_id) {
 	mm_ptr_t lh = __shared_get_vlan_desc(vlan_id);
 
 	if (MM_NULL == lh)
-		return 1;
+		return -ENODEV;
 	mm_list_del(mm, lh);
 	mm_free(mm, mm_list_entry(lh, struct vlan_desc, lh));
 	return 0;
@@ -325,7 +325,7 @@ int shared_get_vlan_desc(int vlan_id, char *desc) {
 	if (MM_NULL == ptr) {
 		mm_unlock(mm);
 		desc = NULL;
-		return 1;
+		return -ENODEV;
 	}
 	s_desc = mm_addr(mm, mm_list_entry(ptr, struct vlan_desc, lh));
 	strcpy(desc, s_desc->desc);
@@ -363,7 +363,7 @@ int shared_set_vlan_desc(int vlan_id, char *desc) {
 	 * is extended (refer to README.mm for details) */
 	s_desc = mm_addr(mm, mm_s_desc);
 	if (NULL == s_desc)
-		return 1;
+		return -ENOMEM;
 
 	s_desc->vlan_id = vlan_id;
 	strncpy(s_desc->desc, desc, SW_MAX_VLAN_NAME);

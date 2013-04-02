@@ -84,7 +84,7 @@ struct switch_operations {
 	 * @param vlans  VLAN bitmap.
 	 */
 	int (*get_vdb) (struct switch_operations *sw_ops, char *vlans);
-	int (*get_vlan_desc) (struct switch_operations *sw_ops, int vlan);
+	int (*get_vlan_desc) (struct switch_operations *sw_ops, int vlan, char *desc);
 
 	int (*mrouter_set) (struct switch_operations *sw_ops, int vlan, int ifindex);
 	int (*mrouter_reset) (struct switch_operations *sw_ops, int vlan, int ifindex);
@@ -97,7 +97,6 @@ struct switch_operations {
 
 	int (*vif_add) (struct switch_operations *sw_ops, int vlan, int *ifindex);
 	int (*vif_del) (struct switch_operations *sw_ops, int vlan);
-
 
 	/* Error code returned by different implementations */
 	int sw_errno;
