@@ -316,9 +316,13 @@ int shared_set_if_tag(int if_index, char *tag, int *other_if) {
 	return 0;
 }
 
-int shared_get_vlan_desc(int vlan_id, char *desc) {
+int shared_get_vlan_desc(int vlan_id, char *desc)
+{
 	mm_ptr_t ptr;
 	struct vlan_desc *s_desc;
+
+	if (desc == NULL)
+		return -EFAULT;
 
 	mm_lock(mm);
 	ptr = __shared_get_vlan_desc(vlan_id);
@@ -329,22 +333,34 @@ int shared_get_vlan_desc(int vlan_id, char *desc) {
 	}
 	s_desc = mm_addr(mm, mm_list_entry(ptr, struct vlan_desc, lh));
 	strcpy(desc, s_desc->desc);
+	desc[SW_MAX_VLAN_NAME] = '\0';
 
 	mm_unlock(mm);
 
 	return 0;
 }
 
-
-int shared_set_vlan_desc(int vlan_id, char *desc) {
+int shared_set_vlan_desc(int vlan_id, char *desc)
+{
 	mm_ptr_t lh, mm_s_desc;
 	struct vlan_desc *s_desc;
-	int ret;
+	int ret = 0;
 
 	mm_lock(mm);
 
 	if (NULL == desc) {
-		ret = __shared_del_vlan_desc(vlan_id);
+		/* Set description to default. */
+		lh = __shared_get_vlan_desc(vlan_id);
+		if (MM_NULL != lh) {
+			char default_desc[SW_MAX_VLAN_NAME];
+			__default_vlan_name(default_desc, vlan_id);
+			s_desc = mm_addr(mm, mm_list_entry(lh, struct vlan_desc,
+					lh));
+			strncpy(s_desc->desc, default_desc, SW_MAX_VLAN_NAME);
+			s_desc->desc[SW_MAX_VLAN_NAME] = '\0';
+		}
+		else
+			ret = -ENODEV;
 		mm_unlock(mm);
 		return ret;
 	}
@@ -372,6 +388,17 @@ int shared_set_vlan_desc(int vlan_id, char *desc) {
 
 	mm_unlock(mm);
 	return 0;
+}
+
+int shared_del_vlan(int vlan_id)
+{
+	int ret = 0;
+
+	mm_lock(mm);
+	ret = __shared_del_vlan_desc(vlan_id);
+	mm_unlock(mm);
+
+	return ret;
 }
 
 void shared_set_cdp(struct cdp_configuration *cdp)

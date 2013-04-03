@@ -67,15 +67,6 @@ struct swcli_context {
 		close(__sock_fd);\
 } while (0)
 
-// FIXME move this to appropriate place
-#define __default_vlan_name(__buf, __vlan) snprintf(__buf, 9, "VLAN%04d", (__vlan))
-#define default_vlan_name(__lvalue, __vlan) do {\
-	int status; \
-	__lvalue = alloca(9); \
-	status = __default_vlan_name(__lvalue, __vlan); \
-	assert(status < 9); \
-} while (0)
-
 enum {
 	VALID_LIMITS,
 	VALID_LIST

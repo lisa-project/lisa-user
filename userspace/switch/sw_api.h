@@ -5,12 +5,12 @@
 
 #define ETH_ALEN	6
 
-struct net_switch_mrouter {
+struct net_switch_mrouter_e {
 	int ifindex;
 	int vlan;
 	struct list_head lh;
 };
-struct net_switch_mac {
+struct net_switch_mac_e {
 	unsigned char addr[ETH_ALEN];
 	unsigned char type;
 	int vlan;
@@ -88,9 +88,9 @@ struct switch_operations {
 
 	int (*mrouter_set) (struct switch_operations *sw_ops, int vlan, int ifindex);
 	int (*mrouter_reset) (struct switch_operations *sw_ops, int vlan, int ifindex);
-	int (*mrouters_get) (struct switch_operations *sw_ops, int vlan, struct net_switch_mrouter *mrouters);
+	int (*mrouters_get) (struct switch_operations *sw_ops, int vlan, struct net_switch_mrouter_e *mrouters);
 
-	int (*get_mac) (struct switch_operations *sw_ops, int ifindex, int vlan, int mac_type, struct net_switch_mac *macs);
+	int (*get_mac) (struct switch_operations *sw_ops, int ifindex, int vlan, int mac_type, struct net_switch_mac_e *macs);
 
 	int (*get_age_time) (struct switch_operations *sw_ops, int *age_time);
 	int (*set_age_time) (struct switch_operations *sw_ops, int age_time);

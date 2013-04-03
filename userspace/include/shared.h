@@ -35,6 +35,14 @@
 #define SW_MAX_TAG		40
 #define SW_MAX_VLAN_NAME	31
 
+#define __default_vlan_name(__buf, __vlan) snprintf(__buf, 9, "VLAN%04d", (__vlan))
+#define default_vlan_name(__lvalue, __vlan) do {\
+		int status; \
+		__lvalue = alloca(9); \
+		status = __default_vlan_name(__lvalue, __vlan); \
+		assert(status < 9); \
+} while (0)
+
 /* Identifiers for the types of passwords stored in the
  * shared memory area
  */
@@ -74,16 +82,22 @@ int shared_get_if_tag(int if_index, char *tag);
 int shared_set_if_tag(int if_index, char *tag, int *other_if);
 
 /* lookup vlan arg0 and put description into arg1; return 0 if
- * vlan has a description, 1 otherwise
+ * vlan has a description, negative value otherwise
  */
 int shared_get_vlan_desc(int vlan_id, char *desc);
 
-/* If arg1 is null, delete description for vlan arg0, otherwise set
- * arg1 as description for vlan arg0.
+/* If arg1 is null, reset description for vlan arg0 to default,
+ * otherwise set arg1 as description for vlan arg0. To delete
+ * description call shared_del_vlan instead.
  *
- * return 0 if successful, 1 if setting description failed
+ * return 0 if successful, negative value if setting description failed
  */
 int shared_set_vlan_desc(int vlan_id, char *desc);
+
+/* Forgets about vlan identified by arg0; return 0 if vlan has been
+ * stored in shared memory, negative value otherwise.
+ */
+int shared_del_vlan(int vlan_id);
 
 /* Sets the cdp global configuration */
 void shared_set_cdp(struct cdp_configuration *cdp);
