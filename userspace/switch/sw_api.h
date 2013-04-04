@@ -88,9 +88,12 @@ struct switch_operations {
 
 	int (*mrouter_set) (struct switch_operations *sw_ops, int vlan, int ifindex);
 	int (*mrouter_reset) (struct switch_operations *sw_ops, int vlan, int ifindex);
-	int (*mrouters_get) (struct switch_operations *sw_ops, int vlan, struct net_switch_mrouter_e *mrouters);
+	/* Return a list of net_switch_mrouter_e. */
+	int (*mrouters_get) (struct switch_operations *sw_ops, int vlan, struct list_head *mrouters);
 
-	int (*get_mac) (struct switch_operations *sw_ops, int ifindex, int vlan, int mac_type, struct net_switch_mac_e *macs);
+	/* Return a list of net_switch_mac_e. */
+	int (*get_mac) (struct switch_operations *sw_ops, int ifindex, int vlan,
+			int mac_type, struct list_head *macs);
 
 	int (*get_age_time) (struct switch_operations *sw_ops, int *age_time);
 	int (*set_age_time) (struct switch_operations *sw_ops, int age_time);
