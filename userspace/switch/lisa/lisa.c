@@ -4,6 +4,42 @@
 #include "shared.h"
 #include "lisa.h"
 
+static int if_add(struct switch_operations *sw_ops, int ifindex, int mode)
+{
+	struct swcfgreq swcfgr;
+	int ret, sock_fd;
+	struct lisa_context *uc = SWLiSA_CTX(sw_ops);
+
+	SW_SOCK_OPEN(uc, sock_fd);
+
+	swcfgr.cmd = SWCFG_ADDIF;
+	swcfgr.ifindex = ifindex;
+	swcfgr.ext.switchport = mode;
+	ret = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
+	sw_ops->sw_errno = errno;
+
+	SW_SOCK_CLOSE(uc, sock_fd);
+
+	return ret;
+}
+
+static int if_remove(struct switch_operations *sw_ops, int ifindex)
+{
+	struct swcfgreq swcfgr;
+	int ret, sock_fd;
+	struct lisa_context *uc = SWLiSA_CTX(sw_ops);
+
+	SW_SOCK_OPEN(uc, sock_fd);
+
+	swcfgr.cmd = SWCFG_DELIF;
+	swcfgr.ifindex = ifindex;
+	ret = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
+
+	SW_SOCK_CLOSE(uc, sock_fd);
+
+	return ret;
+}
+
 static int get_vlan_desc(struct switch_operations *sw_ops, int vlan, char *desc)
 {
 	int rc;
@@ -59,6 +95,8 @@ static int vlan_add(struct switch_operations *sw_ops, int vlan)
 struct lisa_context lisa_ctx = {
 	.sock_fd = -1,
 	.sw_ops = (struct switch_operations) {
+		.if_add = if_add,
+		.if_remove = if_remove,
 		.vlan_add = vlan_add,
 		.vlan_rename = vlan_rename,
 		.get_vlan_desc = get_vlan_desc
