@@ -29,6 +29,7 @@
 
 #include <assert.h>
 
+#include "lisa.h"
 #include "swsock.h"
 #include "shared.h"
 #include "util.h"
@@ -70,7 +71,7 @@ void usage(void) {
 		"  add iface_name\t\t\tAdds an interface to switch.\n"
 		"  addtagged iface_name tag_name\t\tAdds an interface to switch and assigns tag.\n"
 		"  del [-s] iface_name\t\t\tRemoves an iterface from switch\n"
-		"  addvlan vlan_no vlan_name\t\tAdds a vlan to the vlan database\n"
+		"  addvlan vlan_no\t\tAdds a vlan to the vlan database\n"
 		"  delvlan vlan_no\t\t\tDeletes a vlan from the vlan database\n"
 		"  chvlan vlan_no new_vlan_name\t\tRenames vlan_no to new_vlan_name\n"
 		"  addportvlan iface_name vlan_no\tAdds vlan to allowed vlans of\n"
@@ -195,14 +196,11 @@ int main(int argc, char **argv) {
 	}
 
 	if (!strcmp(argv[1], "addvlan")) {
-		if (argc < 4) {
+		if (argc < 3) {
 			usage();
 			return 0;
 		}
-		user_arg.cmd = SWCFG_ADDVLAN;
-		user_arg.vlan = atoi(argv[2]);
-		user_arg.ext.vlan_desc = argv[3];
-		status = ioctl(sock, SIOCSWCFG, &user_arg);
+		status = lisa_ctx.sw_ops.vlan_add(&lisa_ctx.sw_ops, atoi(argv[2]));
 		if (status)
 			perror("addvlan failed");
 		return 0;	
