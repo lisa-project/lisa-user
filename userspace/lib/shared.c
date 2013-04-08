@@ -113,8 +113,10 @@ static mm_ptr_t __shared_get_vlan_desc(int vlan_id) {
 static int __shared_del_vlan_desc(int vlan_id) {
 	mm_ptr_t lh = __shared_get_vlan_desc(vlan_id);
 
-	if (MM_NULL == lh)
-		return -ENODEV;
+	if (MM_NULL == lh) {
+		errno = ENODEV;
+		return -1;
+	}
 	mm_list_del(mm, lh);
 	mm_free(mm, mm_list_entry(lh, struct vlan_desc, lh));
 	return 0;
@@ -321,15 +323,18 @@ int shared_get_vlan_desc(int vlan_id, char *desc)
 	mm_ptr_t ptr;
 	struct vlan_desc *s_desc;
 
-	if (desc == NULL)
-		return -EFAULT;
+	if (desc == NULL) {
+		errno = EFAULT;
+		return -1;
+	}
 
 	mm_lock(mm);
 	ptr = __shared_get_vlan_desc(vlan_id);
 	if (MM_NULL == ptr) {
 		mm_unlock(mm);
 		desc = NULL;
-		return -ENODEV;
+		errno = ENODEV;
+		return -1;
 	}
 	s_desc = mm_addr(mm, mm_list_entry(ptr, struct vlan_desc, lh));
 	strcpy(desc, s_desc->desc);
@@ -359,8 +364,10 @@ int shared_set_vlan_desc(int vlan_id, char *desc)
 			strncpy(s_desc->desc, default_desc, SW_MAX_VLAN_NAME);
 			s_desc->desc[SW_MAX_VLAN_NAME] = '\0';
 		}
-		else
-			ret = -ENODEV;
+		else {
+			errno = ENODEV;
+			ret = -1;
+		}
 		mm_unlock(mm);
 		return ret;
 	}
@@ -378,8 +385,10 @@ int shared_set_vlan_desc(int vlan_id, char *desc)
 	 * pointer, because mm_alloc() can change mm->area if the shm area
 	 * is extended (refer to README.mm for details) */
 	s_desc = mm_addr(mm, mm_s_desc);
-	if (NULL == s_desc)
-		return -ENOMEM;
+	if (NULL == s_desc) {
+		errno = ENOMEM;
+		return -1;
+	}
 
 	s_desc->vlan_id = vlan_id;
 	strncpy(s_desc->desc, desc, SW_MAX_VLAN_NAME);

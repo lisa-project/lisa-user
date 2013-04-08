@@ -101,8 +101,6 @@ struct switch_operations {
 	int (*vif_add) (struct switch_operations *sw_ops, int vlan, int *ifindex);
 	int (*vif_del) (struct switch_operations *sw_ops, int vlan);
 
-	/* Error code returned by different implementations */
-	int sw_errno;
 };
 
 #endif

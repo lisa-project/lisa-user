@@ -7,7 +7,7 @@
 static int if_add(struct switch_operations *sw_ops, int ifindex, int mode)
 {
 	struct swcfgreq swcfgr;
-	int ret, sock_fd;
+	int ret, sock_fd, ioctl_errno;
 	struct lisa_context *uc = SWLiSA_CTX(sw_ops);
 
 	SW_SOCK_OPEN(uc, sock_fd);
@@ -16,17 +16,17 @@ static int if_add(struct switch_operations *sw_ops, int ifindex, int mode)
 	swcfgr.ifindex = ifindex;
 	swcfgr.ext.switchport = mode;
 	ret = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
-	sw_ops->sw_errno = errno;
-
+	ioctl_errno = errno;
 	SW_SOCK_CLOSE(uc, sock_fd);
 
+	errno = ioctl_errno;
 	return ret;
 }
 
 static int if_remove(struct switch_operations *sw_ops, int ifindex)
 {
 	struct swcfgreq swcfgr;
-	int ret, sock_fd;
+	int ret, sock_fd, ioctl_errno;
 	struct lisa_context *uc = SWLiSA_CTX(sw_ops);
 
 	SW_SOCK_OPEN(uc, sock_fd);
@@ -34,35 +34,32 @@ static int if_remove(struct switch_operations *sw_ops, int ifindex)
 	swcfgr.cmd = SWCFG_DELIF;
 	swcfgr.ifindex = ifindex;
 	ret = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
-
+	ioctl_errno = errno;
 	SW_SOCK_CLOSE(uc, sock_fd);
 
+	errno = ioctl_errno;
 	return ret;
 }
 
 static int get_vlan_desc(struct switch_operations *sw_ops, int vlan, char *desc)
 {
-	int rc;
-
-	rc = shared_get_vlan_desc(vlan, desc);
-	sw_ops->sw_errno = rc;
-
-	return rc;
+	return shared_get_vlan_desc(vlan, desc);
 }
 
-/* FIXME Should rename check if vlan is present in vdb or should assume that
- * shared mem is consistent with vdb? */
 static int vlan_rename(struct switch_operations *sw_ops, int vlan, char *desc)
 {
 	int rc;
 
-	if (sw_invalid_vlan(vlan))
-		rc = -EINVAL;
-	else if (sw_is_default_vlan(vlan))
-		rc = -EPERM;
+	if (sw_invalid_vlan(vlan)) {
+		rc = -1;
+		errno = EINVAL;
+	}
+	else if (sw_is_default_vlan(vlan)) {
+		rc = -1;
+		errno = EPERM;
+	}
 	else
 		rc = shared_set_vlan_desc(vlan, desc);
-	sw_ops->sw_errno = rc;
 
 	return rc;
 }
@@ -81,13 +78,8 @@ static int vlan_add(struct switch_operations *sw_ops, int vlan)
 	ioctl_errno = errno;
 	SW_SOCK_CLOSE(uc, sock_fd); /* this can overwrite ioctl errno */
 
-	if (rc == -1 && ioctl_errno == EACCES)
-		rc = -EACCES;
+	errno = ioctl_errno;
 
-	if (ioctl_errno == EEXIST)
-		rc = -EEXIST;
-
-	sw_ops->sw_errno = rc;
 	return rc;
 }
 
@@ -107,7 +99,7 @@ int vlan_del (struct switch_operations *sw_ops, int vlan)
 	ioctl_errno = errno;
 	SW_SOCK_CLOSE(lc, sock_fd); /* this can overwrite ioctl errno */
 
-	sw_ops->sw_errno = ioctl_errno;
+	errno = ioctl_errno;
 
 	return rc;
 }

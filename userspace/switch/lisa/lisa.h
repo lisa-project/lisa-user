@@ -16,10 +16,8 @@
 		break;\
 	}\
 	__sock_fd = socket(PF_SWITCH, SOCK_RAW, 0); \
-	if (__sock_fd == -1) {\
-		__ctx->sw_ops.sw_errno = errno; \
-		return errno; \
-	}\
+	if (__sock_fd == -1) \
+		return -1; \
 } while(0)
 
 #define SW_SOCK_CLOSE(__ctx, __sock_fd) do {\

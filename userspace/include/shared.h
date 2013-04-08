@@ -82,7 +82,7 @@ int shared_get_if_tag(int if_index, char *tag);
 int shared_set_if_tag(int if_index, char *tag, int *other_if);
 
 /* lookup vlan arg0 and put description into arg1; return 0 if
- * vlan has a description, negative value otherwise
+ * vlan has a description, negative value otherwise and set errno
  */
 int shared_get_vlan_desc(int vlan_id, char *desc);
 
@@ -91,11 +91,12 @@ int shared_get_vlan_desc(int vlan_id, char *desc);
  * description call shared_del_vlan instead.
  *
  * return 0 if successful, negative value if setting description failed
+ * and also set errno
  */
 int shared_set_vlan_desc(int vlan_id, char *desc);
 
 /* Forgets about vlan identified by arg0; return 0 if vlan has been
- * stored in shared memory, negative value otherwise.
+ * stored in shared memory, negative value otherwise and set errno.
  */
 int shared_del_vlan(int vlan_id);
 
