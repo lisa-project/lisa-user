@@ -211,10 +211,11 @@ int main(int argc, char **argv) {
 			usage();
 			return 0;
 		}
-		user_arg.cmd = SWCFG_DELVLAN;
-		user_arg.vlan = atoi(argv[2]);
-		user_arg.ifindex = 0;
-		status = ioctl(sock, SIOCSWCFG, &user_arg);
+		status = shared_init();
+		assert(!status);
+
+		status = lisa_ctx.sw_ops.vlan_del(&lisa_ctx.sw_ops,
+				atoi(argv[2]));
 		if (status)
 			perror("delvlan failed");
 		return 0;

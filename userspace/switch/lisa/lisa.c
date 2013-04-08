@@ -91,6 +91,27 @@ static int vlan_add(struct switch_operations *sw_ops, int vlan)
 	return rc;
 }
 
+int vlan_del (struct switch_operations *sw_ops, int vlan)
+{
+	int rc, sock_fd, ioctl_errno;
+	struct swcfgreq swcfgr;
+	struct lisa_context *lc = SWLiSA_CTX(sw_ops);
+
+	rc = shared_del_vlan(vlan);
+
+	swcfgr.vlan = vlan;
+	swcfgr.cmd = SWCFG_DELVLAN;
+
+	SW_SOCK_OPEN(lc, sock_fd);
+	rc = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
+	ioctl_errno = errno;
+	SW_SOCK_CLOSE(lc, sock_fd); /* this can overwrite ioctl errno */
+
+	sw_ops->sw_errno = ioctl_errno;
+
+	return rc;
+}
+
 /* TODO implement switch API with lisa module */
 struct lisa_context lisa_ctx = {
 	.sock_fd = -1,
@@ -98,6 +119,7 @@ struct lisa_context lisa_ctx = {
 		.if_add = if_add,
 		.if_remove = if_remove,
 		.vlan_add = vlan_add,
+		.vlan_del = vlan_del,
 		.vlan_rename = vlan_rename,
 		.get_vlan_desc = get_vlan_desc
 	}
