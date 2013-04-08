@@ -68,6 +68,8 @@ static int vlan_add(struct switch_operations *sw_ops, int vlan)
 {
 	struct swcfgreq swcfgr;
 	int rc, sock_fd, ioctl_errno;
+	char desc[SW_MAX_VLAN_NAME];
+
 	struct lisa_context *uc = SWLiSA_CTX(sw_ops);
 
 	swcfgr.vlan = vlan;
@@ -78,8 +80,18 @@ static int vlan_add(struct switch_operations *sw_ops, int vlan)
 	ioctl_errno = errno;
 	SW_SOCK_CLOSE(uc, sock_fd); /* this can overwrite ioctl errno */
 
-	errno = ioctl_errno;
+	/* Add default description for newly added vlan. */
+	if (rc == 0) {
+		__default_vlan_name(desc, vlan);
+		rc = shared_set_vlan_desc(vlan, desc);
+		if (rc) {
+			lisa_ctx.sw_ops.vlan_del(&lisa_ctx.sw_ops, vlan);
+			goto exit;
+		}
+	}
 
+	errno = ioctl_errno;
+exit:
 	return rc;
 }
 

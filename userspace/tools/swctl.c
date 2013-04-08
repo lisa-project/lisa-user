@@ -200,6 +200,9 @@ int main(int argc, char **argv) {
 			usage();
 			return 0;
 		}
+		status = shared_init();
+		assert(!status);
+
 		status = lisa_ctx.sw_ops.vlan_add(&lisa_ctx.sw_ops, atoi(argv[2]));
 		if (status)
 			perror("addvlan failed");
