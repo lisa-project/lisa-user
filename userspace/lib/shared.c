@@ -44,6 +44,8 @@ struct shared {
 	struct mm_list_head if_tags;
 	/* List of vlan descriptions */
 	struct mm_list_head vlan_descs;
+	/* List of interface descriptions */
+	struct mm_list_head if_descs;
 };
 
 struct if_tag {
@@ -55,6 +57,12 @@ struct if_tag {
 struct vlan_desc {
 	int vlan_id;
 	char desc[SW_MAX_VLAN_NAME + 1];
+	struct mm_list_head lh;
+};
+
+struct if_desc {
+	int if_index;
+	char desc[SW_MAX_PORT_DESC + 1];
 	struct mm_list_head lh;
 };
 
@@ -95,6 +103,32 @@ static mm_ptr_t __shared_get_tag_if(char *tag) {
 	}
 
 	return MM_NULL;
+}
+
+static mm_ptr_t __shared_get_if_desc(int if_index)
+{
+	mm_ptr_t ret;
+
+	mm_list_for_each(mm, ret, mm_ptr(mm, &SHM->if_descs)) {
+		struct if_desc *desc =
+			mm_addr(mm, mm_list_entry(ret, struct if_desc, lh));
+		if(desc->if_index == if_index)
+			return ret;
+	}
+
+	return MM_NULL;
+}
+
+static int __shared_del_if_desc(int if_index)
+{
+	mm_ptr_t lh = __shared_get_if_desc(if_index);
+
+	if(MM_NULL == lh)
+		return -ENODEV;
+
+	mm_list_del(mm, lh);
+	mm_free(mm, mm_list_entry(lh, struct if_desc, lh));
+	return 0;
 }
 
 static mm_ptr_t __shared_get_vlan_desc(int vlan_id) {
@@ -405,6 +439,97 @@ int shared_del_vlan(int vlan_id)
 
 	mm_lock(mm);
 	ret = __shared_del_vlan_desc(vlan_id);
+	mm_unlock(mm);
+
+	return ret;
+}
+
+int shared_get_if_desc(int if_index, char *desc)
+{
+	mm_ptr_t ptr;
+	struct if_desc *sif_desc;
+
+	mm_lock(mm);
+	ptr = __shared_get_if_desc(if_index);
+	if(MM_NULL == ptr) {
+		mm_unlock(mm);
+		return -EINVAL;
+	}
+
+	sif_desc = mm_addr(mm, mm_list_entry(ptr, struct if_desc, lh));
+	strncpy(desc, sif_desc->desc, SW_MAX_PORT_DESC);
+	desc[SW_MAX_PORT_DESC] = '\0';
+
+	mm_unlock(mm);
+	return 0;
+}
+
+int shared_set_if_desc(int if_index, char *desc)
+{
+	mm_ptr_t lh, mm_s_desc;
+	struct if_desc *sif_desc;
+	int ret = 0;
+
+	mm_lock(mm);
+
+	/* no description was given */
+	if(NULL == desc) {
+		/* Set description to default value */
+		lh = __shared_get_if_desc(if_index);
+		if(MM_NULL != lh) {
+			char default_desc[SW_MAX_PORT_DESC];
+			__default_iface_name(default_desc);
+			sif_desc = mm_addr(mm, mm_list_entry(lh, struct if_desc,
+						lh));
+			strncpy(sif_desc->desc, default_desc, SW_MAX_PORT_DESC);
+			sif_desc->desc[SW_MAX_PORT_DESC] = '\0';
+		} else {
+			errno = ENODEV;
+			ret = -1;
+		}
+		goto out_unlock;
+	}
+
+	/* interface already exists */
+	lh = __shared_get_if_desc(if_index);
+	if(MM_NULL != lh) {
+		sif_desc = mm_addr(mm, mm_list_entry(lh, struct if_desc, lh));
+		strncpy(sif_desc->desc, desc, SW_MAX_PORT_DESC);
+		sif_desc->desc[SW_MAX_PORT_DESC] = '\0';
+		goto out_unlock;
+	}
+
+	/* interface doesn't exist */
+	mm_s_desc = mm_alloc(mm, sizeof(struct if_desc));
+	/* first save mm pointer obtained from mm_alloc, then compute s_desc
+	 * pointer, because mm_alloc() can change mm->area if the shm area
+	 * is extended (refer to README.mm for details) */
+	sif_desc = mm_addr(mm, mm_s_desc);
+	if (NULL == sif_desc) {
+		errno = ENOMEM;
+		ret = -1;
+		goto out;
+	}
+
+	sif_desc->if_index = if_index;
+	strncpy(sif_desc->desc, desc, SW_MAX_VLAN_NAME);
+	sif_desc->desc[SW_MAX_PORT_DESC] = '\0';
+	mm_list_add(mm, mm_ptr(mm, &sif_desc->lh), mm_ptr(mm, &SHM->if_descs));
+
+out_unlock:
+	mm_unlock(mm);
+out:
+	return ret;
+
+}
+
+
+int shared_del_if(int if_index)
+{
+	int ret;
+
+	mm_lock(mm);
+	ret = __shared_del_if_desc(if_index);
 	mm_unlock(mm);
 
 	return ret;

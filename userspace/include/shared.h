@@ -34,6 +34,7 @@
 
 #define SW_MAX_TAG		40
 #define SW_MAX_VLAN_NAME	31
+#define SW_MAX_PORT_DESC	31
 
 #define __default_vlan_name(__buf, __vlan) snprintf(__buf, 9, "VLAN%04d", (__vlan))
 #define default_vlan_name(__lvalue, __vlan) do {\
@@ -42,6 +43,14 @@
 		status = __default_vlan_name(__lvalue, __vlan); \
 		assert(status < 9); \
 } while (0)
+
+#define __default_iface_name(__buf) snprintf(__buf, 2,"--")
+#define default_iface_name(__lvalue) do {\
+		int status; \
+		__lvalue = alloca(2); \
+		status = __default_iface_name(__lvalue); \
+		assert(status < 2); \
+} while (0);
 
 /* Identifiers for the types of passwords stored in the
  * shared memory area
@@ -80,6 +89,27 @@ int shared_get_if_tag(int if_index, char *tag);
  * successfull, 1 if interface had no tag assigned.
  */
 int shared_set_if_tag(int if_index, char *tag, int *other_if);
+
+/**
+ * lookup interface arg0 and put description into arg1
+ * return 0 if operation was succesful or a negative value if
+ * the interface has no description
+ */
+int shared_get_if_desc(int if_index, char *desc);
+
+/**
+ * if interface description arg1 is null then the default
+ * value will be set, else arg1 will be set as description for
+ * interface arg0
+ * return 0 if succesfull or a negative if setting the description
+ * failed
+ */
+int shared_set_if_desc(int if_index, char *desc);
+
+/* Forgets about interface identified by arg0; return 0 if  interface has been
+ * stored in shared memory, negative value otherwise and set errno.
+ */
+int shared_del_if(int if_index);
 
 /* lookup vlan arg0 and put description into arg1; return 0 if
  * vlan has a description, negative value otherwise and set errno
