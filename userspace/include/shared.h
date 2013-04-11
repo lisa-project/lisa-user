@@ -50,7 +50,7 @@
 		__lvalue = alloca(2); \
 		status = __default_iface_name(__lvalue); \
 		assert(status < 2); \
-} while (0);
+} while (0)
 
 /* Identifiers for the types of passwords stored in the
  * shared memory area

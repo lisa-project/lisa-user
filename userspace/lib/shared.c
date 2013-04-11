@@ -208,6 +208,7 @@ int shared_init(void) {
 		memset(SHM, 0, sizeof(struct shared));
 		MM_INIT_LIST_HEAD(mm, mm_ptr(mm, &SHM->vlan_descs));
 		MM_INIT_LIST_HEAD(mm, mm_ptr(mm, &SHM->if_tags));
+		MM_INIT_LIST_HEAD(mm, mm_ptr(mm, &SHM->if_descs));
 		shared_init_cdp();
 		shared_init_rstp();
 	}
@@ -499,7 +500,7 @@ int shared_set_if_desc(int if_index, char *desc)
 		goto out_unlock;
 	}
 
-	/* interface doesn't exist */
+	/* interface doesn't exist in shm */
 	mm_s_desc = mm_alloc(mm, sizeof(struct if_desc));
 	/* first save mm pointer obtained from mm_alloc, then compute s_desc
 	 * pointer, because mm_alloc() can change mm->area if the shm area
@@ -512,10 +513,9 @@ int shared_set_if_desc(int if_index, char *desc)
 	}
 
 	sif_desc->if_index = if_index;
-	strncpy(sif_desc->desc, desc, SW_MAX_VLAN_NAME);
+	strncpy(sif_desc->desc, desc, SW_MAX_PORT_DESC);
 	sif_desc->desc[SW_MAX_PORT_DESC] = '\0';
 	mm_list_add(mm, mm_ptr(mm, &sif_desc->lh), mm_ptr(mm, &SHM->if_descs));
-
 out_unlock:
 	mm_unlock(mm);
 out:

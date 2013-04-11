@@ -125,7 +125,7 @@ int cmd_if_desc(struct cli_context *ctx, int argc, char **argv, struct menu_node
 {
 	struct swcli_context *uc = SWCLI_CTX(ctx);
 	struct swcfgreq swcfgr;
-	int sock_fd;
+	int ret = CLI_EX_OK;
 
 	assert(argc);
 
@@ -135,16 +135,16 @@ int cmd_if_desc(struct cli_context *ctx, int argc, char **argv, struct menu_node
 		/* description is set/changed by user */
 		assert(argc >= 2);
 		swcfgr.ext.iface_desc = argv[1];
+		if(shared_set_if_desc(swcfgr.ifindex, swcfgr.ext.iface_desc) < 0) {
+			ret = CLI_EX_REJECTED;
+			goto out;
+		}
 	} else {
 		/* description is set to default */
-		swcfgr.ext.iface_desc = (char *)"";
+		default_iface_name(swcfgr.ext.iface_desc);
 	}
-
-	SW_SOCK_OPEN(ctx, sock_fd);
-	ioctl(sock_fd, SIOCSWCFG, &swcfgr);
-	SW_SOCK_CLOSE(ctx, sock_fd);
-
-	return CLI_EX_OK;
+out:
+	return ret;
 }
 
 int cmd_speed_duplex(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
