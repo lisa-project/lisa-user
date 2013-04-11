@@ -47,7 +47,7 @@ struct switch_operations {
 
 	int (*if_clear_mac) (struct switch_operations *sw_ops, int ifindex);
 
-	int (*if_add_trunk_vlans) (struct switch_operations *sw_ops, int ifindex, char *vlans);
+	int (*if_add_trunk_vlans) (struct switch_operations *sw_ops, int ifindex, unsigned char *vlans);
 	int (*if_set_trunk_vlans) (struct switch_operations *sw_ops, int ifindex, char *vlans);
 	int (*if_del_trunk_vlans) (struct switch_operations *sw_ops, int ifindex, char *vlans);
 
