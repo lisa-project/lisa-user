@@ -380,7 +380,7 @@ int shared_get_vlan_desc(int vlan_id, char *desc)
 	return 0;
 }
 
-int shared_set_vlan_desc(int vlan_id, char *desc)
+int shared_set_vlan_desc(int vlan_id, const char *desc)
 {
 	mm_ptr_t lh, mm_s_desc;
 	struct vlan_desc *s_desc;

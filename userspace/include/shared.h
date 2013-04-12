@@ -123,7 +123,7 @@ int shared_get_vlan_desc(int vlan_id, char *desc);
  * return 0 if successful, negative value if setting description failed
  * and also set errno
  */
-int shared_set_vlan_desc(int vlan_id, char *desc);
+int shared_set_vlan_desc(int vlan_id, const char *desc);
 
 /* Forgets about vlan identified by arg0; return 0 if vlan has been
  * stored in shared memory, negative value otherwise and set errno.

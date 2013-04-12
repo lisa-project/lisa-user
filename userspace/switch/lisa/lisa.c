@@ -4,6 +4,26 @@
 #include "shared.h"
 #include "lisa.h"
 
+/* Add default descriptions for default vlans initialized by sw_vdb_init. */
+void sw_init(void)
+{
+	int ret, i;
+	char desc[SW_MAX_VLAN_NAME + 1];
+
+	ret = shared_init();
+	assert(ret == 0);
+	ret = shared_set_vlan_desc(1, "default");
+	assert(ret == 0);
+
+	for (i = 1002; i <= 1005; i++) {
+		__default_vlan_name(desc, i);
+		ret = shared_set_vlan_desc(i, desc);
+		assert(ret == 0);
+	}
+
+	printf("Successful sw_init()\n");
+}
+
 static int if_add(struct switch_operations *sw_ops, int ifindex, int mode)
 {
 	struct swcfgreq swcfgr;
@@ -93,6 +113,7 @@ static int vlan_add(struct switch_operations *sw_ops, int vlan)
 	errno = ioctl_errno;
 exit:
 	return rc;
+
 }
 
 int vlan_del (struct switch_operations *sw_ops, int vlan)
