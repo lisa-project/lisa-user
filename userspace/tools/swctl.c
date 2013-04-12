@@ -105,6 +105,10 @@ int main(int argc, char **argv) {
 		usage();
 		return 0;
 	}
+
+	/* Initialize sw_ops and shared memory */
+	status = switch_init();
+	assert(!status);
 	
 	sock = socket(PF_SWITCH, SOCK_RAW, 0);
 	if (sock == -1) {
@@ -113,13 +117,14 @@ int main(int argc, char **argv) {
 	}	
 
 	if(!strcmp(argv[1], "add")) {
+		int if_index;
 		if (argc < 3) {
 			usage();
 			return 0;
 		}
-		user_arg.cmd = SWCFG_ADDIF;
-		user_arg.ifindex = if_get_index(argv[2], sock);
-		status = ioctl(sock, SIOCSWCFG, &user_arg);
+
+		if_index = if_get_index(argv[2], sock);
+		status = sw_ops->if_add(sw_ops, if_index, 0);
 		if(status)
 			perror("add failed");
 		return 0;
@@ -132,8 +137,6 @@ int main(int argc, char **argv) {
 			usage();
 			return 0;
 		}
-		status = switch_init();
-		assert(!status);
 
 		if_index = if_get_index(argv[2], sock);
 		assert(if_index);
@@ -171,15 +174,10 @@ int main(int argc, char **argv) {
 			silent = 1;
 		} while(0);
 
-		status = switch_init();
-		assert(!status);
-
 		if_index = if_get_index(argv[2], sock);
 		assert(if_index);
 
-		user_arg.cmd = SWCFG_DELIF;
-		user_arg.ifindex = if_index;
-		status = ioctl(sock, SIOCSWCFG, &user_arg);
+		status = sw_ops->if_remove(sw_ops, if_index);
 		if (status && !silent) {
 			perror("del failed");
 			return 1;
@@ -225,8 +223,6 @@ int main(int argc, char **argv) {
 			usage();
 			return 0;
 		}
-		status = switch_init();
-		assert(!status);
 
 		status = shared_set_vlan_desc(atoi(argv[2]), argv[3]);
 		if (status)
