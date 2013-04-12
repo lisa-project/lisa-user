@@ -211,29 +211,27 @@ int switch_init(void) {
 	if (!mm)
 		return  -1;
 
-	if (mm->init) {
-		memset(SHM, 0, sizeof(struct shared));
-		MM_INIT_LIST_HEAD(mm, mm_ptr(mm, &SHM->vlan_descs));
-		MM_INIT_LIST_HEAD(mm, mm_ptr(mm, &SHM->if_tags));
-		MM_INIT_LIST_HEAD(mm, mm_ptr(mm, &SHM->if_descs));
-		switch_init_cdp();
-		switch_init_rstp();
+	if (!mm->init)
+		return 0;
 
-		ret = shared_set_vlan_desc(1, "default");
+	memset(SHM, 0, sizeof(struct shared));
+	MM_INIT_LIST_HEAD(mm, mm_ptr(mm, &SHM->vlan_descs));
+	MM_INIT_LIST_HEAD(mm, mm_ptr(mm, &SHM->if_tags));
+	MM_INIT_LIST_HEAD(mm, mm_ptr(mm, &SHM->if_descs));
+	switch_init_cdp();
+	switch_init_rstp();
+
+	ret = shared_set_vlan_desc(1, "default");
+	if (ret)
+		return -1;
+
+	for (i = 1002; i <= 1005; i++) {
+		__default_vlan_name(desc, i);
+		ret = shared_set_vlan_desc(i, desc);
 		if (ret)
 			return -1;
-
-		for (i = 1002; i <= 1005; i++) {
-			__default_vlan_name(desc, i);
-			ret = shared_set_vlan_desc(i, desc);
-			if (ret)
-				return -1;
-
-		}
-		return sw_ops->backend_init(sw_ops);
 	}
-
-	return 0;
+	return sw_ops->backend_init(sw_ops);
 }
 
 int shared_auth(int type, int level,
