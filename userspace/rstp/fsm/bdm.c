@@ -2,7 +2,7 @@
 
 #include "swsock.h"
 #include "rstp.h"
-#include "shared.h"
+#include "switch.h"
 
 #define BDM_EDGE	0
 #define BDM_NOT_EDGE	1

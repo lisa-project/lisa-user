@@ -151,8 +151,8 @@ int main(int argc, char **argv) {
 	ctx.sock_fd = -1;
 	ctx.cdp = NULL;
 
-	if (shared_init() < 0) {
-		perror("shared_init");
+	if (switch_init() < 0) {
+		perror("switch_init");
 		return -1;
 	}
 

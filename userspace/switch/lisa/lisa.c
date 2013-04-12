@@ -1,27 +1,12 @@
 #include <linux/net_switch.h>
 #include <errno.h>
 
-#include "shared.h"
+#include "switch.h"
 #include "lisa.h"
 
-/* Add default descriptions for default vlans initialized by sw_vdb_init. */
-void sw_init(void)
+static int backend_init(struct switch_operations *sw_ops)
 {
-	int ret, i;
-	char desc[SW_MAX_VLAN_NAME + 1];
-
-	ret = shared_init();
-	assert(ret == 0);
-	ret = shared_set_vlan_desc(1, "default");
-	assert(ret == 0);
-
-	for (i = 1002; i <= 1005; i++) {
-		__default_vlan_name(desc, i);
-		ret = shared_set_vlan_desc(i, desc);
-		assert(ret == 0);
-	}
-
-	printf("Successful sw_init()\n");
+	return 0;
 }
 
 static int if_add(struct switch_operations *sw_ops, int ifindex, int mode)
@@ -105,7 +90,7 @@ static int vlan_add(struct switch_operations *sw_ops, int vlan)
 		__default_vlan_name(desc, vlan);
 		rc = shared_set_vlan_desc(vlan, desc);
 		if (rc) {
-			lisa_ctx.sw_ops.vlan_del(&lisa_ctx.sw_ops, vlan);
+			sw_ops->vlan_del(sw_ops, vlan);
 			goto exit;
 		}
 	}
@@ -256,6 +241,8 @@ int if_get_type (struct switch_operations *sw_ops, int ifindex, int *vlan)
 struct lisa_context lisa_ctx = {
 	.sock_fd = -1,
 	.sw_ops = (struct switch_operations) {
+		.backend_init = backend_init,
+
 		.if_add = if_add,
 		.if_remove = if_remove,
 		.vlan_add = vlan_add,
@@ -271,5 +258,3 @@ struct lisa_context lisa_ctx = {
 		.if_get_type = if_get_type
 	}
 };
-
-

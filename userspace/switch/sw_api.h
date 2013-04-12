@@ -18,11 +18,9 @@ struct net_switch_mac_e {
 	struct list_head lh;
 };
 
-/* Add default vlans (1, 1002-1005). */
-void sw_init(void) __attribute__((constructor));
-void sw_clean(void) __attribute__((destructor));
-
 struct switch_operations {
+	int (*backend_init) (struct switch_operations *sw_ops);
+
 	int (*if_add) (struct switch_operations *sw_ops, int ifindex, int mode);
 
 	int (*if_remove) (struct switch_operations *sw_ops, int ifindex);

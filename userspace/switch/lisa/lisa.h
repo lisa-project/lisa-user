@@ -35,5 +35,4 @@ struct lisa_context {
 };
 
 extern struct lisa_context lisa_ctx;
-
 #endif

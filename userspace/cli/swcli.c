@@ -15,8 +15,8 @@ int main(int argc, char **argv) {
 	ctx.cdp = NULL;
 	ctx.rstp = NULL;
 
-	if (shared_init() < 0) {
-		perror("shared_init");
+	if (switch_init() < 0) {
+		perror("switch_init");
 		return -1;
 	}
 

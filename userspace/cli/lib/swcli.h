@@ -20,7 +20,7 @@
 
 #include "swsock.h"
 #include "util.h"
-#include "shared.h"
+#include "switch.h"
 #include "cli.h"
 #include "cdp_client.h"
 #include "rstp_client.h"

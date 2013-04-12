@@ -12,7 +12,7 @@
 #include <stdio.h>
 #include <errno.h>
 
-#include "shared.h"
+#include "switch.h"
 #include "lisa.h"
 
 #define DEFAULT_VLAN		1
@@ -43,7 +43,7 @@ static void test_rename_arbitrary(void) {
 	char bkp_desc[SW_MAX_VLAN_NAME + 1];
 
 	/* Initialize shared context as vlan description resides in mm. */
-	shared_init();
+	switch_init();
 	/* Try to add ARBITRARY_VLAN. If it already exists, just rename it. */
 	add_ret = lisa_ctx.sw_ops.vlan_add(&lisa_ctx.sw_ops, ARBITRARY_VLAN);
 	if (add_ret == -1 && errno != EEXIST)

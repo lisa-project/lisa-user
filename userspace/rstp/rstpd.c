@@ -1,6 +1,6 @@
 #include "rstp.h"
 #include "swsock.h"
-#include "shared.h"
+#include "switch.h"
 #include <sys/time.h>
 
 pthread_t mgmt_thread;
@@ -269,7 +269,7 @@ int main(int argc, char *argv[])
 	init_bridge();
 
 	/* Initialize shared memory area */
-	shared_init();
+	switch_init();
 
 	/* Set one second timer */
 	sigemptyset(&alrm_mask);

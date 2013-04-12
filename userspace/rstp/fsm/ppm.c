@@ -1,7 +1,7 @@
 /* PORT PROTOCOL MIGRATION MACHINE */
 
 #include "rstp.h"
-#include "shared.h"
+#include "switch.h"
 
 #define PPM_CHECKING_RSTP	0
 #define PPM_SELECTING_STP	1

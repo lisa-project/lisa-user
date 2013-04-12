@@ -546,7 +546,7 @@ int main(int argc, char *argv[]) {
 	pthread_sigmask(SIG_BLOCK, &signal_set, NULL);
 
 	/* initialize shared memory area */
-	shared_init();
+	switch_init();
 
 	/* initial cdp configuration */
 	do_initial_cfg();

@@ -43,8 +43,8 @@ int main(int argc, char *argv[])
 	struct swcli_context ctx;
 	char hostname[HOST_NAME_MAX];
 	
-	if (shared_init() < 0) {
-		perror("shared_init");
+	if (switch_init() < 0) {
+		perror("switch_init");
 		return -1;
 	}
 

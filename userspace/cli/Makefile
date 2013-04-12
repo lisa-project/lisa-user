@@ -5,6 +5,8 @@ CFLAGS		= -fPIC -g
 include $(TOP_DIR)/scripts/Makefile.includes
 INC		= $(LINUX_INC) \
 		  $(TOP_DIR)/include \
+		  $(TOP_DIR)/switch \
+		  $(TOP_DIR)/switch/lisa \
 		  $(TOP_DIR)/cli \
 		  $(TOP_DIR)/cli/lib \
 		  $(TOP_DIR)/cli/command \
@@ -96,9 +98,9 @@ include $(TOP_DIR)/scripts/Makefile.rules
 dep: $(DEPS)
 
 libswcli.so: $(LIBSWCLI_OBJS)
-	$(Q)$(MAKE) -C $(TOP_DIR)/lib
+	$(Q)$(MAKE) -C $(TOP_DIR)/lib -C ../switch -C lisa
 	$(QUIET_LD)$(CC) $(CFLAGS) -shared -Wl,-soname,$@ -o $@ -lreadline -lcurses -lutil -lcrypt -lrt \
-		$^ ../lib/util.o ../lib/mm.o ../lib/if_generic.o ../lib/netlink.o ../lib/shared.o ../lib/cdp_client.o ../lib/rstp_client.o
+		$^ ../lib/util.o ../switch/lisa/lisa.o ../lib/mm.o ../lib/if_generic.o ../lib/netlink.o ../switch/switch.o ../lib/cdp_client.o ../lib/rstp_client.o
 
 $(LIBSWCLI_TARGETS): % : %.o libswcli.so
 	$(QUIET_LD)$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^

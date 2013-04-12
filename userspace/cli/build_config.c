@@ -30,7 +30,7 @@
 #include <unistd.h>
 
 #include "climain.h"
-#include "shared.h"
+#include "switch.h"
 #include "ip.h"
 #include "cdp_client.h"
 #include "rstp_client.h"

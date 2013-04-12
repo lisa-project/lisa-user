@@ -50,7 +50,7 @@
 #include "util.h"
 #include "list.h"
 #include "swsock.h"
-#include "shared.h"
+#include "switch.h"
 #include "if_generic.h"
 
 /* the pid file of the cdp daemon */

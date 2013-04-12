@@ -1,7 +1,7 @@
 /* PORT ROLE SELECTION MACHINE */
 
 #include "rstp.h"
-#include "shared.h"
+#include "switch.h"
 #include "vector.h"
 
 #define PRS_INIT_BRIDGE		0

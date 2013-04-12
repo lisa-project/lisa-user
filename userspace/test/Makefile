@@ -19,8 +19,8 @@ include $(TOP_DIR)/scripts/Makefile.rules
 dep: $(DEPS)
 
 vlan_rename: vlan_rename.o
-	$(Q) $(MAKE) -C $(TOP_DIR)/lib -C ../switch/lisa
-	$(QUIET_LD)$(CC) $(LDFLAGS) -o $@ $^ ../lib/shared.o ../lib/mm.o \
+	$(Q) $(MAKE) -C $(TOP_DIR)/lib -C ../switch -C lisa
+	$(QUIET_LD)$(CC) $(LDFLAGS) -o $@ $^ ../switch/switch.o ../lib/mm.o \
 		../switch/lisa/lisa.o -lrt
 
 

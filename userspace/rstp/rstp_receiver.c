@@ -1,5 +1,5 @@
 #include "rstp.h"
-#include "shared.h"
+#include "switch.h"
 
 extern struct list_head registered_interfaces;
 

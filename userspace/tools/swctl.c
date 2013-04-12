@@ -31,7 +31,7 @@
 
 #include "lisa.h"
 #include "swsock.h"
-#include "shared.h"
+#include "switch.h"
 #include "util.h"
 #include "if_generic.h"
 
@@ -132,7 +132,7 @@ int main(int argc, char **argv) {
 			usage();
 			return 0;
 		}
-		status = shared_init();
+		status = switch_init();
 		assert(!status);
 
 		if_index = if_get_index(argv[2], sock);
@@ -171,7 +171,7 @@ int main(int argc, char **argv) {
 			silent = 1;
 		} while(0);
 
-		status = shared_init();
+		status = switch_init();
 		assert(!status);
 
 		if_index = if_get_index(argv[2], sock);
@@ -201,10 +201,8 @@ int main(int argc, char **argv) {
 			usage();
 			return 0;
 		}
-		status = shared_init();
-		assert(!status);
 
-		status = lisa_ctx.sw_ops.vlan_add(&lisa_ctx.sw_ops, atoi(argv[2]));
+		status = sw_ops->vlan_add(sw_ops, atoi(argv[2]));
 		if (status)
 			perror("addvlan failed");
 		return 0;	
@@ -215,11 +213,8 @@ int main(int argc, char **argv) {
 			usage();
 			return 0;
 		}
-		status = shared_init();
-		assert(!status);
 
-		status = lisa_ctx.sw_ops.vlan_del(&lisa_ctx.sw_ops,
-				atoi(argv[2]));
+		status = sw_ops->vlan_del(sw_ops, atoi(argv[2]));
 		if (status)
 			perror("delvlan failed");
 		return 0;
@@ -230,7 +225,7 @@ int main(int argc, char **argv) {
 			usage();
 			return 0;
 		}
-		status = shared_init();
+		status = switch_init();
 		assert(!status);
 
 		status = shared_set_vlan_desc(atoi(argv[2]), argv[3]);
@@ -273,7 +268,7 @@ int main(int argc, char **argv) {
 			return 0;
 		}
 		user_arg.ifindex = if_get_index(argv[2], sock);
-		status = lisa_ctx.sw_ops.if_set_mode(&lisa_ctx.sw_ops,
+		status = sw_ops->if_set_mode(sw_ops,
 				user_arg.ifindex, SWCFG_SETTRUNK, atoi(argv[3]));
 
 		if (status)
@@ -403,7 +398,7 @@ int main(int argc, char **argv) {
 		}
 		int type;
 		user_arg.ifindex = if_get_index(argv[2], sock);
-		status = lisa_ctx.sw_ops.if_get_type(&lisa_ctx.sw_ops,
+		status = sw_ops->if_get_type(sw_ops,
 				user_arg.ifindex, &type);
 		if(status < 0) {
 			printf("getting if type failed\n");

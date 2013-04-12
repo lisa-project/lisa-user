@@ -5,6 +5,8 @@ LDFLAGS = -lpthread -lm -lrt
 
 include $(TOP_DIR)/scripts/Makefile.includes
 INC 	= $(LINUX_INC) \
+	  $(TOP_DIR)/switch \
+	  $(TOP_DIR)/switch/lisa \
 	  $(TOP_DIR)/include
 DEF	= _XOPEN_SOURCE=500 \
 	  DEBUG
@@ -19,7 +21,7 @@ include $(TOP_DIR)/scripts/Makefile.rules
 
 dep: $(DEPS)
 
-LIB_OBJS = $(TOP_DIR)/lib/util.o $(TOP_DIR)/lib/shared.o $(TOP_DIR)/lib/mm.o \
+LIB_OBJS = $(TOP_DIR)/lib/util.o $(TOP_DIR)/switch/lisa/lisa.o $(TOP_DIR)/switch/switch.o $(TOP_DIR)/lib/mm.o \
 		   $(TOP_DIR)/lib/if_generic.o $(TOP_DIR)/lib/netlink.o
 
 $(TOP_DIR)/include/swsock.h:

@@ -1,7 +1,7 @@
 /* TOPOLOGY CHANGE MACHINE */
 
 #include "rstp.h"
-#include "shared.h"
+#include "switch.h"
 
 #define TCM_INACTIVE		0
 #define TCM_LEARNING		1

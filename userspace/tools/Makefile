@@ -21,9 +21,9 @@ include $(TOP_DIR)/scripts/Makefile.rules
 dep: $(DEPS)
 
 swctl: swctl.o
-	$(Q) $(MAKE) -C $(TOP_DIR)/lib -C ../switch/lisa
+	$(Q) $(MAKE) -C $(TOP_DIR)/lib -C ../switch
 	$(QUIET_LD)$(CC) $(LDFLAGS) -o $@ $^ ../lib/if_generic.o ../lib/netlink.o ../lib/util.o \
-		../switch/lisa/lisa.o ../lib/mm.o ../lib/shared.o -lrt
+		../switch/lisa/lisa.o ../lib/mm.o ../switch/switch.o -lrt
 	
 $(SIMPLE_TARGETS): % : %.o
 	$(QUIET_LD)$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^

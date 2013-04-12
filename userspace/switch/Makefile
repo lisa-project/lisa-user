@@ -1,14 +1,14 @@
-TOP_DIR		:= $(shell pwd)/../../
-CFLAGS		= -fPIC -g -I..
+TOP_DIR = ..
 
-
+CFLAGS  = -fPIC -g
 
 include $(TOP_DIR)/scripts/Makefile.includes
-INC		= $(LINUX_INC) \
-		  $(TOP_DIR)/include
+INC	= $(LINUX_INC) \
+	  $(TOP_DIR)/include \
+	  lisa \
+	  .
 
-# LiSA Middleware
-SRCS = lisa.c
+SRCS	= switch.c
 
 include $(TOP_DIR)/scripts/Makefile.variables
 include $(TOP_DIR)/scripts/Makefile.rules
