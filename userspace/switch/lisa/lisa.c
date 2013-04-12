@@ -98,10 +98,9 @@ static int vlan_add(struct switch_operations *sw_ops, int vlan)
 	errno = ioctl_errno;
 exit:
 	return rc;
-
 }
 
-int vlan_del (struct switch_operations *sw_ops, int vlan)
+static int vlan_del(struct switch_operations *sw_ops, int vlan)
 {
 	int rc, sock_fd, ioctl_errno;
 	struct swcfgreq swcfgr;
@@ -122,7 +121,8 @@ int vlan_del (struct switch_operations *sw_ops, int vlan)
 	return rc;
 }
 
-int if_add_trunk_vlans(struct switch_operations *sw_ops, int ifindex,unsigned char *vlans)
+static int if_add_trunk_vlans(struct switch_operations *sw_ops,
+	int ifindex, unsigned char *vlans)
 {
 	int rc, sock_fd, ioctl_errno;
 	struct swcfgreq swcfgr;
@@ -142,7 +142,8 @@ int if_add_trunk_vlans(struct switch_operations *sw_ops, int ifindex,unsigned ch
 	return rc;
 }
 
-int if_set_trunk_vlans(struct switch_operations *sw_ops, int ifindex,unsigned char *vlans)
+static int if_set_trunk_vlans(struct switch_operations *sw_ops,
+	int ifindex, unsigned char *vlans)
 {
 	int rc, sock_fd, ioctl_errno;
 	struct swcfgreq swcfgr;
@@ -163,7 +164,8 @@ int if_set_trunk_vlans(struct switch_operations *sw_ops, int ifindex,unsigned ch
 	return rc;
 }
 
-int if_set_mode (struct switch_operations *sw_ops, int ifindex, int mode, int flag)
+static int if_set_mode (struct switch_operations *sw_ops, int ifindex,
+	int mode, int flag)
 {
 	int rc, sock_fd, ioctl_errno;
 	struct swcfgreq swcfgr;
@@ -197,7 +199,8 @@ out:
 	return rc;
 }
 
-int if_del_trunk_vlans(struct switch_operations *sw_ops, int ifindex,unsigned char *vlans)
+static int if_del_trunk_vlans(struct switch_operations *sw_ops,
+	int ifindex, unsigned char *vlans)
 {
 	int rc, sock_fd, ioctl_errno;
 	struct swcfgreq swcfgr;
@@ -217,7 +220,7 @@ int if_del_trunk_vlans(struct switch_operations *sw_ops, int ifindex,unsigned ch
 	return rc;
 }
 
-int if_get_type (struct switch_operations *sw_ops, int ifindex, int *vlan)
+static int if_get_type(struct switch_operations *sw_ops, int ifindex, int *type)
 {
 	int rc, sock_fd, ioctl_errno;
 	struct swcfgreq swcfgr;
@@ -232,14 +235,13 @@ int if_get_type (struct switch_operations *sw_ops, int ifindex, int *vlan)
 	SW_SOCK_CLOSE(lc, sock_fd); /* this can overwrite ioctl errno*/
 
 	errno = ioctl_errno;
-	*vlan = swcfgr.ext.switchport;
+	*type = swcfgr.ext.switchport;
 
 	return rc;
 }
 
 /* TODO implement switch API with lisa module */
 struct lisa_context lisa_ctx = {
-	.sock_fd = -1,
 	.sw_ops = (struct switch_operations) {
 		.backend_init = backend_init,
 
@@ -256,5 +258,6 @@ struct lisa_context lisa_ctx = {
 
 		.if_set_mode = if_set_mode,
 		.if_get_type = if_get_type
-	}
+	},
+	.sock_fd = -1
 };
