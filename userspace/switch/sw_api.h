@@ -29,8 +29,9 @@ struct switch_operations {
 
 	/**
 	 * @param mode   Switchport mode: access or trunk.
+	 * @param flag Specifies if the mode is set to on(flag = 1) or off (flag = 0)
 	 */
-	int (*if_set_mode) (struct switch_operations *sw_ops, int ifindex, int mode);
+	int (*if_set_mode) (struct switch_operations *sw_ops, int ifindex, int mode, int flag);
 
 	int (*if_set_port_vlan) (struct switch_operations *sw_ops, int ifindex, int vlan);
 
@@ -44,7 +45,11 @@ struct switch_operations {
 	 */
 	int (*if_get_vlans) (struct switch_operations *sw_ops, int ifindex, unsigned char *vlans);
 
-	int (*if_get_type) (struct switch_operations *sw_ops, int ifindex, int *vlan, int *mode);
+	/**
+	 * @param mode This parameter will return as side effect the type of the interface:
+	 * ethernet or a virtual vlan interface
+	 */
+	int (*if_get_type) (struct switch_operations *sw_ops, int ifindex, int *mode);
 
 	int (*if_enable) (struct switch_operations *sw_ops, int ifindex);
 	int (*if_disable) (struct switch_operations *sw_ops, int ifindex);

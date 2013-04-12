@@ -71,7 +71,7 @@ void usage(void) {
 		"  add iface_name\t\t\tAdds an interface to switch.\n"
 		"  addtagged iface_name tag_name\t\tAdds an interface to switch and assigns tag.\n"
 		"  del [-s] iface_name\t\t\tRemoves an iterface from switch\n"
-		"  addvlan vlan_no\t\tAdds a vlan to the vlan database\n"
+		"  addvlan vlan_no\t\t\tAdds a vlan to the vlan database\n"
 		"  delvlan vlan_no\t\t\tDeletes a vlan from the vlan database\n"
 		"  chvlan vlan_no new_vlan_name\t\tRenames vlan_no to new_vlan_name\n"
 		"  addportvlan iface_name vlan_no\tAdds vlan to allowed vlans of\n"
@@ -90,6 +90,7 @@ void usage(void) {
 		"  delvif vlan_no\t\t\tRemoves the virtual interface for\n"
 		"  \t\t\t\t\tgiven vlan\n"
 		"  showmac\t\t\t\tPrints switch forwarding database\n"
+		"  getiftype if_name\t\t\tPrints the type of the the interface\n"
 		"\n"
 	);
 }
@@ -235,7 +236,7 @@ int main(int argc, char **argv) {
 		status = shared_set_vlan_desc(atoi(argv[2]), argv[3]);
 		if (status)
 			perror("chvlan failed");
-		return 0;	
+		return 0;
 	}
 
 	if (!strcmp(argv[1], "addportvlan")) {
@@ -271,10 +272,10 @@ int main(int argc, char **argv) {
 			usage();
 			return 0;
 		}
-		user_arg.cmd = SWCFG_SETTRUNK;
 		user_arg.ifindex = if_get_index(argv[2], sock);
-		user_arg.ext.trunk = atoi(argv[3]);
-		status = ioctl(sock, SIOCSWCFG, &user_arg);
+		status = lisa_ctx.sw_ops.if_set_mode(&lisa_ctx.sw_ops,
+				user_arg.ifindex, SWCFG_SETTRUNK, atoi(argv[3]));
+
 		if (status)
 			perror("settrunk failed");
 		return 0;	
@@ -395,6 +396,28 @@ int main(int argc, char **argv) {
 		return 0;
 	}
 
+	if (!strcmp(argv[1], "getiftype")) {
+		if(argc < 3){
+			usage();
+			return 0;
+		}
+		int type;
+		user_arg.ifindex = if_get_index(argv[2], sock);
+		status = lisa_ctx.sw_ops.if_get_type(&lisa_ctx.sw_ops,
+				user_arg.ifindex, &type);
+		if(status < 0) {
+			printf("getting if type failed\n");
+			return status;
+		}
+
+		if(type == SW_IF_VIF)
+			printf("[%s]\tvlan interface\n", argv[2]);
+		else
+			printf("[%s]\tethernet interface\n", argv[2]);
+
+		return status;
+
+	}
 	/* first command line arg invalid ... */
 	usage();
 

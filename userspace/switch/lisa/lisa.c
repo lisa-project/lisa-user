@@ -170,10 +170,45 @@ int if_set_trunk_vlans(struct switch_operations *sw_ops, int ifindex,unsigned ch
 	SW_SOCK_OPEN(lc, sock_fd);
 	rc = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
 	ioctl_errno = errno;
+
 	SW_SOCK_CLOSE(lc, sock_fd); /* this can overwrite ioctl errno*/
 
 	errno = ioctl_errno;
 
+	return rc;
+}
+
+int if_set_mode (struct switch_operations *sw_ops, int ifindex, int mode, int flag)
+{
+	int rc, sock_fd, ioctl_errno;
+	struct swcfgreq swcfgr;
+	struct lisa_context *lc = SWLiSA_CTX(sw_ops);
+
+	rc = 0;
+
+	swcfgr.cmd = mode;
+	swcfgr.ifindex = ifindex;
+
+	switch (mode) {
+		case SWCFG_SETTRUNK:
+			swcfgr.ext.trunk = flag;
+			break;
+		case SWCFG_SETACCESS:
+			swcfgr.ext.access = flag;
+			break;
+		default:
+			rc = -1;
+			goto out;
+	}
+
+	SW_SOCK_OPEN(lc, sock_fd);
+	rc = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
+	ioctl_errno = errno;
+	SW_SOCK_CLOSE(lc, sock_fd); /* this can overwrite ioctl errno*/
+
+	errno = ioctl_errno;
+
+out:
 	return rc;
 }
 
@@ -193,11 +228,29 @@ int if_del_trunk_vlans(struct switch_operations *sw_ops, int ifindex,unsigned ch
 	SW_SOCK_CLOSE(lc, sock_fd); /* this can overwrite ioctl errno*/
 
 	errno = ioctl_errno;
-
+	
 	return rc;
 }
 
+int if_get_type (struct switch_operations *sw_ops, int ifindex, int *vlan)
+{
+	int rc, sock_fd, ioctl_errno;
+	struct swcfgreq swcfgr;
+	struct lisa_context *lc = SWLiSA_CTX(sw_ops);
 
+	swcfgr.cmd = SWCFG_GETIFTYPE;
+	swcfgr.ifindex = ifindex;
+
+	SW_SOCK_OPEN(lc, sock_fd);
+	rc = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
+	ioctl_errno = errno;
+	SW_SOCK_CLOSE(lc, sock_fd); /* this can overwrite ioctl errno*/
+
+	errno = ioctl_errno;
+	*vlan = swcfgr.ext.switchport;
+
+	return rc;
+}
 
 /* TODO implement switch API with lisa module */
 struct lisa_context lisa_ctx = {
@@ -209,9 +262,13 @@ struct lisa_context lisa_ctx = {
 		.vlan_del = vlan_del,
 		.vlan_rename = vlan_rename,
 		.get_vlan_desc = get_vlan_desc,
+
 		.if_add_trunk_vlans = if_add_trunk_vlans,
 		.if_set_trunk_vlans = if_set_trunk_vlans,
-		.if_del_trunk_vlans = if_del_trunk_vlans
+		.if_del_trunk_vlans = if_del_trunk_vlans,
+
+		.if_set_mode = if_set_mode,
+		.if_get_type = if_get_type
 	}
 };
 
