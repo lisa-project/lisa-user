@@ -277,10 +277,10 @@ int main(int argc, char **argv) {
 			usage();
 			return 0;
 		}
-		user_arg.cmd = SWCFG_SETPORTVLAN;
 		user_arg.ifindex = if_get_index(argv[2], sock);
 		user_arg.vlan = atoi(argv[3]);
-		status = ioctl(sock, SIOCSWCFG, &user_arg);
+		status = sw_ops->if_set_port_vlan(sw_ops,
+				user_arg.ifindex, user_arg.vlan);
 		if (status)
 			perror("setportvlan failed");
 		return 0;
@@ -333,11 +333,15 @@ int main(int argc, char **argv) {
 			usage();
 			return 0;
 		}
-		user_arg.cmd  = SWCFG_ADDVIF;
+		int interface;
+
 		user_arg.vlan = atoi(argv[2]);
-		status = ioctl(sock, SIOCSWCFG, &user_arg);
+		status = sw_ops->vif_add(sw_ops, user_arg.vlan, &interface);
+
 		if (status)
 			perror("addvif failed");
+		printf("[vlan] %d\t[vif_index] %d\n",user_arg.vlan, interface);
+
 		return 0;
 	}
 
@@ -346,11 +350,12 @@ int main(int argc, char **argv) {
 			usage();
 			return 0;
 		}
-		user_arg.cmd = SWCFG_DELVIF;
 		user_arg.vlan = atoi(argv[2]);
-		status = ioctl(sock, SIOCSWCFG, &user_arg);
+		status = sw_ops->vif_del(sw_ops, user_arg.vlan);
+
 		if (status)
 			perror("delvif failed");
+		printf("Succesfully deleted [vif] %d\n", user_arg.vlan);
 		return 0;
 	}
 

@@ -240,6 +240,68 @@ static int if_get_type(struct switch_operations *sw_ops, int ifindex, int *type)
 	return rc;
 }
 
+static int vif_add(struct switch_operations *sw_ops, int vlan, int *ifindex)
+{
+	int rc, sock_fd, ioctl_errno;
+	struct swcfgreq swcfgr;
+	struct lisa_context *lc = SWLiSA_CTX(sw_ops);
+
+	swcfgr.cmd = SWCFG_ADDVIF;
+	swcfgr.vlan = vlan;
+
+	SW_SOCK_OPEN(lc, sock_fd);
+	rc = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
+	ioctl_errno = errno;
+	SW_SOCK_CLOSE(lc, sock_fd);
+
+	errno = ioctl_errno;
+	*ifindex = swcfgr.ifindex;
+
+	return rc;
+}
+
+static int vif_del(struct switch_operations *sw_ops, int vlan)
+{
+	int rc, sock_fd, ioctl_errno;
+	struct swcfgreq swcfgr;
+	struct lisa_context *lc = SWLiSA_CTX(sw_ops);
+
+	swcfgr.cmd = SWCFG_DELVIF;
+	swcfgr.vlan = vlan;
+
+	SW_SOCK_OPEN(lc, sock_fd);
+	rc = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
+	ioctl_errno = errno;
+	SW_SOCK_CLOSE(lc, sock_fd);
+
+	errno = ioctl_errno;
+
+	return rc;
+}
+
+static int if_set_port_vlan(struct switch_operations *sw_ops, int ifindex, int vlan)
+{
+	int rc, sock_fd, ioctl_errno;
+	struct swcfgreq swcfgr;
+	struct lisa_context *lc = SWLiSA_CTX(sw_ops);
+
+	swcfgr.cmd = SWCFG_SETPORTVLAN;
+	swcfgr.ifindex = ifindex;
+	swcfgr.vlan = vlan;
+
+	SW_SOCK_OPEN(lc, sock_fd);
+	rc = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
+	ioctl_errno = errno;
+	SW_SOCK_CLOSE(lc, sock_fd);
+
+	errno = ioctl_errno;
+
+	printf("[errno] %d\n",ioctl_errno);
+
+	return rc;
+}
+
+
 /* TODO implement switch API with lisa module */
 struct lisa_context lisa_ctx = {
 	.sw_ops = (struct switch_operations) {
@@ -258,6 +320,9 @@ struct lisa_context lisa_ctx = {
 
 		.if_set_mode = if_set_mode,
 		.if_get_type = if_get_type
-	},
-	.sock_fd = -1
+		.if_set_port_vlan = if_set_port_vlan,
+
+		.vif_add = vif_add,
+		.vif_del = vif_del
+	}
 };
