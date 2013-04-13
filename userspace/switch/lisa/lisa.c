@@ -361,7 +361,6 @@ static int get_if_list(struct switch_operations *sw_ops, int type,
 	return 0;
 }
 
-
 static int if_set_desc(struct switch_operations *sw_ops, int ifindex, char *desc)
 {
 	return shared_set_if_desc(ifindex, desc);
@@ -370,6 +369,43 @@ static int if_set_desc(struct switch_operations *sw_ops, int ifindex, char *desc
 static int if_get_desc(struct switch_operations *sw_ops, int ifindex, char *desc)
 {
 	return shared_get_if_desc(ifindex, desc);
+}
+
+static int set_age_time(struct switch_operations *sw_ops, int age_time)
+{
+	int ret, sock_fd, ioctl_errno;
+	struct swcfgreq swcfgr;
+	struct lisa_context *lc = SWLiSA_CTX(sw_ops);
+
+	swcfgr.cmd = SWCFG_SETAGETIME;
+	swcfgr.ext.nsec = age_time;
+
+	SW_SOCK_OPEN(lc, sock_fd);
+	ret = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
+	ioctl_errno = errno;
+	SW_SOCK_CLOSE(lc, sock_fd);
+
+	errno = ioctl_errno;
+	return ret;
+}
+
+static int get_age_time(struct switch_operations *sw_ops, int *age_time)
+{
+	int ret, sock_fd, ioctl_errno;
+	struct swcfgreq swcfgr;
+	struct lisa_context *lc = SWLiSA_CTX(sw_ops);
+
+	swcfgr.cmd = SWCFG_GETAGETIME;
+
+	SW_SOCK_OPEN(lc, sock_fd);
+	ret = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
+	ioctl_errno = errno;
+	SW_SOCK_CLOSE(lc, sock_fd);
+
+	errno = ioctl_errno;
+	*age_time = swcfgr.ext.nsec;
+
+	return ret;
 }
 
 /* TODO implement switch API with lisa module */
@@ -395,6 +431,9 @@ struct lisa_context lisa_ctx = {
 		.if_set_desc = if_set_desc,
 		.if_get_desc = if_get_desc,
 		.if_set_port_vlan = if_set_port_vlan,
+
+		.get_age_time = get_age_time,
+		.set_age_time = set_age_time,
 
 		.vif_add = vif_add,
 		.vif_del = vif_del
