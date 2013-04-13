@@ -22,10 +22,8 @@ static int if_add(struct switch_operations *sw_ops, int ifindex, int mode)
 	swcfgr.ifindex = ifindex;
 	swcfgr.ext.switchport = mode;
 	ret = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
-	ioctl_errno = errno;
 	SW_SOCK_CLOSE(uc, sock_fd);
 
-	errno = ioctl_errno;
 	return ret;
 }
 
@@ -40,10 +38,8 @@ static int if_remove(struct switch_operations *sw_ops, int ifindex)
 	swcfgr.cmd = SWCFG_DELIF;
 	swcfgr.ifindex = ifindex;
 	ret = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
-	ioctl_errno = errno;
 	SW_SOCK_CLOSE(uc, sock_fd);
 
-	errno = ioctl_errno;
 	return ret;
 }
 
@@ -83,7 +79,6 @@ static int vlan_add(struct switch_operations *sw_ops, int vlan)
 
 	SW_SOCK_OPEN(uc, sock_fd);
 	rc = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
-	ioctl_errno = errno;
 	SW_SOCK_CLOSE(uc, sock_fd); /* this can overwrite ioctl errno */
 
 	/* Add default description for newly added vlan. */
@@ -96,7 +91,6 @@ static int vlan_add(struct switch_operations *sw_ops, int vlan)
 		}
 	}
 
-	errno = ioctl_errno;
 exit:
 	return rc;
 }
@@ -114,10 +108,7 @@ static int vlan_del(struct switch_operations *sw_ops, int vlan)
 
 	SW_SOCK_OPEN(lc, sock_fd);
 	rc = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
-	ioctl_errno = errno;
 	SW_SOCK_CLOSE(lc, sock_fd); /* this can overwrite ioctl errno */
-
-	errno = ioctl_errno;
 
 	return rc;
 }
@@ -135,10 +126,7 @@ static int if_add_trunk_vlans(struct switch_operations *sw_ops,
 
 	SW_SOCK_OPEN(lc, sock_fd);
 	rc = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
-	ioctl_errno = errno;
 	SW_SOCK_CLOSE(lc, sock_fd); /* this can overwrite ioctl errno*/
-
-	errno = ioctl_errno;
 
 	return rc;
 }
@@ -156,11 +144,7 @@ static int if_set_trunk_vlans(struct switch_operations *sw_ops,
 
 	SW_SOCK_OPEN(lc, sock_fd);
 	rc = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
-	ioctl_errno = errno;
-
 	SW_SOCK_CLOSE(lc, sock_fd); /* this can overwrite ioctl errno*/
-
-	errno = ioctl_errno;
 
 	return rc;
 }
@@ -191,10 +175,7 @@ static int if_set_mode (struct switch_operations *sw_ops, int ifindex,
 
 	SW_SOCK_OPEN(lc, sock_fd);
 	rc = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
-	ioctl_errno = errno;
 	SW_SOCK_CLOSE(lc, sock_fd); /* this can overwrite ioctl errno*/
-
-	errno = ioctl_errno;
 
 out:
 	return rc;
@@ -213,11 +194,8 @@ static int if_del_trunk_vlans(struct switch_operations *sw_ops,
 
 	SW_SOCK_OPEN(lc, sock_fd);
 	rc = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
-	ioctl_errno = errno;
 	SW_SOCK_CLOSE(lc, sock_fd); /* this can overwrite ioctl errno*/
 
-	errno = ioctl_errno;
-	
 	return rc;
 }
 
@@ -232,10 +210,8 @@ static int if_get_type(struct switch_operations *sw_ops, int ifindex, int *type)
 
 	SW_SOCK_OPEN(lc, sock_fd);
 	rc = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
-	ioctl_errno = errno;
 	SW_SOCK_CLOSE(lc, sock_fd); /* this can overwrite ioctl errno*/
 
-	errno = ioctl_errno;
 	*type = swcfgr.ext.switchport;
 
 	return rc;
@@ -252,10 +228,8 @@ static int vif_add(struct switch_operations *sw_ops, int vlan, int *ifindex)
 
 	SW_SOCK_OPEN(lc, sock_fd);
 	rc = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
-	ioctl_errno = errno;
 	SW_SOCK_CLOSE(lc, sock_fd);
 
-	errno = ioctl_errno;
 	*ifindex = swcfgr.ifindex;
 
 	return rc;
@@ -272,10 +246,7 @@ static int vif_del(struct switch_operations *sw_ops, int vlan)
 
 	SW_SOCK_OPEN(lc, sock_fd);
 	rc = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
-	ioctl_errno = errno;
 	SW_SOCK_CLOSE(lc, sock_fd);
-
-	errno = ioctl_errno;
 
 	return rc;
 }
@@ -292,10 +263,7 @@ static int if_set_port_vlan(struct switch_operations *sw_ops, int ifindex, int v
 
 	SW_SOCK_OPEN(lc, sock_fd);
 	rc = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
-	ioctl_errno = errno;
 	SW_SOCK_CLOSE(lc, sock_fd);
-
-	errno = ioctl_errno;
 
 	return rc;
 }
@@ -312,13 +280,11 @@ static int get_vlan_interfaces(struct switch_operations *sw_ops, int vlan,
 
 	SW_SOCK_OPEN(lc, sock_fd);
 	vlif_no = buf_alloc_swcfgr(&swcfgr, sock_fd);
-	ioctl_errno = errno;
 	SW_SOCK_CLOSE(lc, sock_fd);
 
 	if(vlif_no < 0)
 		return -1;
 
-	errno = ioctl_errno;
 	vlif_no /= sizeof(int);
 	*no_ifs = vlif_no;
 
@@ -343,10 +309,8 @@ static int get_if_list(struct switch_operations *sw_ops, int type,
 
 	SW_SOCK_OPEN(lc, sock_fd);
 	rc = buf_alloc_swcfgr(&swcfgr, sock_fd);
-	ioctl_errno = errno;
 	SW_SOCK_CLOSE(lc, sock_fd);
 
-	errno = ioctl_errno;
 	if (rc < 0)
 		return -1;
 
@@ -382,10 +346,8 @@ static int set_age_time(struct switch_operations *sw_ops, int age_time)
 
 	SW_SOCK_OPEN(lc, sock_fd);
 	ret = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
-	ioctl_errno = errno;
 	SW_SOCK_CLOSE(lc, sock_fd);
 
-	errno = ioctl_errno;
 	return ret;
 }
 
@@ -399,10 +361,8 @@ static int get_age_time(struct switch_operations *sw_ops, int *age_time)
 
 	SW_SOCK_OPEN(lc, sock_fd);
 	ret = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
-	ioctl_errno = errno;
 	SW_SOCK_CLOSE(lc, sock_fd);
 
-	errno = ioctl_errno;
 	*age_time = swcfgr.ext.nsec;
 
 	return ret;

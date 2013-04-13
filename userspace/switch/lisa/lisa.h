@@ -21,8 +21,10 @@
 } while(0)
 
 #define SW_SOCK_CLOSE(__ctx, __sock_fd) do {\
+	int tmp_errno = errno;		\
 	if (__sock_fd != __ctx->sock_fd)\
-		close(__sock_fd);\
+		close(__sock_fd);	\
+	errno = tmp_errno;		\
 } while (0)
 
 
