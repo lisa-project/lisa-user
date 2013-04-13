@@ -333,9 +333,10 @@ static int if_get_cfg (struct switch_operations *sw_ops, int ifindex, int *flags
 	*flags = swcfgr.ext.cfg.flags;
 	*access_vlan = swcfgr.ext.cfg.access_vlan;
 
-	for (i = 0; i < SW_VLAN_BMP_NO ; i++){
-		vlans[i] = ~vlans[i];
-	}
+	if (vlans)
+		for (i = 0; i < SW_VLAN_BMP_NO ; i++){
+			vlans[i] = ~vlans[i];
+		}
 	return rc;
 
 }
