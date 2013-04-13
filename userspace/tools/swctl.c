@@ -378,6 +378,7 @@ int main(int argc, char **argv) {
 		return 0;
 
 	}
+
 	if (!strcmp(argv[1], "deltrunkvlans")) {
 		if (argc < 4) {
 			usage();
@@ -396,7 +397,35 @@ int main(int argc, char **argv) {
 		return 0;
 
 	}
-	
+
+	if (!strcmp(argv[1], "getvdb")) {
+		if (argc < 2) {
+			usage();
+			return 0;
+		}
+		unsigned char vlans[SW_VLAN_BMP_NO];
+		int i;
+
+		status = sw_ops->get_vdb(sw_ops, vlans);
+
+		if (status)
+			perror("getvdb failed");
+
+		printf("VDB: ");
+
+		for (i=0 ; i < SW_MAX_VLAN; i++)
+		{
+			if (vlans[i / 8] & (1 << (i % 8)))
+			{
+				printf("%d, ",i);
+			}
+		}
+		printf("\n");
+
+		return 0;
+
+	}
+
 	if (!strcmp(argv[1], "settrunk")) {
 		if (argc < 4) {
 			usage();

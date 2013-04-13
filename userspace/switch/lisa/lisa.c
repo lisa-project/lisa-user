@@ -295,6 +295,24 @@ static int get_vlan_interfaces(struct switch_operations *sw_ops, int vlan,
 	free(swcfgr.buf.addr);
 	return 0;
 }
+static int get_vdb(struct switch_operations *sw_ops, unsigned char *vlans)
+{
+	int rc, sock_fd;
+	struct swcfgreq swcfgr;
+	struct lisa_context *lc = SWLiSA_CTX(sw_ops);
+
+	swcfgr.cmd = SWCFG_GETVDB;
+	swcfgr.vlan = 0;
+	swcfgr.buf.size = SW_VLAN_BMP_NO;
+	swcfgr.buf.addr = (char *)vlans;
+
+
+	SW_SOCK_OPEN(lc, sock_fd);
+	rc = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
+	SW_SOCK_CLOSE(lc, sock_fd);
+
+	return rc;
+}
 
 static int get_if_list(struct switch_operations *sw_ops, int type,
 	int *ifindexes, int *size)
@@ -437,6 +455,7 @@ struct lisa_context lisa_ctx = {
 		.get_vlan_desc = get_vlan_desc,
 		.get_vlan_interfaces = get_vlan_interfaces,
 		.get_if_list = get_if_list,
+		.get_vdb = get_vdb,
 
 		.if_add_trunk_vlans = if_add_trunk_vlans,
 		.if_set_trunk_vlans = if_set_trunk_vlans,

@@ -104,7 +104,7 @@ struct switch_operations {
 	 *
 	 * @param vlans  VLAN bitmap.
 	 */
-	int (*get_vdb) (struct switch_operations *sw_ops, char *vlans);
+	int (*get_vdb) (struct switch_operations *sw_ops, unsigned char *vlans);
 	int (*get_vlan_desc) (struct switch_operations *sw_ops, int vlan, char *desc);
 
 	int (*mrouter_set) (struct switch_operations *sw_ops, int vlan, int ifindex, int setting);
