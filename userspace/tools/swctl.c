@@ -47,6 +47,74 @@ static const char *dash =
 /* Get a null-terminated string (char *) of x dashes */
 #define DASHES(x) (dash + DASH_LENGTH - (x))
 
+#define is_digit(arg) ((arg) >= '0' && (arg) <= '9')
+
+int parse_vlan_list(char *list, unsigned char *bmp)
+{
+	int state = 0;
+	int min, max;
+	char *last = list, *ptr;
+
+	memset(bmp, 0xff, SW_VLAN_BMP_NO);
+	for(ptr = list; *ptr != '\0'; ptr++) {
+		switch(state) {
+		case 0: /* First number */
+			if(is_digit(*ptr))
+				continue;
+			switch(*ptr) {
+			case '-':
+				min = atoi(last);
+				if(sw_invalid_vlan(min))
+					return 1;
+				last = ptr + 1;
+				state = 1;
+				continue;
+			case ',':
+				min = atoi(last);
+				if(sw_invalid_vlan(min))
+					return 1;
+				last = ptr + 1;
+				sw_allow_vlan(bmp, min);
+				continue;
+			}
+			return 2;
+		case 1: /* Second number */
+			if(is_digit(*ptr))
+				continue;
+			if(*ptr == ',') {
+				max = atoi(last);
+				if(sw_invalid_vlan(max))
+					return 1;
+				while(min <= max) {
+					sw_allow_vlan(bmp, min);
+					min++;
+				}
+				last = ptr + 1;
+				state = 0;
+			}
+			return 2;
+		}
+	}
+	switch(state) {
+	case 0:
+		min = atoi(last);
+		if(sw_invalid_vlan(min))
+			return 1;
+		sw_allow_vlan(bmp, min);
+		break;
+	case 1:
+		max = atoi(last);
+		if(sw_invalid_vlan(max))
+			return 1;
+		while(min <= max) {
+			sw_allow_vlan(bmp, min);
+			min++;
+		}
+		break;
+	}
+	return 0;
+}
+
 void parse_hw_addr(char *mac, unsigned char *buf) {
 	unsigned short a0, a1, a2;
 	int i;
@@ -271,6 +339,62 @@ int main(int argc, char **argv) {
 		if (status)
 			perror("delportvlan failed");
 		return 0;
+	}
+
+	if (!strcmp(argv[1], "settrunkvlans")) {
+		if (argc < 4) {
+			usage();
+			return 0;
+		}
+		unsigned char vlans[SW_VLAN_BMP_NO];
+
+		parse_vlan_list(argv[3], vlans);
+
+		user_arg.ifindex = if_get_index(argv[2], sock);
+		status = sw_ops->if_set_trunk_vlans(sw_ops,
+				user_arg.ifindex, vlans);
+
+		if (status)
+			perror("settrunkvlans failed");
+		return 0;
+
+	}
+
+	if (!strcmp(argv[1], "addtrunkvlans")) {
+		if (argc < 4) {
+			usage();
+			return 0;
+		}
+		unsigned char vlans[SW_VLAN_BMP_NO];
+
+		parse_vlan_list(argv[3], vlans);
+
+		user_arg.ifindex = if_get_index(argv[2], sock);
+		status = sw_ops->if_add_trunk_vlans(sw_ops,
+				user_arg.ifindex, vlans);
+
+		if (status)
+			perror("addtrunkvlans failed");
+		return 0;
+
+	}
+	if (!strcmp(argv[1], "deltrunkvlans")) {
+		if (argc < 4) {
+			usage();
+			return 0;
+		}
+		unsigned char vlans[SW_VLAN_BMP_NO];
+
+		parse_vlan_list(argv[3], vlans);
+
+		user_arg.ifindex = if_get_index(argv[2], sock);
+		status = sw_ops->if_del_trunk_vlans(sw_ops,
+				user_arg.ifindex, vlans);
+
+		if (status)
+			perror("deltrunkvlans failed");
+		return 0;
+
 	}
 	
 	if (!strcmp(argv[1], "settrunk")) {
