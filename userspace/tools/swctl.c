@@ -38,6 +38,15 @@
 #define INITIAL_BUF_SIZE 4096
 #define ETH_ALEN 6
 
+/* Dash stuff used for pretty printing of tables */
+static const char *dash =
+"---------------------------------------"
+"---------------------------------------";
+/* Dash length must match the number of dashes in the string above */
+#define DASH_LENGTH 78
+/* Get a null-terminated string (char *) of x dashes */
+#define DASHES(x) (dash + DASH_LENGTH - (x))
+
 void parse_hw_addr(char *mac, unsigned char *buf) {
 	unsigned short a0, a1, a2;
 	int i;
@@ -91,6 +100,7 @@ void usage(void) {
 		"  \t\t\t\t\tgiven vlan\n"
 		"  showmac\t\t\t\tPrints switch forwarding database\n"
 		"  getiftype if_name\t\t\tPrints the type of the the interface\n"
+		"  getvlanifs vlan_name\t\t\tPrints the interfaces associated with the vlan\n"
 		"\n"
 	);
 }
@@ -401,18 +411,54 @@ int main(int argc, char **argv) {
 		user_arg.ifindex = if_get_index(argv[2], sock);
 		status = sw_ops->if_get_type(sw_ops,
 				user_arg.ifindex, &type);
-		if(status < 0) {
+		if (status < 0) {
 			printf("getting if type failed\n");
 			return status;
 		}
 
-		if(type == SW_IF_VIF)
+		if (type == SW_IF_VIF)
 			printf("[%s]\tvlan interface\n", argv[2]);
 		else
 			printf("[%s]\tethernet interface\n", argv[2]);
 
 		return status;
 
+	}
+
+	if (!strcmp(argv[1], "getvlanifs")) {
+		if(argc < 3){
+			usage();
+			return 0;
+		}
+		int *interfaces;
+		int no_ifs = 0;
+		int i;
+
+		interfaces = malloc(sizeof(int) * INITIAL_BUF_SIZE);
+		if (!interfaces) {
+			perror("Couldn't allocate buffer for interfaces\n");
+			return -1;
+		}
+
+		user_arg.vlan = atoi(argv[2]);
+		status = sw_ops->get_vlan_interfaces(sw_ops, user_arg.vlan,
+					interfaces, &no_ifs);
+
+		if (status < 0) {
+			printf("getting vlan interfaces failed\n");
+			return status;
+		}
+
+		printf("vlan\t|\tinterfaces\t\n");
+		printf("%s\n", DASHES(30));
+
+		printf("%s\t|",argv[2]);
+		for (i = 0; i < no_ifs; ++i) {
+			printf("%3d", interfaces[i]);
+		}
+		printf("\n");
+		free(interfaces);
+		return status;
 	}
 	/* first command line arg invalid ... */
 	usage();

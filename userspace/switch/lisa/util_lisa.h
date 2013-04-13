@@ -17,8 +17,8 @@
  *    MA  02111-1307  USA
  */
 
-#ifndef _UTIL_H
-#define _UTIL_H
+#ifndef _UTIL_LISA_H
+#define _UTIL_LISA_H
 
 #include <linux/net_switch.h>
 

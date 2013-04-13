@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <linux/sockios.h>
 
-#include "util.h"
+#include "util_lisa.h"
 
 int buf_alloc_swcfgr(struct swcfgreq *swcfgr, int sock_fd)
 {

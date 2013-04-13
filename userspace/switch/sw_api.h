@@ -90,7 +90,7 @@ struct switch_operations {
 	int (*vlan_del_mac_static) (struct switch_operations *sw_ops, int ifindex, int vlan, unsigned char *mac);
 	int (*vlan_del_mac_dynamic) (struct switch_operations *sw_ops, int ifindex, int vlan);
 
-	int (*get_vlan_interfaces) (struct switch_operations *sw_ops, int vlan, int *ifindexes);
+	int (*get_vlan_interfaces) (struct switch_operations *sw_ops, int vlan, int *ifindexes, int *no_ifs);
 
 	int (*igmp_enable) (struct switch_operations *sw_ops, int vlan);
 	int (*igmp_disable) (struct switch_operations *sw_ops, int vlan);

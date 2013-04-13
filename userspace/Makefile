@@ -10,8 +10,8 @@ SUBDIRS = \
 	$(TOP_DIR)/cli     \
 	$(TOP_DIR)/tools   \
 	$(TOP_DIR)/cdpd    \
-	$(TOP_DIR)/rstp    \
-	$(TOP_DIR)/test
+	$(TOP_DIR)/rstp
+#	$(TOP_DIR)/test
 
 DEPFILE = lisa.dep
 

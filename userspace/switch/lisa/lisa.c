@@ -2,6 +2,7 @@
 #include <errno.h>
 
 #include "switch.h"
+#include "util_lisa.h"
 #include "lisa.h"
 
 static int backend_init(struct switch_operations *sw_ops)
@@ -301,6 +302,36 @@ static int if_set_port_vlan(struct switch_operations *sw_ops, int ifindex, int v
 	return rc;
 }
 
+static int get_vlan_interfaces(struct switch_operations *sw_ops, int vlan,
+		int *ifindexes, int *no_ifs)
+{
+	int sock_fd, ioctl_errno, vlif_no,i;
+	struct swcfgreq swcfgr;
+	struct lisa_context *lc = SWLiSA_CTX(sw_ops);
+
+	swcfgr.cmd = SWCFG_GETVLANIFS;
+	swcfgr.vlan = vlan;
+
+	SW_SOCK_OPEN(lc, sock_fd);
+	vlif_no = buf_alloc_swcfgr(&swcfgr, sock_fd);
+	ioctl_errno = errno;
+	SW_SOCK_CLOSE(lc, sock_fd);
+
+	if(vlif_no < 0)
+		return -1;
+
+	errno = ioctl_errno;
+	vlif_no /= sizeof(int);
+	*no_ifs = vlif_no;
+
+	for (i = 0; i < vlif_no; ++i) {
+		ifindexes[i] = ((int *)swcfgr.buf.addr)[i];
+	}
+
+	free(swcfgr.buf.addr);
+	return 0;
+}
+
 
 /* TODO implement switch API with lisa module */
 struct lisa_context lisa_ctx = {
@@ -313,6 +344,7 @@ struct lisa_context lisa_ctx = {
 		.vlan_del = vlan_del,
 		.vlan_rename = vlan_rename,
 		.get_vlan_desc = get_vlan_desc,
+		.get_vlan_interfaces = get_vlan_interfaces,
 
 		.if_add_trunk_vlans = if_add_trunk_vlans,
 		.if_set_trunk_vlans = if_set_trunk_vlans,
