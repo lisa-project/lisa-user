@@ -5,6 +5,7 @@
 
 #include <linux/sockios.h>
 
+#include "util_lisa.h"
 #include "sw_api.h"
 #include "swsock.h"
 

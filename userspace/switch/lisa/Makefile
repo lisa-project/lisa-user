@@ -8,7 +8,7 @@ INC		= $(LINUX_INC) \
 		  $(TOP_DIR)/include
 
 # LiSA Middleware
-SRCS = lisa.c
+SRCS = util_lisa.c lisa.c
 
 include $(TOP_DIR)/scripts/Makefile.variables
 include $(TOP_DIR)/scripts/Makefile.rules
