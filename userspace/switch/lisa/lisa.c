@@ -13,7 +13,7 @@ static int backend_init(struct switch_operations *sw_ops)
 static int if_add(struct switch_operations *sw_ops, int ifindex, int mode)
 {
 	struct swcfgreq swcfgr;
-	int ret, sock_fd, ioctl_errno;
+	int ret, sock_fd;
 	struct lisa_context *uc = SWLiSA_CTX(sw_ops);
 
 	SW_SOCK_OPEN(uc, sock_fd);
@@ -30,7 +30,7 @@ static int if_add(struct switch_operations *sw_ops, int ifindex, int mode)
 static int if_remove(struct switch_operations *sw_ops, int ifindex)
 {
 	struct swcfgreq swcfgr;
-	int ret, sock_fd, ioctl_errno;
+	int ret, sock_fd;
 	struct lisa_context *uc = SWLiSA_CTX(sw_ops);
 
 	SW_SOCK_OPEN(uc, sock_fd);
@@ -69,7 +69,7 @@ static int vlan_rename(struct switch_operations *sw_ops, int vlan, char *desc)
 static int vlan_add(struct switch_operations *sw_ops, int vlan)
 {
 	struct swcfgreq swcfgr;
-	int rc, sock_fd, ioctl_errno;
+	int rc, sock_fd;
 	char desc[SW_MAX_VLAN_NAME];
 
 	struct lisa_context *uc = SWLiSA_CTX(sw_ops);
@@ -97,7 +97,7 @@ exit:
 
 static int vlan_del(struct switch_operations *sw_ops, int vlan)
 {
-	int rc, sock_fd, ioctl_errno;
+	int rc, sock_fd;
 	struct swcfgreq swcfgr;
 	struct lisa_context *lc = SWLiSA_CTX(sw_ops);
 
@@ -116,7 +116,7 @@ static int vlan_del(struct switch_operations *sw_ops, int vlan)
 static int if_add_trunk_vlans(struct switch_operations *sw_ops,
 	int ifindex, unsigned char *vlans)
 {
-	int rc, sock_fd, ioctl_errno;
+	int rc, sock_fd;
 	struct swcfgreq swcfgr;
 	struct lisa_context *lc = SWLiSA_CTX(sw_ops);
 
@@ -134,7 +134,7 @@ static int if_add_trunk_vlans(struct switch_operations *sw_ops,
 static int if_set_trunk_vlans(struct switch_operations *sw_ops,
 	int ifindex, unsigned char *vlans)
 {
-	int rc, sock_fd, ioctl_errno;
+	int rc, sock_fd;
 	struct swcfgreq swcfgr;
 	struct lisa_context *lc = SWLiSA_CTX(sw_ops);
 
@@ -152,7 +152,7 @@ static int if_set_trunk_vlans(struct switch_operations *sw_ops,
 static int if_set_mode (struct switch_operations *sw_ops, int ifindex,
 	int mode, int flag)
 {
-	int rc, sock_fd, ioctl_errno;
+	int rc, sock_fd;
 	struct swcfgreq swcfgr;
 	struct lisa_context *lc = SWLiSA_CTX(sw_ops);
 
@@ -184,7 +184,7 @@ out:
 static int if_del_trunk_vlans(struct switch_operations *sw_ops,
 	int ifindex, unsigned char *vlans)
 {
-	int rc, sock_fd, ioctl_errno;
+	int rc, sock_fd;
 	struct swcfgreq swcfgr;
 	struct lisa_context *lc = SWLiSA_CTX(sw_ops);
 
@@ -201,7 +201,7 @@ static int if_del_trunk_vlans(struct switch_operations *sw_ops,
 
 static int if_get_type(struct switch_operations *sw_ops, int ifindex, int *type)
 {
-	int rc, sock_fd, ioctl_errno;
+	int rc, sock_fd;
 	struct swcfgreq swcfgr;
 	struct lisa_context *lc = SWLiSA_CTX(sw_ops);
 
@@ -219,7 +219,7 @@ static int if_get_type(struct switch_operations *sw_ops, int ifindex, int *type)
 
 static int vif_add(struct switch_operations *sw_ops, int vlan, int *ifindex)
 {
-	int rc, sock_fd, ioctl_errno;
+	int rc, sock_fd;
 	struct swcfgreq swcfgr;
 	struct lisa_context *lc = SWLiSA_CTX(sw_ops);
 
@@ -237,7 +237,7 @@ static int vif_add(struct switch_operations *sw_ops, int vlan, int *ifindex)
 
 static int vif_del(struct switch_operations *sw_ops, int vlan)
 {
-	int rc, sock_fd, ioctl_errno;
+	int rc, sock_fd;
 	struct swcfgreq swcfgr;
 	struct lisa_context *lc = SWLiSA_CTX(sw_ops);
 
@@ -253,7 +253,7 @@ static int vif_del(struct switch_operations *sw_ops, int vlan)
 
 static int if_set_port_vlan(struct switch_operations *sw_ops, int ifindex, int vlan)
 {
-	int rc, sock_fd, ioctl_errno;
+	int rc, sock_fd;
 	struct swcfgreq swcfgr;
 	struct lisa_context *lc = SWLiSA_CTX(sw_ops);
 
@@ -271,7 +271,7 @@ static int if_set_port_vlan(struct switch_operations *sw_ops, int ifindex, int v
 static int get_vlan_interfaces(struct switch_operations *sw_ops, int vlan,
 		int *ifindexes, int *no_ifs)
 {
-	int sock_fd, ioctl_errno, vlif_no,i;
+	int sock_fd, vlif_no,i;
 	struct swcfgreq swcfgr;
 	struct lisa_context *lc = SWLiSA_CTX(sw_ops);
 
@@ -299,7 +299,7 @@ static int get_vlan_interfaces(struct switch_operations *sw_ops, int vlan,
 static int get_if_list(struct switch_operations *sw_ops, int type,
 	int *ifindexes, int *size)
 {
-	int rc, sock_fd, i, ioctl_errno;
+	int rc, sock_fd, i;
 	struct swcfgreq swcfgr;
 	struct lisa_context *lc = SWLiSA_CTX(sw_ops);
 	struct net_switch_device *devs;
@@ -337,7 +337,7 @@ static int if_get_desc(struct switch_operations *sw_ops, int ifindex, char *desc
 
 static int set_age_time(struct switch_operations *sw_ops, int age_time)
 {
-	int ret, sock_fd, ioctl_errno;
+	int ret, sock_fd;
 	struct swcfgreq swcfgr;
 	struct lisa_context *lc = SWLiSA_CTX(sw_ops);
 
@@ -353,7 +353,7 @@ static int set_age_time(struct switch_operations *sw_ops, int age_time)
 
 static int get_age_time(struct switch_operations *sw_ops, int *age_time)
 {
-	int ret, sock_fd, ioctl_errno;
+	int ret, sock_fd;
 	struct swcfgreq swcfgr;
 	struct lisa_context *lc = SWLiSA_CTX(sw_ops);
 
@@ -364,6 +364,62 @@ static int get_age_time(struct switch_operations *sw_ops, int *age_time)
 	SW_SOCK_CLOSE(lc, sock_fd);
 
 	*age_time = swcfgr.ext.nsec;
+
+	return ret;
+}
+
+static int mrouters_get(struct switch_operations *sw_ops, int vlan,
+		struct list_head *mrouters)
+{
+	int sock_fd, vlif_no, i;
+	struct net_switch_mrouter_e *entry;
+	struct net_switch_mrouter ret_value;
+	struct swcfgreq swcfgr;
+	struct lisa_context *lc = SWLiSA_CTX(sw_ops);
+
+	swcfgr.cmd = SWCFG_GETMROUTERS;
+	swcfgr.vlan = vlan;
+
+	SW_SOCK_OPEN(lc, sock_fd);
+	vlif_no = buf_alloc_swcfgr(&swcfgr, sock_fd);
+	SW_SOCK_CLOSE(lc, sock_fd);
+
+	if(vlif_no < 0)
+		return -1;
+
+	vlif_no /= sizeof(struct net_switch_mrouter);
+
+	for (i = 0; i < vlif_no; ++i) {
+		entry = malloc(sizeof(struct net_switch_mrouter_e));
+		if (!entry)
+			return -1;
+
+		ret_value = ((struct net_switch_mrouter *)swcfgr.buf.addr)[i];
+		entry->ifindex = ret_value.ifindex;
+		entry->vlan = ret_value.vlan;
+
+		list_add_tail(&entry->lh, mrouters);
+	}
+
+	return 0;
+}
+
+
+static int mrouter_set(struct switch_operations *sw_ops, int vlan,
+			int ifindex, int setting)
+{
+	int ret, sock_fd;
+	struct swcfgreq swcfgr;
+	struct lisa_context *lc = SWLiSA_CTX(sw_ops);
+
+	swcfgr.cmd = SWCFG_SETMROUTER;
+	swcfgr.vlan = vlan;
+	swcfgr.ext.mrouter = setting;
+	swcfgr.ifindex = ifindex;
+
+	SW_SOCK_OPEN(lc, sock_fd);
+	ret = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
+	SW_SOCK_CLOSE(lc, sock_fd);
 
 	return ret;
 }
@@ -396,7 +452,10 @@ struct lisa_context lisa_ctx = {
 		.set_age_time = set_age_time,
 
 		.vif_add = vif_add,
-		.vif_del = vif_del
+		.vif_del = vif_del,
+
+		.mrouters_get = mrouters_get,
+		.mrouter_set = mrouter_set
 	},
 	.sock_fd = -1
 };

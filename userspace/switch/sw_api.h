@@ -107,8 +107,7 @@ struct switch_operations {
 	int (*get_vdb) (struct switch_operations *sw_ops, char *vlans);
 	int (*get_vlan_desc) (struct switch_operations *sw_ops, int vlan, char *desc);
 
-	int (*mrouter_set) (struct switch_operations *sw_ops, int vlan, int ifindex);
-	int (*mrouter_reset) (struct switch_operations *sw_ops, int vlan, int ifindex);
+	int (*mrouter_set) (struct switch_operations *sw_ops, int vlan, int ifindex, int setting);
 	/* Return a list of net_switch_mrouter_e. */
 	int (*mrouters_get) (struct switch_operations *sw_ops, int vlan, struct list_head *mrouters);
 

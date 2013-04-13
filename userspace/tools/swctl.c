@@ -104,6 +104,8 @@ void usage(void) {
 		"  getiflist type\t\t\tPrints all the interfaces switch or routed(1), virtual(0)\n"
 		"  setifdesc if_name desc\t\tSet description for an interface\n"
 		"  getifdesc if_name\t\t\tDisplay description of the given interface\n"
+		"  getmrouters vlan\t\t\tDisplay the ports for which igmp is activated\n"
+		"  setmrouter vlan if_name flag\t\tPuts mrouter (flag = 1) or unsets it (flag = 0)\n"
 		"\n"
 	);
 }
@@ -545,6 +547,57 @@ int main(int argc, char **argv) {
 
 		printf("Age time %d\n", age_time);
 		return status;
+	}
+
+	if (!strcmp(argv[1], "getmrouters")) {
+		if (argc < 2) {
+			usage();
+			return 0;
+		}
+
+		int status;
+		int vlan = atoi(argv[2]);
+		char if_name[SW_MAX_PORT_DESC];
+		struct list_head mrouters, *iter, *tmp;
+		struct net_switch_mrouter_e *entry;
+
+		INIT_LIST_HEAD(&mrouters);
+		status = sw_ops->mrouters_get(sw_ops, vlan, &mrouters);
+		if(status < 0)
+			return -1;
+
+		printf("  Vlan  |  Interface  \n");
+		printf("%s\n", DASHES(21));
+		list_for_each_safe(iter, tmp, &mrouters) {
+			entry = list_entry(iter, struct net_switch_mrouter_e, lh);
+			if_get_name(entry->ifindex, sock, if_name);
+
+			printf("%8d|%6s\n", entry->vlan, if_name);
+
+			list_del(iter);
+			free(entry);
+		}
+
+		return 0;
+	}
+
+	if (!strcmp(argv[1], "setmrouter")) {
+		if (argc < 4) {
+			usage();
+			return 0;
+		}
+
+		int vlan = atoi(argv[2]);
+		int ifindex = if_get_index(argv[3], sock);
+		int option = atoi(argv[4]);
+
+		int status = sw_ops->mrouter_set(sw_ops, vlan, ifindex, option);
+
+		if(status < 0)
+			return status;
+		printf("Mrouter was successfully set\n");
+
+		return 0;
 	}
 
 	/* first command line arg invalid ... */
