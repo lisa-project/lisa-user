@@ -5,17 +5,30 @@
 
 #define ETH_ALEN	6
 
+#ifndef IFNAMSIZE
+#define IFNAMSIZE	16
+#endif
+
 struct net_switch_mrouter_e {
 	int ifindex;
 	int vlan;
 	struct list_head lh;
 };
+
 struct net_switch_mac_e {
 	unsigned char addr[ETH_ALEN];
 	unsigned char type;
 	int vlan;
 	int ifindex;
 	struct list_head lh;
+};
+
+/* Generic net device structure */
+struct net_switch_device {
+	char name[IFNAMSIZE];
+	int ifindex;
+	int type;
+	int vlan; /* used only for VIFs */
 };
 
 struct switch_operations {

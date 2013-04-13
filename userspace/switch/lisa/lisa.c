@@ -319,10 +319,11 @@ struct lisa_context lisa_ctx = {
 		.if_del_trunk_vlans = if_del_trunk_vlans,
 
 		.if_set_mode = if_set_mode,
-		.if_get_type = if_get_type
+		.if_get_type = if_get_type,
 		.if_set_port_vlan = if_set_port_vlan,
 
 		.vif_add = vif_add,
 		.vif_del = vif_del
-	}
+	},
+	.sock_fd = -1
 };
