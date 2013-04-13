@@ -78,7 +78,8 @@ struct switch_operations {
 	 *
 	 * @param ifindexes  Array with interfaces' indexes.
 	 */
-	int (*get_if_list) (struct switch_operations *sw_ops, int mode, int *ifindexes);
+	int (*get_if_list) (struct switch_operations *sw_ops, int type,
+		int *ifindexes, int *size);
 
 	int (*vlan_add) (struct switch_operations *sw_ops, int vlan);
 	int (*vlan_del) (struct switch_operations *sw_ops, int vlan);

@@ -101,6 +101,7 @@ void usage(void) {
 		"  showmac\t\t\t\tPrints switch forwarding database\n"
 		"  getiftype if_name\t\t\tPrints the type of the the interface\n"
 		"  getvlanifs vlan_name\t\t\tPrints the interfaces associated with the vlan\n"
+		"  getiflist type\t\t\tPrints all the interfaces switch or routed(1), virtual(0)\n"
 		"\n"
 	);
 }
@@ -458,6 +459,33 @@ int main(int argc, char **argv) {
 		}
 		printf("\n");
 		free(interfaces);
+		return status;
+	}
+
+	if (!strcmp(argv[1], "getiflist")) {
+		printf("Intra in get if list\n");
+		int ifindexes[INITIAL_BUF_SIZE];
+		int size, i, type;
+
+		if (argc < 3) {
+			usage();
+			return 0;
+		}
+
+		if (atoi(argv[2]))
+			type = SW_IF_SWITCHED | SW_IF_ROUTED;
+		else
+			type = SW_IF_VIF;
+
+		status = sw_ops->get_if_list(sw_ops, type, ifindexes, &size);
+		if (status < 0) {
+			printf("Failed to get all interfaces\n");
+			return status;
+		}
+
+		for (i = 0; i < size; i++)
+			printf("Int%02d ", ifindexes[i]);
+		printf("\n");
 		return status;
 	}
 	/* first command line arg invalid ... */

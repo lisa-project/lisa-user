@@ -297,8 +297,6 @@ static int if_set_port_vlan(struct switch_operations *sw_ops, int ifindex, int v
 
 	errno = ioctl_errno;
 
-	printf("[errno] %d\n",ioctl_errno);
-
 	return rc;
 }
 
@@ -332,6 +330,36 @@ static int get_vlan_interfaces(struct switch_operations *sw_ops, int vlan,
 	return 0;
 }
 
+static int get_if_list(struct switch_operations *sw_ops, int type,
+	int *ifindexes, int *size)
+{
+	int rc, sock_fd, i, ioctl_errno;
+	struct swcfgreq swcfgr;
+	struct lisa_context *lc = SWLiSA_CTX(sw_ops);
+	struct net_switch_device *devs;
+
+	swcfgr.cmd = SWCFG_GETIFLIST;
+	swcfgr.ext.switchport = type;
+
+	SW_SOCK_OPEN(lc, sock_fd);
+	rc = buf_alloc_swcfgr(&swcfgr, sock_fd);
+	ioctl_errno = errno;
+	SW_SOCK_CLOSE(lc, sock_fd);
+
+	errno = ioctl_errno;
+	if (rc < 0)
+		return -1;
+
+	/* Get the array of devices from response */
+	devs = (struct net_switch_device *)swcfgr.buf.addr;
+	*size = rc / sizeof(struct net_switch_device);
+
+	for (i = 0; i < *size; i++)
+		ifindexes[i] = devs[i].ifindex;
+
+	free(devs);
+	return 0;
+}
 
 /* TODO implement switch API with lisa module */
 struct lisa_context lisa_ctx = {
@@ -345,6 +373,7 @@ struct lisa_context lisa_ctx = {
 		.vlan_rename = vlan_rename,
 		.get_vlan_desc = get_vlan_desc,
 		.get_vlan_interfaces = get_vlan_interfaces,
+		.get_if_list = get_if_list,
 
 		.if_add_trunk_vlans = if_add_trunk_vlans,
 		.if_set_trunk_vlans = if_set_trunk_vlans,
