@@ -313,6 +313,32 @@ static int get_vdb(struct switch_operations *sw_ops, unsigned char *vlans)
 
 	return rc;
 }
+static int if_get_cfg (struct switch_operations *sw_ops, int ifindex, int *flags,int *access_vlan, unsigned char *vlans)
+{
+	int rc, sock_fd, i;
+	struct swcfgreq swcfgr;
+	struct lisa_context *lc = SWLiSA_CTX(sw_ops);
+
+	swcfgr.cmd = SWCFG_GETIFCFG;
+	swcfgr.ifindex = ifindex;
+	swcfgr.ext.cfg.forbidden_vlans = vlans;
+
+	SW_SOCK_OPEN(lc, sock_fd);
+	rc = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
+	SW_SOCK_CLOSE(lc, sock_fd);
+
+	if (rc < 0)
+		return rc;
+
+	*flags = swcfgr.ext.cfg.flags;
+	*access_vlan = swcfgr.ext.cfg.access_vlan;
+
+	for (i = 0; i < SW_VLAN_BMP_NO ; i++){
+		vlans[i] = ~vlans[i];
+	}
+	return rc;
+
+}
 
 static int get_if_list(struct switch_operations *sw_ops, int type,
 	int *ifindexes, int *size)
@@ -466,6 +492,7 @@ struct lisa_context lisa_ctx = {
 		.if_set_desc = if_set_desc,
 		.if_get_desc = if_get_desc,
 		.if_set_port_vlan = if_set_port_vlan,
+		.if_get_cfg = if_get_cfg,
 
 		.get_age_time = get_age_time,
 		.set_age_time = set_age_time,

@@ -426,6 +426,37 @@ int main(int argc, char **argv) {
 
 	}
 
+	if (!strcmp(argv[1], "ifgetcfg")) {
+		if (argc < 3) {
+			usage();
+			return 0;
+		}
+		unsigned char vlans[SW_VLAN_BMP_NO];
+		int flags, access_vlan, i;
+
+		user_arg.ifindex = if_get_index(argv[2], sock);
+		status = sw_ops->if_get_cfg(sw_ops,
+				user_arg.ifindex, &flags, &access_vlan,
+					vlans);
+
+		if (status)
+			perror("ifgetcfg failed");
+
+		printf("ALLOWED VLANS: ");
+
+		for (i=0 ; i < SW_MAX_VLAN; i++)
+		{
+			if (vlans[i / 8] & (1 << (i % 8)))
+			{
+				printf("%d, ",i);
+			}
+		}
+		printf("\n");
+
+		return 0;
+
+	}
+
 	if (!strcmp(argv[1], "settrunk")) {
 		if (argc < 4) {
 			usage();

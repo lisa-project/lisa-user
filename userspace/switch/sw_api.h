@@ -54,7 +54,7 @@ struct switch_operations {
 	/**
 	 * @param vlans  Vlans are returned using bitmap positive logic.
 	 */
-	int (*if_get_vlans) (struct switch_operations *sw_ops, int ifindex, unsigned char *vlans);
+	int (*if_get_cfg) (struct switch_operations *sw_ops, int ifindex, int *flags, int *access_vlan, unsigned char *vlans);
 
 	/**
 	 * @param mode This parameter will return as side effect the type of the interface:
