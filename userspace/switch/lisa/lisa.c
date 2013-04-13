@@ -361,6 +361,17 @@ static int get_if_list(struct switch_operations *sw_ops, int type,
 	return 0;
 }
 
+
+static int if_set_desc(struct switch_operations *sw_ops, int ifindex, char *desc)
+{
+	return shared_set_if_desc(ifindex, desc);
+}
+
+static int if_get_desc(struct switch_operations *sw_ops, int ifindex, char *desc)
+{
+	return shared_get_if_desc(ifindex, desc);
+}
+
 /* TODO implement switch API with lisa module */
 struct lisa_context lisa_ctx = {
 	.sw_ops = (struct switch_operations) {
@@ -381,6 +392,8 @@ struct lisa_context lisa_ctx = {
 
 		.if_set_mode = if_set_mode,
 		.if_get_type = if_get_type,
+		.if_set_desc = if_set_desc,
+		.if_get_desc = if_get_desc,
 		.if_set_port_vlan = if_set_port_vlan,
 
 		.vif_add = vif_add,

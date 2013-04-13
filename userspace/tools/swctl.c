@@ -102,6 +102,8 @@ void usage(void) {
 		"  getiftype if_name\t\t\tPrints the type of the the interface\n"
 		"  getvlanifs vlan_name\t\t\tPrints the interfaces associated with the vlan\n"
 		"  getiflist type\t\t\tPrints all the interfaces switch or routed(1), virtual(0)\n"
+		"  setifdesc if_name desc\t\tSet description for an interface\n"
+		"  getifdesc if_name\t\t\tDisplay description of the given interface\n"
 		"\n"
 	);
 }
@@ -463,7 +465,6 @@ int main(int argc, char **argv) {
 	}
 
 	if (!strcmp(argv[1], "getiflist")) {
-		printf("Intra in get if list\n");
 		int ifindexes[INITIAL_BUF_SIZE];
 		int size, i, type;
 
@@ -486,6 +487,48 @@ int main(int argc, char **argv) {
 		for (i = 0; i < size; i++)
 			printf("Int%02d ", ifindexes[i]);
 		printf("\n");
+		return status;
+	}
+
+	if (!strcmp(argv[1], "getifdesc")) {
+		if (argc < 2) {
+			usage();
+			return 0;
+		}
+
+		char desc[SW_MAX_PORT_DESC];
+		int if_index, status;
+
+		if_index = if_get_index(argv[2], sock);
+		status = sw_ops->if_get_desc(sw_ops, if_index, desc);
+		if(status < 0) {
+			perror("Failed to get interface description");
+			return status;
+		}
+
+		printf("[%2s]\t%s\n", argv[2], desc);
+
+		return status;
+	}
+
+	if (!strcmp(argv[1], "setifdesc")) {
+		if (argc < 3) {
+			usage();
+			return 0;
+		}
+
+		int if_index, status;
+
+		if_index = if_get_index(argv[2], sock);
+		status = sw_ops->if_set_desc(sw_ops, if_index, argv[3]);
+
+		if(status < 0) {
+			perror("Failed to set interface description");
+			return status;
+		}
+
+		printf("Description set successfully for _ %s _\n", argv[2]);
+
 		return status;
 	}
 	/* first command line arg invalid ... */
