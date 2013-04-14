@@ -489,7 +489,52 @@ static int mrouters_get(struct switch_operations *sw_ops, int vlan,
 
 	return 0;
 }
+int get_mac(struct switch_operations *sw_ops, int ifindex, int vlan,
+			int mac_type,unsigned char *mac_addr, struct list_head *macs)
+{
+	int sock_fd, vlif_no, i;
+	struct net_switch_mac_e *entry;
+	struct net_switch_mac ret_value;
+	struct swcfgreq swcfgr;
+	struct lisa_context *lc = SWLiSA_CTX(sw_ops);
 
+	swcfgr.cmd = SWCFG_GETMAC;
+	swcfgr.ifindex = ifindex;
+	swcfgr.vlan = vlan;
+	swcfgr.ext.mac.type = mac_type;
+
+	if (mac_addr)
+		memcpy(swcfgr.ext.mac.addr, mac_addr, ETH_ALEN);
+	else
+		memset(swcfgr.ext.mac.addr, 0x0, ETH_ALEN);
+
+	SW_SOCK_OPEN(lc, sock_fd);
+	vlif_no = buf_alloc_swcfgr(&swcfgr, sock_fd);
+	SW_SOCK_CLOSE(lc, sock_fd);
+
+	if(vlif_no < 0)
+		return -1;
+
+	vlif_no /= sizeof(struct net_switch_mac);
+
+	for (i = 0; i < vlif_no; ++i) {
+		entry = malloc(sizeof(struct net_switch_mac_e));
+		if (!entry)
+			return -1;
+
+		ret_value = ((struct net_switch_mac *)swcfgr.buf.addr)[i];
+		entry->ifindex = ret_value.ifindex;
+		entry->vlan = ret_value.vlan;
+		entry->type = ret_value.type;
+		memcpy(entry->addr, ret_value.addr, ETH_ALEN);
+
+		list_add_tail(&entry->lh, macs);
+	}
+
+	return 0;
+
+
+}
 
 static int mrouter_set(struct switch_operations *sw_ops, int vlan,
 			int ifindex, int setting)
@@ -557,6 +602,7 @@ struct lisa_context lisa_ctx = {
 
 		.vlan_set_mac_static = vlan_set_mac_static,
 		.vlan_del_mac_static = vlan_del_mac_static,
+		.get_mac = get_mac,
 
 		.get_vlan_desc = get_vlan_desc,
 		.get_vlan_interfaces = get_vlan_interfaces,

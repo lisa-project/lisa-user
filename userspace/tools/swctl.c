@@ -505,7 +505,6 @@ int main(int argc, char **argv) {
 			usage();
 			return 0;
 		}
-		user_arg.cmd = SWCFG_MACSTATIC;
 		user_arg.ifindex = if_get_index(argv[2], sock);
 		user_arg.vlan = atoi(argv[3]);
 		parse_hw_addr(argv[4], user_arg.ext.mac.addr);
@@ -521,7 +520,6 @@ int main(int argc, char **argv) {
 			usage();
 			return 0;
 		}
-		user_arg.cmd = SWCFG_MACSTATIC;
 		user_arg.ifindex = if_get_index(argv[2], sock);
 		user_arg.vlan = atoi(argv[3]);
 		parse_hw_addr(argv[4], user_arg.ext.mac.addr);
@@ -531,6 +529,75 @@ int main(int argc, char **argv) {
 			perror("delmacstatic failed");
 		return 0;
 	}
+
+	if (!strcmp(argv[1], "getmac")) {
+		if (argc < 6) {
+			usage();
+			return 0;
+		}
+
+		int status, i;
+		int mac_type;
+		char if_name[SW_MAX_PORT_DESC];
+		struct list_head macs, *iter, *tmp;
+		struct net_switch_mac_e *entry;
+
+		mac_type = atoi(argv[4]);
+		user_arg.ifindex = if_get_index(argv[2], sock);
+		user_arg.vlan = atoi(argv[3]);
+		if (strcmp(argv[5], "no_address"))
+		parse_hw_addr(argv[5], user_arg.ext.mac.addr);
+
+		switch(mac_type){
+		case 0:
+			mac_type = SW_FDB_ANY;
+			break;
+		case 1:
+			mac_type = SW_FDB_MAC_ANY;
+			break;
+		case 2:
+			mac_type = SW_FDB_MAC_STATIC;
+			break;
+		case 3:
+			mac_type = SW_FDB_MAC_DYNAMIC;
+			break;
+		case 4:
+			mac_type = SW_FDB_IGMP_ANY;
+			break;
+		}
+
+		INIT_LIST_HEAD(&macs);
+
+		if (!strcmp(argv[5], "no_address"))
+			status = sw_ops->get_mac(sw_ops, user_arg.ifindex,
+				user_arg.vlan, mac_type, NULL, &macs);
+		else
+			status = sw_ops->get_mac(sw_ops, user_arg.ifindex,
+				user_arg.vlan, mac_type, user_arg.ext.mac.addr, 				&macs);
+
+		if(status < 0)
+			return -1;
+
+		printf("  Vlan  |  Interface | MAC \n");
+		printf("%s\n", DASHES(21));
+		list_for_each_safe(iter, tmp, &macs) {
+			entry = list_entry(iter, struct net_switch_mac_e, lh);
+			if_get_name(entry->ifindex, sock, if_name);
+
+			printf("%8d|%12s|", entry->vlan, if_name);
+
+			for (i=0; i< ETH_ALEN; i++) {
+				printf("0x%x ", entry->addr[i]);
+			}
+			printf("\n");
+
+			list_del(iter);
+			free(entry);
+		}
+
+		return 0;
+	}
+
 
 	if (!strcmp(argv[1], "addvif")) {
 		if (argc < 3) {

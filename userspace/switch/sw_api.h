@@ -112,7 +112,7 @@ struct switch_operations {
 
 	/* Return a list of net_switch_mac_e. */
 	int (*get_mac) (struct switch_operations *sw_ops, int ifindex, int vlan,
-			int mac_type, struct list_head *macs);
+			int mac_type, unsigned char *optional_mac, struct list_head *macs);
 
 	int (*get_age_time) (struct switch_operations *sw_ops, int *age_time);
 	int (*set_age_time) (struct switch_operations *sw_ops, int age_time);
