@@ -204,7 +204,9 @@ int switch_init(void) {
 	int ret, i;
 	char desc[SW_MAX_VLAN_NAME + 1];
 
+#ifdef LiSA
 	sw_ops = &lisa_ctx.sw_ops;
+#endif
 	if (mm)
 		return 0;
 	mm = mm_create("lisa", sizeof(struct shared), 4096);

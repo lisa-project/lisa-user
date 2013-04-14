@@ -1,0 +1,2 @@
+SWITCH_INC =	$(TOP_DIR)/switch/lisa \
+		$(TOP_DIR)/switch
