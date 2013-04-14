@@ -26,6 +26,8 @@
 
 #define SW_VLAN_BMP_NO (SW_MAX_VLAN / 8 + 1)
 
+#define ETH_ALEN	6
+
 #define	_SC_PAGE_SIZE		_SC_PAGESIZE
 
 int buf_alloc_swcfgr(struct swcfgreq *swcfgr, int sock_fd);

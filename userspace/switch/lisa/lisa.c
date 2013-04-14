@@ -113,6 +113,47 @@ static int vlan_del(struct switch_operations *sw_ops, int vlan)
 	return rc;
 }
 
+int vlan_set_mac_static(struct switch_operations *sw_ops, int ifindex, int vlan, unsigned char *mac)
+{
+	int rc, sock_fd;
+	struct swcfgreq swcfgr;
+	struct lisa_context *lc = SWLiSA_CTX(sw_ops);
+
+	swcfgr.vlan = vlan;
+	swcfgr.cmd = SWCFG_MACSTATIC;
+	swcfgr.ifindex = ifindex;
+
+	memcpy(swcfgr.ext.mac.addr, mac, ETH_ALEN);
+
+
+	SW_SOCK_OPEN(lc, sock_fd);
+	rc = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
+	SW_SOCK_CLOSE(lc, sock_fd); /* this can overwrite ioctl errno */
+
+	return rc;
+
+}
+
+int vlan_del_mac_static(struct switch_operations *sw_ops, int ifindex, int vlan, unsigned char *mac)
+{
+	int rc, sock_fd;
+	struct swcfgreq swcfgr;
+	struct lisa_context *lc = SWLiSA_CTX(sw_ops);
+
+	swcfgr.vlan = vlan;
+	swcfgr.cmd = SWCFG_DELMACSTATIC;
+	swcfgr.ifindex = ifindex;
+
+	memcpy(swcfgr.ext.mac.addr, mac, ETH_ALEN);
+
+	SW_SOCK_OPEN(lc, sock_fd);
+	rc = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
+	SW_SOCK_CLOSE(lc, sock_fd); /* this can overwrite ioctl errno */
+
+	return rc;
+
+}
+
 static int if_add_trunk_vlans(struct switch_operations *sw_ops,
 	int ifindex, unsigned char *vlans)
 {
@@ -513,6 +554,10 @@ struct lisa_context lisa_ctx = {
 		.vlan_add = vlan_add,
 		.vlan_del = vlan_del,
 		.vlan_rename = vlan_rename,
+
+		.vlan_set_mac_static = vlan_set_mac_static,
+		.vlan_del_mac_static = vlan_del_mac_static,
+
 		.get_vlan_desc = get_vlan_desc,
 		.get_vlan_interfaces = get_vlan_interfaces,
 		.get_if_list = get_if_list,

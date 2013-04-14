@@ -509,12 +509,28 @@ int main(int argc, char **argv) {
 		user_arg.ifindex = if_get_index(argv[2], sock);
 		user_arg.vlan = atoi(argv[3]);
 		parse_hw_addr(argv[4], user_arg.ext.mac.addr);
-		status = ioctl(sock, SIOCSWCFG, &user_arg);
+		status = sw_ops->vlan_set_mac_static(sw_ops, user_arg.ifindex,
+				user_arg.vlan,user_arg.ext.mac.addr);
 		if (status)
 			perror("macstatic failed");
 		return 0;
 	}
 
+	if (!strcmp(argv[1], "delmacstatic")) {
+		if (argc < 5) {
+			usage();
+			return 0;
+		}
+		user_arg.cmd = SWCFG_MACSTATIC;
+		user_arg.ifindex = if_get_index(argv[2], sock);
+		user_arg.vlan = atoi(argv[3]);
+		parse_hw_addr(argv[4], user_arg.ext.mac.addr);
+		status = sw_ops->vlan_del_mac_static(sw_ops, user_arg.ifindex,
+				user_arg.vlan,user_arg.ext.mac.addr);
+		if (status)
+			perror("delmacstatic failed");
+		return 0;
+	}
 
 	if (!strcmp(argv[1], "addvif")) {
 		if (argc < 3) {
