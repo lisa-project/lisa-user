@@ -93,9 +93,8 @@ struct switch_operations {
 
 	int (*get_vlan_interfaces) (struct switch_operations *sw_ops, int vlan, int *ifindexes, int *no_ifs);
 
-	int (*igmp_enable) (struct switch_operations *sw_ops, int vlan);
-	int (*igmp_disable) (struct switch_operations *sw_ops, int vlan);
-	int (*igmps_get) (struct switch_operations *sw_ops, char *buff, int *snooping);
+	int (*igmp_set) (struct switch_operations *sw_ops, int vlan, int snooping);
+	int (*igmp_get) (struct switch_operations *sw_ops, char *buff, int *snooping);
 
 	/**
 	 * Return a VLAN bitmap.

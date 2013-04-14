@@ -173,6 +173,8 @@ void usage(void) {
 		"  setifdesc if_name desc\t\tSet description for an interface\n"
 		"  getifdesc if_name\t\t\tDisplay description of the given interface\n"
 		"  getmrouters vlan\t\t\tDisplay the ports for which igmp is activated\n"
+		"  igmpset vlan flag\t\t\tSet igmp, enable (flag = 1), disable (flag = 0)\n"
+		"  igmpget \t\t\t\tSet igmp, enable (flag = 1), disable (flag = 0)\n"
 		"  setmrouter vlan if_name flag\t\tPuts mrouter (flag = 1) or unsets it (flag = 0)\n"
 		"\n"
 	);
@@ -734,7 +736,7 @@ int main(int argc, char **argv) {
 	}
 
 	if (!strcmp(argv[1], "getmrouters")) {
-		if (argc < 2) {
+		if (argc < 3) {
 			usage();
 			return 0;
 		}
@@ -766,7 +768,7 @@ int main(int argc, char **argv) {
 	}
 
 	if (!strcmp(argv[1], "setmrouter")) {
-		if (argc < 4) {
+		if (argc < 5) {
 			usage();
 			return 0;
 		}
@@ -782,6 +784,31 @@ int main(int argc, char **argv) {
 		printf("Mrouter was successfully set\n");
 
 		return 0;
+	}
+
+	if (!strcmp(argv[1], "igmpset")) {
+		if (argc < 4) {
+			usage();
+			return 0;
+		}
+
+		int vlan = atoi(argv[2]);
+		int snoop = atoi(argv[3]);
+		int status = sw_ops->igmp_set(sw_ops, vlan, snoop);
+
+		return status;
+	}
+
+	if (!strcmp(argv[1], "igmpget")) {
+		int snoop;
+		int status = sw_ops->igmp_get(sw_ops, NULL, &snoop);
+		printf("IGMP is ");
+		if (snoop)
+			printf("on\n");
+		else
+			printf("off\n");
+
+		return status;
 	}
 
 	/* first command line arg invalid ... */

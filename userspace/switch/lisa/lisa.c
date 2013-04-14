@@ -469,6 +469,40 @@ static int mrouter_set(struct switch_operations *sw_ops, int vlan,
 	return ret;
 }
 
+static int igmp_set(struct switch_operations *sw_ops, int vlan, int snooping)
+{
+	int ret, sock_fd;
+	struct swcfgreq swcfgr;
+	struct lisa_context *lc = SWLiSA_CTX(sw_ops);
+
+	swcfgr.cmd = SWCFG_SETIGMPS;
+	swcfgr.vlan = vlan;
+	swcfgr.ext.snooping = snooping;
+
+	SW_SOCK_OPEN(lc, sock_fd);
+	ret = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
+	SW_SOCK_CLOSE(lc, sock_fd);
+
+	return ret;
+}
+
+static int igmp_get(struct switch_operations *sw_ops, char *buff, int *snooping)
+{
+	int ret, sock_fd;
+	struct swcfgreq swcfgr;
+	struct lisa_context *lc = SWLiSA_CTX(sw_ops);
+
+	swcfgr.cmd = SWCFG_GETIGMPS;
+	swcfgr.buf.addr = buff;
+
+	SW_SOCK_OPEN(lc, sock_fd);
+	ret = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
+	SW_SOCK_CLOSE(lc, sock_fd);
+
+	*snooping = swcfgr.ext.snooping;
+	return ret;
+}
+
 /* TODO implement switch API with lisa module */
 struct lisa_context lisa_ctx = {
 	.sw_ops = (struct switch_operations) {
@@ -500,6 +534,9 @@ struct lisa_context lisa_ctx = {
 
 		.vif_add = vif_add,
 		.vif_del = vif_del,
+
+		.igmp_set = igmp_set,
+		.igmp_get = igmp_get,
 
 		.mrouters_get = mrouters_get,
 		.mrouter_set = mrouter_set
