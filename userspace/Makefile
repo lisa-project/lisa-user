@@ -15,7 +15,8 @@ SUBDIRS = \
 
 DEPFILE = lisa.dep
 
-all:
+all: build install
+build:
 	$(Q) for subdir in $(SUBDIRS) ; \
 	do \
 		make -C $${subdir}; \
@@ -36,7 +37,7 @@ dep:
 	$(Q)-touch $(DEPFILE)
 	$(Q)-find . -name '*.d' -exec cat {} >> $(DEPFILE) \;
 
-install: all
+install:
 	install -m 755 -D cdpd/cdpd $(ROOT)/usr/sbin/cdpd
 	install -m 755 -D tools/filter $(ROOT)/bin/filter
 	install -m 755 -D tools/swclid $(ROOT)/usr/sbin/swclid

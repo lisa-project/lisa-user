@@ -201,7 +201,7 @@ static void switch_init_cdp(void)
 }
 
 int switch_init(void) {
-	int ret, i;
+	int i;
 	char desc[SW_MAX_VLAN_NAME + 1];
 
 #ifdef LiSA
@@ -223,17 +223,22 @@ int switch_init(void) {
 	switch_init_cdp();
 	switch_init_rstp();
 
-	ret = shared_set_vlan_desc(1, "default");
-	if (ret)
+	if (sw_ops->backend_init(sw_ops))
+		return -1;
+
+	if (sw_ops->vlan_add(sw_ops, 1))
+		return -1;
+	if (shared_set_vlan_desc(1, "default"))
 		return -1;
 
 	for (i = 1002; i <= 1005; i++) {
 		__default_vlan_name(desc, i);
-		ret = shared_set_vlan_desc(i, desc);
-		if (ret)
+		if (sw_ops->vlan_add(sw_ops, i))
+			return -1;
+		if (shared_set_vlan_desc(i, desc))
 			return -1;
 	}
-	return sw_ops->backend_init(sw_ops);
+	return 0;
 }
 
 int shared_auth(int type, int level,
