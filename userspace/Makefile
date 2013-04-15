@@ -4,14 +4,14 @@ include $(TOP_DIR)/scripts/Makefile.variables
 
 SUBDIRS = \
 	$(TOP_DIR)/include \
-	$(TOP_DIR)/lib     \
-	$(TOP_DIR)/switch \
 	$(TOP_DIR)/switch/lisa \
+	$(TOP_DIR)/switch \
+	$(TOP_DIR)/lib     \
 	$(TOP_DIR)/cli     \
 	$(TOP_DIR)/tools   \
 	$(TOP_DIR)/cdpd    \
-	$(TOP_DIR)/rstp
-#	$(TOP_DIR)/test
+	$(TOP_DIR)/rstp    \
+	$(TOP_DIR)/test
 
 DEPFILE = lisa.dep
 
@@ -48,6 +48,7 @@ endif
 	install -m 755 -D cli/swcon $(ROOT)/usr/sbin/swcon
 	install -m 755 -D cli/swlogin $(ROOT)/usr/sbin/swlogin
 	install -m 755 -D cli/libswcli.so $(ROOT)/usr/lib/libswcli.so
+	install -m 755 -D switch/libswitch.so $(ROOT)/usr/lib/libswitch.so
 ifneq ($(ROOT),)
 	install -m 755 -D tools/login $(ROOT)/bin/login
 endif

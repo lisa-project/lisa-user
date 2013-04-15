@@ -2,9 +2,9 @@ TOP_DIR = ..
 
 CGLAGS	= -g
 include $(TOP_DIR)/scripts/Makefile.includes
+include $(TOP_DIR)/switch/Makefile.switch
 INC	= $(LINUX_INC) \
-	  $(TOP_DIR)/switch \
-	  $(TOP_DIR)/switch/lisa \
+	  $(SWITCH_INC) \
 	  $(TOP_DIR)/include
 
 SRCS	= vlan_rename.c pktgen.c pktrecv.c test_sock.c mcast_recv.c mcast_send.c
@@ -18,10 +18,9 @@ include $(TOP_DIR)/scripts/Makefile.rules
 
 dep: $(DEPS)
 
-vlan_rename: vlan_rename.o
-	$(Q) $(MAKE) -C $(TOP_DIR)/lib -C ../switch -C lisa
-	$(QUIET_LD)$(CC) $(LDFLAGS) -o $@ $^ ../switch/switch.o ../lib/mm.o \
-		../switch/lisa/lisa.o -lrt
+vlan_rename: vlan_rename.o $(TOP_DIR)/switch/libswitch.so
+	$(Q) $(MAKE) -C $(TOP_DIR)/lib
+	$(QUIET_LD)$(CC) $(LDFLAGS) -o $@ $^ ../lib/mm.o -lrt
 
 
 $(SIMPLE_TARGETS): % : %.o

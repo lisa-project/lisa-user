@@ -3,9 +3,9 @@ TOP_DIR = ..
 CFLAGS	=
 LDFLAGS = -lcrypt
 include $(TOP_DIR)/scripts/Makefile.includes
+include $(TOP_DIR)/switch/Makefile.switch
 INC	= $(LINUX_INC) \
-	  $(TOP_DIR)/switch \
-	  $(TOP_DIR)/switch/lisa \
+	  $(SWITCH_INC) \
 	  $(TOP_DIR)/include
 
 SRCS	= filter.c login.c swctl.c swclid.c reboot.c
@@ -20,10 +20,10 @@ include $(TOP_DIR)/scripts/Makefile.rules
 
 dep: $(DEPS)
 
-swctl: swctl.o
-	$(Q) $(MAKE) -C $(TOP_DIR)/lib -C ../switch
-	$(QUIET_LD)$(CC) $(LDFLAGS) -o $@ $^ ../lib/if_generic.o ../lib/netlink.o ../lib/util.o \
-		../switch/lisa/lisa.o ../lib/mm.o ../switch/switch.o -lrt
+swctl: swctl.o $(TOP_DIR)/switch/libswitch.so
+	$(Q) $(MAKE) -C $(TOP_DIR)/lib
+	$(QUIET_LD)$(CC) $(LDFLAGS) -o $@ $^ ../lib/if_generic.o \
+		../lib/netlink.o ../lib/util.o ../lib/mm.o -lrt
 	
 $(SIMPLE_TARGETS): % : %.o
 	$(QUIET_LD)$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
