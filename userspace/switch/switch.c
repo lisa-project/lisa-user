@@ -88,8 +88,11 @@ static mm_ptr_t __shared_get_if_tag(int if_index) {
 static int __shared_del_if_tag(int if_index) {
 	mm_ptr_t lh = __shared_get_if_tag(if_index);
 
-	if (MM_NULL == lh)
-		return 1;
+	if (MM_NULL == lh) {
+		errno = ENODEV;
+		return -1;
+	}
+
 	mm_list_del(mm, lh);
 	mm_free(mm, mm_list_entry(lh, struct if_tag, lh));
 	return 0;
@@ -126,8 +129,10 @@ static int __shared_del_if_desc(int if_index)
 {
 	mm_ptr_t lh = __shared_get_if_desc(if_index);
 
-	if(MM_NULL == lh)
-		return -ENODEV;
+	if(MM_NULL == lh) {
+		errno = ENODEV;
+		return -1;
+	}
 
 	mm_list_del(mm, lh);
 	mm_free(mm, mm_list_entry(lh, struct if_desc, lh));
@@ -245,10 +250,12 @@ int shared_auth(int type, int level,
 		int (*auth)(char *pw, void *priv), void *priv)
 {
 	char *passwd;
-	int err = -EINVAL;
+	int err = EINVAL;
 
-	if (!auth)
-		return err;
+	if (!auth) {
+		errno = err;
+		return -1;
+	}
 
 	mm_lock(mm);
 	switch (type) {
@@ -276,10 +283,12 @@ out_unlock:
 
 int shared_set_passwd(int type, int level, char *passwd)
 {
-	int err = -EINVAL;
+	int err = EINVAL;
 
-	if (!passwd)
-		return err;
+	if (!passwd) {
+		errno = err;
+		return -1;
+	}
 
 	mm_lock(mm);
 	switch (type) {
@@ -303,6 +312,10 @@ int shared_set_passwd(int type, int level, char *passwd)
 
 out_unlock:
 	mm_unlock(mm);
+	if (err) {
+		errno = err;
+		err = -1;
+	}
 
 	return err;
 }
@@ -428,18 +441,19 @@ int shared_set_vlan_desc(int vlan_id, const char *desc)
 			errno = ENODEV;
 			ret = -1;
 		}
-		mm_unlock(mm);
-		return ret;
+		goto out_unlock;
 	}
 	lh = __shared_get_vlan_desc(vlan_id);
 	if (MM_NULL != lh) {
+		/* Vlan already has a description, so replace it. */
 		s_desc = mm_addr(mm, mm_list_entry(lh, struct vlan_desc, lh));
 		strncpy(s_desc->desc, desc, SW_MAX_VLAN_NAME);
 		s_desc->desc[SW_MAX_VLAN_NAME] = '\0';
-		mm_unlock(mm);
-		return 0;
+		ret = 0;
+		goto out_unlock;
 	}
 
+	/* Create a new entry for vlan descriptions list. */
 	mm_s_desc = mm_alloc(mm, sizeof(struct vlan_desc));
 	/* first save mm pointer obtained from mm_alloc, then compute s_desc
 	 * pointer, because mm_alloc() can change mm->area if the shm area
@@ -447,7 +461,8 @@ int shared_set_vlan_desc(int vlan_id, const char *desc)
 	s_desc = mm_addr(mm, mm_s_desc);
 	if (NULL == s_desc) {
 		errno = ENOMEM;
-		return -1;
+		ret = -1;
+		goto out_unlock;
 	}
 
 	s_desc->vlan_id = vlan_id;
@@ -455,8 +470,9 @@ int shared_set_vlan_desc(int vlan_id, const char *desc)
 	s_desc->desc[SW_MAX_VLAN_NAME] = '\0';
 	mm_list_add(mm, mm_ptr(mm, &s_desc->lh), mm_ptr(mm, &SHM->vlan_descs));
 
+out_unlock:
 	mm_unlock(mm);
-	return 0;
+	return ret;
 }
 
 int shared_del_vlan(int vlan_id)
@@ -479,7 +495,8 @@ int shared_get_if_desc(int if_index, char *desc)
 	ptr = __shared_get_if_desc(if_index);
 	if(MM_NULL == ptr) {
 		mm_unlock(mm);
-		return -EINVAL;
+		errno = EINVAL;
+		return -1;
 	}
 
 	sif_desc = mm_addr(mm, mm_list_entry(ptr, struct if_desc, lh));
@@ -534,18 +551,17 @@ int shared_set_if_desc(int if_index, char *desc)
 	if (NULL == sif_desc) {
 		errno = ENOMEM;
 		ret = -1;
-		goto out;
+		goto out_unlock;
 	}
 
 	sif_desc->if_index = if_index;
 	strncpy(sif_desc->desc, desc, SW_MAX_PORT_DESC);
 	sif_desc->desc[SW_MAX_PORT_DESC] = '\0';
 	mm_list_add(mm, mm_ptr(mm, &sif_desc->lh), mm_ptr(mm, &SHM->if_descs));
+
 out_unlock:
 	mm_unlock(mm);
-out:
 	return ret;
-
 }
 
 
