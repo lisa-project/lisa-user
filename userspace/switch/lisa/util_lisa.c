@@ -14,8 +14,10 @@ int buf_alloc_swcfgr(struct swcfgreq *swcfgr, int sock_fd)
 	int status;
 
 	buf = malloc(size);
-	if (buf == NULL)
-		return -ENOMEM;
+	if (buf == NULL) {
+		errno = ENOMEM;
+		return -1;
+	}
 
 	do {
 		swcfgr->buf.size = size;
@@ -25,11 +27,13 @@ int buf_alloc_swcfgr(struct swcfgreq *swcfgr, int sock_fd)
 			return status;
 
 		if (errno != ENOMEM)
-			return -errno;
+			return -1;
 
 		size += page_size;
 		buf = realloc(buf, size);
-		if (buf == NULL)
-			return -ENOMEM;
+		if (buf == NULL) {
+			errno = ENOMEM;
+			return -1;
+		}
 	} while (1);
 }

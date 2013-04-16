@@ -167,7 +167,7 @@ static int if_add_trunk_vlans(struct switch_operations *sw_ops,
 
 	SW_SOCK_OPEN(lc, sock_fd);
 	rc = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
-	SW_SOCK_CLOSE(lc, sock_fd); /* this can overwrite ioctl errno*/
+	SW_SOCK_CLOSE(lc, sock_fd);
 
 	return rc;
 }
@@ -185,7 +185,7 @@ static int if_set_trunk_vlans(struct switch_operations *sw_ops,
 
 	SW_SOCK_OPEN(lc, sock_fd);
 	rc = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
-	SW_SOCK_CLOSE(lc, sock_fd); /* this can overwrite ioctl errno*/
+	SW_SOCK_CLOSE(lc, sock_fd);
 
 	return rc;
 }
@@ -211,12 +211,13 @@ static int if_set_mode (struct switch_operations *sw_ops, int ifindex,
 			break;
 		default:
 			rc = -1;
+			errno = EINVAL;
 			goto out;
 	}
 
 	SW_SOCK_OPEN(lc, sock_fd);
 	rc = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
-	SW_SOCK_CLOSE(lc, sock_fd); /* this can overwrite ioctl errno*/
+	SW_SOCK_CLOSE(lc, sock_fd);
 
 out:
 	return rc;
@@ -235,7 +236,7 @@ static int if_del_trunk_vlans(struct switch_operations *sw_ops,
 
 	SW_SOCK_OPEN(lc, sock_fd);
 	rc = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
-	SW_SOCK_CLOSE(lc, sock_fd); /* this can overwrite ioctl errno*/
+	SW_SOCK_CLOSE(lc, sock_fd);
 
 	return rc;
 }
@@ -251,7 +252,7 @@ static int if_get_type(struct switch_operations *sw_ops, int ifindex, int *type)
 
 	SW_SOCK_OPEN(lc, sock_fd);
 	rc = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
-	SW_SOCK_CLOSE(lc, sock_fd); /* this can overwrite ioctl errno*/
+	SW_SOCK_CLOSE(lc, sock_fd);
 
 	*type = swcfgr.ext.switchport;
 
@@ -589,7 +590,6 @@ static int igmp_get(struct switch_operations *sw_ops, char *buff, int *snooping)
 	return ret;
 }
 
-/* TODO implement switch API with lisa module */
 struct lisa_context lisa_ctx = {
 	.sw_ops = (struct switch_operations) {
 		.backend_init = backend_init,
