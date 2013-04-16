@@ -521,37 +521,33 @@ int cmd_macstatic(struct cli_context *ctx, int argc, char **argv, struct menu_no
 
 int cmd_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
-	struct swcfgreq swcfgr;
-	int status, sock_fd, ioctl_errno;
+	int status, vlan, ret = CLI_EX_OK, added, cmd_errno;
 	struct swcli_context *uc = SWCLI_CTX(ctx);
-	FILE *out;
 
-	swcfgr.vlan = atoi(argv[argc - 1]);
+	vlan = atoi(argv[argc - 1]);
 	if (strcmp(nodev[0]->name, "no")) {
 		/* vlan is added */
-		swcfgr.cmd = SWCFG_ADDVLAN;
-		default_vlan_name(swcfgr.ext.vlan_desc, swcfgr.vlan);
+		status = sw_ops->vlan_add(sw_ops, vlan);
+		added = 1;
 	} else {
 		/* vlan is removed */
-		swcfgr.cmd = SWCFG_DELVLAN;
+		status = sw_ops->vlan_del(sw_ops, vlan);
+		added = 0;
+	}
+	cmd_errno = errno;
+
+	if (status && cmd_errno == EACCES) {
+		EX_STATUS_REASON(ctx, "Default VLAN %d may not be deleted.\n",
+				vlan);
+		ret = CLI_EX_REJECTED;
 	}
 
-	SW_SOCK_OPEN(ctx, sock_fd);
-	status = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
-	ioctl_errno = errno;
-	SW_SOCK_CLOSE(ctx, sock_fd); /* this can overwrite ioctl errno */
-
-	if (status == -1 && ioctl_errno == EACCES) {
-		out = ctx->out_open(ctx, 0);
-		fprintf(out, "Default VLAN %d may not be deleted.\n", swcfgr.vlan);
-	}
-
-	if (swcfgr.cmd == SWCFG_ADDVLAN && (!status || ioctl_errno == EEXIST)) {
+	if (added && (!status || cmd_errno == EEXIST)) {
 		ctx->root = &config_vlan_main;
-		uc->vlan = swcfgr.vlan;
+		uc->vlan = vlan;
 	}
 	
-	return CLI_EX_OK;
+	return ret;
 }
 
 int cmd_add_mrouter(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
