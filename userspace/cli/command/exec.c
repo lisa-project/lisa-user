@@ -802,33 +802,30 @@ int cmd_sh_mac_age(struct cli_context *ctx, int argc, char **argv, struct menu_n
 
 int cmd_show_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
-	struct swcfgreq swcfgr = {
-		.buf.addr = NULL,
-		.cmd = SWCFG_GETVDB,
-		.vlan = 0,
-		.ext.vlan_desc = NULL
-	};
 	int sock_fd = -1, status;
 	int ret = CLI_EX_OK;
 	const char *fmt1 = "%-4s %-32s %-9s %s\n";
 	const char *fmt2 = "%-4d %-32s %-9s %s\n";
 	const char *fmt3 = "%47s %s\n";
-	char vlan_name[SW_MAX_TAG + 1];
 	FILE *out = NULL;
 	struct if_map if_map;
 	int i, j;
+	unsigned char vlans[SW_VLAN_BMP_NO];
+	char vlan_name[SW_MAX_VLAN_NAME + 1], *vlan_desc = NULL;
+	int vlan_id = 0, min_vlan = SW_MIN_VLAN, max_vlan = SW_MAX_VLAN;
 
 	assert(argc >= 2); /* show vlan */
 	SHIFT_ARG(argc, argv, nodev, 2);
 
 	if (argc && !strcmp(nodev[0]->name, "id")) {
 		assert(argc >= 2);
-		swcfgr.vlan = atoi(argv[1]);
+		vlan_id = atoi(argv[1]);
+		min_vlan = max_vlan = vlan_id;
 	}
 
 	if (argc && !strcmp(nodev[0]->name, "name")) {
 		assert(argc >= 2);
-		swcfgr.ext.vlan_desc = argv[1];
+		vlan_desc = argv[1];
 	}
 
 	SW_SOCK_OPEN(ctx, sock_fd);
@@ -839,24 +836,34 @@ int cmd_show_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_no
 	status = if_map_init_ifindex_hash(&if_map);
 	assert(!status);
 
-	status = buf_alloc_swcfgr(&swcfgr, sock_fd);
-
-	if (status < 0) {
-		EX_STATUS_REASON_IOCTL(ctx, -status);
+	status = sw_ops->get_vdb(sw_ops, vlans);
+	if (status) {
+		EX_STATUS_REASON_IOCTL(ctx, errno);
 		ret = CLI_EX_REJECTED;
 		goto out_clean;
 	}
 
-	if (!status && swcfgr.vlan) {
-		EX_STATUS_REASON(ctx, "VLAN id %d not found in current VLAN database\n", swcfgr.vlan);
+	if (vlan_id && !sw_bitmap_test(vlans, vlan_id)) {
+		EX_STATUS_REASON(ctx, "VLAN id %d not found in current VLAN database\n", vlan_id);
 		ret = CLI_EX_WARNING;
 		goto out_clean;
 	}
 
-	if (!status && swcfgr.ext.vlan_desc != NULL) {
-		EX_STATUS_REASON(ctx, "VLAN %s not found in current VLAN database\n", swcfgr.ext.vlan_desc);
-		ret = CLI_EX_WARNING;
-		goto out_clean;
+	if (vlan_desc != NULL) {
+		for (i = min_vlan; i <= max_vlan; i++)
+			if (sw_bitmap_test(vlans, i)) {
+				status = sw_ops->get_vlan_desc(sw_ops, i, vlan_name);
+				if (!status && !strcmp(vlan_name, vlan_desc))
+					break;
+			}
+		if (i == max_vlan) {
+			EX_STATUS_REASON(ctx, "VLAN %s not found in current VLAN database\n",
+					vlan_desc);
+			ret = CLI_EX_WARNING;
+			goto out_clean;
+		}
+		else
+			min_vlan = max_vlan = i;
 	}
 
 	out = ctx->out_open(ctx, 1);
@@ -864,11 +871,10 @@ int cmd_show_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_no
 	fprintf(out, fmt1, "VLAN", "Name", "Status", "Ports");
 	fprintf(out, fmt1, DASHES(4), DASHES(32), DASHES(9), DASHES(31));
 
-	status /= sizeof(struct net_switch_vdb);
-	for (i = 0; i < status; i++) {
-		struct net_switch_vdb *entry =
-			&((struct net_switch_vdb *)swcfgr.buf.addr)[i];
-		int vlan = entry->vlan;
+	for (i = min_vlan; i <= max_vlan; i++) {
+		if (!sw_bitmap_test(vlans, i))
+			continue;
+		int vlan = i;
 		struct swcfgreq vlif_swcfgr = {
 			.cmd = SWCFG_GETVLANIFS,
 			.vlan = vlan
@@ -934,8 +940,6 @@ out_clean:
 		SW_SOCK_CLOSE(ctx, sock_fd);
 	if (out != NULL)
 		fclose(out);
-	if (swcfgr.buf.addr != NULL)
-		free(swcfgr.buf.addr);
 	return ret;
 }
 

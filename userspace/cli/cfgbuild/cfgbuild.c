@@ -238,6 +238,9 @@ int build_config_global(struct cli_context *ctx, FILE *out, int tagged_if)
 	int status, i, j, sock_fd;
 	char hostname[128];
 	struct swcfgreq swcfgr;
+	unsigned char vlans[SW_VLAN_BMP_NO];
+	int ret = CLI_EX_OK;
+	char vlan_name[SW_MAX_VLAN_NAME + 1], def_name[SW_MAX_VLAN_NAME + 1];
 
 	if_map_init(&if_map);
 
@@ -283,26 +286,24 @@ int build_config_global(struct cli_context *ctx, FILE *out, int tagged_if)
 	}
 
 	/* vlans (aka replacement for vlan database) */
-	swcfgr.cmd = SWCFG_GETVDB;
-	swcfgr.vlan = 0;
-	swcfgr.ext.vlan_desc = NULL;
-	status = buf_alloc_swcfgr(&swcfgr, sock_fd);
-	assert(status > 0); // FIXME
-
-	status /= sizeof(struct net_switch_vdb);
-	for (i = 0, j = 0; i < status; i++) {
-		struct net_switch_vdb *entry =
-			(struct net_switch_vdb *)swcfgr.buf.addr + i;
-		char vlan_name[9];
-
-		if(sw_is_default_vlan(entry->vlan))
-			continue;
-		fprintf(out, "!\nvlan %d\n", entry->vlan);
-		__default_vlan_name(vlan_name, entry->vlan);
-		if (strcmp(entry->name, vlan_name))
-			fprintf(out, " name %s\n", entry->name);
-		j++;
+	status = sw_ops->get_vdb(sw_ops, vlans);
+	if (status) {
+		fprintf(out, "get_vdb failed\n");
+		ret = CLI_EX_WARNING;
 	}
+	else
+		for (i = SW_MIN_VLAN, j = 0; i < SW_MAX_VLAN; i++) {
+			if (!sw_bitmap_test(vlans, i))
+				continue;
+			if (sw_is_default_vlan(i))
+				continue;
+			fprintf(out, "!\nvlan %d\n", i);
+			shared_get_vlan_desc(i, vlan_name);
+			__default_vlan_name(def_name, i);
+			if (strcmp(vlan_name, def_name))
+				fprintf(out, " name %s\n", vlan_name);
+			j++;
+		}
 
 	/* physical interfaces and VIFs */
 	status = if_map_fetch(&if_map, SW_IF_SWITCHED | SW_IF_ROUTED | SW_IF_VIF, sock_fd);
@@ -379,7 +380,7 @@ int build_config_global(struct cli_context *ctx, FILE *out, int tagged_if)
 
 	SW_SOCK_CLOSE(ctx, sock_fd);
 	free(if_map.dev);
-	return CLI_EX_OK;
+	return ret;
 }
 
 static __inline__ int __cmd_show_run(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
