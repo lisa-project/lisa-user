@@ -15,7 +15,7 @@ SUBDIRS = \
 
 DEPFILE = lisa.dep
 
-all: build install
+all: build
 build:
 	$(Q) for subdir in $(SUBDIRS) ; \
 	do \
