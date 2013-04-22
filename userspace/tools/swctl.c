@@ -723,8 +723,9 @@ int main(int argc, char **argv) {
 	}
 
 	if (!strcmp(argv[1], "getiflist")) {
-		int ifindexes[INITIAL_BUF_SIZE];
-		int size, i, type;
+		int type;
+		struct list_head net_devs, *iter, *tmp;
+		struct net_switch_device *dev;
 
 		if (argc < 3) {
 			usage();
@@ -736,14 +737,20 @@ int main(int argc, char **argv) {
 		else
 			type = SW_IF_VIF;
 
-		status = sw_ops->get_if_list(sw_ops, type, ifindexes, &size);
+		INIT_LIST_HEAD(&net_devs);
+		status = sw_ops->get_if_list(sw_ops, type, &net_devs);
 		if (status < 0) {
 			printf("Failed to get all interfaces\n");
 			return status;
 		}
 
-		for (i = 0; i < size; i++)
-			printf("Int%02d ", ifindexes[i]);
+		list_for_each_safe(iter, tmp, &net_devs) {
+			dev = list_entry(iter, struct net_switch_device, lh);
+			printf("Int%02d ", dev->ifindex);
+
+			list_del(iter);
+			free(dev);
+		}
 		printf("\n");
 		return status;
 	}

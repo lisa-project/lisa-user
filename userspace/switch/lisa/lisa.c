@@ -384,12 +384,13 @@ static int if_get_cfg (struct switch_operations *sw_ops, int ifindex, int *flags
 }
 
 static int get_if_list(struct switch_operations *sw_ops, int type,
-	int *ifindexes, int *size)
+	struct list_head *net_devs)
 {
-	int rc, sock_fd, i;
+	int rc, sock_fd, i, if_no;
 	struct swcfgreq swcfgr;
 	struct lisa_context *lc = SWLiSA_CTX(sw_ops);
-	struct net_switch_device *devs;
+	struct net_switch_device *dev;
+	struct net_switch_dev *resp;
 
 	swcfgr.cmd = SWCFG_GETIFLIST;
 	swcfgr.ext.switchport = type;
@@ -402,13 +403,21 @@ static int get_if_list(struct switch_operations *sw_ops, int type,
 		return -1;
 
 	/* Get the array of devices from response */
-	devs = (struct net_switch_device *)swcfgr.buf.addr;
-	*size = rc / sizeof(struct net_switch_device);
+	resp = (struct net_switch_dev *)swcfgr.buf.addr;
+	if_no = rc / sizeof(struct net_switch_dev);
+	for (i = 0; i < if_no; i++) {
+		dev = malloc(sizeof(struct net_switch_device));
+		if (!dev) {
+			errno = ENOMEM;
+			return -1;
+		}
+		dev->ifindex = resp[i].ifindex;
+		dev->type = resp[i].type;
+		dev->vlan = resp[i].vlan;
 
-	for (i = 0; i < *size; i++)
-		ifindexes[i] = devs[i].ifindex;
+		list_add_tail(&dev->lh, net_devs);
+	}
 
-	free(devs);
 	return 0;
 }
 
@@ -478,8 +487,10 @@ static int mrouters_get(struct switch_operations *sw_ops, int vlan,
 
 	for (i = 0; i < vlif_no; ++i) {
 		entry = malloc(sizeof(struct net_switch_mrouter_e));
-		if (!entry)
+		if (!entry) {
+			errno = ENOMEM;
 			return -1;
+		}
 
 		ret_value = ((struct net_switch_mrouter *)swcfgr.buf.addr)[i];
 		entry->ifindex = ret_value.ifindex;

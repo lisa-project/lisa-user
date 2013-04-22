@@ -29,6 +29,7 @@ struct net_switch_device {
 	int ifindex;
 	int type;
 	int vlan; /* used only for VIFs */
+	struct list_head lh;
 };
 
 struct switch_operations {
@@ -71,15 +72,8 @@ struct switch_operations {
 	int (*if_set_trunk_vlans) (struct switch_operations *sw_ops, int ifindex, unsigned char *vlans);
 	int (*if_del_trunk_vlans) (struct switch_operations *sw_ops, int ifindex, unsigned char *vlans);
 
-	/**
-	 * Get indexes of interfaces.
-	 *
-	 * Description may be obtained using if_get_desc().
-	 *
-	 * @param ifindexes  Array with interfaces' indexes.
-	 */
 	int (*get_if_list) (struct switch_operations *sw_ops, int type,
-		int *ifindexes, int *size);
+		struct list_head *net_devs);
 
 	int (*vlan_add) (struct switch_operations *sw_ops, int vlan);
 	int (*vlan_del) (struct switch_operations *sw_ops, int vlan);
