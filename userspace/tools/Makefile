@@ -22,8 +22,8 @@ dep: $(DEPS)
 
 swctl: swctl.o $(TOP_DIR)/switch/libswitch.so
 	$(Q) $(MAKE) -C $(TOP_DIR)/lib
-	$(QUIET_LD)$(CC) $(LDFLAGS) -o $@ $^ ../lib/if_generic.o \
-		../lib/netlink.o ../lib/util.o ../lib/mm.o -lrt
+	$(QUIET_LD)$(CC) -o $@ $^ ../lib/if_generic.o \
+		../lib/netlink.o ../lib/util.o ../lib/mm.o -lrt $(LDFLAGS)
 	
 $(SIMPLE_TARGETS): % : %.o
-	$(QUIET_LD)$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
+	$(QUIET_LD)$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
