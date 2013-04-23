@@ -179,7 +179,6 @@ int cmd_hostname(struct cli_context *ctx, int argc, char **argv, struct menu_nod
 static int use_if_ether(struct cli_context *ctx, char *name, int index, int switchport)
 {
 	int status, sock_fd, ioctl_errno;
-	struct swcfgreq swcfgr;
 	struct swcli_context *uc = SWCLI_CTX(ctx);
 	struct cdp_session *cdp;
 	FILE *out;
@@ -195,12 +194,8 @@ static int use_if_ether(struct cli_context *ctx, char *name, int index, int swit
 		return CLI_EX_REJECTED;
 	}
 
-	swcfgr.cmd = SWCFG_ADDIF;
-	swcfgr.ifindex = index;
-	swcfgr.ext.switchport = switchport;
-	status = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
+	status = sw_ops->if_add(sw_ops, index, switchport);
 	ioctl_errno = errno;
-	SW_SOCK_CLOSE(ctx, sock_fd); /* this can overwrite ioctl errno */
 
 	if (status) {
 		switch (ioctl_errno) {
@@ -270,7 +265,7 @@ static int use_if_vlan(struct cli_context *ctx, int vlan, int index)
 static int remove_if_ether(struct cli_context *ctx, char *name, int index, int switchport)
 {
 	int sock_fd;
-	struct swcfgreq swcfgr;
+	int status;
 	struct cdp_session *cdp;
 	FILE *out;
 
@@ -284,9 +279,6 @@ static int remove_if_ether(struct cli_context *ctx, char *name, int index, int s
 		return CLI_EX_OK;
 	}
 
-	swcfgr.cmd = SWCFG_DELIF;
-	swcfgr.ifindex = index;
-
 	/* Try to disable CDP on this interface */
 	do {
 		if (!CDP_SESSION_OPEN(ctx, cdp)) {
@@ -299,8 +291,13 @@ static int remove_if_ether(struct cli_context *ctx, char *name, int index, int s
 		CDP_SESSION_CLOSE(ctx, cdp);
 	} while (0);
 
-	ioctl(sock_fd, SIOCSWCFG, &swcfgr);
 	SW_SOCK_CLOSE(ctx, sock_fd);
+
+	status = sw_ops->if_remove(sw_ops, index);
+	if (status) {
+		EX_STATUS_REASON(ctx, "if_remove failed");
+		return CLI_EX_REJECTED;
+	}
 
 	return CLI_EX_OK;
 }

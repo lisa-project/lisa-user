@@ -232,9 +232,7 @@ int main(int argc, char **argv) {
 			return 1;
 		}
 
-		user_arg.cmd = SWCFG_ADDIF;
-		user_arg.ifindex = if_index;
-		status = ioctl(sock, SIOCSWCFG, &user_arg);
+		status = sw_ops->if_add(sw_ops, if_index, 0);
 		if (status) {
 			switch_set_if_tag(if_index, NULL, NULL);
 			perror("add failed");
