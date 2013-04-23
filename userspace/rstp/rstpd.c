@@ -150,7 +150,7 @@ rstpd_register_interface(int if_index)
 	status = ioctl(entry->sw_sock_fd, SIOCGIFHWADDR, &ifr);
 	memcpy(entry->mac_addr, ifr.ifr_ifru.ifru_hwaddr.sa_data, 6);
 
-	shared_get_rstp(&rstp);
+	switch_get_rstp(&rstp);
 
 	memset(&entry->portPriority, 0, sizeof(struct priority_vector4));
 	memcpy(&entry->portPriority.root_bridge_id, &bridge.BridgePriority.root_bridge_id, sizeof(struct bridge_id));

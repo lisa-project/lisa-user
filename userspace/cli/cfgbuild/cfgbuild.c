@@ -259,7 +259,7 @@ int build_config_global(struct cli_context *ctx, FILE *out, int tagged_if)
 			.level = i
 		};
 
-		shared_auth(SHARED_AUTH_ENABLE, i, write_enable_secret, &priv);
+		switch_auth(SHARED_AUTH_ENABLE, i, write_enable_secret, &priv);
 	}
 
 	/* TODO: IGMP snooping static mrouter configuration */
@@ -298,7 +298,7 @@ int build_config_global(struct cli_context *ctx, FILE *out, int tagged_if)
 			if (sw_is_default_vlan(i))
 				continue;
 			fprintf(out, "!\nvlan %d\n", i);
-			shared_get_vlan_desc(i, vlan_name);
+			switch_get_vlan_desc(i, vlan_name);
 			__default_vlan_name(def_name, i);
 			if (strcmp(vlan_name, def_name))
 				fprintf(out, " name %s\n", vlan_name);
@@ -315,7 +315,7 @@ int build_config_global(struct cli_context *ctx, FILE *out, int tagged_if)
 		char path[PATH_MAX];
 		int if_cmd = 1;
 
-		if (tagged_if && !shared_get_if_tag(if_map.dev[i].ifindex, tag)) {
+		if (tagged_if && !switch_get_if_tag(if_map.dev[i].ifindex, tag)) {
 			status = snprintf(path, sizeof(path), "%s/%s", SW_TAGS_FILE, tag);
 			assert (status < sizeof(path)); // FIXME
 
@@ -366,7 +366,7 @@ int build_config_global(struct cli_context *ctx, FILE *out, int tagged_if)
 		fprintf(out, "mac-address-table aging-time %d\n!\n", swcfgr.ext.nsec);
 
 	/* cdp global settings */
-	shared_get_cdp(&cdp);
+	switch_get_cdp(&cdp);
 	if (!cdp.enabled)
 		fprintf(out, "no cdp run\n");
 	if (cdp.version != CDP_DFL_VERSION)

@@ -212,7 +212,7 @@ static void do_initial_cfg(void) {
 	struct cdp_configuration cdp;
 	struct utsname u_name;
 
-	shared_get_cdp(&cdp);
+	switch_get_cdp(&cdp);
 
 	/* advertise as a layer 2 (non-STP) switch */
 	cdp.capabilities = CAP_L2SW;
@@ -229,7 +229,7 @@ static void do_initial_cfg(void) {
 	cdp.platform[sizeof(cdp.platform)-1] = '\0';
 
 	/* store initial config into the shared memory */
-	shared_set_cdp(&cdp);
+	switch_set_cdp(&cdp);
 
 	/* initialize statistics */
 	cdp_stats.v1_in = cdp_stats.v2_in = cdp_stats.v1_out = cdp_stats.v2_out = 0;
@@ -496,7 +496,7 @@ static void cdp_recv_loop(void) {
 				perror("recv");
 				continue;
 			}
-			shared_get_cdp(&cdp);
+			switch_get_cdp(&cdp);
 			if (!cdp.enabled) {
 				sys_dbg("[cdp receiver]: cdp is disabled\n");
 				continue;

@@ -232,11 +232,11 @@ void *cdp_send_loop(void *arg) {
 	struct cdp_interface *entry, *tmp;
 	int offset, r;
 
-	shared_get_cdp(&cdp);
+	switch_get_cdp(&cdp);
 	while (1) {
 		sleep(cdp.timer);
 		sys_dbg("cdp_send_loop()\n");
-		shared_get_cdp(&cdp);
+		switch_get_cdp(&cdp);
 		if (!cdp.enabled) {
 			sys_dbg("cdp is disabled\n");
 			continue;

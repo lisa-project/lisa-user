@@ -18,9 +18,9 @@ int cmd_rstp_run(struct cli_context *ctx, int argc, char **argv, struct menu_nod
 
 	if (!strcmp(nodev[0]->name, "no"))
 		enabled = 0;
-	shared_get_rstp(&rstp);
+	switch_get_rstp(&rstp);
 	rstp.enabled = enabled;
-	shared_set_rstp(&rstp);
+	switch_set_rstp(&rstp);
 
 	return CLI_EX_OK;
 }
@@ -33,10 +33,10 @@ int cmd_cdp_v2(struct cli_context *ctx, int argc, char **argv, struct menu_node 
 	if (!strcmp(nodev[0]->name, "no"))
 		version = 1;
 
-	shared_get_cdp(&cdp);
+	switch_get_cdp(&cdp);
 	if (cdp.enabled) {
 		cdp.version = version;
-		shared_set_cdp(&cdp);
+		switch_set_cdp(&cdp);
 	}
 
 	return CLI_EX_OK;
@@ -46,10 +46,10 @@ int cmd_cdp_holdtime(struct cli_context *ctx, int argc, char **argv, struct menu
 {
 	struct cdp_configuration cdp;
 
-	shared_get_cdp(&cdp);
+	switch_get_cdp(&cdp);
 	if (cdp.enabled) {
 		cdp.holdtime = atoi(argv[2]);
-		shared_set_cdp(&cdp);
+		switch_set_cdp(&cdp);
 	}
 
 	return CLI_EX_OK;
@@ -59,10 +59,10 @@ int cmd_cdp_timer(struct cli_context *ctx, int argc, char **argv, struct menu_no
 {
 	struct cdp_configuration cdp;
 
-	shared_get_cdp(&cdp);
+	switch_get_cdp(&cdp);
 	if (cdp.enabled) {
 		cdp.timer = atoi(argv[2]);
-		shared_set_cdp(&cdp);
+		switch_set_cdp(&cdp);
 	}
 
 	return CLI_EX_OK;
@@ -75,9 +75,9 @@ int cmd_cdp_run(struct cli_context *ctx, int argc, char **argv, struct menu_node
 
 	if (!strcmp(nodev[0]->name, "no"))
 		enabled = 0;
-	shared_get_cdp(&cdp);
+	switch_get_cdp(&cdp);
 	cdp.enabled = enabled;
-	shared_set_cdp(&cdp);
+	switch_set_cdp(&cdp);
 
 	return CLI_EX_OK;
 }
@@ -85,7 +85,7 @@ int cmd_cdp_run(struct cli_context *ctx, int argc, char **argv, struct menu_node
 static int _cmd_setenpw(struct cli_context *ctx, int level, char *passwd)
 {
 	int err;
-	if ((err = shared_set_passwd(SHARED_AUTH_ENABLE, level, passwd))) {
+	if ((err = switch_set_passwd(SHARED_AUTH_ENABLE, level, passwd))) {
 		EX_STATUS_REASON(ctx, "%s", strerror(err));
 		return CLI_EX_REJECTED;
 	}

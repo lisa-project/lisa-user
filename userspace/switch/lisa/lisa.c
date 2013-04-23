@@ -45,7 +45,7 @@ static int if_remove(struct switch_operations *sw_ops, int ifindex)
 
 static int get_vlan_desc(struct switch_operations *sw_ops, int vlan, char *desc)
 {
-	return shared_get_vlan_desc(vlan, desc);
+	return switch_get_vlan_desc(vlan, desc);
 }
 
 static int vlan_rename(struct switch_operations *sw_ops, int vlan, char *desc)
@@ -61,7 +61,7 @@ static int vlan_rename(struct switch_operations *sw_ops, int vlan, char *desc)
 		errno = EPERM;
 	}
 	else
-		rc = shared_set_vlan_desc(vlan, desc);
+		rc = switch_set_vlan_desc(vlan, desc);
 
 	return rc;
 }
@@ -84,7 +84,7 @@ static int vlan_add(struct switch_operations *sw_ops, int vlan)
 	/* Add default description for newly added vlan. */
 	if (rc == 0) {
 		__default_vlan_name(desc, vlan);
-		rc = shared_set_vlan_desc(vlan, desc);
+		rc = switch_set_vlan_desc(vlan, desc);
 		if (rc) {
 			sw_ops->vlan_del(sw_ops, vlan);
 			goto exit;
@@ -101,7 +101,7 @@ static int vlan_del(struct switch_operations *sw_ops, int vlan)
 	struct swcfgreq swcfgr;
 	struct lisa_context *lc = SWLiSA_CTX(sw_ops);
 
-	rc = shared_del_vlan(vlan);
+	rc = switch_del_vlan(vlan);
 
 	swcfgr.vlan = vlan;
 	swcfgr.cmd = SWCFG_DELVLAN;
@@ -423,12 +423,12 @@ static int get_if_list(struct switch_operations *sw_ops, int type,
 
 static int if_set_desc(struct switch_operations *sw_ops, int ifindex, char *desc)
 {
-	return shared_set_if_desc(ifindex, desc);
+	return switch_set_if_desc(ifindex, desc);
 }
 
 static int if_get_desc(struct switch_operations *sw_ops, int ifindex, char *desc)
 {
-	return shared_get_if_desc(ifindex, desc);
+	return switch_get_if_desc(ifindex, desc);
 }
 
 static int set_age_time(struct switch_operations *sw_ops, int age_time)

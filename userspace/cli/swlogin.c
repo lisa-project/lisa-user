@@ -46,7 +46,7 @@ static int checkpass(int retries)
 	rl_redisplay_function = redisplay_password;
 	for (i = 0; i < retries; i++) {
 		pw = readline(NULL);
-		if (shared_auth(SHARED_AUTH_VTY, 0, password_valid, pw))
+		if (switch_auth(SHARED_AUTH_VTY, 0, password_valid, pw))
 			break;
 	}
 	rl_redisplay_function = old_redisplay;

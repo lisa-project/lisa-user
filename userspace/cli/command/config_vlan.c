@@ -11,10 +11,10 @@ int cmd_namevlan(struct cli_context *ctx, int argc, char **argv, struct menu_nod
 	if (strcmp(nodev[0]->name, "no")) {
 		/* vlan is renamed by user */
 		assert(argc >= 2);
-		status = shared_set_vlan_desc(uc->vlan, argv[1]);
+		status = switch_set_vlan_desc(uc->vlan, argv[1]);
 	} else {
 		/* vlan name is set to default */
-		status = shared_set_vlan_desc(uc->vlan, NULL);
+		status = switch_set_vlan_desc(uc->vlan, NULL);
 	}
 	if (status) {
 		EX_STATUS_REASON(ctx, "Could not name vlan %d\n", uc->vlan);

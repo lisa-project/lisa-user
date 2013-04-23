@@ -7,7 +7,7 @@ int cmd_sh_cdp(struct cli_context *ctx, int argc, char **argv, struct menu_node 
 	struct cdp_configuration cdp;
 	FILE *out;
 
-	shared_get_cdp(&cdp);
+	switch_get_cdp(&cdp);
 	if (cdp.enabled) {
 		out =  ctx->out_open(ctx, 0);
 		fprintf(out, "Global CDP information:\n"
@@ -28,7 +28,7 @@ int cmd_sh_cdp_entry(struct cli_context *ctx, int argc, char **argv, struct menu
 	char *entry = NULL;
 	FILE *out;
 
-	shared_get_cdp(&cfg);
+	switch_get_cdp(&cfg);
 	if (!cfg.enabled)
 		return 0;
 
@@ -68,7 +68,7 @@ int cmd_sh_cdp_holdtime(struct cli_context *ctx, int argc, char **argv, struct m
 	struct cdp_configuration cdp;
 	FILE *out;
 
-	shared_get_cdp(&cdp);
+	switch_get_cdp(&cdp);
 	if (cdp.enabled) {
 		out =  ctx->out_open(ctx, 0);
 		fprintf(out, "%d secs\n", cdp.holdtime);
@@ -84,7 +84,7 @@ int cmd_sh_cdp_int(struct cli_context *ctx, int argc, char **argv, struct menu_n
 	char buf[IFNAMSIZ];
 	FILE *out;
 
-	shared_get_cdp(&cfg);
+	switch_get_cdp(&cfg);
 	if (!cfg.enabled)
 		return 0;
 
@@ -134,7 +134,7 @@ int cmd_sh_cdp_ne(struct cli_context *ctx, int argc, char **argv, struct menu_no
 	int err, if_index = 0, sock_fd;
 	FILE *out;
 
-	shared_get_cdp(&cfg);
+	switch_get_cdp(&cfg);
 	if (!cfg.enabled)
 		return 0;
 
@@ -182,7 +182,7 @@ int cmd_sh_cdp_run(struct cli_context *ctx, int argc, char **argv, struct menu_n
 	struct cdp_configuration cdp;
 	FILE *out;
 
-	shared_get_cdp(&cdp);
+	switch_get_cdp(&cdp);
 
 	out =  ctx->out_open(ctx, 1);
 	fprintf(out, "CDP is %s\n", cdp.enabled? "enabled" : "disabled");
@@ -196,7 +196,7 @@ int cmd_sh_cdp_timer(struct cli_context *ctx, int argc, char **argv, struct menu
 	struct cdp_configuration cdp;
 	FILE *out;
 
-	shared_get_cdp(&cdp);
+	switch_get_cdp(&cdp);
 
 	if (cdp.enabled) {
 		out = ctx->out_open(ctx, 1);
@@ -214,7 +214,7 @@ int cmd_sh_cdp_traffic(struct cli_context *ctx, int argc, char **argv, struct me
 	FILE *out;
 	int err;
 
-	shared_get_cdp(&cfg);
+	switch_get_cdp(&cfg);
 	if (!cfg.enabled)
 		return 0;
 

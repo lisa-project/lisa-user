@@ -29,7 +29,7 @@
 /*
  * Switch shared memory structure
  */
-struct shared {
+struct switch_mem {
 	/* Enable secrets (crypted) */
 	struct {
 		char secret[SW_SECRET_LEN + 1];
@@ -69,10 +69,10 @@ struct if_desc {
 };
 
 static struct mm_private *mm = NULL;
-#define SHM ((struct shared *)MM_STATIC(mm))
+#define SHM ((struct switch_mem *)MM_STATIC(mm))
 struct switch_operations *sw_ops;
 
-static mm_ptr_t __shared_get_if_tag(int if_index) {
+static mm_ptr_t __switch_get_if_tag(int if_index) {
 	mm_ptr_t ret;
 
 	mm_list_for_each(mm, ret, mm_ptr(mm, &SHM->if_tags)) {
@@ -85,8 +85,8 @@ static mm_ptr_t __shared_get_if_tag(int if_index) {
 	return MM_NULL;
 }
 
-static int __shared_del_if_tag(int if_index) {
-	mm_ptr_t lh = __shared_get_if_tag(if_index);
+static int __switch_del_if_tag(int if_index) {
+	mm_ptr_t lh = __switch_get_if_tag(if_index);
 
 	if (MM_NULL == lh) {
 		errno = ENODEV;
@@ -98,7 +98,7 @@ static int __shared_del_if_tag(int if_index) {
 	return 0;
 }
 
-static mm_ptr_t __shared_get_tag_if(char *tag) {
+static mm_ptr_t __switch_get_tag_if(char *tag) {
 	mm_ptr_t ret;
 
 	mm_list_for_each(mm, ret, mm_ptr(mm, &SHM->if_tags)) {
@@ -111,7 +111,7 @@ static mm_ptr_t __shared_get_tag_if(char *tag) {
 	return MM_NULL;
 }
 
-static mm_ptr_t __shared_get_if_desc(int if_index)
+static mm_ptr_t __switch_get_if_desc(int if_index)
 {
 	mm_ptr_t ret;
 
@@ -125,9 +125,9 @@ static mm_ptr_t __shared_get_if_desc(int if_index)
 	return MM_NULL;
 }
 
-static int __shared_del_if_desc(int if_index)
+static int __switch_del_if_desc(int if_index)
 {
-	mm_ptr_t lh = __shared_get_if_desc(if_index);
+	mm_ptr_t lh = __switch_get_if_desc(if_index);
 
 	if(MM_NULL == lh) {
 		errno = ENODEV;
@@ -139,7 +139,7 @@ static int __shared_del_if_desc(int if_index)
 	return 0;
 }
 
-static mm_ptr_t __shared_get_vlan_desc(int vlan_id) {
+static mm_ptr_t __switch_get_vlan_desc(int vlan_id) {
 	mm_ptr_t ret;
 
 	mm_list_for_each(mm, ret, mm_ptr(mm, &SHM->vlan_descs)) {
@@ -152,8 +152,8 @@ static mm_ptr_t __shared_get_vlan_desc(int vlan_id) {
 	return MM_NULL;
 }
 
-static int __shared_del_vlan_desc(int vlan_id) {
-	mm_ptr_t lh = __shared_get_vlan_desc(vlan_id);
+static int __switch_del_vlan_desc(int vlan_id) {
+	mm_ptr_t lh = __switch_get_vlan_desc(vlan_id);
 
 	if (MM_NULL == lh) {
 		errno = ENODEV;
@@ -188,7 +188,7 @@ static void switch_init_rstp(void)
 	rstp.ForceProtocolVersion = 2;
 
 	/* store initial config into the shared memory */
-	shared_set_rstp(&rstp);
+	switch_set_rstp(&rstp);
 }
 
 static void switch_init_cdp(void)
@@ -202,7 +202,7 @@ static void switch_init_cdp(void)
 	cdp.timer    = CDP_DFL_TIMER;    /* 60 seconds */
 
 	/* store initial config into the shared memory */
-	shared_set_cdp(&cdp);
+	switch_set_cdp(&cdp);
 }
 
 int switch_init(void) {
@@ -214,14 +214,14 @@ int switch_init(void) {
 #endif
 	if (mm)
 		return 0;
-	mm = mm_create("lisa", sizeof(struct shared), 4096);
+	mm = mm_create("lisa", sizeof(struct switch_mem), 4096);
 	if (!mm)
 		return  -1;
 
 	if (!mm->init)
 		return 0;
 
-	memset(SHM, 0, sizeof(struct shared));
+	memset(SHM, 0, sizeof(struct switch_mem));
 	MM_INIT_LIST_HEAD(mm, mm_ptr(mm, &SHM->vlan_descs));
 	MM_INIT_LIST_HEAD(mm, mm_ptr(mm, &SHM->if_tags));
 	MM_INIT_LIST_HEAD(mm, mm_ptr(mm, &SHM->if_descs));
@@ -233,20 +233,20 @@ int switch_init(void) {
 
 	if (sw_ops->vlan_add(sw_ops, 1))
 		return -1;
-	if (shared_set_vlan_desc(1, "default"))
+	if (switch_set_vlan_desc(1, "default"))
 		return -1;
 
 	for (i = 1002; i <= 1005; i++) {
 		__default_vlan_name(desc, i);
 		if (sw_ops->vlan_add(sw_ops, i))
 			return -1;
-		if (shared_set_vlan_desc(i, desc))
+		if (switch_set_vlan_desc(i, desc))
 			return -1;
 	}
 	return 0;
 }
 
-int shared_auth(int type, int level,
+int switch_auth(int type, int level,
 		int (*auth)(char *pw, void *priv), void *priv)
 {
 	char *passwd;
@@ -281,7 +281,7 @@ out_unlock:
 	return err;
 }
 
-int shared_set_passwd(int type, int level, char *passwd)
+int switch_set_passwd(int type, int level, char *passwd)
 {
 	int err = EINVAL;
 
@@ -320,12 +320,12 @@ out_unlock:
 	return err;
 }
 
-int shared_get_if_tag(int if_index, char *tag) {
+int switch_get_if_tag(int if_index, char *tag) {
 	mm_ptr_t ptr;
 	struct if_tag *s_tag;
 
 	mm_lock(mm);
-	ptr = __shared_get_if_tag(if_index);
+	ptr = __switch_get_if_tag(if_index);
 	if (MM_NULL == ptr) {
 		mm_unlock(mm);
 		return 1;
@@ -338,7 +338,7 @@ int shared_get_if_tag(int if_index, char *tag) {
 }
 
 
-int shared_set_if_tag(int if_index, char *tag, int *other_if) {
+int switch_set_if_tag(int if_index, char *tag, int *other_if) {
 	mm_ptr_t lh, mm_s_tag;
 	struct if_tag *s_tag;
 	int ret;
@@ -346,12 +346,12 @@ int shared_set_if_tag(int if_index, char *tag, int *other_if) {
 	mm_lock(mm);
 
 	if (NULL == tag) {
-		ret = __shared_del_if_tag(if_index);
+		ret = __switch_del_if_tag(if_index);
 		mm_unlock(mm);
 		return ret;
 	}
 
-	lh = __shared_get_tag_if(tag);
+	lh = __switch_get_tag_if(tag);
 	if (MM_NULL != lh) {
 		if (*other_if) {
 			s_tag = mm_addr(mm, mm_list_entry(lh, struct if_tag, lh));
@@ -361,7 +361,7 @@ int shared_set_if_tag(int if_index, char *tag, int *other_if) {
 		return 1;
 	}
 
-	lh = __shared_get_if_tag(if_index);
+	lh = __switch_get_if_tag(if_index);
 	if (MM_NULL != lh) {
 		s_tag = mm_addr(mm, mm_list_entry(lh, struct if_tag, lh));
 		strncpy(s_tag->tag, tag, SW_MAX_TAG);
@@ -391,7 +391,7 @@ int shared_set_if_tag(int if_index, char *tag, int *other_if) {
 	return 0;
 }
 
-int shared_get_vlan_desc(int vlan_id, char *desc)
+int switch_get_vlan_desc(int vlan_id, char *desc)
 {
 	mm_ptr_t ptr;
 	struct vlan_desc *s_desc;
@@ -402,7 +402,7 @@ int shared_get_vlan_desc(int vlan_id, char *desc)
 	}
 
 	mm_lock(mm);
-	ptr = __shared_get_vlan_desc(vlan_id);
+	ptr = __switch_get_vlan_desc(vlan_id);
 	if (MM_NULL == ptr) {
 		mm_unlock(mm);
 		desc = NULL;
@@ -418,7 +418,7 @@ int shared_get_vlan_desc(int vlan_id, char *desc)
 	return 0;
 }
 
-int shared_set_vlan_desc(int vlan_id, const char *desc)
+int switch_set_vlan_desc(int vlan_id, const char *desc)
 {
 	mm_ptr_t lh, mm_s_desc;
 	struct vlan_desc *s_desc;
@@ -428,7 +428,7 @@ int shared_set_vlan_desc(int vlan_id, const char *desc)
 
 	if (NULL == desc) {
 		/* Set description to default. */
-		lh = __shared_get_vlan_desc(vlan_id);
+		lh = __switch_get_vlan_desc(vlan_id);
 		if (MM_NULL != lh) {
 			char default_desc[SW_MAX_VLAN_NAME];
 			__default_vlan_name(default_desc, vlan_id);
@@ -443,7 +443,7 @@ int shared_set_vlan_desc(int vlan_id, const char *desc)
 		}
 		goto out_unlock;
 	}
-	lh = __shared_get_vlan_desc(vlan_id);
+	lh = __switch_get_vlan_desc(vlan_id);
 	if (MM_NULL != lh) {
 		/* Vlan already has a description, so replace it. */
 		s_desc = mm_addr(mm, mm_list_entry(lh, struct vlan_desc, lh));
@@ -475,24 +475,24 @@ out_unlock:
 	return ret;
 }
 
-int shared_del_vlan(int vlan_id)
+int switch_del_vlan(int vlan_id)
 {
 	int ret = 0;
 
 	mm_lock(mm);
-	ret = __shared_del_vlan_desc(vlan_id);
+	ret = __switch_del_vlan_desc(vlan_id);
 	mm_unlock(mm);
 
 	return ret;
 }
 
-int shared_get_if_desc(int if_index, char *desc)
+int switch_get_if_desc(int if_index, char *desc)
 {
 	mm_ptr_t ptr;
 	struct if_desc *sif_desc;
 
 	mm_lock(mm);
-	ptr = __shared_get_if_desc(if_index);
+	ptr = __switch_get_if_desc(if_index);
 	if(MM_NULL == ptr) {
 		mm_unlock(mm);
 		errno = EINVAL;
@@ -507,7 +507,7 @@ int shared_get_if_desc(int if_index, char *desc)
 	return 0;
 }
 
-int shared_set_if_desc(int if_index, char *desc)
+int switch_set_if_desc(int if_index, char *desc)
 {
 	mm_ptr_t lh, mm_s_desc;
 	struct if_desc *sif_desc;
@@ -518,7 +518,7 @@ int shared_set_if_desc(int if_index, char *desc)
 	/* no description was given */
 	if(NULL == desc) {
 		/* Set description to default value */
-		lh = __shared_get_if_desc(if_index);
+		lh = __switch_get_if_desc(if_index);
 		if(MM_NULL != lh) {
 			char default_desc[SW_MAX_PORT_DESC];
 			__default_iface_name(default_desc);
@@ -534,7 +534,7 @@ int shared_set_if_desc(int if_index, char *desc)
 	}
 
 	/* interface already exists */
-	lh = __shared_get_if_desc(if_index);
+	lh = __switch_get_if_desc(if_index);
 	if(MM_NULL != lh) {
 		sif_desc = mm_addr(mm, mm_list_entry(lh, struct if_desc, lh));
 		strncpy(sif_desc->desc, desc, SW_MAX_PORT_DESC);
@@ -565,18 +565,18 @@ out_unlock:
 }
 
 
-int shared_del_if(int if_index)
+int switch_del_if(int if_index)
 {
 	int ret;
 
 	mm_lock(mm);
-	ret = __shared_del_if_desc(if_index);
+	ret = __switch_del_if_desc(if_index);
 	mm_unlock(mm);
 
 	return ret;
 }
 
-void shared_set_cdp(struct cdp_configuration *cdp)
+void switch_set_cdp(struct cdp_configuration *cdp)
 {
 	assert(cdp);
 	mm_lock(mm);
@@ -584,7 +584,7 @@ void shared_set_cdp(struct cdp_configuration *cdp)
 	mm_unlock(mm);
 }
 
-void shared_get_cdp(struct cdp_configuration *cdp)
+void switch_get_cdp(struct cdp_configuration *cdp)
 {
 	assert(cdp);
 	mm_lock(mm);
@@ -592,7 +592,7 @@ void shared_get_cdp(struct cdp_configuration *cdp)
 	mm_unlock(mm);
 }
 
-void shared_set_rstp(struct rstp_configuration *rstp)
+void switch_set_rstp(struct rstp_configuration *rstp)
 {
 	assert(rstp);
 	mm_lock(mm);
@@ -600,7 +600,7 @@ void shared_set_rstp(struct rstp_configuration *rstp)
 	mm_unlock(mm);
 }
 
-void shared_get_rstp(struct rstp_configuration *rstp)
+void switch_get_rstp(struct rstp_configuration *rstp)
 {
 	assert(rstp);
 	mm_lock(mm);

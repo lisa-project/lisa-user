@@ -76,7 +76,7 @@ int cmd_rstp_if_set(struct cli_context *ctx, int argc, char **argv, struct menu_
 	int enable = 1;
 	int err;
 
-	shared_get_rstp(&cfg);
+	switch_get_rstp(&cfg);
 	if (!cfg.enabled)
 		return 0;
 
@@ -104,7 +104,7 @@ int cmd_cdp_if_set(struct cli_context *ctx, int argc, char **argv, struct menu_n
 	int enable = 1;
 	int err;
 
-	shared_get_cdp(&cfg);
+	switch_get_cdp(&cfg);
 	if (!cfg.enabled)
 		return 0;
 
@@ -124,24 +124,20 @@ int cmd_cdp_if_set(struct cli_context *ctx, int argc, char **argv, struct menu_n
 int cmd_if_desc(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
 	struct swcli_context *uc = SWCLI_CTX(ctx);
-	struct swcfgreq swcfgr;
 	int ret = CLI_EX_OK;
 
 	assert(argc);
 
-	swcfgr.cmd = SWCFG_SETIFDESC;
-	swcfgr.ifindex = uc->ifindex;
 	if (strcmp(nodev[0]->name, "no")) {
 		/* description is set/changed by user */
 		assert(argc >= 2);
-		swcfgr.ext.iface_desc = argv[1];
-		if(shared_set_if_desc(swcfgr.ifindex, swcfgr.ext.iface_desc) < 0) {
+		if(switch_set_if_desc(uc->ifindex, argv[1]) < 0) {
 			ret = CLI_EX_REJECTED;
 			goto out;
 		}
 	} else {
 		/* description is set to default */
-		default_iface_name(swcfgr.ext.iface_desc);
+		default_iface_name(argv[1]);
 	}
 out:
 	return ret;

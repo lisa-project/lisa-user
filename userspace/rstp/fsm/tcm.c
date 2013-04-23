@@ -20,7 +20,7 @@ newTcWhile(struct rstp_interface *port)
 {
 	//struct rstp_configuration rstp;
 
-	//shared_get_rstp(&rstp);
+	//switch_get_rstp(&rstp);
 
 	if (!port->tcWhile) {
 		if (port->sendRSTP) {

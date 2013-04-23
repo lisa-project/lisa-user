@@ -884,7 +884,7 @@ int cmd_show_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_no
 		struct comma_buffer buf = COMMA_BUFFER_INIT(32);
 		int firstline = 1;
 
-		if (shared_get_vlan_desc(vlan, vlan_name))
+		if (switch_get_vlan_desc(vlan, vlan_name))
 			__default_vlan_name(vlan_name, vlan);
 		/* FIXME kernel module should tell us whether vlan is "active"
 		 * or "act/unsup" */

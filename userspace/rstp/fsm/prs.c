@@ -38,7 +38,7 @@ updtRolesTree(void)
 	//struct rstp_configuration rstp;
 	struct rstp_interface *root_port = NULL;
 
-	//shared_get_rstp(&rstp);
+	//switch_get_rstp(&rstp);
 
 	memset(&root_priority, 0, sizeof(root_priority));
 	memset(&root_port_id, 0, 2);
@@ -73,7 +73,7 @@ updtRolesTree(void)
 		memcpy(&bridge.rootTimes, &bridge.BridgeTimes, sizeof(struct rstp_times));
 	}
 
-	//shared_set_rstp(&rstp);
+	//switch_set_rstp(&rstp);
 
 	list_for_each_entry_safe(entry, tmp, &registered_interfaces, lh) {
 		memcpy(&entry->designatedPriority.root_bridge_id, 

@@ -73,16 +73,16 @@ int switch_init(void) __attribute__((constructor));
  * password from the shared memory area, passing it back the
  * private data pointer.
  */
-int shared_auth(int type, int level,
+int switch_auth(int type, int level,
 		int (*auth)(char *pw, void *priv), void *priv);
 
 /* Stores the requested password in the shared memory area */
-int shared_set_passwd(int type, int level, char *passwd);
+int switch_set_passwd(int type, int level, char *passwd);
 
 /* lookup interface arg0 and put tag into arg1; return 0 if
  * interface has a tag, 1 otherwise
  */
-int shared_get_if_tag(int if_index, char *tag);
+int switch_get_if_tag(int if_index, char *tag);
 
 /* 1. if arg1 is not null, then assign tag arg1 to interface
  * arg0; if arg2 is not NULL and tag is already assigned to
@@ -92,14 +92,14 @@ int shared_get_if_tag(int if_index, char *tag);
  * 2. if arg1 is null, delete tag for interface arg0. return 0 if
  * successfull, 1 if interface had no tag assigned.
  */
-int shared_set_if_tag(int if_index, char *tag, int *other_if);
+int switch_set_if_tag(int if_index, char *tag, int *other_if);
 
 /**
  * lookup interface arg0 and put description into arg1
  * return 0 if operation was succesful or a negative value if
  * the interface has no description
  */
-int shared_get_if_desc(int if_index, char *desc);
+int switch_get_if_desc(int if_index, char *desc);
 
 /**
  * if interface description arg1 is null then the default
@@ -108,42 +108,42 @@ int shared_get_if_desc(int if_index, char *desc);
  * return 0 if succesfull or a negative if setting the description
  * failed
  */
-int shared_set_if_desc(int if_index, char *desc);
+int switch_set_if_desc(int if_index, char *desc);
 
 /* Forgets about interface identified by arg0; return 0 if  interface has been
  * stored in shared memory, negative value otherwise and set errno.
  */
-int shared_del_if(int if_index);
+int switch_del_if(int if_index);
 
 /* lookup vlan arg0 and put description into arg1; return 0 if
  * vlan has a description, negative value otherwise and set errno
  */
-int shared_get_vlan_desc(int vlan_id, char *desc);
+int switch_get_vlan_desc(int vlan_id, char *desc);
 
 /* If arg1 is null, reset description for vlan arg0 to default,
  * otherwise set arg1 as description for vlan arg0. To delete
- * description call shared_del_vlan instead.
+ * description call switch_del_vlan instead.
  *
  * return 0 if successful, negative value if setting description failed
  * and also set errno
  */
-int shared_set_vlan_desc(int vlan_id, const char *desc);
+int switch_set_vlan_desc(int vlan_id, const char *desc);
 
 /* Forgets about vlan identified by arg0; return 0 if vlan has been
  * stored in shared memory, negative value otherwise and set errno.
  */
-int shared_del_vlan(int vlan_id);
+int switch_del_vlan(int vlan_id);
 
 /* Sets the cdp global configuration */
-void shared_set_cdp(struct cdp_configuration *cdp);
+void switch_set_cdp(struct cdp_configuration *cdp);
 
 /* Gets the cdp global configuration */
-void shared_get_cdp(struct cdp_configuration *cdp);
+void switch_get_cdp(struct cdp_configuration *cdp);
 
 /* Sets the RSTP global configuration */
-void shared_set_rstp(struct rstp_configuration *rstp);
+void switch_set_rstp(struct rstp_configuration *rstp);
 
 /* Gets the RSTP global configuration */
-void shared_get_rstp(struct rstp_configuration *rstp);
+void switch_get_rstp(struct rstp_configuration *rstp);
 
 #endif

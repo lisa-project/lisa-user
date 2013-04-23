@@ -226,7 +226,7 @@ int main(int argc, char **argv) {
 		if_index = if_get_index(argv[2], sock);
 		assert(if_index);
 
-		if (shared_set_if_tag(if_index, argv[3], &other_if)) {
+		if (switch_set_if_tag(if_index, argv[3], &other_if)) {
 			fprintf(stderr, "Tag %s already assigned to %s\n",
 					argv[3], if_get_name(other_if, sock, buf));
 			return 1;
@@ -236,7 +236,7 @@ int main(int argc, char **argv) {
 		user_arg.ifindex = if_index;
 		status = ioctl(sock, SIOCSWCFG, &user_arg);
 		if (status) {
-			shared_set_if_tag(if_index, NULL, NULL);
+			switch_set_if_tag(if_index, NULL, NULL);
 			perror("add failed");
 			return 1;
 		}
@@ -275,7 +275,7 @@ int main(int argc, char **argv) {
 		 * but the interface tag must be deleted later, via userspace
 		 * brctl).
 		 */
-		shared_set_if_tag(if_index, NULL, NULL);
+		switch_set_if_tag(if_index, NULL, NULL);
 		return 0;
 	}
 
@@ -309,7 +309,7 @@ int main(int argc, char **argv) {
 			return 0;
 		}
 
-		status = shared_set_vlan_desc(atoi(argv[2]), argv[3]);
+		status = switch_set_vlan_desc(atoi(argv[2]), argv[3]);
 		if (status)
 			perror("chvlan failed");
 		return 0;

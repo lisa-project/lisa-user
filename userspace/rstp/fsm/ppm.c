@@ -15,7 +15,7 @@ ppm_checking_rstp(struct rstp_interface *port)
 	//struct rstp_configuration rstp;
 
 	if (!port->state[PPM][EXEC]) {
-		//shared_get_rstp(&rstp);
+		//switch_get_rstp(&rstp);
 		port->mcheck = 0;
 		port->sendRSTP = 1;//(rstp.ForceProtocolVersion >= 2); /*(rstpVersion)*/
 		port->mdelayWhile = 3; /*Migrate Time*/

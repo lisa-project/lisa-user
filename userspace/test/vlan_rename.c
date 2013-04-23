@@ -42,7 +42,7 @@ static void test_rename_arbitrary(void) {
 	char desc[SW_MAX_VLAN_NAME + 1], eq_desc[SW_MAX_VLAN_NAME + 1];
 	char bkp_desc[SW_MAX_VLAN_NAME + 1];
 
-	/* Initialize shared context as vlan description resides in mm. */
+	/* Initialize switch context as vlan description resides in mm. */
 	switch_init();
 	/* Try to add ARBITRARY_VLAN. If it already exists, just rename it. */
 	add_ret = lisa_ctx.sw_ops.vlan_add(&lisa_ctx.sw_ops, ARBITRARY_VLAN);
