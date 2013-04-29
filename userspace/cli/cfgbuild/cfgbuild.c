@@ -50,7 +50,7 @@ static __inline__ void list_vlans(FILE *out, unsigned char *bmp)
 }
 
 #define nbit2mask(nbit)	(htonl(nbit ? (~((uint32_t)0)) ^ ((((uint32_t)1) << (32 - nbit)) - 1) : 0))
-int build_config_interface(struct cli_context *ctx, FILE *out, struct net_switch_dev *nsdev, int if_cmd)
+int build_config_interface(struct cli_context *ctx, FILE *out, struct net_switch_device *nsdev, int if_cmd)
 {
 	int sock_fd, status;
 	unsigned char bmp[SW_VLAN_BMP_NO];
@@ -58,6 +58,7 @@ int build_config_interface(struct cli_context *ctx, FILE *out, struct net_switch
 	int need_trunk_vlans = 1;
 	struct cdp_session *cdp;
 	struct swcfgreq swcfgr;
+	int ret = CLI_EX_OK;
 
 	SW_SOCK_OPEN(ctx, sock_fd);
 
@@ -204,7 +205,7 @@ int build_config_interface(struct cli_context *ctx, FILE *out, struct net_switch
 	} while (0);
 
 	SW_SOCK_CLOSE(ctx, sock_fd);
-	return CLI_EX_OK;
+	return ret;
 }
 
 struct write_enable_secret_priv {
@@ -306,16 +307,23 @@ int build_config_global(struct cli_context *ctx, FILE *out, int tagged_if)
 		}
 
 	/* physical interfaces and VIFs */
-	status = if_map_fetch(&if_map, SW_IF_SWITCHED | SW_IF_ROUTED | SW_IF_VIF, sock_fd);
-	assert(!status); // FIXME if not null, status is an error code (i.e. errno) so we can use EX_STATUS_PERROR
+	status = if_map_fetch(&if_map, SW_IF_SWITCHED | SW_IF_ROUTED | SW_IF_VIF);
+	if (status) {
+		EX_STATUS_PERROR(ctx, "if_map_fetch failed");
+		ret = CLI_EX_WARNING;
+		goto static_mac;
+	}
 
-	for (i = 0; i < if_map.size; i++) {
+	struct list_head *iter, *tmp;
+	struct net_switch_device *dev;
+	list_for_each_safe(iter, tmp, &if_map.dev) {
 		FILE *if_out = out;
 		char tag[SW_MAX_TAG + 1];
 		char path[PATH_MAX];
 		int if_cmd = 1;
+		dev = list_entry(iter, struct net_switch_device, lh);
 
-		if (tagged_if && !switch_get_if_tag(if_map.dev[i].ifindex, tag)) {
+		if (tagged_if && !switch_get_if_tag(dev->ifindex, tag)) {
 			status = snprintf(path, sizeof(path), "%s/%s", SW_TAGS_FILE, tag);
 			assert (status < sizeof(path)); // FIXME
 
@@ -324,12 +332,15 @@ int build_config_global(struct cli_context *ctx, FILE *out, int tagged_if)
 
 			if_cmd = 0;
 		}
-		build_config_interface(ctx, if_out, &if_map.dev[i], if_cmd);
+		build_config_interface(ctx, if_out, dev, if_cmd);
 		fprintf(out, "!\n");
 		if (if_out != out)
 			fclose(if_out);
+		list_del(iter);
+		free(dev);
 	}
 
+static_mac:
 	/* static macs */
 	status = if_map_init_ifindex_hash(&if_map);
 	assert(!status);
@@ -379,7 +390,6 @@ int build_config_global(struct cli_context *ctx, FILE *out, int tagged_if)
 	/* line vty stuff TODO */
 
 	SW_SOCK_CLOSE(ctx, sock_fd);
-	free(if_map.dev);
 	return ret;
 }
 
@@ -387,7 +397,7 @@ static __inline__ int __cmd_show_run(struct cli_context *ctx, int argc, char **a
 {
 	FILE *out, *tmp_out;
 	int iftype;
-	struct net_switch_dev nsdev = {
+	struct net_switch_device nsdev = {
 		.ifindex = 0
 	};
 	int tmp_fd, sock_fd;

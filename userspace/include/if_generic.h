@@ -16,6 +16,7 @@
 #include <linux/ethtool.h>
 
 #include "netlink.h"
+#include "switch.h"
 #include "list.h"
 
 /* Build a linux netdevice name with a generic structure of "type"
@@ -54,9 +55,9 @@ int if_parse_generic(const char *name, const char *type);
 
 int if_get_index(const char *name, int sock_fd);
 
-char *canonical_if_name(struct net_switch_dev *nsdev);
+char *canonical_if_name(struct net_switch_device *nsdev);
 
-char *short_if_name(struct net_switch_dev *nsdev);
+char *short_if_name(struct net_switch_device *nsdev);
 
 char *if_get_name(int if_index, int sock_fd, char *name);
 
@@ -84,26 +85,18 @@ int if_change_addr(int cmd, int ifindex, struct in_addr addr, int prefixlen, int
 
 #define IF_MAP_HASH_SIZE 17
 
-struct if_map_hash_entry {
-	struct list_head lh;
-	struct net_switch_dev *dev;
-};
-
 struct if_map {
-	/* number of (net)devices in map */
-	int size;
-
-	/* array of (net)devices */
-	struct net_switch_dev *dev;
+	/* list of (net)devices */
+	struct list_head dev;
 
 	/* ifindex hash of (net)devices */
 	struct list_head ifindex_hash[IF_MAP_HASH_SIZE];
 
 	/* local cache for if_get_name fallback */
-	struct net_switch_dev cache;
+	struct net_switch_device cache;
 
 	/* local cache for normal operation */
-	struct net_switch_dev *last_dev;
+	struct net_switch_device *last_dev;
 };
 
 #define if_map_ifindex_hash(i) ((i) % IF_MAP_HASH_SIZE)
@@ -111,11 +104,12 @@ struct if_map {
 static __inline__ void if_map_init(struct if_map *map)
 {
 	memset(map, 0, sizeof(struct if_map));
+	INIT_LIST_HEAD(&map->dev);
 }
 
-struct net_switch_dev *if_map_lookup_ifindex(struct if_map *map, int ifindex, int sock_fd);
+struct net_switch_device *if_map_lookup_ifindex(struct if_map *map, int ifindex, int sock_fd);
 int if_map_init_ifindex_hash(struct if_map *map);
-int if_map_fetch(struct if_map *map, int type, int sock_fd);
+int if_map_fetch(struct if_map *map, int type);
 int if_settings_cmd(int ifindex, int cmd, int sock_fd, struct ethtool_cmd *settings);
 
 #define if_get_settings(ifindex, sock_fd, settings) if_settings_cmd(ifindex, ETHTOOL_GSET, sock_fd, settings)
@@ -129,7 +123,7 @@ struct if_map_priv {
 static __inline__ char *if_map_print_mac(int ifindex, void *__priv)
 {
 	struct if_map_priv *priv = __priv;
-	struct net_switch_dev *dev = if_map_lookup_ifindex(priv->map, ifindex, priv->sock_fd);
+	struct net_switch_device *dev = if_map_lookup_ifindex(priv->map, ifindex, priv->sock_fd);
 
 	return dev == NULL ? NULL : dev->name;
 }
@@ -137,12 +131,21 @@ static __inline__ char *if_map_print_mac(int ifindex, void *__priv)
 static __inline__ void if_map_cleanup(struct if_map *map)
 {
 	int i;
-	struct if_map_hash_entry *he, *tmp;
+	struct net_switch_device *dev;
+	struct list_head *iter, *tmp;
 
+	list_for_each_safe(iter, tmp, &map->dev) {
+		dev = list_entry(iter, struct net_switch_device, lh);
+		list_del(iter);
+		free(dev);
+	}
 	if (map->ifindex_hash[0].prev != NULL)
 		for (i = 0; i < IF_MAP_HASH_SIZE; i++)
-			list_for_each_entry_safe(he, tmp, &map->ifindex_hash[i], lh)
-				free(he);
+			list_for_each_safe(iter, tmp, &map->ifindex_hash[i]) {
+				dev = list_entry(iter, struct net_switch_device, lh);
+				list_del(iter);
+				free(dev);
+			}
 }
 
 #endif

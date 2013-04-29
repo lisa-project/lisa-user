@@ -414,6 +414,7 @@ static int get_if_list(struct switch_operations *sw_ops, int type,
 		dev->ifindex = resp[i].ifindex;
 		dev->type = resp[i].type;
 		dev->vlan = resp[i].vlan;
+		strcpy(dev->name, resp[i].name);
 
 		list_add_tail(&dev->lh, net_devs);
 	}

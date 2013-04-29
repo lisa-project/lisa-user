@@ -37,7 +37,7 @@ dep:
 	$(Q)-touch $(DEPFILE)
 	$(Q)-find . -name '*.d' -exec cat {} >> $(DEPFILE) \;
 
-install:
+install: build
 	install -m 755 -D cdpd/cdpd $(ROOT)/usr/sbin/cdpd
 	install -m 755 -D tools/filter $(ROOT)/bin/filter
 	install -m 755 -D tools/swclid $(ROOT)/usr/sbin/swclid

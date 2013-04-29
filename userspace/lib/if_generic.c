@@ -42,7 +42,7 @@ int if_get_index(const char *name, int sock_fd)
 	return ret;
 }
 
-char *canonical_if_name(struct net_switch_dev *nsdev)
+char *canonical_if_name(struct net_switch_device *nsdev)
 {
 	char *ret = NULL;
 	int n, status = -1;
@@ -66,7 +66,7 @@ char *canonical_if_name(struct net_switch_dev *nsdev)
 	return status == -1 ? NULL : ret;
 }
 
-char *short_if_name(struct net_switch_dev *nsdev)
+char *short_if_name(struct net_switch_device *nsdev)
 {
 	char *ret = NULL;
 	int n, status = -1;
@@ -226,9 +226,9 @@ int if_change_addr(int cmd, int ifindex, struct in_addr addr, int prefixlen, int
 	return 0;
 }
 
-struct net_switch_dev *if_map_lookup_ifindex(struct if_map *map, int ifindex, int sock_fd)
+struct net_switch_device *if_map_lookup_ifindex(struct if_map *map, int ifindex, int sock_fd)
 {
-	struct if_map_hash_entry *he;
+	struct net_switch_device *dev;
 
 	if (map->ifindex_hash[0].prev == NULL) {
 		if (map->cache.ifindex == ifindex)
@@ -244,10 +244,10 @@ struct net_switch_dev *if_map_lookup_ifindex(struct if_map *map, int ifindex, in
 	if (map->last_dev && map->last_dev->ifindex == ifindex)
 		return map->last_dev;
 
-	list_for_each_entry(he, &map->ifindex_hash[if_map_ifindex_hash(ifindex)], lh) {
-		if (he->dev->ifindex == ifindex) {
-			map->last_dev = he->dev;
-			return he->dev;
+	list_for_each_entry(dev, &map->ifindex_hash[if_map_ifindex_hash(ifindex)], lh) {
+		if (dev->ifindex == ifindex) {
+			map->last_dev = dev;
+			return dev;
 		}
 	}
 
@@ -257,36 +257,25 @@ struct net_switch_dev *if_map_lookup_ifindex(struct if_map *map, int ifindex, in
 int if_map_init_ifindex_hash(struct if_map *map)
 {
 	int i;
-	struct if_map_hash_entry *he;
+	struct net_switch_device *dev, *he;
 	
 	for (i = 0; i < IF_MAP_HASH_SIZE; i++)
 		INIT_LIST_HEAD(&map->ifindex_hash[i]);
 
-	for (i = 0; i < map->size; i++) {
+	list_for_each_entry(dev, &map->dev, lh) {
 		he = malloc(sizeof(*he));
 		if (he == NULL)
 			return -1;
-		he->dev = map->dev + i;
-		list_add_tail(&he->lh, &map->ifindex_hash[if_map_ifindex_hash(map->dev[i].ifindex)]);
+		memcpy(he, dev, sizeof(struct net_switch_device));
+		list_add_tail(&he->lh, &map->ifindex_hash[if_map_ifindex_hash(dev->ifindex)]);
 	}
 
 	return 0;
 }
 
-int if_map_fetch(struct if_map *map, int type, int sock_fd)
+int if_map_fetch(struct if_map *map, int type)
 {
-	struct swcfgreq swcfgr;
-	int status;
-
-	swcfgr.cmd = SWCFG_GETIFLIST;
-	swcfgr.ext.switchport = type;
-
-	if ((status = buf_alloc_swcfgr(&swcfgr, sock_fd)) < 0)
-		return -status;
-
-	map->dev = (struct net_switch_dev *)swcfgr.buf.addr;
-	map->size = status / sizeof(struct net_switch_dev);
-	return 0;
+	return sw_ops->get_if_list(sw_ops, type, &map->dev);
 }
 
 int if_settings_cmd(int ifindex, int cmd, int sock_fd, struct ethtool_cmd *settings)

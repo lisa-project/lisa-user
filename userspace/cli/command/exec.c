@@ -207,7 +207,7 @@ int cmd_sh_mac_addr_t(struct cli_context *ctx, int argc, char **argv, struct men
 		 * have the same ifindex and if_get_name fallback is enough;
 		 * otherwise fetch interface list from kernel and init hash */
 		if (!swcfgr.ifindex) {
-			status = if_map_fetch(&if_map, SW_IF_SWITCHED, sock_fd);
+			status = if_map_fetch(&if_map, SW_IF_SWITCHED);
 			assert(!status);
 			status = if_map_init_ifindex_hash(&if_map);
 			assert(!status);
@@ -353,13 +353,13 @@ static int show_interfaces(struct cli_context *ctx, int sock_fd, struct if_map *
 	struct ethtool_pauseparam pause;
 	struct ethtool_value value;
 	struct ethtool_perm_addr *epaddr;
-	struct net_switch_dev *dev;
+	struct net_switch_device *dev;
 	struct ifreq ifr;
-	int i, nstats;
+	int nstats;
 	FILE *out;
 
 	out = ctx->out_open(ctx, 1);
-	for (i=0; i<map->size && (dev = &map->dev[i]); i++) {
+	list_for_each_entry(dev, &map->dev, lh) {
 		fprintf(out, "Interface %s, type=%d, index=%d\n",
 				dev->name, dev->type, dev->ifindex);
 		strcpy(ifr.ifr_name, dev->name);
@@ -469,7 +469,7 @@ static int show_interfaces(struct cli_context *ctx, int sock_fd, struct if_map *
 int cmd_sh_int(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
 	int sock_fd, err = CLI_EX_OK;
-	struct net_switch_dev dev;
+	struct net_switch_device *dev;
 	struct if_map if_map;
 	struct swcfgreq swcfgr;
 
@@ -477,20 +477,27 @@ int cmd_sh_int(struct cli_context *ctx, int argc, char **argv, struct menu_node 
 
 	if_map_init(&if_map);
 	if (argc > 2) {
+		dev = malloc(sizeof(struct net_switch_device));
+		if (!dev) {
+			EX_STATUS_REASON(ctx, "alloc device failed\n");
+			return CLI_EX_REJECTED;
+		}
+
 		SHIFT_ARG(argc, argv, nodev, 2);
-		if_args_to_ifindex(ctx, argv, nodev, sock_fd, dev.ifindex, dev.type, dev.name);
-		if_get_type(ctx, sock_fd, dev.ifindex, dev.name, swcfgr);
-		dev.type = swcfgr.ext.switchport;
-		dev.vlan = swcfgr.vlan;
-		if_map.dev = &dev;
-		if_map.size = 1;
+		if_args_to_ifindex(ctx, argv, nodev, sock_fd, dev->ifindex,
+				dev->type, dev->name);
+		if_get_type(ctx, sock_fd, dev->ifindex, dev->name, swcfgr);
+		dev->type = swcfgr.ext.switchport;
+		dev->vlan = swcfgr.vlan;
+		list_add_tail(&dev->lh, &if_map.dev);
 	}
 	else
-		if_map_fetch(&if_map, SW_IF_SWITCHED | SW_IF_ROUTED | SW_IF_VIF, sock_fd);
+		if_map_fetch(&if_map, SW_IF_SWITCHED | SW_IF_ROUTED | SW_IF_VIF);
 
 	err = show_interfaces(ctx, sock_fd, &if_map);
 
 	SW_SOCK_CLOSE(ctx, sock_fd);
+	if_map_cleanup(&if_map);
 
 	return err;
 }
@@ -729,8 +736,13 @@ int cmd_sh_ip_igmps_groups(struct cli_context *ctx, int argc, char **argv, struc
 	}
 
 	/* Build ifindex => ifname hash */
-	status = if_map_fetch(&if_map, SW_IF_SWITCHED, sock_fd);
-	assert(!status); // FIXME if not null, status is an error code (i.e. errno) so we can use EX_STATUS_PERROR
+	status = if_map_fetch(&if_map, SW_IF_SWITCHED);
+	if (status) {
+		EX_STATUS_PERROR(ctx, "if_map_fetch failed");
+		ret = CLI_EX_WARNING;
+		goto out_clean;
+
+	}
 	status = if_map_init_ifindex_hash(&if_map);
 	assert(!status);
 
@@ -740,7 +752,7 @@ int cmd_sh_ip_igmps_groups(struct cli_context *ctx, int argc, char **argv, struc
 	fprintf(out, "%s\n", DASHES(63));
 	for (i=0; i<SW_MAX_VLAN; i++) {
 		list_for_each_entry(group, &igmp_groups[i], lh) {
-			struct net_switch_dev *nsdev;
+			struct net_switch_device *nsdev;
 			char *group_addr = inet_ntoa(*(struct in_addr*)&group->addr);
 			int firstline = 1;
 			struct comma_buffer buf = COMMA_BUFFER_INIT(24);
@@ -771,8 +783,6 @@ int cmd_sh_ip_igmps_groups(struct cli_context *ctx, int argc, char **argv, struc
 
 out_clean:
 	if_map_cleanup(&if_map);
-	if (if_map.dev != NULL)
-		free(if_map.dev);
 	delete_igmp_groups(igmp_groups, IGMP_GROUP_ANY);
 	if (swcfgr.buf.addr != NULL)
 		free(swcfgr.buf.addr);
@@ -831,8 +841,12 @@ int cmd_show_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_no
 	SW_SOCK_OPEN(ctx, sock_fd);
 
 	if_map_init(&if_map);
-	status = if_map_fetch(&if_map, SW_IF_SWITCHED, sock_fd);
-	assert(!status); // FIXME if not null, status is an error code (i.e. errno) so we can use EX_STATUS_PERROR
+	status = if_map_fetch(&if_map, SW_IF_SWITCHED);
+	if (status) {
+		EX_STATUS_PERROR(ctx, "if_map_fetch failed");
+		ret = CLI_EX_REJECTED;
+		goto out_clean;
+	}
 	status = if_map_init_ifindex_hash(&if_map);
 	assert(!status);
 
@@ -880,7 +894,7 @@ int cmd_show_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_no
 			.vlan = vlan
 		};
 		int vlif_no = buf_alloc_swcfgr(&vlif_swcfgr, sock_fd);
-		struct net_switch_dev *nsdev;
+		struct net_switch_device *nsdev;
 		struct comma_buffer buf = COMMA_BUFFER_INIT(32);
 		int firstline = 1;
 
@@ -898,6 +912,7 @@ int cmd_show_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_no
 				fprintf(out, fmt3, "", buf.str);\
 			}\
 		} while(0)
+
 		/* if (vlif_no < 0) perror("getvlanif"); */
 		assert(vlif_no >= 0);
 
@@ -934,8 +949,6 @@ int cmd_show_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_no
 
 out_clean:
 	if_map_cleanup(&if_map);
-	if (if_map.dev != NULL)
-		free(if_map.dev);
 	if (sock_fd != -1)
 		SW_SOCK_CLOSE(ctx, sock_fd);
 	if (out != NULL)
