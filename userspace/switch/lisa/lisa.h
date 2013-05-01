@@ -2,7 +2,6 @@
 #define _LISA_H
 
 #include <unistd.h>
-
 #include <linux/sockios.h>
 
 #include "sw_api.h"

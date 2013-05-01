@@ -24,7 +24,14 @@
 #include "mm.h"
 #include "switch.h"
 #include "sw_api.h"
+
+#ifdef LiSA
 #include "lisa.h"
+#endif
+
+#ifdef Linux
+#include "linux.h"
+#endif
 
 /*
  * Switch shared memory structure
