@@ -29,7 +29,14 @@
 
 #include <assert.h>
 
+#ifdef Lisa
 #include "lisa.h"
+#endif
+
+#ifdef Linux
+#include "linux.h"
+#endif
+
 #include "swsock.h"
 #include "switch.h"
 #include "util.h"

@@ -1,6 +1,6 @@
 TOP_DIR = ..
 
-CFLAGS	=
+CFLAGS	= -DLiSA
 LDFLAGS = -lcrypt
 include $(TOP_DIR)/scripts/Makefile.includes
 include $(TOP_DIR)/switch/Makefile.switch

@@ -215,9 +215,10 @@ static void switch_init_cdp(void)
 int switch_init(void) {
 	int i;
 	char desc[SW_MAX_VLAN_NAME + 1];
-
 #ifdef LiSA
 	sw_ops = &lisa_ctx.sw_ops;
+#else
+	sw_ops = &lnx_ctx.sw_ops;
 #endif
 	if (mm)
 		return 0;
