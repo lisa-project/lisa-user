@@ -315,7 +315,7 @@ static int if_set_port_vlan(struct switch_operations *sw_ops, int ifindex, int v
 }
 
 static int get_vlan_interfaces(struct switch_operations *sw_ops, int vlan,
-		int *ifindexes, int *no_ifs)
+		int **ifindexes, int *no_ifs)
 {
 	int sock_fd, vlif_no,i;
 	struct swcfgreq swcfgr;
@@ -334,8 +334,10 @@ static int get_vlan_interfaces(struct switch_operations *sw_ops, int vlan,
 	vlif_no /= sizeof(int);
 	*no_ifs = vlif_no;
 
+	(*ifindexes) = malloc((*no_ifs) * sizeof(int));
+
 	for (i = 0; i < vlif_no; ++i) {
-		ifindexes[i] = ((int *)swcfgr.buf.addr)[i];
+		(*ifindexes)[i] = ((int *)swcfgr.buf.addr)[i];
 	}
 
 	free(swcfgr.buf.addr);
