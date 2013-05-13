@@ -242,6 +242,7 @@ int build_config_global(struct cli_context *ctx, FILE *out, int tagged_if)
 	unsigned char vlans[SW_VLAN_BMP_NO];
 	int ret = CLI_EX_OK;
 	char vlan_name[SW_MAX_VLAN_NAME + 1], def_name[SW_MAX_VLAN_NAME + 1];
+	int igmp_snooping;
 
 	if_map_init(&if_map);
 
@@ -267,16 +268,21 @@ int build_config_global(struct cli_context *ctx, FILE *out, int tagged_if)
 	fprintf(out, "!\n");
 
 	/* IGMP snooping global flag */
-	swcfgr.cmd = SWCFG_GETIGMPS;
-	swcfgr.buf.addr = NULL;
-	status = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
-	assert(status == 0); // FIXME
-	if (swcfgr.ext.snooping) {
+	status = sw_ops->igmp_get(sw_ops, NULL, &igmp_snooping);
+	if (status != 0) {
+		EX_STATUS_PERROR(ctx, "igmp_get failed");
+		ret = CLI_EX_WARNING;
+		goto vlans;
+	}
+	if (igmp_snooping) {
 		unsigned char map[SW_VLAN_BMP_NO];
 
-		swcfgr.buf.addr = (void *)&map[0];
-		status = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
-		assert(status == 0); // FIXME
+		status = sw_ops->igmp_get(sw_ops, (void *)&map[0], &igmp_snooping);
+		if (status != 0) {
+			EX_STATUS_PERROR(ctx, "igmp_get failed");
+			ret = CLI_EX_WARNING;
+			goto vlans;
+		}
 
 		for (i = SW_MIN_VLAN; i <= SW_MAX_VLAN; i++) {
 			if (sw_bitmap_test(map, i))
@@ -286,6 +292,7 @@ int build_config_global(struct cli_context *ctx, FILE *out, int tagged_if)
 		fprintf(out, "no ip igmp snooping\n");
 	}
 
+vlans:
 	/* vlans (aka replacement for vlan database) */
 	status = sw_ops->get_vdb(sw_ops, vlans);
 	if (status) {
