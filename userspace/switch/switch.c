@@ -31,8 +31,7 @@
 #include "linux.h"
 #endif
 
-static struct mm_private *mm = NULL;
-#define SHM ((struct switch_mem *)MM_STATIC(mm))
+struct mm_private *mm = NULL;
 struct switch_operations *sw_ops;
 
 static mm_ptr_t __switch_get_if_tag(int if_index)

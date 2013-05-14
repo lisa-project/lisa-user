@@ -40,6 +40,8 @@
 #define SW_MAX_PORT_DESC	31
 
 extern struct switch_operations *sw_ops;
+extern struct mm_private *mm;
+#define SHM ((struct switch_mem *)MM_STATIC(mm))
 
 /*
  * Switch shared memory structure
