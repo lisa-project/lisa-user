@@ -1,3 +1,22 @@
+/*
+ *    This file is part of LiSA Switch
+ *
+ *    LiSA Switch is free software; you can redistribute it
+ *    and/or modify it under the terms of the GNU General Public License
+ *    as published by the Free Software Foundation; either version 2 of the
+ *    License, or (at your option) any later version.
+ *
+ *    LiSA Switch is distributed in the hope that it will be
+ *    useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *    GNU General Public License for more details.
+ *
+ *    You should have received a copy of the GNU General Public License
+ *    along with LiSA Switch; if not, write to the Free
+ *    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ *    MA  02111-1307  USA
+ */
+
 #ifndef _SW_API_H
 #define _SW_API_H
 
@@ -8,6 +27,14 @@
 #ifndef IFNAMSIZE
 #define IFNAMSIZE	16
 #endif
+
+#define IF_TYPE_NONE		0x00
+#define IF_TYPE_SWITCHED	0x01
+#define IF_TYPE_ROUTED		0x02
+#define IF_TYPE_VIF		0x04
+
+#define IF_MODE_ACCESS		0x02
+#define IF_MODE_TRUNK		0x04
 
 struct net_switch_mrouter_e {
 	int ifindex;

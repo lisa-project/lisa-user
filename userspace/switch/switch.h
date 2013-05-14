@@ -23,6 +23,8 @@
 #include "cdp_client.h"
 #include "rstp_client.h"
 #include "sw_api.h"
+#include "mm.h"
+#include "swsock.h"
 
 #define SW_CONFIG_FILE	"/etc/lisa/config.text"
 #define SW_TAGS_FILE	"/etc/lisa/tags"
@@ -38,6 +40,66 @@
 #define SW_MAX_PORT_DESC	31
 
 extern struct switch_operations *sw_ops;
+
+/*
+ * Switch shared memory structure
+ */
+struct switch_mem {
+	/* Enable secrets (crypted) */
+	struct {
+		char secret[SW_SECRET_LEN + 1];
+	} enable[SW_MAX_ENABLE+1];
+	/* Line vty passwords (clear text) */
+	struct {
+		char passwd[SW_PASS_LEN + 1];
+	} vty[SW_MAX_VTY + 1];
+	/* CDP configuration */
+	struct cdp_configuration cdp;
+	/* RSTP configuration */
+	struct rstp_configuration rstp;
+	/* List of interface tags */
+	struct mm_list_head if_tags;
+	/* List of vlan descriptions */
+	struct mm_list_head vlan_descs;
+	/* List of interface descriptions */
+	struct mm_list_head if_descs;
+
+	/* List of VLAN specific data */
+	struct mm_list_head vlan_data;
+	/* List of interface specific data */
+	struct mm_list_head if_data;
+};
+
+struct if_tag {
+	int if_index;
+	char tag[SW_MAX_TAG + 1];
+	struct mm_list_head lh;
+};
+
+struct vlan_desc {
+	int vlan_id;
+	char desc[SW_MAX_VLAN_NAME + 1];
+	struct mm_list_head lh;
+};
+
+struct if_desc {
+	int if_index;
+	char desc[SW_MAX_PORT_DESC + 1];
+	struct mm_list_head lh;
+};
+
+struct vlan_data {
+	int vlan_id;
+	struct list_head net_devices;
+	struct mm_list_head lh;
+};
+
+struct if_data {
+	struct net_switch_device device;
+	unsigned char *bitmap;
+	int mode;
+	struct mm_list_head lh;
+};
 
 #define __default_vlan_name(__buf, __vlan) snprintf(__buf, 9, "VLAN%04d", (__vlan))
 #define default_vlan_name(__lvalue, __vlan) do {\
@@ -94,6 +156,8 @@ int switch_get_if_tag(int if_index, char *tag);
  */
 int switch_set_if_tag(int if_index, char *tag, int *other_if);
 
+
+
 /**
  * lookup interface arg0 and put description into arg1
  * return 0 if operation was succesful or a negative value if
@@ -115,6 +179,8 @@ int switch_set_if_desc(int if_index, char *desc);
  */
 int switch_del_if(int if_index);
 
+
+
 /* lookup vlan arg0 and put description into arg1; return 0 if
  * vlan has a description, negative value otherwise and set errno
  */
@@ -133,6 +199,40 @@ int switch_set_vlan_desc(int vlan_id, const char *desc);
  * stored in shared memory, negative value otherwise and set errno.
  */
 int switch_del_vlan(int vlan_id);
+
+
+
+/* Lookup vlan data arg0 and put it into arg1; return 0 if
+ * vlan has data assigned, negative value otherwise and set errno
+ */
+int get_vlan_data(int vlan_id, struct vlan_data *data);
+
+/* Buld new vlan data if there is no data assigned to vlan_id
+ * or replace the net_devices list with the new one
+ */
+int set_vlan_data(int vlan_id, struct list_head net_devices);
+
+/* Remove VLAN data for a given vlan_id
+ */
+int del_vlan_data(int vlan_id);
+
+
+
+/* Lookup interface data for arg0 and put it into arg1; return 0 if
+ * interface has data assigned, negative value otherwise and set errno
+ */
+int get_if_data(int if_index, struct if_data *data);
+
+/* Buld new interface data if there is no data assigned to if_index
+ * or replace the structure with a new one
+ */
+int set_if_data(int if_index, struct if_data new_data);
+
+/* Remove interface data for a given if_index
+ */
+int del_if_data(int if_index);
+
+
 
 /* Sets the cdp global configuration */
 void switch_set_cdp(struct cdp_configuration *cdp);

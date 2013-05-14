@@ -21,9 +21,7 @@
 #include <errno.h>
 #include <string.h>
 
-#include "mm.h"
 #include "switch.h"
-#include "sw_api.h"
 
 #ifdef LiSA
 #include "lisa.h"
@@ -33,53 +31,12 @@
 #include "linux.h"
 #endif
 
-/*
- * Switch shared memory structure
- */
-struct switch_mem {
-	/* Enable secrets (crypted) */
-	struct {
-		char secret[SW_SECRET_LEN + 1];
-	} enable[SW_MAX_ENABLE+1];
-	/* Line vty passwords (clear text) */
-	struct {
-		char passwd[SW_PASS_LEN + 1];
-	} vty[SW_MAX_VTY + 1];
-	/* CDP configuration */
-	struct cdp_configuration cdp;
-	/* RSTP configuration */
-	struct rstp_configuration rstp;
-	/* List of interface tags */
-	struct mm_list_head if_tags;
-	/* List of vlan descriptions */
-	struct mm_list_head vlan_descs;
-	/* List of interface descriptions */
-	struct mm_list_head if_descs;
-};
-
-struct if_tag {
-	int if_index;
-	char tag[SW_MAX_TAG + 1];
-	struct mm_list_head lh;
-};
-
-struct vlan_desc {
-	int vlan_id;
-	char desc[SW_MAX_VLAN_NAME + 1];
-	struct mm_list_head lh;
-};
-
-struct if_desc {
-	int if_index;
-	char desc[SW_MAX_PORT_DESC + 1];
-	struct mm_list_head lh;
-};
-
 static struct mm_private *mm = NULL;
 #define SHM ((struct switch_mem *)MM_STATIC(mm))
 struct switch_operations *sw_ops;
 
-static mm_ptr_t __switch_get_if_tag(int if_index) {
+static mm_ptr_t __switch_get_if_tag(int if_index)
+{
 	mm_ptr_t ret;
 
 	mm_list_for_each(mm, ret, mm_ptr(mm, &SHM->if_tags)) {
@@ -92,7 +49,8 @@ static mm_ptr_t __switch_get_if_tag(int if_index) {
 	return MM_NULL;
 }
 
-static int __switch_del_if_tag(int if_index) {
+static int __switch_del_if_tag(int if_index)
+{
 	mm_ptr_t lh = __switch_get_if_tag(if_index);
 
 	if (MM_NULL == lh) {
@@ -105,7 +63,8 @@ static int __switch_del_if_tag(int if_index) {
 	return 0;
 }
 
-static mm_ptr_t __switch_get_tag_if(char *tag) {
+static mm_ptr_t __switch_get_tag_if(char *tag)
+{
 	mm_ptr_t ret;
 
 	mm_list_for_each(mm, ret, mm_ptr(mm, &SHM->if_tags)) {
@@ -146,7 +105,8 @@ static int __switch_del_if_desc(int if_index)
 	return 0;
 }
 
-static mm_ptr_t __switch_get_vlan_desc(int vlan_id) {
+static mm_ptr_t __switch_get_vlan_desc(int vlan_id)
+{
 	mm_ptr_t ret;
 
 	mm_list_for_each(mm, ret, mm_ptr(mm, &SHM->vlan_descs)) {
@@ -159,7 +119,8 @@ static mm_ptr_t __switch_get_vlan_desc(int vlan_id) {
 	return MM_NULL;
 }
 
-static int __switch_del_vlan_desc(int vlan_id) {
+static int __switch_del_vlan_desc(int vlan_id)
+{
 	mm_ptr_t lh = __switch_get_vlan_desc(vlan_id);
 
 	if (MM_NULL == lh) {
@@ -168,6 +129,61 @@ static int __switch_del_vlan_desc(int vlan_id) {
 	}
 	mm_list_del(mm, lh);
 	mm_free(mm, mm_list_entry(lh, struct vlan_desc, lh));
+	return 0;
+}
+
+static mm_ptr_t __get_vlan_data(int vlan_id)
+{
+	mm_ptr_t ret;
+
+	mm_list_for_each(mm, ret, mm_ptr(mm, &SHM->vlan_data)) {
+		struct vlan_data *data =
+			mm_addr(mm, mm_list_entry(ret, struct vlan_data, lh));
+		if (data->vlan_id == vlan_id)
+			return ret;
+	}
+
+	return MM_NULL;
+}
+
+static int __del_vlan_data(int vlan_id)
+{
+	mm_ptr_t lh = __get_vlan_data(vlan_id);
+
+	if (MM_NULL == lh) {
+		errno = ENODEV;
+		return -1;
+	}
+	mm_list_del(mm, lh);
+	mm_free(mm, mm_list_entry(lh, struct vlan_data, lh));
+	return 0;
+}
+
+static mm_ptr_t __get_if_data(int if_index)
+{
+	mm_ptr_t ret;
+
+	mm_list_for_each(mm, ret, mm_ptr(mm, &SHM->if_data)) {
+		struct if_data *data =
+			mm_addr(mm, mm_list_entry(ret, struct if_data, lh));
+		if (data->device.ifindex == if_index) {
+			return ret;
+		}
+	}
+
+	return MM_NULL;
+}
+
+static int __del_if_data(int if_index)
+{
+	mm_ptr_t lh = __get_if_data(if_index);
+
+	if (MM_NULL == lh) {
+		errno = ENODEV;
+		return -1;
+	}
+	mm_list_del(mm, lh);
+	mm_free(mm, mm_list_entry(lh, struct if_data, lh));
 	return 0;
 }
 
@@ -212,7 +228,8 @@ static void switch_init_cdp(void)
 	switch_set_cdp(&cdp);
 }
 
-int switch_init(void) {
+int switch_init(void)
+{
 	int i;
 	char desc[SW_MAX_VLAN_NAME + 1];
 #ifdef LiSA
@@ -233,6 +250,11 @@ int switch_init(void) {
 	MM_INIT_LIST_HEAD(mm, mm_ptr(mm, &SHM->vlan_descs));
 	MM_INIT_LIST_HEAD(mm, mm_ptr(mm, &SHM->if_tags));
 	MM_INIT_LIST_HEAD(mm, mm_ptr(mm, &SHM->if_descs));
+#ifdef Linux
+	MM_INIT_LIST_HEAD(mm, mm_ptr(mm, &SHM->vlan_data));
+	MM_INIT_LIST_HEAD(mm, mm_ptr(mm, &SHM->if_data));
+#endif
+
 	switch_init_cdp();
 	switch_init_rstp();
 
@@ -328,7 +350,8 @@ out_unlock:
 	return err;
 }
 
-int switch_get_if_tag(int if_index, char *tag) {
+int switch_get_if_tag(int if_index, char *tag)
+{
 	mm_ptr_t ptr;
 	struct if_tag *s_tag;
 
@@ -346,7 +369,8 @@ int switch_get_if_tag(int if_index, char *tag) {
 }
 
 
-int switch_set_if_tag(int if_index, char *tag, int *other_if) {
+int switch_set_if_tag(int if_index, char *tag, int *other_if)
+{
 	mm_ptr_t lh, mm_s_tag;
 	struct if_tag *s_tag;
 	int ret;
@@ -489,6 +513,135 @@ int switch_del_vlan(int vlan_id)
 
 	mm_lock(mm);
 	ret = __switch_del_vlan_desc(vlan_id);
+	mm_unlock(mm);
+
+	return ret;
+}
+
+int get_vlan_data(int vlan_id, struct vlan_data *data)
+{
+	mm_ptr_t ptr;
+
+	mm_lock(mm);
+	ptr = __get_vlan_data(vlan_id);
+	if(MM_NULL == ptr) {
+		mm_unlock(mm);
+		errno = EINVAL;
+		return -1;
+	}
+
+	data = mm_addr(mm, mm_list_entry(ptr, struct vlan_data, lh));
+	mm_unlock(mm);
+	return 0;
+}
+
+int set_vlan_data(int vlan_id, struct list_head net_devices)
+{
+	mm_ptr_t lh, mm_v_data;
+	struct vlan_data *data;
+	int ret = 0;
+
+	mm_lock(mm);
+
+	lh = __get_vlan_data(vlan_id);
+	/* VLAN data already exists */
+	if (MM_NULL != lh) {
+		data = mm_addr(mm, mm_list_entry(lh, struct vlan_data, lh));
+		data->net_devices = net_devices;
+		goto out_unlock;
+	}
+
+	/* VLAN data does not exist */
+	mm_v_data = mm_alloc(mm, sizeof(struct vlan_data));
+	/* first save mm pointer obtained from mm_alloc, then compute s_desc
+	 * pointer, because mm_alloc() can change mm->area if the shm area
+	 * is extended (refer to README.mm for details) */
+	data = mm_addr(mm, mm_v_data);
+	if (NULL == data) {
+		errno = ENOMEM;
+		ret = -1;
+		goto out_unlock;
+	}
+
+	data->vlan_id = vlan_id;
+	data->net_devices = net_devices;
+	mm_list_add(mm, mm_ptr(mm, &data->lh), mm_ptr(mm, &SHM->vlan_data));
+
+out_unlock:
+	mm_unlock(mm);
+	return ret;
+}
+
+int del_vlan_data(int vlan_id)
+{
+	int ret = 0;
+
+	mm_lock(mm);
+	ret = __del_vlan_data(vlan_id);
+	mm_unlock(mm);
+
+	return ret;
+}
+
+int get_if_data(int if_index, struct if_data *data)
+{
+	mm_ptr_t ptr;
+
+	mm_lock(mm);
+	ptr = __get_if_data(if_index);
+	if(MM_NULL == ptr) {
+		mm_unlock(mm);
+		errno = EINVAL;
+		return -1;
+	}
+
+	*data = *(struct if_data *)mm_addr(mm, mm_list_entry(ptr, struct if_data, lh));
+	mm_unlock(mm);
+	return 0;
+}
+
+int set_if_data(int if_index, struct if_data new_data)
+{
+	mm_ptr_t lh, mm_if_data;
+	struct if_data *data;
+	int ret = 0;
+
+	mm_lock(mm);
+
+	lh = __get_if_data(if_index);
+	/* Interface data already exists */
+	if (MM_NULL != lh) {
+		data = mm_addr(mm, mm_list_entry(lh, struct vlan_data, lh));
+		*data = new_data;
+		goto out_unlock;
+	}
+
+	/* Interface data does not exist */
+	mm_if_data = mm_alloc(mm, sizeof(struct if_data));
+	/* first save mm pointer obtained from mm_alloc, then compute s_desc
+	 * pointer, because mm_alloc() can change mm->area if the shm area
+	 * is extended (refer to README.mm for details) */
+	data = mm_addr(mm, mm_if_data);
+	if (NULL == data) {
+		errno = ENOMEM;
+		ret = -1;
+		goto out_unlock;
+	}
+
+	*data = new_data;
+	mm_list_add(mm, mm_ptr(mm, &data->lh), mm_ptr(mm, &SHM->if_data));
+
+out_unlock:
+	mm_unlock(mm);
+	return ret;
+}
+
+int del_if_data(int if_index)
+{
+	int ret = 0;
+
+	mm_lock(mm);
+	ret = __del_if_data(if_index);
 	mm_unlock(mm);
 
 	return ret;
