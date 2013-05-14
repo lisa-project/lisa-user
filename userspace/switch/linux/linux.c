@@ -22,7 +22,7 @@
 static int add_bridge(struct linux_context *lnx_ctx, int vlan_id)
 {
 	int ret, bridge_sfd;
-	char name[9];
+	char name[VLAN_NAME_LEN];
 
 	sprintf(name, "vlan%d", vlan_id);
 
@@ -48,6 +48,59 @@ static int remove_bridge(struct linux_context *lnx_ctx, int vlan_id)
 	return 0;
 }
 
+static int add_bridge_if(struct linux_context *lnx_ctx, int vlan_id, int ifindex)
+{
+	int ret = 0, if_sfd, bridge_sfd;
+	struct ifreq ifr;
+	char if_name[IFNAMSIZE], br_name[VLAN_NAME_LEN];
+	unsigned long args[4] = { BRCTL_ADD_IF, ifindex, 0, 0 };
+
+	/* Get the name of the interface */
+	IF_SOCK_OPEN(lnx_ctx, if_sfd);
+	if_get_name(ifindex, if_sfd, if_name);
+	IF_SOCK_CLOSE(lnx_ctx, if_sfd);
+
+	/* Build the name of the bridge */
+	sprintf(br_name, "vlan%d", vlan_id);
+
+
+	/* Add the interface to the bridge */
+	strncpy(ifr.ifr_name, br_name, IFNAMSIZ);
+	ifr.ifr_data = (char *) args;
+
+	BRIDGE_SOCK_OPEN(lnx_ctx, bridge_sfd);
+	ret = ioctl(bridge_sfd, SIOCDEVPRIVATE, &ifr);
+	BRIDGE_SOCK_CLOSE(lnx_ctx, bridge_sfd);
+
+	return ret;
+}
+
+static int remove_bridge_if(struct linux_context *lnx_ctx, int vlan_id, int ifindex)
+{
+	int ret = 0, if_sfd, bridge_sfd;
+	struct ifreq ifr;
+	unsigned long args[4] = { BRCTL_DEL_IF, ifindex, 0, 0 };
+	char if_name[IFNAMSIZE], br_name[VLAN_NAME_LEN];
+
+	/* Get the name of the interface */
+	IF_SOCK_OPEN(lnx_ctx, if_sfd);
+	if_get_name(ifindex, if_sfd, if_name);
+	IF_SOCK_CLOSE(lnx_ctx, if_sfd);
+
+	/* Build the name of the bridge */
+	sprintf(br_name, "vlan%d", vlan_id);
+
+	/* Remove the interface from the bridge */
+	strncpy(ifr.ifr_name, br_name, IFNAMSIZ);
+	ifr.ifr_data = (char *) args;
+
+	BRIDGE_SOCK_OPEN(lnx_ctx, bridge_sfd);
+	ret = ioctl(bridge_sfd, SIOCDEVPRIVATE, &ifr);
+	BRIDGE_SOCK_CLOSE(lnx_ctx, bridge_sfd);
+
+	return ret;
+}
+
 static int linux_init(struct switch_operations *sw_ops)
 {
 	return 0;
@@ -55,14 +108,12 @@ static int linux_init(struct switch_operations *sw_ops)
 
 static int if_add(struct switch_operations *sw_ops, int ifindex, int mode)
 {
-	struct ifreq ifr;
 	struct if_data data;
 	struct net_switch_device device;
-	int ret, bridge_sfd, if_sfd;
+	int ret, if_sfd;
 	char if_name[IFNAMSIZE];
 	unsigned char vlan_bitmap[512];
 	struct linux_context *lnx_ctx = SWLINUX_CTX(sw_ops);
-	unsigned long args[4] = { BRCTL_ADD_IF, ifindex, 0, 0 };
 
 
 	/* Get the name of the interface */
@@ -72,14 +123,9 @@ static int if_add(struct switch_operations *sw_ops, int ifindex, int mode)
 
 
 	/* Add the new interface to the default bridge */
-	strncpy(ifr.ifr_name, LINUX_DEFAULT_BRIDGE, IFNAMSIZ);
-	ifr.ifr_data = (char *) args;
-
-	BRIDGE_SOCK_OPEN(lnx_ctx, bridge_sfd);
-
-	ret = ioctl(bridge_sfd, SIOCDEVPRIVATE, &ifr);
-
-	BRIDGE_SOCK_CLOSE(lnx_ctx, bridge_sfd);
+	ret = add_bridge_if(lnx_ctx, LINUX_DEFAULT_VLAN, ifindex);
+	if (ret)
+		return ret;
 
 
 	/* Create interface specific data */
@@ -98,28 +144,11 @@ static int if_add(struct switch_operations *sw_ops, int ifindex, int mode)
 
 static int if_remove(struct switch_operations *sw_ops, int ifindex)
 {
-	struct ifreq ifr;
-	int ret, bridge_sfd, if_sfd;
-	char if_name[IFNAMSIZE];
+	int ret;
 	struct linux_context *lnx_ctx = SWLINUX_CTX(sw_ops);
-	unsigned long args[4] = { BRCTL_DEL_IF, ifindex, 0, 0 };
-
-
-	/* Get the name of the interface */
-	IF_SOCK_OPEN(lnx_ctx, if_sfd);
-	if_get_name(ifindex, if_sfd, if_name);
-	IF_SOCK_CLOSE(lnx_ctx, if_sfd);
-
 
 	/* Remove the new interface from the default bridge */
-	strncpy(ifr.ifr_name, LINUX_DEFAULT_BRIDGE, IFNAMSIZ);
-	ifr.ifr_data = (char *) args;
-
-	BRIDGE_SOCK_OPEN(lnx_ctx, bridge_sfd);
-
-	ret = ioctl(bridge_sfd, SIOCDEVPRIVATE, &ifr);
-
-	BRIDGE_SOCK_CLOSE(lnx_ctx, bridge_sfd);
+	ret = remove_bridge_if(lnx_ctx, LINUX_DEFAULT_VLAN, ifindex);
 
 	/* Remove the interface specific data */
 	del_if_data(ifindex);

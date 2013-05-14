@@ -76,6 +76,7 @@
 
 #define LINUX_DEFAULT_BRIDGE		"vlan1"
 #define LINUX_DEFAULT_VLAN		1
+#define VLAN_NAME_LEN			9
 
 struct linux_context {
 	struct switch_operations sw_ops;
