@@ -21,6 +21,7 @@
 #define _SW_API_H
 
 #include "list.h"
+#include "mm.h"
 
 #define ETH_ALEN	6
 

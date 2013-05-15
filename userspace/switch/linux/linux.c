@@ -212,7 +212,10 @@ remove_data:
 
 static int vlan_add(struct switch_operations *sw_ops, int vlan)
 {
-	int ret;
+	int ret = 0, if_sfd;
+	mm_ptr_t ptr;
+	char vif_name[IFNAMSIZE];
+	struct net_switch_device vif_device;
 	struct linux_context *lnx_ctx = SWLINUX_CTX(sw_ops);
 
 	/* Add a bridge for the new VLAN */
@@ -220,10 +223,13 @@ static int vlan_add(struct switch_operations *sw_ops, int vlan)
 	if (ret)
 		return ret;
 
-	/* Add new virtual interfaces for all the trunk interfaces */
-	LIST_HEAD(net_devices);
+	/* Create VLAN specific data */
+	add_vlan_data(vlan);
 
+
+	/* Add new virtual interfaces for all the trunk interfaces */
 	mm_lock(mm);
+
 	mm_list_for_each(mm, ptr, mm_ptr(mm, &SHM->if_data)) {
 		struct if_data *if_data =
 			mm_addr(mm, mm_list_entry(ptr, struct if_data, lh));
@@ -232,11 +238,23 @@ static int vlan_add(struct switch_operations *sw_ops, int vlan)
 			continue;
 
 
+		/* Create a new virtual interface */
+		ret = __add_vif(lnx_ctx, if_data->device.name, vlan);
+		if (ret)
+			continue;
+
+		/* Add virtual interface information to VLAN data */
+		sprintf(vif_name, "%s.%d", if_data->device.name, vlan);
+		strcpy(vif_device.name, vif_name);
+		vif_device.vlan = vlan;
+
+		IF_SOCK_OPEN(lnx_ctx, if_sfd);
+		vif_device.ifindex = if_get_index(vif_name, if_sfd);
+		IF_SOCK_CLOSE(lnx_ctx, if_sfd);
+
+		add_vif_data(vlan, vif_device);
 	}
 	mm_unlock(mm);
-
-	/* Create VLAN specific data */
-	set_vlan_data(vlan, net_devices);
 
 	return ret;
 }

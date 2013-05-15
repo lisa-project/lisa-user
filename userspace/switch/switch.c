@@ -517,7 +517,7 @@ int switch_del_vlan(int vlan_id)
 	return ret;
 }
 
-int get_vlan_data(int vlan_id, struct vlan_data *data)
+int get_vlan_data(int vlan_id, struct vlan_data **data)
 {
 	mm_ptr_t ptr;
 
@@ -529,26 +529,25 @@ int get_vlan_data(int vlan_id, struct vlan_data *data)
 		return -1;
 	}
 
-	data = mm_addr(mm, mm_list_entry(ptr, struct vlan_data, lh));
+	*data = mm_addr(mm, mm_list_entry(ptr, struct vlan_data, lh));
 	mm_unlock(mm);
 	return 0;
 }
 
-int set_vlan_data(int vlan_id, struct list_head net_devices)
+int add_vlan_data(int vlan_id)
 {
 	mm_ptr_t lh, mm_v_data;
 	struct vlan_data *data;
+	mm_ptr_t mm_vif_data;
+	struct if_data *vif_data;
 	int ret = 0;
 
 	mm_lock(mm);
 
 	lh = __get_vlan_data(vlan_id);
 	/* VLAN data already exists */
-	if (MM_NULL != lh) {
-		data = mm_addr(mm, mm_list_entry(lh, struct vlan_data, lh));
-		data->net_devices = net_devices;
+	if (MM_NULL != lh)
 		goto out_unlock;
-	}
 
 	/* VLAN data does not exist */
 	mm_v_data = mm_alloc(mm, sizeof(struct vlan_data));
@@ -563,7 +562,8 @@ int set_vlan_data(int vlan_id, struct list_head net_devices)
 	}
 
 	data->vlan_id = vlan_id;
-	data->net_devices = net_devices;
+	MM_INIT_LIST_HEAD(mm, mm_ptr(mm, &data->vif_list));
+
 	mm_list_add(mm, mm_ptr(mm, &data->lh), mm_ptr(mm, &SHM->vlan_data));
 
 out_unlock:
@@ -665,6 +665,42 @@ int switch_get_if_desc(int if_index, char *desc)
 
 	mm_unlock(mm);
 	return 0;
+}
+
+/* Add virtual interface specific data to vlan data */
+int add_vif_data(int vlan_id, struct net_switch_device device)
+{
+	int ret = 0;
+	mm_ptr_t mm_vif_data;
+	struct vlan_data *v_data;
+	struct if_data *vif_data;
+
+	/* Get VLAN data */
+	ret = get_vlan_data(vlan_id, &v_data);
+	if (ret)
+		return ret;
+
+
+	/* Create new virtual interface specific data */
+	mm_lock(mm);
+
+	mm_vif_data = mm_alloc(mm, sizeof(struct if_data));
+	/* first save mm pointer obtained from mm_alloc, then compute vif_data
+	 * pointer, because mm_alloc() can change mm->area if the shm area
+	 * is extended (refer to README.mm for details) */
+	vif_data = mm_addr(mm, mm_vif_data);
+	if (NULL == vif_data) {
+		errno = ENOMEM;
+		ret = -1;
+		goto out_unlock;
+	}
+
+	vif_data->device = device;
+	mm_list_add(mm, mm_ptr(mm, &vif_data->lh), mm_ptr(mm, &v_data->vif_list));
+
+out_unlock:
+	mm_unlock(mm);
+	return ret;
 }
 
 int switch_set_if_desc(int if_index, char *desc)

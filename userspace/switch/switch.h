@@ -92,7 +92,7 @@ struct if_desc {
 
 struct vlan_data {
 	int vlan_id;
-	struct list_head net_devices;
+	struct mm_list_head vif_list;
 	struct mm_list_head lh;
 };
 
@@ -207,12 +207,12 @@ int switch_del_vlan(int vlan_id);
 /* Lookup vlan data arg0 and put it into arg1; return 0 if
  * vlan has data assigned, negative value otherwise and set errno
  */
-int get_vlan_data(int vlan_id, struct vlan_data *data);
+int get_vlan_data(int vlan_id, struct vlan_data **data);
 
 /* Buld new vlan data if there is no data assigned to vlan_id
  * or replace the net_devices list with the new one
  */
-int set_vlan_data(int vlan_id, struct list_head net_devices);
+int add_vlan_data(int vlan_id);
 
 /* Remove VLAN data for a given vlan_id
  */
@@ -234,6 +234,10 @@ int set_if_data(int if_index, struct if_data new_data);
  */
 int del_if_data(int if_index);
 
+
+
+/* Add virtual interface specific information to VLAN data */
+int add_vif_data(int vlan_id, struct net_switch_device device);
 
 
 /* Sets the cdp global configuration */
