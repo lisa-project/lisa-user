@@ -239,6 +239,10 @@ int del_if_data(int if_index);
 /* Add virtual interface specific information to VLAN data */
 int add_vif_data(int vlan_id, struct net_switch_device device);
 
+/* Remove virtual interface information from VLAN data */
+void del_vif_data(int vlan_id, char *if_name);
+
+
 
 /* Sets the cdp global configuration */
 void switch_set_cdp(struct cdp_configuration *cdp);

@@ -538,8 +538,6 @@ int add_vlan_data(int vlan_id)
 {
 	mm_ptr_t lh, mm_v_data;
 	struct vlan_data *data;
-	mm_ptr_t mm_vif_data;
-	struct if_data *vif_data;
 	int ret = 0;
 
 	mm_lock(mm);
@@ -701,6 +699,36 @@ int add_vif_data(int vlan_id, struct net_switch_device device)
 out_unlock:
 	mm_unlock(mm);
 	return ret;
+}
+
+void del_vif_data(int vlan_id, char *if_name)
+{
+	int res = 0;
+	char vif_name[IFNAMSIZE];
+	struct vlan_data *v_data;
+	mm_ptr_t ret;
+
+	/* Get VLAN data */
+	res = get_vlan_data(vlan_id, &v_data);
+	if (res)
+		return;
+	sprintf(vif_name, "%s.%d", if_name, vlan_id);
+
+
+	/* Remove virtual interface information from VLAN data */
+	mm_lock(mm);
+
+	mm_list_for_each(mm, ret, mm_ptr(mm, &v_data->vif_list)) {
+		struct if_data *vif_data =
+			mm_addr(mm, mm_list_entry(ret, struct if_data, lh));
+		if (!strcmp(vif_data->device.name, vif_name))
+			break;
+	}
+	mm_list_del(mm, ret);
+	mm_free(mm, mm_list_entry(ret, struct if_data, lh));
+
+	mm_unlock(mm);
+
 }
 
 int switch_set_if_desc(int if_index, char *desc)

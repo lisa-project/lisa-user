@@ -98,7 +98,8 @@ static int __manage_vif(struct linux_context *lnx_ctx, char *if_name,
 
 	/* Create a new interface in a given VLAN */
 	strcpy(if_request.device1, if_name);
-	if_request.u.VID = vlan_id;
+	if (ADD_VLAN_CMD == cmd)
+		if_request.u.VID = vlan_id;
 	if_request.cmd = cmd;
 
 	VLAN_SOCK_OPEN(lnx_ctx, vlan_sfd);
@@ -126,8 +127,8 @@ static int linux_init(struct switch_operations *sw_ops)
 static int if_add(struct switch_operations *sw_ops, int ifindex, int mode)
 {
 	struct if_data data;
-	struct net_switch_device device;
-	int ret, if_sfd;
+	struct net_switch_device device, vif_device;
+	int ret = 0, if_sfd;
 	char if_name[IFNAMSIZE], vif_name[IFNAMSIZE];
 	unsigned char vlan_bitmap[512];
 	struct linux_context *lnx_ctx = SWLINUX_CTX(sw_ops);
@@ -148,7 +149,7 @@ static int if_add(struct switch_operations *sw_ops, int ifindex, int mode)
 		goto create_data;
 	}
 
-	/* Create interfaces for each VLAN in the switch */
+	/* Trunk: create interfaces for each VLAN in the switch */
 	mm_lock(mm);
 
 	mm_list_for_each(mm, ptr, mm_ptr(mm, &SHM->vlan_data)) {
@@ -157,10 +158,19 @@ static int if_add(struct switch_operations *sw_ops, int ifindex, int mode)
 
 		/* Use 8021q to add a new interface */
 		ret = __add_vif(lnx_ctx, if_name, v_data->vlan_id);
-		if (ret) {
-			mm_unlock(mm);
-			goto out;
-		}
+		if (ret)
+			continue;
+
+		/* Add virtual interface information to VLAN data */
+		sprintf(vif_name, "%s.%d", if_name, v_data->vlan_id);
+		strcpy(vif_device.name, vif_name);
+		vif_device.vlan = v_data->vlan_id;
+
+		IF_SOCK_OPEN(lnx_ctx, if_sfd);
+		vif_device.ifindex = if_get_index(vif_name, if_sfd);
+		IF_SOCK_CLOSE(lnx_ctx, if_sfd);
+
+		add_vif_data(v_data->vlan_id, vif_device);
 	}
 
 	mm_unlock(mm);
@@ -177,7 +187,6 @@ create_data:
 	data.mode = mode;
 	set_if_data(ifindex, data);
 
-out:
 	return ret;
 }
 
@@ -185,8 +194,9 @@ static int if_remove(struct switch_operations *sw_ops, int ifindex)
 {
 	int ret = 0, if_sfd;
 	struct linux_context *lnx_ctx = SWLINUX_CTX(sw_ops);
-	char if_name[IFNAMSIZE];
+	char if_name[IFNAMSIZE], vif_name[IFNAMSIZE];
 	struct if_data data;
+	mm_ptr_t ptr;
 
 	/* Get the name of the interface */
 	IF_SOCK_OPEN(lnx_ctx, if_sfd);
@@ -202,7 +212,24 @@ static int if_remove(struct switch_operations *sw_ops, int ifindex)
 		goto remove_data;
 	}
 
-	/* TODO Remove all the virtual interfaces for TRUNK mode */
+	/* Remove all the virtual interfaces for TRUNK mode */
+	mm_lock(mm);
+
+	mm_list_for_each(mm, ptr, mm_ptr(mm, &SHM->vlan_data)) {
+		struct vlan_data *v_data =
+			mm_addr(mm, mm_list_entry(ptr, struct vlan_data, lh));
+
+		/* Use 8021q to remove the virtual interface */
+		sprintf(vif_name, "%s.%d", if_name, v_data->vlan_id);
+		ret = __remove_vif(lnx_ctx, vif_name);
+		if (ret)
+			continue;
+
+		/* Remove virtual interface information from VLAN data */
+		del_vif_data(v_data->vlan_id, if_name);
+	}
+
+	mm_unlock(mm);
 
 remove_data:
 	/* Remove the interface specific data */
@@ -237,7 +264,6 @@ static int vlan_add(struct switch_operations *sw_ops, int vlan)
 		if (IF_MODE_ACCESS == if_data->mode)
 			continue;
 
-
 		/* Create a new virtual interface */
 		ret = __add_vif(lnx_ctx, if_data->device.name, vlan);
 		if (ret)
@@ -261,12 +287,42 @@ static int vlan_add(struct switch_operations *sw_ops, int vlan)
 
 static int vlan_del(struct switch_operations *sw_ops, int vlan)
 {
-	int ret;
+	int ret = 0;
 	struct linux_context *lnx_ctx = SWLINUX_CTX(sw_ops);
+	struct vlan_data *v_data;
+	mm_ptr_t ptr, tmp;
 
 	ret = remove_bridge(lnx_ctx, vlan);
+	if (ret)
+		return ret;
 
-	/* TODO Remove VLAN specific data */
+	/* Get VLAN data */
+	ret = get_vlan_data(vlan, &v_data);
+	if (ret)
+		return ret;
+
+
+	/* Remove the virtual interfaces for all the trunk interfaces */
+	mm_lock(mm);
+
+	mm_list_for_each_safe(mm, ptr, tmp, mm_ptr(mm, &v_data->vif_list)) {
+		struct if_data *vif_data =
+			mm_addr(mm, mm_list_entry(ptr, struct if_data, lh));
+
+		ret = __remove_vif(lnx_ctx, vif_data->device.name);
+		if (ret)
+			continue;
+
+		mm_list_del(mm, ptr);
+		mm_free(mm, mm_list_entry(ptr, struct if_data, lh));
+	}
+
+	mm_unlock(mm);
+
+
+	/* Remove VLAN specific data */
+	ret = del_vlan_data(vlan);
+
 	return ret;
 }
 
