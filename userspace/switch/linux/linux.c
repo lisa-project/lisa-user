@@ -35,7 +35,7 @@ static int add_bridge(struct linux_context *lnx_ctx, int vlan_id)
 
 static int remove_bridge(struct linux_context *lnx_ctx, int vlan_id)
 {
-	int ret, bridge_sfd;
+	int ret = 0, bridge_sfd;
 	char name[9];
 
 	sprintf(name, "vlan%d", vlan_id);
@@ -45,7 +45,6 @@ static int remove_bridge(struct linux_context *lnx_ctx, int vlan_id)
 	BRIDGE_SOCK_CLOSE(lnx_ctx, bridge_sfd);
 
 	return ret;
-	return 0;
 }
 
 static int add_bridge_if(struct linux_context *lnx_ctx, int vlan_id, int ifindex)
@@ -171,6 +170,9 @@ static int if_add(struct switch_operations *sw_ops, int ifindex, int mode)
 		IF_SOCK_CLOSE(lnx_ctx, if_sfd);
 
 		add_vif_data(v_data->vlan_id, vif_device);
+
+		/* Add the new interface to VLAN's bridge */
+		add_bridge_if(lnx_ctx, v_data->vlan_id, vif_device.ifindex);
 	}
 
 	mm_unlock(mm);
@@ -192,7 +194,7 @@ create_data:
 
 static int if_remove(struct switch_operations *sw_ops, int ifindex)
 {
-	int ret = 0, if_sfd;
+	int ret = 0, if_sfd, vifindex;
 	struct linux_context *lnx_ctx = SWLINUX_CTX(sw_ops);
 	char if_name[IFNAMSIZE], vif_name[IFNAMSIZE];
 	struct if_data data;
@@ -219,8 +221,16 @@ static int if_remove(struct switch_operations *sw_ops, int ifindex)
 		struct vlan_data *v_data =
 			mm_addr(mm, mm_list_entry(ptr, struct vlan_data, lh));
 
-		/* Use 8021q to remove the virtual interface */
 		sprintf(vif_name, "%s.%d", if_name, v_data->vlan_id);
+		IF_SOCK_OPEN(lnx_ctx, if_sfd);
+		vifindex = if_get_index(vif_name, if_sfd);
+		IF_SOCK_CLOSE(lnx_ctx, if_sfd);
+
+		/* Remove vif from VLAN's bridge */
+		if (remove_bridge_if(lnx_ctx, v_data->vlan_id, vifindex))
+			continue;
+
+		/* Use 8021q to remove the virtual interface */
 		ret = __remove_vif(lnx_ctx, vif_name);
 		if (ret)
 			continue;
@@ -279,6 +289,9 @@ static int vlan_add(struct switch_operations *sw_ops, int vlan)
 		IF_SOCK_CLOSE(lnx_ctx, if_sfd);
 
 		add_vif_data(vlan, vif_device);
+
+		/* Add the virtual interface to VLAN's bridge */
+		add_bridge_if(lnx_ctx, vlan, vif_device.ifindex);
 	}
 	mm_unlock(mm);
 
@@ -291,10 +304,6 @@ static int vlan_del(struct switch_operations *sw_ops, int vlan)
 	struct linux_context *lnx_ctx = SWLINUX_CTX(sw_ops);
 	struct vlan_data *v_data;
 	mm_ptr_t ptr, tmp;
-
-	ret = remove_bridge(lnx_ctx, vlan);
-	if (ret)
-		return ret;
 
 	/* Get VLAN data */
 	ret = get_vlan_data(vlan, &v_data);
@@ -309,6 +318,11 @@ static int vlan_del(struct switch_operations *sw_ops, int vlan)
 		struct if_data *vif_data =
 			mm_addr(mm, mm_list_entry(ptr, struct if_data, lh));
 
+		/* Remove the virtual interface from VLAN's bridge */
+		if (remove_bridge_if(lnx_ctx, vlan, vif_data->device.ifindex))
+			continue;
+
+		/* Remove vif */
 		ret = __remove_vif(lnx_ctx, vif_data->device.name);
 		if (ret)
 			continue;
@@ -319,6 +333,10 @@ static int vlan_del(struct switch_operations *sw_ops, int vlan)
 
 	mm_unlock(mm);
 
+	/* Remove the bridge associated with this VLAN */
+	ret = remove_bridge(lnx_ctx, vlan);
+	if (ret)
+		return ret;
 
 	/* Remove VLAN specific data */
 	ret = del_vlan_data(vlan);
