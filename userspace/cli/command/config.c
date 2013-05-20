@@ -463,18 +463,12 @@ int cmd_linevty(struct cli_context *__ctx, int argc, char **argv, struct menu_no
 
 int cmd_set_aging(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
-	struct swcfgreq swcfgr;
-	int sock_fd, status, nsec = SW_DEFAULT_AGE_TIME;
+	int status, nsec = SW_DEFAULT_AGE_TIME;
 
 	if (strcmp(nodev[0]->name, "no"))
 		nsec = atoi(argv[2]);
 
-	SW_SOCK_OPEN(ctx, sock_fd);
-	swcfgr.cmd = SWCFG_SETAGETIME;
-	swcfgr.ext.nsec = nsec;
-	status = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
-	SW_SOCK_CLOSE(ctx, sock_fd);
-
+	status = sw_ops->set_age_time(sw_ops, nsec);
 	if (status) {
 		EX_STATUS_REASON_IOCTL(ctx, errno);
 		return CLI_EX_REJECTED;

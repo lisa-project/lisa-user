@@ -808,19 +808,17 @@ out_clean:
 
 int cmd_sh_mac_age(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
-	struct swcfgreq swcfgr = {
-		.cmd = SWCFG_GETAGETIME
-	};
-	int sock_fd, status;
+	int status, age_time;
 	FILE *out;
 
-	SW_SOCK_OPEN(ctx, sock_fd);
-	status = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
-	assert(status != -1);
-	SW_SOCK_CLOSE(ctx, sock_fd);
+	status = sw_ops->get_age_time(sw_ops, &age_time);
+	if (status < 0) {
+		EX_STATUS_PERROR(ctx, "get age time failed");
+		return CLI_EX_WARNING;
+	}
 
 	out = ctx->out_open(ctx, 0);
-	fprintf(out, "%d\n", swcfgr.ext.nsec);
+	fprintf(out, "%d\n", age_time);
 
 	return CLI_EX_OK;
 }

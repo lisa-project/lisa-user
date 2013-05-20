@@ -243,6 +243,7 @@ int build_config_global(struct cli_context *ctx, FILE *out, int tagged_if)
 	int ret = CLI_EX_OK;
 	char vlan_name[SW_MAX_VLAN_NAME + 1], def_name[SW_MAX_VLAN_NAME + 1];
 	int igmp_snooping;
+	int age_time = SW_DEFAULT_AGE_TIME;
 
 	if_map_init(&if_map);
 
@@ -377,10 +378,12 @@ static_mac:
 	if_map_cleanup(&if_map);
 
 	/* fdb mac aging time */
-	swcfgr.cmd = SWCFG_GETAGETIME;
-	status = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
-	assert(status != -1);
-	if (swcfgr.ext.nsec != SW_DEFAULT_AGE_TIME)
+	status = sw_ops->get_age_time(sw_ops, &age_time);
+	if (status < 0) {
+		EX_STATUS_PERROR(ctx, "get age time failed");
+		ret = CLI_EX_WARNING;
+	}
+	if (age_time != SW_DEFAULT_AGE_TIME)
 		fprintf(out, "mac-address-table aging-time %d\n!\n", swcfgr.ext.nsec);
 
 	/* cdp global settings */
