@@ -549,31 +549,27 @@ int cmd_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **
 
 int cmd_add_mrouter(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
-	int sock_fd, iftype, status, ioctl_errno;
-	struct swcfgreq swcfgr = {
-		.cmd = SWCFG_SETMROUTER,
-		.ext.mrouter = 1
-	};
+	int sock_fd, iftype, status;
+	int mrouter = 1, vlan, ifindex;
 
 	if (!strcmp(nodev[0]->name, "no")) {
-		swcfgr.ext.mrouter = 0;
+		mrouter = 0;
 		SHIFT_ARG(argc, argv, nodev);
 	}
 
 	SHIFT_ARG(argc, argv, nodev, 4);
-	swcfgr.vlan = atoi(argv[0]);
+	vlan = atoi(argv[0]);
 
 	SHIFT_ARG(argc, argv, nodev, 3);
 	SW_SOCK_OPEN(ctx, sock_fd);
-	if_args_to_ifindex(ctx, argv, nodev, sock_fd, swcfgr.ifindex, iftype);
+	if_args_to_ifindex(ctx, argv, nodev, sock_fd, ifindex, iftype);
+	SW_SOCK_CLOSE(ctx, sock_fd);
 	SHIFT_ARG(argc, argv, nodev);
 
-	status = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
-	ioctl_errno = errno;
-	SW_SOCK_CLOSE(ctx, sock_fd);
+	status = sw_ops->mrouter_set(sw_ops, vlan, ifindex, mrouter);
 
 	if (status == -1) {
-		EX_STATUS_REASON_IOCTL(ctx, ioctl_errno);
+		EX_STATUS_REASON_IOCTL(ctx, errno);
 		return CLI_EX_REJECTED;
 	}
 

@@ -521,41 +521,47 @@ int cmd_sh_ip_igmps(struct cli_context *ctx, int argc, char **argv, struct menu_
 int cmd_sh_ip_igmps_mrouter(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
 	FILE *out;
-	int ret = CLI_EX_OK, sock_fd = -1, i;
-	struct net_switch_mrouter dummy;
-
-	struct swcfgreq swcfgr = {
-		.cmd = SWCFG_GETMROUTERS,
-		.vlan = 0
-	}; 
+	int ret = CLI_EX_OK, sock_fd = -1;
+	int vlan = 0;
+	struct list_head mrouters;
+	struct net_switch_mrouter_e *entry, *tmp;
+	int status;
 
 	const char *fmt1 = "%-4s    %s\n";
 	const char *fmt2 = "%4d    %s(static)\n";
 	char ifname[IFNAMSIZ];
-	int vlif_no;
 
 	SHIFT_ARG(argc, argv, nodev, 5);
 	if (argc) {
 		assert(argc > 1);
-		swcfgr.vlan = atoi(argv[1]);
+		vlan = atoi(argv[1]);
 	}
 	out = ctx->out_open(ctx, 1);
 
+	INIT_LIST_HEAD(&mrouters);
+	status = sw_ops->mrouters_get(sw_ops, vlan, &mrouters);
+	if (status < 0) {
+		EX_STATUS_PERROR(ctx, "failed to get mrouters");
+		ret = CLI_EX_REJECTED;
+		goto close_out;
+	}
+
+	/* Open socket for if_get_name. */
 	SW_SOCK_OPEN(ctx, sock_fd);
-	vlif_no = buf_alloc_swcfgr(&swcfgr, sock_fd);
-	vlif_no /= sizeof(dummy);
 
 	fprintf(out, fmt1, "Vlan", "Ports");
 	fprintf(out, fmt1, DASHES(4), DASHES(8));
 
-	for (i = 0; i < vlif_no; i++) {
-		struct net_switch_mrouter *entry = 
-			&((struct net_switch_mrouter *)swcfgr.buf.addr)[i];
+	list_for_each_entry_safe(entry, tmp, &mrouters, lh) {
 		if_get_name(entry->ifindex, sock_fd, ifname);
 		fprintf(out, fmt2, entry->vlan, ifname);
+
+		list_del(&entry->lh);
+		free(entry);
 	}
 	SW_SOCK_CLOSE(ctx, sock_fd);
 
+close_out:
 	fclose(out);
 	return ret;
 }
@@ -626,6 +632,11 @@ int cmd_sh_ip_igmps_groups(struct cli_context *ctx, int argc, char **argv, struc
 	int display_count = 0;
 	int group_count = 0;
 	const char *group_type = "";
+	struct list_head mrouters;
+	struct net_switch_mrouter_e *mrouter, *tmp;
+	int vlan;
+
+	INIT_LIST_HEAD(&mrouters);
 
 	if (!strcmp(nodev[argc - 1]->name, "count")) {
 		display_count = 1;
@@ -706,17 +717,15 @@ int cmd_sh_ip_igmps_groups(struct cli_context *ctx, int argc, char **argv, struc
 	free(swcfgr.buf.addr);
 
 	/* Get the mrouters list */
-	swcfgr.cmd = SWCFG_GETMROUTERS;
-	if ((status = buf_alloc_swcfgr(&swcfgr, sock_fd)) < 0) {
-		EX_STATUS_REASON_IOCTL(ctx, -status);
+	vlan = swcfgr.vlan;
+	status = sw_ops->mrouters_get(sw_ops, vlan, &mrouters);
+	if (status < 0) {
+		EX_STATUS_REASON_IOCTL(ctx, errno);
 		ret = CLI_EX_WARNING;
 		goto out_clean;
 	}
 
-	status /= sizeof(struct net_switch_mrouter);
-	for (i=0; i<status; i++) {
-		struct net_switch_mrouter *mrouter = (struct net_switch_mrouter *)swcfgr.buf.addr + i;
-
+	list_for_each_entry_safe(mrouter, tmp, &mrouters, lh) {
 		list_for_each_entry(group, &igmp_groups[mrouter->vlan], lh) {
 			int found = 0;
 			list_for_each_entry(ife, &group->interfaces, lh)
@@ -733,6 +742,8 @@ int cmd_sh_ip_igmps_groups(struct cli_context *ctx, int argc, char **argv, struc
 			ife->ifindex = mrouter->ifindex;
 			list_add_tail(&ife->lh, &group->interfaces);
 		}
+		list_del(&mrouter->lh);
+		free(mrouter);
 	}
 
 	/* Build ifindex => ifname hash */
@@ -787,6 +798,10 @@ out_clean:
 	if (swcfgr.buf.addr != NULL)
 		free(swcfgr.buf.addr);
 	SW_SOCK_CLOSE(ctx, sock_fd);
+	list_for_each_entry_safe(mrouter, tmp, &mrouters, lh) {
+		list_del(&mrouter->lh);
+		free(mrouter);
+	}
 
 	return ret;
 }
