@@ -187,40 +187,40 @@ int cmd_speed_duplex(struct cli_context *ctx, int argc, char **argv, struct menu
 
 int cmd_trunk_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 { 
-	int parse_vlan_err = 0, i, sock_fd;
-	struct swcfgreq swcfgr;
+	int parse_vlan_err = 0, i;
 	struct swcli_context *uc = SWCLI_CTX(ctx);
 	unsigned char bmp[SW_VLAN_BMP_NO];
+	int status = -1, ifindex = uc->ifindex;
 
 	assert(argc > 1);
 
 	switch ((int)nodev[argc - 1]->priv) {
 	case CMD_VLAN_SET:
 		parse_vlan_err = parse_vlan_list(argv[argc - 1], bmp);
-		swcfgr.cmd = SWCFG_SETTRUNKVLANS;
+		status = sw_ops->if_set_trunk_vlans(sw_ops, ifindex, bmp);
 		break;
 	case CMD_VLAN_ADD:
 		parse_vlan_err = parse_vlan_list(argv[argc - 1], bmp);
-		swcfgr.cmd = SWCFG_ADDTRUNKVLANS;
+		status = sw_ops->if_add_trunk_vlans(sw_ops, ifindex, bmp);
 		break;
 	case CMD_VLAN_ALL:
 	case CMD_VLAN_NO:
 		memset(bmp, 0, SW_VLAN_BMP_NO);
-		swcfgr.cmd = SWCFG_SETTRUNKVLANS;
+		status = sw_ops->if_set_trunk_vlans(sw_ops, ifindex, bmp);
 		break;
 	case CMD_VLAN_EXCEPT:
 		parse_vlan_err = parse_vlan_list(argv[argc - 1], bmp);
 		for(i = 0; i < SW_VLAN_BMP_NO; i++)
 			bmp[i] ^= 0xff;
-		swcfgr.cmd = SWCFG_SETTRUNKVLANS;
+		status = sw_ops->if_set_trunk_vlans(sw_ops, ifindex, bmp);
 		break;
 	case CMD_VLAN_NONE:
 		memset(bmp, 0xff, SW_VLAN_BMP_NO);
-		swcfgr.cmd = SWCFG_SETTRUNKVLANS;
+		status = sw_ops->if_set_trunk_vlans(sw_ops, ifindex, bmp);
 		break;
 	case CMD_VLAN_REMOVE:
 		parse_vlan_err = parse_vlan_list(argv[argc - 1], bmp);
-		swcfgr.cmd = SWCFG_DELTRUNKVLANS;
+		status = sw_ops->if_del_trunk_vlans(sw_ops, ifindex, bmp);
 		break;
 	}
 
@@ -229,12 +229,10 @@ int cmd_trunk_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_n
 		return CLI_EX_REJECTED;
 	}
 
-	swcfgr.ifindex = uc->ifindex;
-	swcfgr.ext.bmp = bmp;
-
-	SW_SOCK_OPEN(ctx, sock_fd);
-	ioctl(sock_fd, SIOCSWCFG, &swcfgr);
-	SW_SOCK_CLOSE(ctx, sock_fd);
+	if (status < 0) {
+		EX_STATUS_PERROR(ctx, "cmd trunk vlan failed");
+		return CLI_EX_WARNING;
+	}
 
 	return CLI_EX_OK;
 }
