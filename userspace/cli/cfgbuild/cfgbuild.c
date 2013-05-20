@@ -1,4 +1,6 @@
 #include "swcli.h"
+#include <sys/stat.h>
+#include <sys/types.h>
 
 /* max len is for ",nnnn-nnnn" */
 #define MAX_VLAN_TOKEN 11
@@ -483,12 +485,7 @@ int cmd_write_mem(struct cli_context *ctx, int argc, char **argv, struct menu_no
 {
 	FILE *cfg, *out;
 	int ret, sock_fd, save_fd = SWCLI_CTX(ctx)->sock_fd;
-
-	cfg = fopen(SW_CONFIG_FILE, "w+");
-	if (cfg == NULL) {
-		EX_STATUS_PERROR(ctx, "fopen failed");
-		return CLI_EX_REJECTED;
-	}
+	struct stat sb;
 
 	SW_SOCK_OPEN(ctx, sock_fd);
 	SWCLI_CTX(ctx)->sock_fd = sock_fd;
@@ -496,6 +493,27 @@ int cmd_write_mem(struct cli_context *ctx, int argc, char **argv, struct menu_no
 	 * opening a new sock_fd or closing the existing one */
 
 	out = ctx->out_open(ctx, 0);
+
+	if(lstat(SW_CONFIG_ROOT, &sb) == -1) {
+		fprintf(out, "config root '%s' not found, attempting to create it... ", SW_CONFIG_ROOT);
+		fflush(out);
+		if(mkdir(SW_CONFIG_ROOT, S_IRWXU) == -1) {
+				EX_STATUS_PERROR(ctx, "\ncreate dir failed ");
+				return CLI_EX_REJECTED;
+		}
+		fprintf(out, "done\n");
+		fflush(out);
+	} else if(!S_ISDIR(sb.st_mode)) {
+				EX_STATUS_PERROR(ctx, "config root '"SW_CONFIG_ROOT"' is not a dir! ");
+				return CLI_EX_REJECTED;
+	}
+
+	cfg = fopen(SW_CONFIG_FILE, "w+");
+	if (cfg == NULL) {
+		EX_STATUS_PERROR(ctx, "fopen failed");
+		return CLI_EX_REJECTED;
+	}
+
 	fprintf(out, "Building configuration...\n");
 	fflush(out);
 
