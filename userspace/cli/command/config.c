@@ -479,27 +479,30 @@ int cmd_set_aging(struct cli_context *ctx, int argc, char **argv, struct menu_no
 
 int cmd_macstatic(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
-	struct swcfgreq swcfgr = {
-		.cmd = SWCFG_MACSTATIC
-	};
 	int sock_fd, status;
+	int ifindex, vlan;
+	int delmac_flag = 0;
+	unsigned char mac[ETH_ALEN];
 
 	if (!strcmp(nodev[0]->name, "no")) {
-		swcfgr.cmd = SWCFG_DELMACSTATIC;
+		delmac_flag = 1;
 		SHIFT_ARG(argc, argv, nodev);
 	}
 
-	if ((status = parse_mac(argv[2], swcfgr.ext.mac.addr))) {
+	if ((status = parse_mac(argv[2], mac))) {
 		EX_STATUS_REASON(ctx, "Error parsing mac address %s: %s", argv[2], strerror(status));
 		return CLI_EX_REJECTED;
 	}
 
 	SW_SOCK_OPEN(ctx, sock_fd);
 
-	swcfgr.vlan = atoi(argv[4]);
+	vlan = atoi(argv[4]);
 	SHIFT_ARG(argc, argv, nodev, 6);
-	if_args_to_ifindex(ctx, argv, nodev, sock_fd, swcfgr.ifindex, status);
-	status = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
+	if_args_to_ifindex(ctx, argv, nodev, sock_fd, ifindex, status);
+	if (delmac_flag)
+		status = sw_ops->vlan_del_mac_static(sw_ops, ifindex, vlan, mac);
+	else
+		status = sw_ops->vlan_set_mac_static(sw_ops, ifindex, vlan, mac);
 	SW_SOCK_CLOSE(ctx, sock_fd);
 
 	if (status) {

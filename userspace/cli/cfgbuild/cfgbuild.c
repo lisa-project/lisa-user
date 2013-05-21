@@ -240,13 +240,17 @@ int build_config_global(struct cli_context *ctx, FILE *out, int tagged_if)
 	struct cdp_configuration cdp;
 	int status, i, j, sock_fd;
 	char hostname[128];
-	struct swcfgreq swcfgr;
 	unsigned char vlans[SW_VLAN_BMP_NO];
 	int ret = CLI_EX_OK;
 	char vlan_name[SW_MAX_VLAN_NAME + 1], def_name[SW_MAX_VLAN_NAME + 1];
 	int igmp_snooping;
 	int age_time = SW_DEFAULT_AGE_TIME;
+	int mac_type, ifindex, vlan;
+	unsigned char mac_addr[ETH_ALEN];
+	struct net_switch_mac_e *mac, *mac_tmp;
+	struct list_head macs;
 
+	INIT_LIST_HEAD(&macs);
 	if_map_init(&if_map);
 
 	SW_SOCK_OPEN(ctx, sock_fd);
@@ -355,17 +359,17 @@ static_mac:
 	status = if_map_init_ifindex_hash(&if_map);
 	assert(!status);
 
-	init_mac_filter(&swcfgr);
-	swcfgr.cmd = SWCFG_GETMAC;
-	swcfgr.ext.mac.type = SW_FDB_MAC_STATIC;
+	init_mac_filter(&ifindex, &vlan, &mac_type, mac_addr);
+	mac_type = SW_FDB_MAC_STATIC;
 
-	status = buf_alloc_swcfgr(&swcfgr, sock_fd);
-	assert(status >= 0); // FIXME
+	status = sw_ops->get_mac(sw_ops, ifindex, vlan, mac_type, mac_addr, &macs);
+	if (status < 0) {
+		EX_STATUS_PERROR(ctx, "failed to get mac addresses");
+		ret = CLI_EX_WARNING;
+		goto aging;
+	}
 
-	status /= sizeof(struct net_switch_mac);
-	for (i = 0; i < status; i++) {
-		struct net_switch_mac *mac =
-			(struct net_switch_mac *)swcfgr.buf.addr + i;
+	list_for_each_entry_safe(mac, mac_tmp, &macs, lh) {
 		unsigned char *addr = &mac->addr[0];
 		char *if_name = canonical_if_name(if_map_lookup_ifindex(&if_map, mac->ifindex, sock_fd));
 
@@ -375,10 +379,12 @@ static_mac:
 				addr[0], addr[1], addr[2], addr[3], addr[4], addr[5],
 				mac->vlan, if_name);
 		free(if_name);
+		list_del(&mac->lh);
+		free(mac);
 	}
-	free(swcfgr.buf.addr);
 	if_map_cleanup(&if_map);
 
+aging:
 	/* fdb mac aging time */
 	status = sw_ops->get_age_time(sw_ops, &age_time);
 	if (status < 0) {
@@ -386,7 +392,7 @@ static_mac:
 		ret = CLI_EX_WARNING;
 	}
 	if (age_time != SW_DEFAULT_AGE_TIME)
-		fprintf(out, "mac-address-table aging-time %d\n!\n", swcfgr.ext.nsec);
+		fprintf(out, "mac-address-table aging-time %d\n!\n", age_time);
 
 	/* cdp global settings */
 	switch_get_cdp(&cdp);

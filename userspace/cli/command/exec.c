@@ -107,24 +107,26 @@ out_return:
 	return err;
 }
 
-static int parse_mac_filter(struct swcfgreq *swcfgr, struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev, int sock_fd, char *ifname)
+static int parse_mac_filter(int *ifindex, int *vlan, int *mac_type,
+		unsigned char *mac_addr, struct cli_context *ctx, int argc,
+		char **argv, struct menu_node **nodev, int sock_fd, char *ifname)
 {
 	int status;
 
-	init_mac_filter(swcfgr);
+	init_mac_filter(ifindex, vlan, mac_type, mac_addr);
 
 	if (!argc)
 		return 0;
 
 	do {
 		if (!strcmp(nodev[0]->name, "static")) {
-			swcfgr->ext.mac.type = SW_FDB_MAC_STATIC;
+			(*mac_type) = SW_FDB_MAC_STATIC;
 			SHIFT_ARG(argc, argv, nodev);
 			break;
 		}
 
 		if (!strcmp(nodev[0]->name, "dynamic")) {
-			swcfgr->ext.mac.type = SW_FDB_MAC_DYNAMIC;
+			(*mac_type) = SW_FDB_MAC_DYNAMIC;
 			SHIFT_ARG(argc, argv, nodev);
 			break;
 		}
@@ -135,7 +137,7 @@ static int parse_mac_filter(struct swcfgreq *swcfgr, struct cli_context *ctx, in
 
 	if (!strcmp(nodev[0]->name, "address")) {
 		assert(argc >= 2);
-		status = parse_mac(argv[1], swcfgr->ext.mac.addr);
+		status = parse_mac(argv[1], mac_addr);
 		assert(!status);
 		SHIFT_ARG(argc, argv, nodev, 2);
 	}
@@ -147,7 +149,8 @@ static int parse_mac_filter(struct swcfgreq *swcfgr, struct cli_context *ctx, in
 		assert(argc >= 3);
 		SHIFT_ARG(argc, argv, nodev);
 
-		if_args_to_ifindex(ctx, argv, nodev, sock_fd, swcfgr->ifindex, status, ifname);
+		if_args_to_ifindex(ctx, argv, nodev, sock_fd, (*ifindex),
+				status, ifname);
 		SHIFT_ARG(argc, argv, nodev, 2);
 	}
 
@@ -156,7 +159,7 @@ static int parse_mac_filter(struct swcfgreq *swcfgr, struct cli_context *ctx, in
 
 	if (!strcmp(nodev[0]->name, "vlan")) {
 		assert(argc >= 2);
-		swcfgr->vlan = atoi(argv[1]);
+		(*vlan) = atoi(argv[1]);
 	}
 
 	return 0;
@@ -167,34 +170,39 @@ int cmd_sh_mac_addr_t(struct cli_context *ctx, int argc, char **argv, struct men
 	FILE *out;
 	int ret = CLI_EX_OK;
 	int status, sock_fd;
-	struct swcfgreq swcfgr = {
-		.cmd = SWCFG_GETMAC
-	};
 	char ifname[IFNAMSIZ];
+	int ifindex, vlan, mac_type;
+	unsigned char mac_addr[ETH_ALEN];
+	struct list_head macs;
+	struct net_switch_mac_e *mac, *tmp;
+
+	INIT_LIST_HEAD(&macs);
 
 	SW_SOCK_OPEN(ctx, sock_fd);
 
 	assert(argc >= 2);
 	SHIFT_ARG(argc, argv, nodev, strcmp(nodev[1]->name, "mac") ? 2 : 3);
 
-	if ((status = parse_mac_filter(&swcfgr, ctx, argc, argv, nodev, sock_fd, ifname))) {
+	if ((status = parse_mac_filter(&ifindex, &vlan, &mac_type, mac_addr,
+			ctx, argc, argv, nodev, sock_fd, ifname))) {
 		SW_SOCK_CLOSE(ctx, sock_fd);
 		return status;
 	}
 
-	if ((status = buf_alloc_swcfgr(&swcfgr, sock_fd)) < 0)
-		switch (-status) {
+	status = sw_ops->get_mac(sw_ops, ifindex, vlan, mac_type, mac_addr,
+			&macs);
+	if (status < 0)
+		switch (errno) {
 		case EINVAL:
 			EX_STATUS_REASON(ctx, "interface %s not in switch", ifname);
 			ret = CLI_EX_REJECTED;
 			break;
 		default:
-			EX_STATUS_REASON_IOCTL(ctx, -status);
+			EX_STATUS_REASON_IOCTL(ctx, errno);
 			ret = CLI_EX_WARNING;
 			break;
 		}
 	else {
-		int size = status;
 		struct if_map if_map;
 		struct if_map_priv priv = {
 			.map = &if_map,
@@ -206,7 +214,7 @@ int cmd_sh_mac_addr_t(struct cli_context *ctx, int argc, char **argv, struct men
 		/* if user asked for mac on specific interface, all results will
 		 * have the same ifindex and if_get_name fallback is enough;
 		 * otherwise fetch interface list from kernel and init hash */
-		if (!swcfgr.ifindex) {
+		if (!ifindex) {
 			status = if_map_fetch(&if_map, SW_IF_SWITCHED);
 			assert(!status);
 			status = if_map_init_ifindex_hash(&if_map);
@@ -214,15 +222,17 @@ int cmd_sh_mac_addr_t(struct cli_context *ctx, int argc, char **argv, struct men
 		}
 
 		out = ctx->out_open(ctx, 1);
-		print_mac(out, swcfgr.buf.addr, size, if_map_print_mac, &priv);
+		print_mac_list(out, &macs, if_map_print_mac, &priv);
 		fflush(out);
 		fclose(out);
 
 		if_map_cleanup(&if_map);
+		list_for_each_entry_safe(mac, tmp, &macs, lh) {
+			list_del(&mac->lh);
+			free(mac);
+		}
 	}
 
-	if (swcfgr.buf.addr != NULL)
-		free(swcfgr.buf.addr);
 	SW_SOCK_CLOSE(ctx, sock_fd);
 
 	return ret;
@@ -231,28 +241,28 @@ int cmd_sh_mac_addr_t(struct cli_context *ctx, int argc, char **argv, struct men
 int cmd_cl_mac_addr_t(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
 	int status, sock_fd;
-	struct swcfgreq swcfgr = {
-		.cmd = SWCFG_DELMACDYN
-	};
+	int ifindex, vlan, mac_type;
+	unsigned char mac_addr[ETH_ALEN];
 
 	SW_SOCK_OPEN(ctx, sock_fd);
 
 	assert(argc >= 2);
 	SHIFT_ARG(argc, argv, nodev, strcmp(nodev[1]->name, "mac") ? 2 : 3);
 
-	if ((status = parse_mac_filter(&swcfgr, ctx, argc, argv, nodev, sock_fd, NULL))) {
+	if ((status = parse_mac_filter(&ifindex, &vlan, &mac_type, mac_addr,
+				ctx, argc, argv, nodev, sock_fd, NULL))) {
 		SW_SOCK_CLOSE(ctx, sock_fd);
 		return status;
 	}
 
-	status = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
-	SW_SOCK_CLOSE(ctx, sock_fd); /* this can overwrite ioctl errno */
+	status = sw_ops->vlan_del_mac_dynamic(sw_ops, ifindex, vlan);
 
 	if (status == -1) {
 		EX_STATUS_REASON(ctx, "MAC address could not be removed\n"
 				"Address not found\n\n");
 		return CLI_EX_WARNING;
 	}
+	SW_SOCK_CLOSE(ctx, sock_fd);
 
 	return 0;
 }
@@ -618,12 +628,7 @@ int cmd_sh_ip_igmps_groups(struct cli_context *ctx, int argc, char **argv, struc
 	struct list_head igmp_groups[SW_MAX_VLAN];
 	struct igmp_group_entry *group;
 	struct if_list_entry *ife;
-	struct swcfgreq swcfgr = {
-		.cmd = SWCFG_GETMAC,
-		.ext.mac.type = SW_FDB_IGMP_ANY,
-		.ifindex = 0,
-		.vlan = 0
-	};
+	int mac_type = SW_FDB_IGMP_ANY, ifindex = 0, vlan = 0;
 	FILE *out;
 	const char *fmt1 = "%-10s%-18s%-12s%-12s%s\n";
 	const char *fmt2 = "%-10d%-18s%-12s%-12s%s\n";
@@ -632,11 +637,12 @@ int cmd_sh_ip_igmps_groups(struct cli_context *ctx, int argc, char **argv, struc
 	int display_count = 0;
 	int group_count = 0;
 	const char *group_type = "";
-	struct list_head mrouters;
+	struct list_head mrouters, macs;
 	struct net_switch_mrouter_e *mrouter, *tmp;
-	int vlan;
+	struct net_switch_mac_e *fdb_entry, *mac_tmp;
 
 	INIT_LIST_HEAD(&mrouters);
+	INIT_LIST_HEAD(&macs);
 
 	if (!strcmp(nodev[argc - 1]->name, "count")) {
 		display_count = 1;
@@ -651,16 +657,15 @@ int cmd_sh_ip_igmps_groups(struct cli_context *ctx, int argc, char **argv, struc
 		INIT_LIST_HEAD(&igmp_groups[i]);
 
 	/* Get the fdb entries corresponding to dynamic/user defined IGMP groups */
-	if ((status = buf_alloc_swcfgr(&swcfgr, sock_fd)) < 0) {
-		EX_STATUS_REASON_IOCTL(ctx, -status);
+	status = sw_ops->get_mac(sw_ops, ifindex, vlan, mac_type, NULL, &macs);
+	if (status < 0) {
+		EX_STATUS_REASON_IOCTL(ctx, errno);
 		ret = CLI_EX_WARNING;
 		goto out_clean;
 	}
 
 #define igmp_group_addr(mac) (*(uint32_t *)&(mac)[2])
-	status /= sizeof(struct net_switch_mac);
-	for (i = 0; i<status; i++) {
-		struct net_switch_mac *fdb_entry = (struct net_switch_mac *)swcfgr.buf.addr + i;
+	list_for_each_entry(fdb_entry, &macs, lh) {
 		uint32_t group_addr = igmp_group_addr(fdb_entry->addr);
 		int found = 0;
 
@@ -714,10 +719,7 @@ int cmd_sh_ip_igmps_groups(struct cli_context *ctx, int argc, char **argv, struc
 	if (!group_count)
 		goto out_clean;
 
-	free(swcfgr.buf.addr);
-
 	/* Get the mrouters list */
-	vlan = swcfgr.vlan;
 	status = sw_ops->mrouters_get(sw_ops, vlan, &mrouters);
 	if (status < 0) {
 		EX_STATUS_REASON_IOCTL(ctx, errno);
@@ -795,12 +797,14 @@ int cmd_sh_ip_igmps_groups(struct cli_context *ctx, int argc, char **argv, struc
 out_clean:
 	if_map_cleanup(&if_map);
 	delete_igmp_groups(igmp_groups, IGMP_GROUP_ANY);
-	if (swcfgr.buf.addr != NULL)
-		free(swcfgr.buf.addr);
 	SW_SOCK_CLOSE(ctx, sock_fd);
 	list_for_each_entry_safe(mrouter, tmp, &mrouters, lh) {
 		list_del(&mrouter->lh);
 		free(mrouter);
+	}
+	list_for_each_entry_safe(fdb_entry, mac_tmp, &macs, lh) {
+		list_del(&fdb_entry->lh);
+		free(fdb_entry);
 	}
 
 	return ret;

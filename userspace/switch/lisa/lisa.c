@@ -147,7 +147,7 @@ int vlan_set_mac_static(struct switch_operations *sw_ops, int ifindex, int vlan,
 
 	SW_SOCK_OPEN(lc, sock_fd);
 	rc = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
-	SW_SOCK_CLOSE(lc, sock_fd); /* this can overwrite ioctl errno */
+	SW_SOCK_CLOSE(lc, sock_fd);
 
 	return rc;
 
@@ -167,10 +167,27 @@ int vlan_del_mac_static(struct switch_operations *sw_ops, int ifindex, int vlan,
 
 	SW_SOCK_OPEN(lc, sock_fd);
 	rc = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
-	SW_SOCK_CLOSE(lc, sock_fd); /* this can overwrite ioctl errno */
+	SW_SOCK_CLOSE(lc, sock_fd);
 
 	return rc;
 
+}
+
+static int vlan_del_mac_dynamic(struct switch_operations *sw_ops, int ifindex, int vlan)
+{
+	int rc, sock_fd;
+	struct swcfgreq swcfgr = {
+		.vlan = vlan,
+		.cmd = SWCFG_DELMACDYN,
+		.ifindex = ifindex
+	};
+	struct lisa_context *lc = SWLiSA_CTX(sw_ops);
+
+	SW_SOCK_OPEN(lc, sock_fd);
+	rc = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
+	SW_SOCK_CLOSE(lc, sock_fd);
+
+	return rc;
 }
 
 static int if_add_trunk_vlans(struct switch_operations *sw_ops,
@@ -633,6 +650,7 @@ struct lisa_context lisa_ctx = {
 
 		.vlan_set_mac_static = vlan_set_mac_static,
 		.vlan_del_mac_static = vlan_del_mac_static,
+		.vlan_del_mac_dynamic = vlan_del_mac_dynamic,
 		.get_mac = get_mac,
 
 		.get_vlan_desc = get_vlan_desc,

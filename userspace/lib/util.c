@@ -84,6 +84,30 @@ int parse_mac(const char *str, unsigned char *mac)
 	return 0;
 }
 
+
+void print_mac_list(FILE *out, struct list_head *macs,
+		char *(*get_if_name)(int, void*), void *priv)
+{
+	struct net_switch_mac_e *mac;
+	fprintf(out,
+		"Destination Address  Address Type  VLAN  Destination Port\n"
+		"-------------------  ------------  ----  ----------------\n");
+	list_for_each_entry(mac, macs, lh) {
+		char *name = NULL;
+		if (get_if_name)
+			name = get_if_name(mac->ifindex, priv);
+		fprintf(out, "%02x%02x.%02x%02x.%02x%02x       "
+				"%-12s  %4d  %s\n", 
+				mac->addr[0], mac->addr[1], mac->addr[2],
+				mac->addr[3], mac->addr[4], mac->addr[5],
+			    (mac->type)? "Static" : "Dynamic",
+				mac->vlan,
+				name ? name : "N/A"
+				);
+
+	}
+}
+
 void print_mac(FILE *out, void *buf, int size, char *(*get_if_name)(int, void*), void *priv)
 {
 	struct net_switch_mac *mac, *end =
@@ -97,7 +121,7 @@ void print_mac(FILE *out, void *buf, int size, char *(*get_if_name)(int, void*),
 		if (get_if_name)
 			name = get_if_name(mac->ifindex, priv);
 		fprintf(out, "%02x%02x.%02x%02x.%02x%02x       "
-				"%-12s  %4d  %s\n", 
+				"%-12s  %4d  %s\n",
 				mac->addr[0], mac->addr[1], mac->addr[2],
 				mac->addr[3], mac->addr[4], mac->addr[5],
 			    (mac->type)? "Static" : "Dynamic",
