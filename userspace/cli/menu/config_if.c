@@ -360,14 +360,8 @@ struct menu_node config_if_main = {
 					.help			= "Shutdown the selected interface",
 					.mask			= CLI_MASK(PRIV(2)),
 					.tokenize	= NULL,
-					.run			= cmd_ioctl_simple,
-					.subtree	= NULL,
-					.priv			= (struct swcfgreq *[]) { /*{{{*/
-						& (struct swcfgreq){
-							.cmd				= SWCFG_ENABLE_IF
-						},
-						NULL
-					} /*}}}*/
+					.run			= cmd_shutdown,
+					.subtree	= NULL
 				},
 
 				/* #no speed */
@@ -469,14 +463,8 @@ struct menu_node config_if_main = {
 			.help			= "Shutdown the selected interface",
 			.mask			= CLI_MASK(PRIV(2)),
 			.tokenize	= NULL,
-			.run			= cmd_ioctl_simple,
-			.subtree	= NULL,
-			.priv			= (struct swcfgreq *[]) { /*{{{*/
-				& (struct swcfgreq){
-					.cmd				= SWCFG_DISABLE_IF
-				},
-				NULL
-			} /*}}}*/
+			.run			= cmd_shutdown,
+			.subtree	= NULL
 		},
 
 		/* #speed */

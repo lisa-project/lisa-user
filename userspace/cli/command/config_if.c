@@ -259,6 +259,27 @@ int cmd_nomode(struct cli_context *ctx, int argc, char **argv, struct menu_node 
 	return CLI_EX_OK;
 }
 
+int cmd_shutdown(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
+{
+	struct swcli_context *uc = SWCLI_CTX(ctx);
+	int status;
+	int shutdown = 0;
+	const char *fmt = "failed to %s interface";
+
+	if (strcmp(nodev[0]->name, "no")) {
+		status = sw_ops->if_disable(sw_ops, uc->ifindex);
+		shutdown = 1;
+	}
+	else
+		status = sw_ops->if_enable(sw_ops, uc->ifindex);
+	if (status < 0) {
+		EX_STATUS_PERROR(ctx, fmt, (shutdown)? "disable" : "enable");
+		return CLI_EX_WARNING;
+	}
+
+	return CLI_EX_OK;
+}
+
 int cmd_acc_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
 	struct swcfgreq swcfgr;

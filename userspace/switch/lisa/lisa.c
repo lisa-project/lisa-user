@@ -638,7 +638,7 @@ static int igmp_get(struct switch_operations *sw_ops, char *buff, int *snooping)
 	return ret;
 }
 
-int if_enable(struct switch_operations *sw_ops, int ifindex)
+static int if_enable(struct switch_operations *sw_ops, int ifindex)
 {
 	int ret, sock_fd;
 	struct swcfgreq swcfgr;
@@ -654,7 +654,7 @@ int if_enable(struct switch_operations *sw_ops, int ifindex)
 	return ret;
 }
 
-int if_disable(struct switch_operations *sw_ops, int ifindex)
+static int if_disable(struct switch_operations *sw_ops, int ifindex)
 {
 	int ret, sock_fd;
 	struct swcfgreq swcfgr;
