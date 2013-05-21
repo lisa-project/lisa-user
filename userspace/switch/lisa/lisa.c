@@ -638,12 +638,46 @@ static int igmp_get(struct switch_operations *sw_ops, char *buff, int *snooping)
 	return ret;
 }
 
+int if_enable(struct switch_operations *sw_ops, int ifindex)
+{
+	int ret, sock_fd;
+	struct swcfgreq swcfgr;
+	struct lisa_context *lc = SWLiSA_CTX(sw_ops);
+
+	swcfgr.cmd = SWCFG_ENABLE_IF;
+	swcfgr.ifindex = ifindex;
+
+	SW_SOCK_OPEN(lc, sock_fd);
+	ret = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
+	SW_SOCK_CLOSE(lc, sock_fd);
+
+	return ret;
+}
+
+int if_disable(struct switch_operations *sw_ops, int ifindex)
+{
+	int ret, sock_fd;
+	struct swcfgreq swcfgr;
+	struct lisa_context *lc = SWLiSA_CTX(sw_ops);
+
+	swcfgr.cmd = SWCFG_DISABLE_IF;
+	swcfgr.ifindex = ifindex;
+
+	SW_SOCK_OPEN(lc, sock_fd);
+	ret = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
+	SW_SOCK_CLOSE(lc, sock_fd);
+
+	return ret;
+}
+
 struct lisa_context lisa_ctx = {
 	.sw_ops = (struct switch_operations) {
 		.backend_init = backend_init,
 
 		.if_add = if_add,
 		.if_remove = if_remove,
+		.if_enable = if_enable,
+		.if_disable = if_disable,
 		.vlan_add = vlan_add,
 		.vlan_del = vlan_del,
 		.vlan_rename = vlan_rename,

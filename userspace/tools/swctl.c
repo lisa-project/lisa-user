@@ -183,6 +183,8 @@ void usage(void) {
 		"  igmpset vlan flag\t\t\tSet igmp, enable (flag = 1), disable (flag = 0)\n"
 		"  igmpget \t\t\t\tSet igmp, enable (flag = 1), disable (flag = 0)\n"
 		"  setmrouter vlan if_name flag\t\tPuts mrouter (flag = 1) or unsets it (flag = 0)\n"
+		"  enable iface_name\t\t\tEnable the interface.\n"
+		"  disable iface_name\t\t\tDisable the interface.\n"
 		"\n"
 	);
 }
@@ -904,6 +906,34 @@ int main(int argc, char **argv) {
 			printf("off\n");
 
 		return status;
+	}
+
+	if(!strcmp(argv[1], "enable")) {
+		int if_index;
+		if (argc < 3) {
+			usage();
+			return 0;
+		}
+
+		if_index = if_get_index(argv[2], sock);
+		status = sw_ops->if_enable(sw_ops, if_index);
+		if(status)
+			perror("enable failed");
+		return 0;
+	}
+
+	if(!strcmp(argv[1], "disable")) {
+		int if_index;
+		if (argc < 3) {
+			usage();
+			return 0;
+		}
+
+		if_index = if_get_index(argv[2], sock);
+		status = sw_ops->if_disable(sw_ops, if_index);
+		if(status)
+			perror("enable failed");
+		return 0;
 	}
 
 	/* first command line arg invalid ... */
