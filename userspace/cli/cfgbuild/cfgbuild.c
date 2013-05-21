@@ -54,15 +54,13 @@ static __inline__ void list_vlans(FILE *out, unsigned char *bmp)
 #define nbit2mask(nbit)	(htonl(nbit ? (~((uint32_t)0)) ^ ((((uint32_t)1) << (32 - nbit)) - 1) : 0))
 int build_config_interface(struct cli_context *ctx, FILE *out, struct net_switch_device *nsdev, int if_cmd)
 {
-	int sock_fd, status;
+	int status;
 	unsigned char bmp[SW_VLAN_BMP_NO];
 	char desc[SW_MAX_PORT_DESC];
 	int need_trunk_vlans = 1;
 	struct cdp_session *cdp;
-	struct swcfgreq swcfgr;
 	int ret = CLI_EX_OK;
-
-	SW_SOCK_OPEN(ctx, sock_fd);
+	int flags, access_vlan;
 
 	if (if_cmd) {
 		char *name = canonical_if_name(nsdev);
@@ -73,23 +71,24 @@ int build_config_interface(struct cli_context *ctx, FILE *out, struct net_switch
 	switch (nsdev->type) {
 	case SW_IF_SWITCHED:
 	case SW_IF_ROUTED:
-		swcfgr.cmd = SWCFG_GETIFCFG;
-		swcfgr.ifindex = nsdev->ifindex;
-		swcfgr.ext.cfg.forbidden_vlans = bmp;
-		swcfgr.ext.cfg.description = desc;
-		status = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
-		// FIXME status == -1  --> errno
+		status = sw_ops->if_get_cfg(sw_ops, nsdev->ifindex, &flags,
+				&access_vlan, bmp);
+		if (status == -1) {
+			EX_STATUS_PERROR(ctx, "get interface config failed");
+			ret = CLI_EX_WARNING;
+			goto next;
+		}
 
 		/* description */
-		if(strlen(desc))
+		if(!switch_get_if_desc(nsdev->ifindex, desc) && strlen(desc))
 			fprintf(out, " description %s\n", desc);
 	}
 	
 	if (nsdev->type == SW_IF_SWITCHED) {
 		/* switchport access vlan */
-		if(swcfgr.ext.cfg.access_vlan != 1)
+		if(access_vlan != 1)
 			fprintf(out, " switchport access vlan %d\n",
-					swcfgr.ext.cfg.access_vlan);
+					access_vlan);
 		/* switchport trunk allowed vlan */
 		do {
 			int i;
@@ -105,9 +104,9 @@ int build_config_interface(struct cli_context *ctx, FILE *out, struct net_switch
 		if(need_trunk_vlans)
 			list_vlans(out, bmp);
 		/* switchport mode */
-		if(swcfgr.ext.cfg.flags & SW_PFL_ACCESS)
+		if(flags & SW_PFL_ACCESS)
 			fprintf(out, " switchport mode access\n");
-		if(swcfgr.ext.cfg.flags & SW_PFL_TRUNK)
+		if(flags & SW_PFL_TRUNK)
 			fprintf(out, " switchport mode trunk\n");
 	}
 
@@ -149,6 +148,7 @@ int build_config_interface(struct cli_context *ctx, FILE *out, struct net_switch
 	*/
 
 	/* per interface cdp status (enabled/disabled). by default cdp is enabled. */
+next:
 	if (CDP_SESSION_OPEN(ctx, cdp)) {
 		if (!cdp_is_enabled(cdp, nsdev->ifindex))
 			fprintf(out, " no cdp enable\n");
@@ -206,7 +206,6 @@ int build_config_interface(struct cli_context *ctx, FILE *out, struct net_switch
 		list_free(&addrl, struct if_addr, lh);
 	} while (0);
 
-	SW_SOCK_CLOSE(ctx, sock_fd);
 	return ret;
 }
 
