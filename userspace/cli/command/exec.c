@@ -16,6 +16,7 @@ static const char *dash =
 /* Get a null-terminated string (char *) of x dashes */
 #define DASHES(x) (dash + DASH_LENGTH - (x))
 
+#define INITIAL_BUF_SIZE 4096
 #define MAX_COMMA_BUFFER_LEN 80
 struct comma_buffer {
 	char str[MAX_COMMA_BUFFER_LEN];
@@ -906,11 +907,22 @@ int cmd_show_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_no
 		if (!sw_bitmap_test(vlans, i))
 			continue;
 		int vlan = i;
-		struct swcfgreq vlif_swcfgr = {
-			.cmd = SWCFG_GETVLANIFS,
-			.vlan = vlan
-		};
-		int vlif_no = buf_alloc_swcfgr(&vlif_swcfgr, sock_fd);
+		int vlif_no;
+		int *interfaces = malloc(sizeof(int) * INITIAL_BUF_SIZE);
+		if (!interfaces) {
+			EX_STATUS_PERROR(ctx, "alloc vlan ports array");
+			ret = CLI_EX_WARNING;
+			goto out_clean;
+		}
+
+		status = sw_ops->get_vlan_interfaces(sw_ops, vlan, interfaces,
+				&vlif_no);
+		if (status < 0 || vlif_no < 0) {
+			EX_STATUS_PERROR(ctx, "getvlanif");
+			ret = CLI_EX_WARNING;
+			free(interfaces);
+			goto out_clean;
+		}
 		struct net_switch_device *nsdev;
 		struct comma_buffer buf = COMMA_BUFFER_INIT(32);
 		int firstline = 1;
@@ -930,15 +942,18 @@ int cmd_show_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_no
 			}\
 		} while(0)
 
-		/* if (vlif_no < 0) perror("getvlanif"); */
-		assert(vlif_no >= 0);
-
-		vlif_no /= sizeof(int);
 		/* Sort interface names and print them comma separated. */
 		char **names = (char**)malloc(vlif_no * sizeof(char*));
-		assert(names != NULL);
+		if (!names) {
+			EX_STATUS_PERROR(ctx, "alloc ports names array");
+			ret = CLI_EX_WARNING;
+			free(interfaces);
+			goto out_clean;
+
+		}
+
 		for (j = 0; j < vlif_no; j++) {
-			int ifindex = ((int *)vlif_swcfgr.buf.addr)[j];
+			int ifindex = interfaces[j];
 
 			nsdev = if_map_lookup_ifindex(&if_map, ifindex, sock_fd);
 			assert(nsdev);
@@ -959,7 +974,7 @@ int cmd_show_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_no
 		}
 		print_buf;
 
-		free(vlif_swcfgr.buf.addr);
+		free(interfaces);
 		free(names);
 #undef print_buf
 	}

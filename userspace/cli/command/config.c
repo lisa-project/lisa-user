@@ -236,27 +236,20 @@ static int use_if_ether(struct cli_context *ctx, char *name, int index, int swit
 
 static int use_if_vlan(struct cli_context *ctx, int vlan, int index)
 {
-	int status, sock_fd, ioctl_errno;
-	struct swcfgreq swcfgr;
+	int status;
+	int ifindex;
 	struct swcli_context *uc = SWCLI_CTX(ctx);
 
-	SW_SOCK_OPEN(ctx, sock_fd);
-
-	swcfgr.cmd = SWCFG_ADDVIF;
-	swcfgr.vlan = vlan;
-	status = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
-	ioctl_errno = errno;
-	SW_SOCK_CLOSE(ctx, sock_fd);
-
-	if (status && ioctl_errno != EEXIST) {
-		EX_STATUS_REASON_IOCTL(ctx, ioctl_errno);
+	status = sw_ops->vif_add(sw_ops, vlan, &ifindex);
+	if (status && errno != EEXIST) {
+		EX_STATUS_REASON_IOCTL(ctx, errno);
 		return CLI_EX_REJECTED;
 	}
 
 	ctx->node_filter &= PRIV_FILTER(PRIV_MAX);
 	ctx->node_filter |= IFF_VIF;
 	ctx->root = &config_if_main;
-	uc->ifindex = swcfgr.ifindex;
+	uc->ifindex = ifindex;
 	uc->vlan = vlan;
 
 	return CLI_EX_OK;
@@ -304,19 +297,11 @@ static int remove_if_ether(struct cli_context *ctx, char *name, int index, int s
 
 static int remove_if_vlan(struct cli_context *ctx, int vlan, int index)
 {
-	int status, sock_fd, ioctl_errno;
-	struct swcfgreq swcfgr;
+	int status;
 
-	SW_SOCK_OPEN(ctx, sock_fd);
-
-	swcfgr.cmd = SWCFG_DELVIF;
-	swcfgr.vlan = vlan;
-	status = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
-	ioctl_errno = errno;
-	SW_SOCK_CLOSE(ctx, sock_fd);
-
-	if (status && ioctl_errno != ENOENT) {
-		EX_STATUS_REASON_IOCTL(ctx, ioctl_errno);
+	status = sw_ops->vif_del(sw_ops, vlan);
+	if (status && errno != ENOENT) {
+		EX_STATUS_REASON_IOCTL(ctx, errno);
 		return CLI_EX_REJECTED;
 	}
 
