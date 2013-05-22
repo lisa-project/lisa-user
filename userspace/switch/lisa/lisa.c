@@ -120,7 +120,7 @@ static int vlan_del(struct switch_operations *sw_ops, int vlan)
 	struct swcfgreq swcfgr;
 	struct lisa_context *lc = SWLiSA_CTX(sw_ops);
 
-	rc = switch_del_vlan(vlan);
+	rc = switch_del_vlan_desc(vlan);
 
 	swcfgr.vlan = vlan;
 	swcfgr.cmd = SWCFG_DELVLAN;

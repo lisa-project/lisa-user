@@ -201,7 +201,7 @@ int switch_set_vlan_desc(int vlan_id, const char *desc);
 /* Forgets about vlan identified by arg0; return 0 if vlan has been
  * stored in shared memory, negative value otherwise and set errno.
  */
-int switch_del_vlan(int vlan_id);
+int switch_del_vlan_desc(int vlan_id);
 
 
 

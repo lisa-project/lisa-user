@@ -506,7 +506,7 @@ out_unlock:
 	return ret;
 }
 
-int switch_del_vlan(int vlan_id)
+int switch_del_vlan_desc(int vlan_id)
 {
 	int ret = 0;
 

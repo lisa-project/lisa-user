@@ -12,8 +12,8 @@
 #include "switch.h"
 #include "if_generic.h"
 #include "swsock.h"
-#include "util_linux.h"
 #include "sw_api.h"
+#include "util_linux.h"
 
 #define SWLINUX_CTX(sw_ops) ((struct linux_context *)(sw_ops))
 
