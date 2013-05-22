@@ -566,15 +566,8 @@ struct menu_node config_if_main = {
 							.help			= "Set trunking mode to ACCESS unconditionally",
 							.mask			= CLI_MASK(PRIV(2)),
 							.tokenize	= NULL,
-							.run			= cmd_ioctl_simple,
-							.subtree	= NULL,
-							.priv			= (struct swcfgreq *[]) { /*{{{*/
-								& (struct swcfgreq){
-									.cmd					= SWCFG_SETACCESS,
-									.ext.access		= 1
-								},
-								NULL
-							} /*}}}*/
+							.run			= cmd_setmode,
+							.subtree	= NULL
 						},
 
 						/* #switchport mode trunk */
@@ -583,15 +576,8 @@ struct menu_node config_if_main = {
 							.help			= "Set trunking mode to TRUNK unconditionally",
 							.mask			= CLI_MASK(PRIV(2)),
 							.tokenize	= NULL,
-							.run			= cmd_ioctl_simple,
-							.subtree	= NULL,
-							.priv			= (struct swcfgreq *[]) { /*{{{*/
-								& (struct swcfgreq){
-									.cmd					= SWCFG_SETTRUNK,
-									.ext.trunk		= 1
-								},
-								NULL
-							} /*}}}*/
+							.run			= cmd_setmode,
+							.subtree	= NULL
 						},
 
 						NULL

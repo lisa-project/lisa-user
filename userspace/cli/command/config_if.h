@@ -24,6 +24,7 @@ int cmd_swport(struct cli_context *, int, char **, struct menu_node **);
 int cmd_noacc_vlan(struct cli_context *, int, char **, struct menu_node **);
 int cmd_trunk_vlan(struct cli_context *, int, char **, struct menu_node **);
 int cmd_nomode(struct cli_context *, int, char **, struct menu_node **);
+int cmd_setmode(struct cli_context *, int, char **, struct menu_node **);
 int cmd_shutdown(struct cli_context *, int, char **, struct menu_node **);
 int cmd_acc_vlan(struct cli_context *, int, char **, struct menu_node **);
 int cmd_access(struct cli_context *, int, char **, struct menu_node **);

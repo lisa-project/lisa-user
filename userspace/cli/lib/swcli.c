@@ -28,25 +28,3 @@ char *swcli_prompt(struct rlshell_context *ctx) {
 
 	return buf;
 }
-
-int cmd_ioctl_simple(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
-{
-	struct swcli_context *uc = SWCLI_CTX(ctx);
-	struct swcfgreq swcfgr, **rp;
-	int sock_fd;
-
-	assert(argc);
-
-	SW_SOCK_OPEN(ctx, sock_fd);
-
-	for (rp = nodev[argc - 1]->priv; *rp; rp++) {
-		swcfgr = **rp;
-		swcfgr.ifindex = uc->ifindex;
-		swcfgr.vlan = uc->vlan;
-		ioctl(sock_fd, SIOCSWCFG, &swcfgr);
-	}
-
-	SW_SOCK_CLOSE(ctx, sock_fd);
-
-	return CLI_EX_OK;
-}

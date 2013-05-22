@@ -86,8 +86,6 @@ static __inline__ int __shift_arg(int *argc, char ***argv, struct menu_node ***n
 #define SHIFT_ARG(__argc, __argv, __nodev, __shift...) \
 	__SHIFT_ARG(__argc, __argv, __nodev, ##__shift, 1)
 
-int cmd_ioctl_simple(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev);
-
 static __inline__ void init_mac_filter(int *ifindex, int *vlan, int *mac_type,
 		unsigned char *mac)
 {

@@ -239,22 +239,43 @@ int cmd_trunk_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_n
 
 int cmd_nomode(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
-	struct swcfgreq swcfgr;
 	struct swcli_context *uc = SWCLI_CTX(ctx);
-	int sock_fd;
+	int ret = CLI_EX_OK, status;
 
-	SW_SOCK_OPEN(ctx, sock_fd);
+	status = sw_ops->if_set_mode(sw_ops, uc->ifindex, SWCFG_SETTRUNK, 0);
+	if (status < 0) {
+		EX_STATUS_PERROR(ctx, "unset mode trunk failed");
+		ret = CLI_EX_WARNING;
+	}
 
-	swcfgr.cmd = SWCFG_SETTRUNK;
-	swcfgr.ifindex = uc->ifindex;
-	swcfgr.ext.trunk = 0;
-	ioctl(sock_fd, SIOCSWCFG, &swcfgr);
+	status = sw_ops->if_set_mode(sw_ops, uc->ifindex, SWCFG_SETACCESS, 0);
+	if (status < 0) {
+		EX_STATUS_PERROR(ctx, "unset mode access failed");
+		ret = CLI_EX_WARNING;
+	}
 
-	swcfgr.cmd = SWCFG_SETACCESS;
-	swcfgr.ext.access = 0;
-	ioctl(sock_fd, SIOCSWCFG, &swcfgr);
+	return ret;
+}
 
-	SW_SOCK_CLOSE(ctx, sock_fd);
+int cmd_setmode(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
+{
+	struct swcli_context *uc = SWCLI_CTX(ctx);
+	int mode, status;
+
+	if (!strcmp(argv[argc - 1], "access"))
+		mode = SWCFG_SETACCESS;
+	else if (!strcmp(argv[argc - 1], "trunk"))
+		mode = SWCFG_SETTRUNK;
+	else {
+		EX_STATUS_REASON(ctx, "unknown mode");
+		return CLI_EX_REJECTED;
+	}
+
+	status = sw_ops->if_set_mode(sw_ops, uc->ifindex, mode, 1);
+	if (status < 0) {
+		EX_STATUS_PERROR(ctx, "set mode failed");
+		return CLI_EX_WARNING;
+	}
 
 	return CLI_EX_OK;
 }
@@ -282,20 +303,17 @@ int cmd_shutdown(struct cli_context *ctx, int argc, char **argv, struct menu_nod
 
 int cmd_acc_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
-	struct swcfgreq swcfgr;
 	struct swcli_context *uc = SWCLI_CTX(ctx);
-	int sock_fd;
+	int status;
+	int vlan = 1;
 
-	SW_SOCK_OPEN(ctx, sock_fd);
-
-	swcfgr.cmd = SWCFG_SETPORTVLAN;
-	swcfgr.ifindex = uc->ifindex;
-	swcfgr.vlan = 1;
 	if (strcmp(nodev[0]->name, "no"))
-		swcfgr.vlan = atoi(argv[3]);
-	ioctl(sock_fd, SIOCSWCFG, &swcfgr);
-
-	SW_SOCK_CLOSE(ctx, sock_fd);
+		vlan = atoi(argv[3]);
+	status = sw_ops->if_set_port_vlan(sw_ops, uc->ifindex, vlan);
+	if (status < 0) {
+		EX_STATUS_PERROR(ctx, "set switchport access failed");
+		return CLI_EX_WARNING;
+	}
 
 	return CLI_EX_OK;
 }
