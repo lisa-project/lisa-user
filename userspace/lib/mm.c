@@ -187,13 +187,14 @@ mm_ptr_t mm_alloc(struct mm_private *mm, size_t size)
 
 		/* find first gap that can accomodate */
 		mm_list_for_each_entry(mm, chunk, mm_ptr(mm, &shr->lh), lh) {
+			struct mm_list_head *lh = &chunk->lh;
 			if (mm_ptr(mm, chunk) - last < real_size) {
 				last = mm_ptr(mm, chunk) + chunk->size;
 				continue;
 			}
 			chunk = mm_addr(mm, last);
 			chunk->size = real_size;
-			__mm_list_add(mm, mm_ptr(mm, &chunk->lh), chunk->lh.prev, chunk->lh.next);
+			__mm_list_add(mm, mm_ptr(mm, &chunk->lh), lh->prev, mm_ptr(mm, lh));
 			mm_unlock(mm);
 			return last + sizeof(struct mm_chunk);
 		}
