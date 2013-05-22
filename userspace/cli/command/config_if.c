@@ -242,13 +242,13 @@ int cmd_nomode(struct cli_context *ctx, int argc, char **argv, struct menu_node 
 	struct swcli_context *uc = SWCLI_CTX(ctx);
 	int ret = CLI_EX_OK, status;
 
-	status = sw_ops->if_set_mode(sw_ops, uc->ifindex, SWCFG_SETTRUNK, 0);
+	status = sw_ops->if_set_mode(sw_ops, uc->ifindex, IF_MODE_TRUNK, 0);
 	if (status < 0) {
 		EX_STATUS_PERROR(ctx, "unset mode trunk failed");
 		ret = CLI_EX_WARNING;
 	}
 
-	status = sw_ops->if_set_mode(sw_ops, uc->ifindex, SWCFG_SETACCESS, 0);
+	status = sw_ops->if_set_mode(sw_ops, uc->ifindex, IF_MODE_ACCESS, 0);
 	if (status < 0) {
 		EX_STATUS_PERROR(ctx, "unset mode access failed");
 		ret = CLI_EX_WARNING;
@@ -263,9 +263,9 @@ int cmd_setmode(struct cli_context *ctx, int argc, char **argv, struct menu_node
 	int mode, status;
 
 	if (!strcmp(argv[argc - 1], "access"))
-		mode = SWCFG_SETACCESS;
+		mode = IF_MODE_ACCESS;
 	else if (!strcmp(argv[argc - 1], "trunk"))
-		mode = SWCFG_SETTRUNK;
+		mode = IF_MODE_TRUNK;
 	else {
 		EX_STATUS_REASON(ctx, "unknown mode");
 		return CLI_EX_REJECTED;

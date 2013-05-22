@@ -226,8 +226,8 @@ static int if_set_trunk_vlans(struct switch_operations *sw_ops,
 	return rc;
 }
 
-static int if_set_mode (struct switch_operations *sw_ops, int ifindex,
-	int mode, int flag)
+static int if_set_mode(struct switch_operations *sw_ops, int ifindex, int mode,
+		int flag)
 {
 	int rc, sock_fd;
 	struct swcfgreq swcfgr;
@@ -235,14 +235,15 @@ static int if_set_mode (struct switch_operations *sw_ops, int ifindex,
 
 	rc = 0;
 
-	swcfgr.cmd = mode;
 	swcfgr.ifindex = ifindex;
 
 	switch (mode) {
-		case SWCFG_SETTRUNK:
+		case IF_MODE_TRUNK:
+			swcfgr.cmd = SWCFG_SETTRUNK;
 			swcfgr.ext.trunk = flag;
 			break;
-		case SWCFG_SETACCESS:
+		case IF_MODE_ACCESS:
+			swcfgr.cmd = SWCFG_SETACCESS;
 			swcfgr.ext.access = flag;
 			break;
 		default:

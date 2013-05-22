@@ -473,7 +473,7 @@ int main(int argc, char **argv) {
 		}
 		user_arg.ifindex = if_get_index(argv[2], sock);
 		status = sw_ops->if_set_mode(sw_ops,
-				user_arg.ifindex, SWCFG_SETTRUNK, atoi(argv[3]));
+				user_arg.ifindex, IF_MODE_TRUNK, atoi(argv[3]));
 
 		if (status)
 			perror("settrunk failed");
