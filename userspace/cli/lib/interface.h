@@ -197,15 +197,13 @@ int if_parse_args(char **argv, struct menu_node **nodev, char *name, int *n);
 #define if_args_to_ifindex(__ctx, __argv, __nodev, __sock_fd, __index, __type, __name...) \
 	__if_args_to_ifindex(__ctx, __argv, __nodev, __sock_fd, __index, __type, ##__name, NULL)
 
-#define if_get_type(__ctx, __sock_fd, __index, __name, __swcfgr) do {\
-	__swcfgr.cmd = SWCFG_GETIFTYPE;\
-	__swcfgr.ifindex = __index;\
-	if (ioctl(__sock_fd, SIOCSWCFG, &__swcfgr)) {\
+#define if_get_type(__ctx, __sock_fd, __index, __name, __type, __vlan) do {\
+	if (sw_ops->if_get_type(sw_ops, __index, &(__type), &(__vlan))) {\
 		EX_STATUS_REASON_IOCTL(__ctx, errno);\
 		SW_SOCK_CLOSE(__ctx, __sock_fd);\
 		return CLI_EX_REJECTED;\
 	}\
-	if (__swcfgr.ext.switchport == SW_IF_NONE) {\
+	if (__type == SW_IF_NONE) {\
 		EX_STATUS_REASON(__ctx, "interface %s not in switch", __name);\
 		SW_SOCK_CLOSE(__ctx, __sock_fd);\
 		return CLI_EX_REJECTED;\

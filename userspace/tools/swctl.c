@@ -675,17 +675,17 @@ int main(int argc, char **argv) {
 			usage();
 			return 0;
 		}
-		int type;
+		int type, ifvlan;
 		user_arg.ifindex = if_get_index(argv[2], sock);
 		status = sw_ops->if_get_type(sw_ops,
-				user_arg.ifindex, &type);
+				user_arg.ifindex, &type, &ifvlan);
 		if (status < 0) {
 			printf("getting if type failed\n");
 			return status;
 		}
 
 		if (type == SW_IF_VIF)
-			printf("[%s]\tvlan interface\n", argv[2]);
+			printf("[%s]\tvlan %d interface\n", argv[2], ifvlan);
 		else
 			printf("[%s]\tethernet interface\n", argv[2]);
 

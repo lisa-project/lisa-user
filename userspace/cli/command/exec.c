@@ -482,7 +482,7 @@ int cmd_sh_int(struct cli_context *ctx, int argc, char **argv, struct menu_node 
 	int sock_fd, err = CLI_EX_OK;
 	struct net_switch_device *dev;
 	struct if_map if_map;
-	struct swcfgreq swcfgr;
+	int iftype, ifvlan;
 
 	SW_SOCK_OPEN(ctx, sock_fd);
 
@@ -491,15 +491,16 @@ int cmd_sh_int(struct cli_context *ctx, int argc, char **argv, struct menu_node 
 		dev = malloc(sizeof(struct net_switch_device));
 		if (!dev) {
 			EX_STATUS_REASON(ctx, "alloc device failed\n");
-			return CLI_EX_REJECTED;
+			err = CLI_EX_REJECTED;
+			goto cleanup;
 		}
 
 		SHIFT_ARG(argc, argv, nodev, 2);
 		if_args_to_ifindex(ctx, argv, nodev, sock_fd, dev->ifindex,
 				dev->type, dev->name);
-		if_get_type(ctx, sock_fd, dev->ifindex, dev->name, swcfgr);
-		dev->type = swcfgr.ext.switchport;
-		dev->vlan = swcfgr.vlan;
+		if_get_type(ctx, sock_fd, dev->ifindex, dev->name, iftype, ifvlan);
+		dev->type = iftype;
+		dev->vlan = ifvlan;
 		list_add_tail(&dev->lh, &if_map.dev);
 	}
 	else
@@ -507,6 +508,7 @@ int cmd_sh_int(struct cli_context *ctx, int argc, char **argv, struct menu_node 
 
 	err = show_interfaces(ctx, sock_fd, &if_map);
 
+cleanup:
 	SW_SOCK_CLOSE(ctx, sock_fd);
 	if_map_cleanup(&if_map);
 

@@ -413,7 +413,6 @@ aging:
 static __inline__ int __cmd_show_run(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
 	FILE *out, *tmp_out;
-	int iftype;
 	struct net_switch_device nsdev = {
 		.ifindex = 0
 	};
@@ -425,13 +424,13 @@ static __inline__ int __cmd_show_run(struct cli_context *ctx, int argc, char **a
 
 	if (argc >= 3 && !strcmp(nodev[2]->name, "interface")) {
 		/* show config for a specific interface */
-		struct swcfgreq swcfgr;
+		int iftype, ifvlan;
 
 		SHIFT_ARG(argc, argv, nodev, 3);
 		assert(argc >= 2);
 		if_args_to_ifindex(ctx, argv, nodev, sock_fd, nsdev.ifindex, iftype, nsdev.name);
-		if_get_type(ctx, sock_fd, nsdev.ifindex, nsdev.name, swcfgr);
-		nsdev.type = swcfgr.ext.switchport;
+		if_get_type(ctx, sock_fd, nsdev.ifindex, nsdev.name, iftype, ifvlan);
+		nsdev.type = iftype;
 	}
 
 	tmp_fd = mkstemp(tmp_name);

@@ -87,9 +87,10 @@ struct switch_operations {
 
 	/**
 	 * @param mode This parameter will return as side effect the type of the interface:
-	 * ethernet or a virtual vlan interface
+	 * ethernet or a virtual vlan interface. In case of vlan interface, also
+	 * return the vlan as side effect.
 	 */
-	int (*if_get_type) (struct switch_operations *sw_ops, int ifindex, int *type);
+	int (*if_get_type) (struct switch_operations *sw_ops, int ifindex, int *type, int *vlan);
 
 	int (*if_enable) (struct switch_operations *sw_ops, int ifindex);
 	int (*if_disable) (struct switch_operations *sw_ops, int ifindex);

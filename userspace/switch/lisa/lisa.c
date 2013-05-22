@@ -277,7 +277,8 @@ static int if_del_trunk_vlans(struct switch_operations *sw_ops,
 	return rc;
 }
 
-static int if_get_type(struct switch_operations *sw_ops, int ifindex, int *type)
+static int if_get_type(struct switch_operations *sw_ops, int ifindex, int *type,
+		int *vlan)
 {
 	int rc, sock_fd;
 	struct swcfgreq swcfgr;
@@ -291,6 +292,7 @@ static int if_get_type(struct switch_operations *sw_ops, int ifindex, int *type)
 	SW_SOCK_CLOSE(lc, sock_fd);
 
 	*type = swcfgr.ext.switchport;
+	*vlan = swcfgr.vlan;
 
 	return rc;
 }

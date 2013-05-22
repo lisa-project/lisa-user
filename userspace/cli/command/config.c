@@ -310,9 +310,9 @@ static int remove_if_vlan(struct cli_context *ctx, int vlan, int index)
 
 static int cmd_no_int_any(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
-	int status, n, sock_fd, ioctl_errno;
+	int status, n, sock_fd;
 	struct ifreq ifr;
-	struct swcfgreq swcfgr;
+	int iftype, ifvlan = 0;
 
 	status = if_parse_args(argv + 1, nodev + 1, ifr.ifr_name, &n);
 
@@ -341,31 +341,28 @@ static int cmd_no_int_any(struct cli_context *ctx, int argc, char **argv, struct
 		SW_SOCK_CLOSE(ctx, sock_fd);
 		return CLI_EX_OK;
 	}
-
-	/* ask switch kernel module what it knows about this interface */
-	swcfgr.cmd = SWCFG_GETIFTYPE;
-	swcfgr.ifindex = ifr.ifr_ifindex;
-	status = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
-	ioctl_errno = errno;
 	SW_SOCK_CLOSE(ctx, sock_fd);
 
+	/* ask switch kernel module what it knows about this interface */
+	status = (sw_ops->if_get_type)(sw_ops, ifr.ifr_ifindex, &iftype, &ifvlan);
+
 	if (status) {
-		EX_STATUS_REASON_IOCTL(ctx, ioctl_errno);
+		EX_STATUS_REASON_IOCTL(ctx, errno);
 		return CLI_EX_REJECTED;
 	}
 
-	if (swcfgr.ext.switchport == SW_IF_VIF)
-		return remove_if_vlan(ctx, swcfgr.vlan, ifr.ifr_ifindex);
+	if (iftype == SW_IF_VIF)
+		return remove_if_vlan(ctx, ifvlan, ifr.ifr_ifindex);
 
 	return remove_if_ether(ctx, ifr.ifr_name, ifr.ifr_ifindex,
-			swcfgr.ext.switchport != SW_IF_ROUTED);
+			iftype != SW_IF_ROUTED);
 }
 
 int cmd_int_any(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
-	int status, n, sock_fd, ioctl_errno;
+	int status, n, sock_fd;
 	struct ifreq ifr;
-	struct swcfgreq swcfgr;
+	int iftype, ifvlan;
 
 	if (!strcmp(nodev[0]->name, "no"))
 		return cmd_no_int_any(ctx, argc - 1, argv + 1, nodev + 1);
@@ -410,23 +407,21 @@ int cmd_int_any(struct cli_context *ctx, int argc, char **argv, struct menu_node
 		return CLI_EX_REJECTED;
 	} while (0);
 
-	/* ask switch kernel module what it knows about this interface */
-	swcfgr.cmd = SWCFG_GETIFTYPE;
-	swcfgr.ifindex = ifr.ifr_ifindex;
-	status = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
-	ioctl_errno = errno;
 	SW_SOCK_CLOSE(ctx, sock_fd);
 
+	/* ask switch kernel module what it knows about this interface */
+	status = (sw_ops->if_get_type)(sw_ops, ifr.ifr_ifindex, &iftype, &ifvlan);
+
 	if (status) {
-		EX_STATUS_REASON_IOCTL(ctx, ioctl_errno);
+		EX_STATUS_REASON_IOCTL(ctx, errno);
 		return CLI_EX_REJECTED;
 	}
 
-	if (swcfgr.ext.switchport == SW_IF_VIF)
-		return use_if_vlan(ctx, swcfgr.vlan, ifr.ifr_ifindex);
+	if (iftype == SW_IF_VIF)
+		return use_if_vlan(ctx, ifvlan, ifr.ifr_ifindex);
 
 	return use_if_ether(ctx, ifr.ifr_name, ifr.ifr_ifindex,
-			swcfgr.ext.switchport != SW_IF_ROUTED);
+			iftype != SW_IF_ROUTED);
 }
 
 int cmd_linevty(struct cli_context *__ctx, int argc, char **argv, struct menu_node **nodev)
