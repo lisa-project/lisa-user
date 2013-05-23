@@ -3,6 +3,10 @@ TOP_DIR = ..
 CFLAGS  = -fPIC -g
 LDFLAGS = -lpthread -lm -lrt -pthread -L$(TOP_DIR)/switch -lswitch
 
+ifneq ($(MAKECMDGOALS), clean)
+$(info ********* Building the CDP daemon *********)
+endif
+
 include $(TOP_DIR)/scripts/Makefile.includes
 include $(TOP_DIR)/switch/Makefile.switch
 INC 	= $(LINUX_INC) \

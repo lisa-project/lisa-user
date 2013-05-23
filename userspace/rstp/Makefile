@@ -4,6 +4,10 @@ FSM	= ./fsm
 CFLAGS  = -fPIC -g
 LDFLAGS = -lpthread -lm -lrt -L$(TOP_DIR)/switch -lswitch
 
+ifneq ($(MAKECMDGOALS), clean)
+$(info ********* Building the RSTP daemon *********)
+endif
+
 include $(TOP_DIR)/scripts/Makefile.includes
 include $(TOP_DIR)/switch/Makefile.switch
 INC 	= $(LINUX_INC) \

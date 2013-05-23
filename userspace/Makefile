@@ -4,7 +4,6 @@ include $(TOP_DIR)/scripts/Makefile.variables
 
 SUBDIRS = \
 	$(TOP_DIR)/include \
-	$(TOP_DIR)/switch/lisa \
 	$(TOP_DIR)/switch \
 	$(TOP_DIR)/lib     \
 	$(TOP_DIR)/cli     \

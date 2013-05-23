@@ -1,6 +1,11 @@
 TOP_DIR = ..
 
 CFLAGS	= -DLiSA
+
+ifneq ($(MAKECMDGOALS), clean)
+$(info ********* Building testing tools *********)
+endif
+
 LDFLAGS = -lcrypt
 include $(TOP_DIR)/scripts/Makefile.includes
 include $(TOP_DIR)/switch/Makefile.switch

@@ -2,6 +2,10 @@ TOP_DIR		:= $(shell pwd)/../
 CFLAGS		= -fPIC -g
 # LDFLAGS		= -L. -lswcli -lrt
 
+ifneq ($(MAKECMDGOALS), clean)
+$(info ********* Building the Command Line Interface *********)
+endif
+
 include $(TOP_DIR)/scripts/Makefile.includes
 include $(TOP_DIR)/switch/Makefile.switch
 INC		= $(LINUX_INC) \

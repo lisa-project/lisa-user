@@ -1,5 +1,10 @@
 MAKEFLAGS += --no-builtin-rules --no-print-directory
 
+ifndef IMPL
+	IMPL = lisa
+	#IMPL = linux
+endif
+
 CFLAGS += -O3 -fno-strict-aliasing -Wall -Wstrict-prototypes -Wwrite-strings
 
 CC = $(CROSS_COMPILE)gcc
