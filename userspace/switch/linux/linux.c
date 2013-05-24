@@ -19,123 +19,6 @@
 
 #include "linux.h"
 
-static int br_set_age_time(struct linux_context *lnx_ctx, int vlan, int age_time)
-{
-	int ret = 0, bridge_sfd;
-	struct ifreq ifr;
-	unsigned long args[4] = {BRCTL_SET_AGEING_TIME,
-		sec_to_jiffies(age_time), 0, 0};
-	char br_name[IFNAMSIZ];
-
-	sprintf(br_name, "vlan%d", vlan);
-	strcpy(ifr.ifr_name, br_name);
-	ifr.ifr_data = (char *) args;
-
-	BRIDGE_SOCK_OPEN(lnx_ctx, bridge_sfd);
-	ret = ioctl(bridge_sfd, SIOCDEVPRIVATE, &ifr);
-	BRIDGE_SOCK_CLOSE(lnx_ctx, bridge_sfd);
-
-	return ret;
-}
-
-static int add_bridge(struct linux_context *lnx_ctx, int vlan_id)
-{
-	int ret = 0, bridge_sfd;
-	char name[VLAN_NAME_LEN];
-
-	sprintf(name, "vlan%d", vlan_id);
-
-	BRIDGE_SOCK_OPEN(lnx_ctx, bridge_sfd);
-	ret = ioctl(bridge_sfd, SIOCBRADDBR, name);
-	BRIDGE_SOCK_CLOSE(lnx_ctx, bridge_sfd);
-
-	return ret;
-}
-
-static int remove_bridge(struct linux_context *lnx_ctx, int vlan_id)
-{
-	int ret = 0, bridge_sfd;
-	char name[9];
-
-	sprintf(name, "vlan%d", vlan_id);
-
-	BRIDGE_SOCK_OPEN(lnx_ctx, bridge_sfd);
-	ret = ioctl(bridge_sfd, SIOCBRDELBR, name);
-	BRIDGE_SOCK_CLOSE(lnx_ctx, bridge_sfd);
-
-	return ret;
-}
-
-static int add_bridge_if(struct linux_context *lnx_ctx, int vlan_id, int ifindex)
-{
-	int ret = 0, bridge_sfd;
-	struct ifreq ifr;
-	char br_name[VLAN_NAME_LEN];
-	unsigned long args[4] = { BRCTL_ADD_IF, ifindex, 0, 0 };
-
-	/* Build the name of the bridge */
-	sprintf(br_name, "vlan%d", vlan_id);
-
-	/* Add the interface to the bridge */
-	strncpy(ifr.ifr_name, br_name, IFNAMSIZ);
-	ifr.ifr_data = (char *) args;
-
-	BRIDGE_SOCK_OPEN(lnx_ctx, bridge_sfd);
-	ret = ioctl(bridge_sfd, SIOCDEVPRIVATE, &ifr);
-	BRIDGE_SOCK_CLOSE(lnx_ctx, bridge_sfd);
-
-	return ret;
-}
-
-static int remove_bridge_if(struct linux_context *lnx_ctx, int vlan_id, int ifindex)
-{
-	int ret = 0, bridge_sfd;
-	struct ifreq ifr;
-	unsigned long args[4] = { BRCTL_DEL_IF, ifindex, 0, 0 };
-	char br_name[VLAN_NAME_LEN];
-
-	/* Build the name of the bridge */
-	sprintf(br_name, "vlan%d", vlan_id);
-
-	/* Remove the interface from the bridge */
-	strncpy(ifr.ifr_name, br_name, IFNAMSIZ);
-	ifr.ifr_data = (char *) args;
-
-	BRIDGE_SOCK_OPEN(lnx_ctx, bridge_sfd);
-	ret = ioctl(bridge_sfd, SIOCDEVPRIVATE, &ifr);
-	BRIDGE_SOCK_CLOSE(lnx_ctx, bridge_sfd);
-
-	return ret;
-}
-
-static int __manage_vif(struct linux_context *lnx_ctx, char *if_name,
-	int vlan_id, int cmd)
-{
-	int ret = 0, vlan_sfd;
-	struct vlan_ioctl_args if_request;
-
-	/* Create a new interface in a given VLAN */
-	strcpy(if_request.device1, if_name);
-	if (ADD_VLAN_CMD == cmd)
-		if_request.u.VID = vlan_id;
-	if_request.cmd = cmd;
-
-	VLAN_SOCK_OPEN(lnx_ctx, vlan_sfd);
-	ret = ioctl(vlan_sfd, SIOCSIFVLAN, &if_request);
-	VLAN_SOCK_CLOSE(lnx_ctx, vlan_sfd);
-
-	return ret;
-}
-
-static int __add_vif(struct linux_context *lnx_ctx, char *if_name, int vlan_id)
-{
-	return __manage_vif(lnx_ctx, if_name, vlan_id, ADD_VLAN_CMD);
-}
-
-static int __remove_vif(struct linux_context *lnx_ctx, char *if_name)
-{
-	return __manage_vif(lnx_ctx, if_name, 0, DEL_VLAN_CMD);
-}
 
 static int linux_init(struct switch_operations *sw_ops)
 {
@@ -161,7 +44,7 @@ static int if_add(struct switch_operations *sw_ops, int ifindex, int mode)
 
 	/* Add the new interface to the default bridge */
 	if (IF_MODE_ACCESS == mode) {
-		ret = add_bridge_if(lnx_ctx, LINUX_DEFAULT_VLAN, ifindex);
+		ret = br_add_if(lnx_ctx, LINUX_DEFAULT_VLAN, ifindex);
 		if (ret)
 			return ret;
 		goto create_data;
@@ -176,7 +59,7 @@ static int if_add(struct switch_operations *sw_ops, int ifindex, int mode)
 
 
 		/* Use 8021q to add a new interface */
-		ret = __add_vif(lnx_ctx, if_name, v_data->vlan_id);
+		ret = create_vif(lnx_ctx, if_name, v_data->vlan_id);
 		if (ret)
 			continue;
 
@@ -192,7 +75,7 @@ static int if_add(struct switch_operations *sw_ops, int ifindex, int mode)
 		add_vif_data(v_data->vlan_id, vif_device);
 
 		/* Add the new interface to VLAN's bridge */
-		add_bridge_if(lnx_ctx, v_data->vlan_id, vif_device.ifindex);
+		br_add_if(lnx_ctx, v_data->vlan_id, vif_device.ifindex);
 	}
 
 	mm_unlock(mm);
@@ -230,7 +113,7 @@ static int if_remove(struct switch_operations *sw_ops, int ifindex)
 
 	/* Remove the new interface from the default bridge for ACCES mode */
 	if (IF_MODE_ACCESS == data.mode) {
-		ret = remove_bridge_if(lnx_ctx, LINUX_DEFAULT_VLAN, ifindex);
+		ret = br_remove_if(lnx_ctx, LINUX_DEFAULT_VLAN, ifindex);
 		goto remove_data;
 	}
 
@@ -247,11 +130,11 @@ static int if_remove(struct switch_operations *sw_ops, int ifindex)
 		IF_SOCK_CLOSE(lnx_ctx, if_sfd);
 
 		/* Remove vif from VLAN's bridge */
-		if (remove_bridge_if(lnx_ctx, v_data->vlan_id, vifindex))
+		if (br_remove_if(lnx_ctx, v_data->vlan_id, vifindex))
 			continue;
 
 		/* Use 8021q to remove the virtual interface */
-		ret = __remove_vif(lnx_ctx, vif_name);
+		ret = remove_vif(lnx_ctx, vif_name);
 		if (ret)
 			continue;
 
@@ -291,11 +174,11 @@ static int vlan_del(struct switch_operations *sw_ops, int vlan)
 			mm_addr(mm, mm_list_entry(ptr, struct if_data, lh));
 
 		/* Remove the virtual interface from VLAN's bridge */
-		if (remove_bridge_if(lnx_ctx, vlan, vif_data->device.ifindex))
+		if (br_remove_if(lnx_ctx, vlan, vif_data->device.ifindex))
 			continue;
 
 		/* Remove vif */
-		ret = __remove_vif(lnx_ctx, vif_data->device.name);
+		ret = remove_vif(lnx_ctx, vif_data->device.name);
 		if (ret)
 			continue;
 
@@ -308,7 +191,7 @@ static int vlan_del(struct switch_operations *sw_ops, int vlan)
 	/* Remove the bridge associated with this VLAN if there is no
 	 * VLAN interface */
 	if (!has_vlan_if(vlan)) {
-		ret = remove_bridge(lnx_ctx, vlan);
+		ret = br_remove(lnx_ctx, vlan);
 		if (ret)
 			return ret;
 	}
@@ -328,7 +211,7 @@ static int vlan_add(struct switch_operations *sw_ops, int vlan)
 
 	/* Add a bridge for the new VLAN if it hadn't been added before */
 	if (!has_vlan_if(vlan)) {
-		ret = add_bridge(lnx_ctx, vlan);
+		ret = br_add(lnx_ctx, vlan);
 		if (ret)
 			return ret;
 	}
@@ -348,7 +231,7 @@ static int vlan_add(struct switch_operations *sw_ops, int vlan)
 			continue;
 
 		/* Create a new virtual interface */
-		ret = __add_vif(lnx_ctx, if_data->device.name, vlan);
+		ret = create_vif(lnx_ctx, if_data->device.name, vlan);
 		if (ret)
 			continue;
 
@@ -364,7 +247,7 @@ static int vlan_add(struct switch_operations *sw_ops, int vlan)
 		add_vif_data(vlan, vif_device);
 
 		/* Add the virtual interface to VLAN's bridge */
-		add_bridge_if(lnx_ctx, vlan, vif_device.ifindex);
+		br_add_if(lnx_ctx, vlan, vif_device.ifindex);
 	}
 	mm_unlock(mm);
 
@@ -394,7 +277,7 @@ static int vif_add(struct switch_operations *sw_ops, int vlan, int *ifindex)
 	/* Check if the VLAN exists */
 	if (!has_vlan(vlan)) {
 		/* Add a bridge for the new VLAN */
-		ret = add_bridge(lnx_ctx, vlan);
+		ret = br_add(lnx_ctx, vlan);
 		if (ret)
 			return ret;
 	}
@@ -438,7 +321,7 @@ static int vif_del(struct switch_operations *sw_ops, int vlan)
 	/* Remove the bridge if the VLAN is not configured */
 	if (has_vlan(vlan))
 		return 0;
-	return remove_bridge(lnx_ctx, vlan);
+	return br_remove(lnx_ctx, vlan);
 }
 
 static int if_set_desc(struct switch_operations *sw_ops, int ifindex, char *desc)
@@ -512,6 +395,32 @@ static int if_get_type(struct switch_operations *sw_ops, int ifindex,
 	return ENODEV;
 }
 
+static int if_set_mode(struct switch_operations *sw_ops, int ifindex,
+	int mode, int flag)
+{
+	int ret = 0;
+	struct linux_context *lnx_ctx = SWLINUX_CTX(sw_ops);
+
+	/* Set interface type to "routed" */
+	if (0 == flag)
+		return if_no_switchport(lnx_ctx, ifindex, mode);
+
+	switch (mode) {
+	case IF_MODE_ACCESS:
+		ret = if_mode_access(lnx_ctx, ifindex);
+		break;
+
+	case IF_MODE_TRUNK:
+		ret = if_mode_trunk(lnx_ctx, ifindex);
+		break;
+
+	default:
+		return EINVAL;
+	}
+
+	return ret;
+}
+
 struct linux_context lnx_ctx = {
 	.sw_ops = (struct switch_operations) {
 		.backend_init	= linux_init,
@@ -522,6 +431,7 @@ struct linux_context lnx_ctx = {
 		.if_set_desc	= if_set_desc,
 		.if_get_desc	= if_get_desc,
 		.if_get_type	= if_get_type,
+		.if_set_mode	= if_set_mode,
 
 		.vlan_add	= vlan_add,
 		.vlan_del	= vlan_del,

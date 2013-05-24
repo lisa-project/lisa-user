@@ -13,7 +13,7 @@
 #include "if_generic.h"
 #include "swsock.h"
 #include "sw_api.h"
-#include "util_linux.h"
+#include "util.h"
 
 #define SWLINUX_CTX(sw_ops) ((struct linux_context *)(sw_ops))
 
@@ -87,5 +87,31 @@ struct linux_context {
 };
 
 extern struct linux_context lnx_ctx;
+
+
+/********* util_linux.c ***********/
+
+/* Check if there is a VLAN in switch */
+extern int has_vlan(int vlan);
+
+/* Check if the switch has a VLAN interface */
+extern int has_vlan_if(int vlan);
+
+extern int if_no_switchport(struct linux_context *lnx_ctx, int ifindex, int mode);
+extern int if_mode_access(struct linux_context *lnx_ctx, int ifindex);
+extern int if_mode_trunk(struct linux_context *lnx_ctx, int ifindex);
+
+
+/* Bridge related functions */
+extern int br_add(struct linux_context *lnx_ctx, int vlan_id);
+extern int br_remove(struct linux_context *lnx_ctx, int vlan_id);
+extern int br_add_if(struct linux_context *lnx_ctx, int vlan_id, int ifindex);
+extern int br_remove_if(struct linux_context *lnx_ctx, int vlan_id, int ifindex);
+extern int br_set_age_time(struct linux_context *lnx_ctx, int vlan, int age_time);
+
+
+/* 8021q related functions */
+extern int create_vif(struct linux_context *lnx_ctx, char *if_name, int vlan_id);
+extern int remove_vif(struct linux_context *lnx_ctx, char *if_name);
 
 #endif
