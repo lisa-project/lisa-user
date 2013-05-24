@@ -13,8 +13,12 @@
 #include "if_generic.h"
 #include "swsock.h"
 #include "sw_api.h"
+#include "util.h"
 
+/* Check if there is a VLAN in switch */
 int has_vlan(int vlan);
+
+/* Check if the switch has a VLAN interface */
 int has_vlan_if(int vlan);
 
 #endif

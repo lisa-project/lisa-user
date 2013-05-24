@@ -71,6 +71,8 @@ struct switch_mem {
 	struct mm_list_head vlan_data;
 	/* List of interface specific data */
 	struct mm_list_head if_data;
+	/* Bridge + 8021q age time */
+	int age_time;
 };
 
 struct if_tag {

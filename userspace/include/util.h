@@ -28,6 +28,12 @@
 
 #define NIP_QUAD(addr) (addr >> 24), ((addr >> 16) & 0xFF), ((addr >> 8) & 0xFF), (addr & 0xFF)
 
+static inline unsigned long sec_to_jiffies(int sec)
+{
+	return 1000000ULL * sec / 10000;
+
+}
+
 void daemonize(void);
 int parse_mac(const char *str, unsigned char *mac);
 void print_mac_list(FILE *out, struct list_head *macs,

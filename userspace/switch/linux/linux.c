@@ -19,9 +19,28 @@
 
 #include "linux.h"
 
+static int br_set_age_time(struct linux_context *lnx_ctx, int vlan, int age_time)
+{
+	int ret = 0, bridge_sfd;
+	struct ifreq ifr;
+	unsigned long args[4] = {BRCTL_SET_AGEING_TIME,
+		sec_to_jiffies(age_time), 0, 0};
+	char br_name[IFNAMSIZ];
+
+	sprintf(br_name, "vlan%d", vlan);
+	strcpy(ifr.ifr_name, br_name);
+	ifr.ifr_data = (char *) args;
+
+	BRIDGE_SOCK_OPEN(lnx_ctx, bridge_sfd);
+	ret = ioctl(bridge_sfd, SIOCDEVPRIVATE, &ifr);
+	BRIDGE_SOCK_CLOSE(lnx_ctx, bridge_sfd);
+
+	return ret;
+}
+
 static int add_bridge(struct linux_context *lnx_ctx, int vlan_id)
 {
-	int ret, bridge_sfd;
+	int ret = 0, bridge_sfd;
 	char name[VLAN_NAME_LEN];
 
 	sprintf(name, "vlan%d", vlan_id);
@@ -30,7 +49,7 @@ static int add_bridge(struct linux_context *lnx_ctx, int vlan_id)
 	ret = ioctl(bridge_sfd, SIOCBRADDBR, name);
 	BRIDGE_SOCK_CLOSE(lnx_ctx, bridge_sfd);
 
-	return 0;
+	return ret;
 }
 
 static int remove_bridge(struct linux_context *lnx_ctx, int vlan_id)
@@ -154,6 +173,7 @@ static int if_add(struct switch_operations *sw_ops, int ifindex, int mode)
 	mm_list_for_each(mm, ptr, mm_ptr(mm, &SHM->vlan_data)) {
 		struct vlan_data *v_data =
 			mm_addr(mm, mm_list_entry(ptr, struct vlan_data, lh));
+
 
 		/* Use 8021q to add a new interface */
 		ret = __add_vif(lnx_ctx, if_name, v_data->vlan_id);
@@ -348,11 +368,17 @@ static int vlan_add(struct switch_operations *sw_ops, int vlan)
 	}
 	mm_unlock(mm);
 
+
 	/* Set the default VLAN description */
 	__default_vlan_name(desc, vlan);
 	ret = switch_set_vlan_desc(vlan, desc);
 	if (ret)
 		vlan_del(sw_ops, vlan);
+
+
+	/* Set the ageing time */
+	if (SHM->age_time)
+		br_set_age_time(lnx_ctx, vlan, SHM->age_time);
 
 	return ret;
 }
@@ -430,6 +456,36 @@ static int get_vlan_desc(struct switch_operations *sw_ops, int vlan, char *desc)
 	return switch_get_vlan_desc(vlan, desc);
 }
 
+static int set_age_time(struct switch_operations *sw_ops, int age_time)
+{
+	mm_ptr_t ptr;
+	struct linux_context *lnx_ctx = SWLINUX_CTX(sw_ops);
+
+	/* Walk through all the VLANs */
+	mm_lock(mm);
+
+	mm_list_for_each(mm, ptr, mm_ptr(mm, &SHM->vlan_data)) {
+		struct vlan_data *v_data =
+			mm_addr(mm, mm_list_entry(ptr, struct vlan_data, lh));
+
+		/* Set age time for the VLAN bridge */
+		br_set_age_time(lnx_ctx, v_data->vlan_id, age_time);
+	}
+
+	mm_unlock(mm);
+
+	/* Save the ageing time inf shared memory */
+	SHM->age_time = age_time;
+
+	return 0;
+}
+
+static int get_age_time(struct switch_operations *sw_ops, int *age_time)
+{
+	*age_time = SHM->age_time;
+	return 0;
+}
+
 struct linux_context lnx_ctx = {
 	.sw_ops = (struct switch_operations) {
 		.backend_init	= linux_init,
@@ -444,7 +500,10 @@ struct linux_context lnx_ctx = {
 		.get_vlan_desc	= get_vlan_desc,
 
 		.vif_add	= vif_add,
-		.vif_del	= vif_del
+		.vif_del	= vif_del,
+
+		.get_age_time = get_age_time,
+		.set_age_time = set_age_time
 	},
 	.vlan_sfd	= -1,
 	.bridge_sfd	= -1,

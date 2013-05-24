@@ -30,7 +30,6 @@ int has_vlan(int vlan)
 			mm_addr(mm, mm_list_entry(ptr, struct vlan_data, lh));
 
 		if (v_data->vlan_id == vlan) {
-			printf("Found vlan data for %d\n", vlan);
 			mm_unlock(mm);
 			return 1;
 		}
@@ -53,7 +52,6 @@ int has_vlan_if(int vlan)
 
 		if (vif_data->device.type == IF_TYPE_VIF &&
 			vif_data->device.vlan == vlan) {
-			printf("found vif for vlan %d\n", vlan);
 			mm_unlock(mm);
 			return 1;
 		}
@@ -63,3 +61,4 @@ int has_vlan_if(int vlan)
 
 	return 0;
 }
+
