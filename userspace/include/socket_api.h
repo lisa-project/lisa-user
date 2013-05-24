@@ -21,10 +21,11 @@
 
 #define PACKET_SIZE	65536
 #define CDP_FILTER	"ether multicast and ether[20:2] = 0x2000"
+#define NO_FILTER	""
 
 #include <pcap.h>
 
-int register_filter(pcap_t **pcap, const char* filter);
+int register_filter(pcap_t **pcap, const char* filter, const char *if_name);
 
 int send_packet(int sock_fd,  unsigned char *packet, int size);
 

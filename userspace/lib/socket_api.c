@@ -18,54 +18,54 @@
  */
 #include "socket_api.h"
 #include <stdlib.h>
+#include <string.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 
-int register_filter(pcap_t **pcap, const char* filter)
+int register_filter(pcap_t **pcap, const char* filter, const char *if_name)
 {
 	int ret;
-	char *dev;
 	char errbuf[PCAP_ERRBUF_SIZE];
 	bpf_u_int32 netp;
 	bpf_u_int32 maskp;
 	struct bpf_program fp;
 
-	/* grab the device*/
-	dev = pcap_lookupdev(errbuf);
-	if (NULL == dev) {
-		printf("Error pcap_lookupdev(): %s\n", errbuf);
+	/* get network address and mask of the device */
+	ret = pcap_lookupnet(if_name, &netp, &maskp, errbuf);
+	if (ret < 0) {
+		printf("Error pcap_lookupnet(): %s\n", errbuf);
 		return -1;
 	}
 
-	/* get network address and mask of the device */
-	ret = pcap_lookupnet(dev, &netp, &maskp, errbuf);
-	if (ret < 0) {
-		printf("Error pcap_lookupnet(): %s\n", errbuf);
-		return ret;
-	}
-
 	/* open device for monitoring */
-	*pcap = pcap_open_live(dev, PACKET_SIZE, 1, -1, errbuf);
+	*pcap = pcap_open_live(if_name, PACKET_SIZE, 1, 0, errbuf);
 	if (NULL == *pcap) {
 		printf("Error pcap_open_live(): %s\n", errbuf);
 		return -1;
 	}
 
+	/* if filter is empty no filter will be applied */
+	if (strcmp(filter, NO_FILTER) == 0) {
+		printf("No filter registered\n");
+		goto out;
+	}
+
 	/* compile the program */
-/*	ret = pcap_compile(*pcap, &fp, filter, 0, netp);
+	ret = pcap_compile(*pcap, &fp, filter, 0, netp);
 	if (ret < 0) {
 		printf("Error pcap_compile()");
-		return ret;
-	}*/
+		return -1;
+	}
 
 	/* set compiled program as filter */
-/*	ret = pcap_setfilter(*pcap, &fp);
+	ret = pcap_setfilter(*pcap, &fp);
 	if (ret < 0) {
 		printf("Error pcap_setfilter()");
 		return -1;
-	}*/
+	}
 
+out:
 	return 0;
 }
 
