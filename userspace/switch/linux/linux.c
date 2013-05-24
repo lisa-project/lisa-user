@@ -486,14 +486,42 @@ static int get_age_time(struct switch_operations *sw_ops, int *age_time)
 	return 0;
 }
 
+static int if_get_type(struct switch_operations *sw_ops, int ifindex,
+	int *type, int *vlan)
+{
+	mm_ptr_t ptr;
+
+	mm_lock(mm);
+
+	mm_list_for_each(mm, ptr, mm_ptr(mm, &SHM->if_data)) {
+		struct if_data *if_data =
+			mm_addr(mm, mm_list_entry(ptr, struct if_data, lh));
+
+		if (if_data->device.ifindex == ifindex) {
+			*type = if_data->device.type;
+			if (IF_TYPE_VIF == *type)
+				*vlan = if_data->device.vlan;
+			mm_unlock(mm);
+
+			return 0;
+		}
+	}
+
+	mm_unlock(mm);
+
+	return ENODEV;
+}
+
 struct linux_context lnx_ctx = {
 	.sw_ops = (struct switch_operations) {
 		.backend_init	= linux_init,
 
 		.if_add		= if_add,
 		.if_remove	= if_remove,
+
 		.if_set_desc	= if_set_desc,
 		.if_get_desc	= if_get_desc,
+		.if_get_type	= if_get_type,
 
 		.vlan_add	= vlan_add,
 		.vlan_del	= vlan_del,
