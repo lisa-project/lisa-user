@@ -62,27 +62,6 @@ int has_vlan_if(int vlan)
 	return 0;
 }
 
-int if_no_switchport(struct linux_context *lnx_ctx, int ifindex, int mode)
-{
-	int ret = 0;
-
-	return ret;
-}
-
-int if_mode_access(struct linux_context *lnx_ctx, int ifindex)
-{
-	int ret = 0;
-
-	return ret;
-}
-
-int if_mode_trunk(struct linux_context *lnx_ctx, int ifindex)
-{
-	int ret = 0;
-
-	return ret;
-}
-
 int br_set_age_time(struct linux_context *lnx_ctx, int vlan, int age_time)
 {
 	int ret = 0, bridge_sfd;
@@ -201,3 +180,192 @@ int remove_vif(struct linux_context *lnx_ctx, char *if_name)
 	return manage_vif(lnx_ctx, if_name, 0, DEL_VLAN_CMD);
 }
 
+int add_vifs_to_trunk(struct linux_context *lnx_ctx, int ifindex)
+{
+	int ret = 0, if_sfd;
+	char if_name[IFNAMSIZE], vif_name[IFNAMSIZE];
+	struct net_switch_device vif_device;
+	mm_ptr_t ptr;
+
+
+	/* Get the name of the interface */
+	IF_SOCK_OPEN(lnx_ctx, if_sfd);
+	if_get_name(ifindex, if_sfd, if_name);
+	IF_SOCK_CLOSE(lnx_ctx, if_sfd);
+
+
+	/* Create interfaces for each VLAN in the switch */
+	mm_lock(mm);
+
+	mm_list_for_each(mm, ptr, mm_ptr(mm, &SHM->vlan_data)) {
+		struct vlan_data *v_data =
+			mm_addr(mm, mm_list_entry(ptr, struct vlan_data, lh));
+
+
+		/* Use 8021q to add a new interface */
+		ret = create_vif(lnx_ctx, if_name, v_data->vlan_id);
+		if (ret)
+			continue;
+
+		/* Add virtual interface information to VLAN data */
+		sprintf(vif_name, "%s.%d", if_name, v_data->vlan_id);
+		strcpy(vif_device.name, vif_name);
+		vif_device.vlan = v_data->vlan_id;
+
+		IF_SOCK_OPEN(lnx_ctx, if_sfd);
+		vif_device.ifindex = if_get_index(vif_name, if_sfd);
+		IF_SOCK_CLOSE(lnx_ctx, if_sfd);
+
+		add_vif_data(v_data->vlan_id, vif_device);
+
+		/* Add the new interface to VLAN's bridge */
+		br_add_if(lnx_ctx, v_data->vlan_id, vif_device.ifindex);
+	}
+
+	mm_unlock(mm);
+
+	return ret;
+}
+
+int remove_vifs_from_trunk(struct linux_context *lnx_ctx, int ifindex)
+{
+	int ret = 0, if_sfd, vifindex;
+	char if_name[IFNAMSIZE], vif_name[IFNAMSIZE];
+	mm_ptr_t ptr;
+
+	/* Get the name of the interface */
+	IF_SOCK_OPEN(lnx_ctx, if_sfd);
+	if_get_name(ifindex, if_sfd, if_name);
+	IF_SOCK_CLOSE(lnx_ctx, if_sfd);
+
+
+	/* Remove all the virtual interfaces for TRUNK mode */
+	mm_lock(mm);
+
+	mm_list_for_each(mm, ptr, mm_ptr(mm, &SHM->vlan_data)) {
+		struct vlan_data *v_data =
+			mm_addr(mm, mm_list_entry(ptr, struct vlan_data, lh));
+
+		sprintf(vif_name, "%s.%d", if_name, v_data->vlan_id);
+		IF_SOCK_OPEN(lnx_ctx, if_sfd);
+		vifindex = if_get_index(vif_name, if_sfd);
+		IF_SOCK_CLOSE(lnx_ctx, if_sfd);
+
+		/* Remove vif from VLAN's bridge */
+		if (br_remove_if(lnx_ctx, v_data->vlan_id, vifindex))
+			continue;
+
+		/* Use 8021q to remove the virtual interface */
+		ret = remove_vif(lnx_ctx, vif_name);
+		if (ret)
+			continue;
+
+		/* Remove virtual interface information from VLAN data */
+		del_vif_data(v_data->vlan_id, if_name);
+	}
+
+	mm_unlock(mm);
+
+	return ret;
+}
+
+int if_no_switchport(struct linux_context *lnx_ctx, int ifindex, int mode)
+{
+	int ret = 0;
+	struct if_data data;
+
+
+	/* Get interface data */
+	ret = get_if_data(ifindex, &data);
+	if (ret || data.device.type == IF_TYPE_VIF)
+		return ret;
+
+
+	/* Return if the interface is already "routed" */
+	if (data.device.type == IF_TYPE_ROUTED)
+		return ret;
+
+	/* Set the interface type to "Routed" */
+	data.device.type = IF_TYPE_ROUTED;
+	set_if_data(ifindex, data);
+
+
+	/* Remove the interface from the default bridge for ACCES mode */
+	if (IF_MODE_ACCESS == data.mode)
+		ret = br_remove_if(lnx_ctx, LINUX_DEFAULT_VLAN, ifindex);
+
+	else
+		/* Remove all trunk virtual interfaces */
+		ret = remove_vifs_from_trunk(lnx_ctx, ifindex);
+
+	return ret;
+}
+
+int if_mode_access(struct linux_context *lnx_ctx, int ifindex)
+{
+	int ret = 0;
+	struct if_data data;
+
+
+	/* Get interface data */
+	ret = get_if_data(ifindex, &data);
+	if (ret || data.device.type == IF_TYPE_VIF)
+		return ret;
+
+	/* Return if interface is already access */
+	if (data.mode == IF_MODE_ACCESS &&
+			data.device.type == IF_TYPE_SWITCHED)
+		return 0;
+
+
+	/* Remove all trunk virtual interfaces */
+	ret = remove_vifs_from_trunk(lnx_ctx, ifindex);
+	if (ret)
+		return ret;
+
+
+	/* Add the interface to the default bridge */
+	ret = br_add_if(lnx_ctx, LINUX_DEFAULT_VLAN, ifindex);
+	if (ret)
+		return ret;
+
+
+	/* Set mode in interface private data */
+	data.device.type = IF_TYPE_SWITCHED;
+	data.mode = IF_MODE_ACCESS;
+
+	return set_if_data(ifindex, data);
+}
+
+int if_mode_trunk(struct linux_context *lnx_ctx, int ifindex)
+{
+	int ret = 0;
+	struct if_data data;
+
+
+	/* Get interface data */
+	ret = get_if_data(ifindex, &data);
+	if (ret || data.device.type == IF_TYPE_VIF)
+		return ret;
+
+	/* Return if interface is already trunk */
+	if (data.mode == IF_MODE_TRUNK &&
+			data.device.type == IF_TYPE_SWITCHED)
+		return 0;
+
+	/* Remove the interface from the default VLAN */
+	ret = br_remove_if(lnx_ctx, LINUX_DEFAULT_VLAN, ifindex);
+	if (ret)
+		return ret;
+
+	/* Create virtual interfaces for each VLAN */
+	ret = add_vifs_to_trunk(lnx_ctx, ifindex);
+	if (ret)
+		return ret;
+
+	/* Set mode in interface private data */
+	data.device.type = IF_TYPE_SWITCHED;
+	data.mode = IF_MODE_TRUNK;
+
+	return set_if_data(ifindex, data);
+}

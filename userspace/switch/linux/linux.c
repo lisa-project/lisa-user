@@ -28,12 +28,11 @@ static int linux_init(struct switch_operations *sw_ops)
 static int if_add(struct switch_operations *sw_ops, int ifindex, int mode)
 {
 	struct if_data data;
-	struct net_switch_device device, vif_device;
+	struct net_switch_device device;
 	int ret = 0, if_sfd;
-	char if_name[IFNAMSIZE], vif_name[IFNAMSIZE];
+	char if_name[IFNAMSIZE];
 	unsigned char vlan_bitmap[512];
 	struct linux_context *lnx_ctx = SWLINUX_CTX(sw_ops);
-	mm_ptr_t ptr;
 
 
 	/* Get the name of the interface */
@@ -43,44 +42,14 @@ static int if_add(struct switch_operations *sw_ops, int ifindex, int mode)
 
 
 	/* Add the new interface to the default bridge */
-	if (IF_MODE_ACCESS == mode) {
+	if (IF_MODE_ACCESS == mode)
 		ret = br_add_if(lnx_ctx, LINUX_DEFAULT_VLAN, ifindex);
-		if (ret)
-			return ret;
-		goto create_data;
-	}
 
-	/* Trunk: create interfaces for each VLAN in the switch */
-	mm_lock(mm);
-
-	mm_list_for_each(mm, ptr, mm_ptr(mm, &SHM->vlan_data)) {
-		struct vlan_data *v_data =
-			mm_addr(mm, mm_list_entry(ptr, struct vlan_data, lh));
+	else
+		/* Create virtual interfaces for each VLAN */
+		ret = add_vifs_to_trunk(lnx_ctx, ifindex);
 
 
-		/* Use 8021q to add a new interface */
-		ret = create_vif(lnx_ctx, if_name, v_data->vlan_id);
-		if (ret)
-			continue;
-
-		/* Add virtual interface information to VLAN data */
-		sprintf(vif_name, "%s.%d", if_name, v_data->vlan_id);
-		strcpy(vif_device.name, vif_name);
-		vif_device.vlan = v_data->vlan_id;
-
-		IF_SOCK_OPEN(lnx_ctx, if_sfd);
-		vif_device.ifindex = if_get_index(vif_name, if_sfd);
-		IF_SOCK_CLOSE(lnx_ctx, if_sfd);
-
-		add_vif_data(v_data->vlan_id, vif_device);
-
-		/* Add the new interface to VLAN's bridge */
-		br_add_if(lnx_ctx, v_data->vlan_id, vif_device.ifindex);
-	}
-
-	mm_unlock(mm);
-
-create_data:
 	/* Create interface specific data */
 	strncpy(device.name, if_name, IFNAMSIZ);
 	device.ifindex = ifindex;
@@ -97,55 +66,30 @@ create_data:
 
 static int if_remove(struct switch_operations *sw_ops, int ifindex)
 {
-	int ret = 0, if_sfd, vifindex;
+	int ret = 0;
 	struct linux_context *lnx_ctx = SWLINUX_CTX(sw_ops);
-	char if_name[IFNAMSIZE], vif_name[IFNAMSIZE];
 	struct if_data data;
-	mm_ptr_t ptr;
-
-	/* Get the name of the interface */
-	IF_SOCK_OPEN(lnx_ctx, if_sfd);
-	if_get_name(ifindex, if_sfd, if_name);
-	IF_SOCK_CLOSE(lnx_ctx, if_sfd);
 
 	/* Get interface data */
 	get_if_data(ifindex, &data);
 
-	/* Remove the new interface from the default bridge for ACCES mode */
-	if (IF_MODE_ACCESS == data.mode) {
+
+	/* Remove the interface from the default bridge for ACCES mode */
+	printf("Type of interface: %d\n", data.device.type);
+	if (data.device.type == IF_TYPE_ROUTED)
+		goto clear_data;
+
+	/* Remove access interface from the default bridge */
+	if (IF_MODE_ACCESS == data.mode)
 		ret = br_remove_if(lnx_ctx, LINUX_DEFAULT_VLAN, ifindex);
-		goto remove_data;
-	}
 
-	/* Remove all the virtual interfaces for TRUNK mode */
-	mm_lock(mm);
+	else
+		/* Remove all trunk virtual interfaces */
+		ret = remove_vifs_from_trunk(lnx_ctx, ifindex);
 
-	mm_list_for_each(mm, ptr, mm_ptr(mm, &SHM->vlan_data)) {
-		struct vlan_data *v_data =
-			mm_addr(mm, mm_list_entry(ptr, struct vlan_data, lh));
 
-		sprintf(vif_name, "%s.%d", if_name, v_data->vlan_id);
-		IF_SOCK_OPEN(lnx_ctx, if_sfd);
-		vifindex = if_get_index(vif_name, if_sfd);
-		IF_SOCK_CLOSE(lnx_ctx, if_sfd);
-
-		/* Remove vif from VLAN's bridge */
-		if (br_remove_if(lnx_ctx, v_data->vlan_id, vifindex))
-			continue;
-
-		/* Use 8021q to remove the virtual interface */
-		ret = remove_vif(lnx_ctx, vif_name);
-		if (ret)
-			continue;
-
-		/* Remove virtual interface information from VLAN data */
-		del_vif_data(v_data->vlan_id, if_name);
-	}
-
-	mm_unlock(mm);
-
-remove_data:
 	/* Remove the interface specific data */
+clear_data:
 	del_if_data(ifindex);
 	return ret;
 }
@@ -227,7 +171,8 @@ static int vlan_add(struct switch_operations *sw_ops, int vlan)
 		struct if_data *if_data =
 			mm_addr(mm, mm_list_entry(ptr, struct if_data, lh));
 
-		if (IF_MODE_ACCESS == if_data->mode || IF_TYPE_VIF == if_data->device.type)
+		if (IF_MODE_ACCESS == if_data->mode ||
+				IF_TYPE_SWITCHED != if_data->device.type)
 			continue;
 
 		/* Create a new virtual interface */

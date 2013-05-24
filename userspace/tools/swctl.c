@@ -59,7 +59,7 @@ static const char *dash =
 int parse_vlan_list(char *list, unsigned char *bmp)
 {
 	int state = 0;
-	int min, max;
+	int min = 0, max;
 	char *last = list, *ptr;
 
 	memset(bmp, 0xff, SW_VLAN_BMP_NO);
@@ -163,6 +163,7 @@ void usage(void) {
 		"  delportvlan iface_name vlan_no\tRemoves vlan from allowed vlans of\n"
 		"  \t\t\t\t\tinterface (trunk mode)\n"
 		"  settrunk iface_name flag\t\tPuts interface in trunk (flag=1) or\n"
+		"  setaccess iface_name flag\t\tPuts interface in trunk (flag=1) or\n"
 		"  \t\t\t\t\tnon-trunk (flag=0) mode\n"
 		"  setportvlan iface_name vlan_no\tAdd interface in vlan vlan_no\n"
 		"  \t\t\t\t\t(non-trunk mode)\n"
@@ -480,6 +481,20 @@ int main(int argc, char **argv) {
 		return 0;	
 	}
 
+	if (!strcmp(argv[1], "setaccess")) {
+		if (argc < 4) {
+			usage();
+			return 0;
+		}
+		user_arg.ifindex = if_get_index(argv[2], sock);
+		status = sw_ops->if_set_mode(sw_ops,
+				user_arg.ifindex, IF_MODE_ACCESS, atoi(argv[3]));
+
+		if (status)
+			perror("settrunk failed");
+		return 0;
+	}
+
 	if (!strcmp(argv[1], "setportvlan")) {
 		if (argc < 4) {
 			usage();
@@ -684,13 +699,21 @@ int main(int argc, char **argv) {
 			return status;
 		}
 
-		if (type == SW_IF_VIF)
+		switch (type) {
+		case IF_TYPE_VIF:
 			printf("[%s]\tvlan %d interface\n", argv[2], ifvlan);
-		else
+			break;
+		case IF_TYPE_SWITCHED:
 			printf("[%s]\tethernet interface\n", argv[2]);
+			break;
+		case IF_TYPE_ROUTED:
+			printf("[%s]\trouted interface\n", argv[2]);
+			break;
+		default:
+			printf("unknown interface type\n");
+		}
 
 		return status;
-
 	}
 
 	if (!strcmp(argv[1], "getvlanifs")) {

@@ -97,21 +97,46 @@ extern int has_vlan(int vlan);
 /* Check if the switch has a VLAN interface */
 extern int has_vlan_if(int vlan);
 
+/* Set the interface type to "Routed" */
 extern int if_no_switchport(struct linux_context *lnx_ctx, int ifindex, int mode);
+
+/* Set the interface mode to "Access" */
 extern int if_mode_access(struct linux_context *lnx_ctx, int ifindex);
+
+/* Set the interface mode to "Trunk" */
 extern int if_mode_trunk(struct linux_context *lnx_ctx, int ifindex);
 
 
+
 /* Bridge related functions */
+/* Add a new bridge for a certain VLAN */
 extern int br_add(struct linux_context *lnx_ctx, int vlan_id);
+
+/* Remove a bridge created for a certain VLAN */
 extern int br_remove(struct linux_context *lnx_ctx, int vlan_id);
+
+/* Add a virtual interface to a bridge */
 extern int br_add_if(struct linux_context *lnx_ctx, int vlan_id, int ifindex);
+
+/* Remove a virtual interface from a bridge */
 extern int br_remove_if(struct linux_context *lnx_ctx, int vlan_id, int ifindex);
+
+/* Set the ageing time for a certain bridge */
 extern int br_set_age_time(struct linux_context *lnx_ctx, int vlan, int age_time);
 
 
+
 /* 8021q related functions */
+/* Create a virtual interface for a certain VLAN */
 extern int create_vif(struct linux_context *lnx_ctx, char *if_name, int vlan_id);
+
+/* Remove a virtual interface created for a certain VLAN */
 extern int remove_vif(struct linux_context *lnx_ctx, char *if_name);
+
+/* Create virtual interfaces for a trunk interface */
+int add_vifs_to_trunk(struct linux_context *lnx_ctx, int ifindex);
+
+/* Remove all the virtual interfaces of a trunk interface */
+extern int remove_vifs_from_trunk(struct linux_context *lnx_ctx, int ifindex);
 
 #endif
