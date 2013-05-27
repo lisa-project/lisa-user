@@ -75,7 +75,6 @@ static int if_remove(struct switch_operations *sw_ops, int ifindex)
 
 
 	/* Remove the interface from the default bridge for ACCES mode */
-	printf("Type of interface: %d\n", data.device.type);
 	if (data.device.type == IF_TYPE_ROUTED)
 		goto clear_data;
 

@@ -285,10 +285,6 @@ int if_no_switchport(struct linux_context *lnx_ctx, int ifindex, int mode)
 	if (data.device.type == IF_TYPE_ROUTED)
 		return ret;
 
-	/* Set the interface type to "Routed" */
-	data.device.type = IF_TYPE_ROUTED;
-	set_if_data(ifindex, data);
-
 
 	/* Remove the interface from the default bridge for ACCES mode */
 	if (IF_MODE_ACCESS == data.mode)
@@ -297,6 +293,14 @@ int if_no_switchport(struct linux_context *lnx_ctx, int ifindex, int mode)
 	else
 		/* Remove all trunk virtual interfaces */
 		ret = remove_vifs_from_trunk(lnx_ctx, ifindex);
+	if (ret)
+		return ret;
+
+
+	/* Set the interface type to "Routed" */
+	data.device.type = IF_TYPE_ROUTED;
+	del_if_data(ifindex);
+	ret = set_if_data(ifindex, data);
 
 	return ret;
 }
@@ -318,10 +322,8 @@ int if_mode_access(struct linux_context *lnx_ctx, int ifindex)
 		return 0;
 
 
-	/* Remove all trunk virtual interfaces */
-	ret = remove_vifs_from_trunk(lnx_ctx, ifindex);
-	if (ret)
-		return ret;
+	/* Make sure all trunk virtual interfaces are removed */
+	remove_vifs_from_trunk(lnx_ctx, ifindex);
 
 
 	/* Add the interface to the default bridge */
@@ -333,8 +335,10 @@ int if_mode_access(struct linux_context *lnx_ctx, int ifindex)
 	/* Set mode in interface private data */
 	data.device.type = IF_TYPE_SWITCHED;
 	data.mode = IF_MODE_ACCESS;
+	del_if_data(ifindex);
 
-	return set_if_data(ifindex, data);
+	ret = set_if_data(ifindex, data);
+	return ret;
 }
 
 int if_mode_trunk(struct linux_context *lnx_ctx, int ifindex)
@@ -353,10 +357,8 @@ int if_mode_trunk(struct linux_context *lnx_ctx, int ifindex)
 			data.device.type == IF_TYPE_SWITCHED)
 		return 0;
 
-	/* Remove the interface from the default VLAN */
-	ret = br_remove_if(lnx_ctx, LINUX_DEFAULT_VLAN, ifindex);
-	if (ret)
-		return ret;
+	/* Make sure the interface is not in the default VLAN */
+	br_remove_if(lnx_ctx, LINUX_DEFAULT_VLAN, ifindex);
 
 	/* Create virtual interfaces for each VLAN */
 	ret = add_vifs_to_trunk(lnx_ctx, ifindex);
@@ -366,6 +368,7 @@ int if_mode_trunk(struct linux_context *lnx_ctx, int ifindex)
 	/* Set mode in interface private data */
 	data.device.type = IF_TYPE_SWITCHED;
 	data.mode = IF_MODE_TRUNK;
+	del_if_data(ifindex);
 
 	return set_if_data(ifindex, data);
 }
