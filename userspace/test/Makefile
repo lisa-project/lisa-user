@@ -19,7 +19,9 @@ include $(TOP_DIR)/scripts/Makefile.rules
 dep: $(DEPS)
 
 vlan_rename: vlan_rename.o $(TOP_DIR)/switch/libswitch.so
-	$(QUIET_LD)$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ ../lib/mm.o -lrt
+	$(Q) $(MAKE) -C $(TOP_DIR)/lib
+	$(QUIET_LD)$(CC) -o $@ $^ ../lib/if_generic.o \
+		../lib/netlink.o ../lib/util.o ../lib/mm.o -lrt $(LDFLAGS)
 
 test_sock_api: %: %.o
 	$(QUIET_LD)$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ ../lib/socket_api.o -lpcap

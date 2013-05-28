@@ -13,7 +13,17 @@
 #include <errno.h>
 
 #include "switch.h"
+
+#ifdef Lisa
 #include "lisa.h"
+#endif
+
+#ifdef Linux
+#include "linux.h"
+#endif
+
+#include "util.h"
+#include "if_generic.h"
 
 #define DEFAULT_VLAN		1
 #define INVALID_VLAN		-1
