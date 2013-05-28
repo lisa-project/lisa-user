@@ -300,7 +300,7 @@ static int vif_del(struct switch_operations *sw_ops, int vlan)
 	return br_remove(lnx_ctx, vlan);
 }
 
-static int get_vlan_interfaces(struct switch_operations *sw_ops, int vlan, int *ifindexes, int *no_ifs)
+static int get_vlan_interfaces(struct switch_operations *sw_ops, int vlan, int **ifindexes, int *no_ifs)
 {
 	int ret = 0, if_sfd, len = 0;
 	struct vlan_data *v_data;
@@ -318,6 +318,18 @@ static int get_vlan_interfaces(struct switch_operations *sw_ops, int vlan, int *
 	mm_lock(mm);
 
 	mm_list_for_each(mm, ptr, mm_ptr(mm, &v_data->vif_list)){
+		(*no_ifs)++;
+
+	}
+
+	mm_unlock(mm);
+
+	*ifindexes = malloc((*no_ifs) * sizeof(int));
+	*no_ifs = 0;
+
+	mm_lock(mm);
+
+	mm_list_for_each(mm, ptr, mm_ptr(mm, &v_data->vif_list)){
 		struct if_data *vif_data =
 			mm_addr(mm, mm_list_entry(ptr, struct if_data, lh));
 
@@ -331,7 +343,7 @@ static int get_vlan_interfaces(struct switch_operations *sw_ops, int vlan, int *
 		len = strchr(vif_name, '.') - vif_name;
 		strncpy(if_name, vif_name, len);
 
-		ifindexes[(*no_ifs)++] = if_get_index(if_name, if_sfd);
+		(*ifindexes)[(*no_ifs)++] = if_get_index(if_name, if_sfd);
 
 		IF_SOCK_CLOSE(lnx_ctx, if_sfd);
 
