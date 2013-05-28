@@ -158,10 +158,6 @@ void usage(void) {
 		"  addvlan vlan_no\t\t\tAdds a vlan to the vlan database\n"
 		"  delvlan vlan_no\t\t\tDeletes a vlan from the vlan database\n"
 		"  chvlan vlan_no new_vlan_name\t\tRenames vlan_no to new_vlan_name\n"
-		"  addportvlan iface_name vlan_no\tAdds vlan to allowed vlans of\n"
-		"  \t\t\t\t\tinterface (trunk mode)\n"
-		"  delportvlan iface_name vlan_no\tRemoves vlan from allowed vlans of\n"
-		"  \t\t\t\t\tinterface (trunk mode)\n"
 		"  settrunk iface_name flag\t\tPuts interface in trunk (flag=1) or\n"
 		"  setaccess iface_name flag\t\tPuts interface in trunk (flag=1) or\n"
 		"  \t\t\t\t\tnon-trunk (flag=0) mode\n"
@@ -333,34 +329,6 @@ int main(int argc, char **argv) {
 		status = switch_set_vlan_desc(atoi(argv[2]), argv[3]);
 		if (status)
 			perror("chvlan failed");
-		return 0;
-	}
-
-	if (!strcmp(argv[1], "addportvlan")) {
-		if (argc < 4) {
-			usage();
-			return 0;
-		}
-		user_arg.cmd = SWCFG_ADDVLANPORT;
-		user_arg.ifindex = if_get_index(argv[2], sock);
-		user_arg.vlan = atoi(argv[3]);
-		status = ioctl(sock, SIOCSWCFG, &user_arg);
-		if (status)
-			perror("addportvlan failed");
-		return 0;	
-	}
-
-	if (!strcmp(argv[1], "delportvlan")) {
-		if (argc < 4) {
-			usage();
-			return 0;
-		}
-		user_arg.cmd = SWCFG_DELVLANPORT;
-		user_arg.ifindex = if_get_index(argv[2], sock);
-		user_arg.vlan = atoi(argv[3]);
-		status = ioctl(sock, SIOCSWCFG, &user_arg);
-		if (status)
-			perror("delportvlan failed");
 		return 0;
 	}
 
