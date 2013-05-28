@@ -293,9 +293,18 @@ int main(int argc, char **argv) {
 			return 0;
 		}
 
-		status = sw_ops->vlan_add(sw_ops, atoi(argv[2]));
+		user_arg.vlan = atoi(argv[2]);
+		status = sw_ops->vlan_add(sw_ops, user_arg.vlan);
 		if (status)
 			perror("addvlan failed");
+		char vlan_desc[SW_MAX_VLAN_NAME + 1];
+		__default_vlan_name(vlan_desc, user_arg.vlan);
+		status = switch_set_vlan_desc(user_arg.vlan, vlan_desc);
+		if (status) {
+			sw_ops->vlan_del(sw_ops, user_arg.vlan);
+			perror("addvlan failed");
+			return -1;
+		}
 		return 0;	
 	}
 
@@ -305,9 +314,13 @@ int main(int argc, char **argv) {
 			return 0;
 		}
 
-		status = sw_ops->vlan_del(sw_ops, atoi(argv[2]));
+		user_arg.vlan = atoi(argv[2]);
+		status = sw_ops->vlan_del(sw_ops, user_arg.vlan);
 		if (status)
 			perror("delvlan failed");
+		status = switch_del_vlan_desc(user_arg.vlan);
+		if (status)
+			perror("del vlan desc failed");
 		return 0;
 	}
 
@@ -795,7 +808,7 @@ int main(int argc, char **argv) {
 		int if_index, status;
 
 		if_index = if_get_index(argv[2], sock);
-		status = sw_ops->if_get_desc(sw_ops, if_index, desc);
+		status = switch_get_if_desc(if_index, desc);
 		if(status < 0) {
 			perror("Failed to get interface description");
 			return status;
@@ -830,7 +843,7 @@ int main(int argc, char **argv) {
 		int if_index, status;
 
 		if_index = if_get_index(argv[2], sock);
-		status = sw_ops->if_set_desc(sw_ops, if_index, argv[3]);
+		status = switch_set_if_desc(if_index, argv[3]);
 
 		if(status < 0) {
 			perror("Failed to set interface description");

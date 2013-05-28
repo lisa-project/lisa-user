@@ -118,6 +118,42 @@ static mm_ptr_t __switch_get_vlan_desc(int vlan_id)
 	return MM_NULL;
 }
 
+static int __switch_add_vlan_desc(int vlan_id, const char *desc) {
+	int ret = 0;
+	mm_ptr_t lh, mm_s_desc;
+	struct vlan_desc *s_desc;
+
+	lh = __switch_get_vlan_desc(vlan_id);
+	if (MM_NULL != lh) {
+		/* Vlan already has a description, so replace it. */
+		s_desc = mm_addr(mm, mm_list_entry(lh, struct vlan_desc, lh));
+		strncpy(s_desc->desc, desc, SW_MAX_VLAN_NAME);
+		s_desc->desc[SW_MAX_VLAN_NAME] = '\0';
+		ret = 0;
+		goto out;
+	}
+
+	/* Create a new entry for vlan descriptions list. */
+	mm_s_desc = mm_alloc(mm, sizeof(struct vlan_desc));
+	/* first save mm pointer obtained from mm_alloc, then compute s_desc
+	 * pointer, because mm_alloc() can change mm->area if the shm area
+	 * is extended (refer to README.mm for details) */
+	s_desc = mm_addr(mm, mm_s_desc);
+	if (NULL == s_desc) {
+		errno = ENOMEM;
+		ret = -1;
+		goto out;
+	}
+
+	s_desc->vlan_id = vlan_id;
+	strncpy(s_desc->desc, desc, SW_MAX_VLAN_NAME);
+	s_desc->desc[SW_MAX_VLAN_NAME] = '\0';
+	mm_list_add(mm, mm_ptr(mm, &s_desc->lh), mm_ptr(mm, &SHM->vlan_descs));
+
+out:
+	return ret;
+}
+
 static int __switch_del_vlan_desc(int vlan_id)
 {
 	mm_ptr_t lh = __switch_get_vlan_desc(vlan_id);
@@ -229,7 +265,7 @@ static void switch_init_cdp(void)
 
 int switch_init(void)
 {
-	int i;
+	int i, ret = 0;
 	char desc[SW_MAX_VLAN_NAME + 1];
 #ifdef LiSA
 	sw_ops = &lisa_ctx.sw_ops;
@@ -262,17 +298,26 @@ int switch_init(void)
 
 	if (sw_ops->vlan_add(sw_ops, 1))
 		return -1;
-	if (switch_set_vlan_desc(1, "default"))
-		return -1;
+	mm_lock(mm);
+	if (__switch_add_vlan_desc(1, "default")) {
+		ret = -1;
+		goto out_unlock;
+	}
 
 	for (i = 1002; i <= 1005; i++) {
 		__default_vlan_name(desc, i);
-		if (sw_ops->vlan_add(sw_ops, i))
-			return -1;
-		if (switch_set_vlan_desc(i, desc))
-			return -1;
+		if (sw_ops->vlan_add(sw_ops, i)) {
+			ret = -1;
+			goto out_unlock;
+		}
+		if (__switch_add_vlan_desc(i, desc)) {
+			ret = -1;
+			goto out_unlock;
+		}
 	}
-	return 0;
+out_unlock:
+	mm_unlock(mm);
+	return ret;
 }
 
 int switch_auth(int type, int level,
@@ -451,9 +496,18 @@ int switch_get_vlan_desc(int vlan_id, char *desc)
 
 int switch_set_vlan_desc(int vlan_id, const char *desc)
 {
-	mm_ptr_t lh, mm_s_desc;
+	mm_ptr_t lh;
 	struct vlan_desc *s_desc;
 	int ret = 0;
+
+	if (sw_invalid_vlan(vlan_id)) {
+		errno = EINVAL;
+		return -1;
+	}
+	if (sw_is_default_vlan(vlan_id)) {
+		errno = EPERM;
+		return -1;
+	}
 
 	mm_lock(mm);
 
@@ -474,32 +528,7 @@ int switch_set_vlan_desc(int vlan_id, const char *desc)
 		}
 		goto out_unlock;
 	}
-	lh = __switch_get_vlan_desc(vlan_id);
-	if (MM_NULL != lh) {
-		/* Vlan already has a description, so replace it. */
-		s_desc = mm_addr(mm, mm_list_entry(lh, struct vlan_desc, lh));
-		strncpy(s_desc->desc, desc, SW_MAX_VLAN_NAME);
-		s_desc->desc[SW_MAX_VLAN_NAME] = '\0';
-		ret = 0;
-		goto out_unlock;
-	}
-
-	/* Create a new entry for vlan descriptions list. */
-	mm_s_desc = mm_alloc(mm, sizeof(struct vlan_desc));
-	/* first save mm pointer obtained from mm_alloc, then compute s_desc
-	 * pointer, because mm_alloc() can change mm->area if the shm area
-	 * is extended (refer to README.mm for details) */
-	s_desc = mm_addr(mm, mm_s_desc);
-	if (NULL == s_desc) {
-		errno = ENOMEM;
-		ret = -1;
-		goto out_unlock;
-	}
-
-	s_desc->vlan_id = vlan_id;
-	strncpy(s_desc->desc, desc, SW_MAX_VLAN_NAME);
-	s_desc->desc[SW_MAX_VLAN_NAME] = '\0';
-	mm_list_add(mm, mm_ptr(mm, &s_desc->lh), mm_ptr(mm, &SHM->vlan_descs));
+	ret = __switch_add_vlan_desc(vlan_id, desc);
 
 out_unlock:
 	mm_unlock(mm);

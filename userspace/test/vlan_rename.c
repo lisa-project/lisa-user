@@ -24,7 +24,7 @@
 static void test_rename_invalid(void) {
 	int ret;
 
-	ret = lisa_ctx.sw_ops.vlan_rename(&lisa_ctx.sw_ops, INVALID_VLAN, NULL);
+	ret = switch_set_vlan_desc(INVALID_VLAN, NULL);
 	assert(ret == -1);
 	assert(errno == EINVAL);
 }
@@ -32,7 +32,7 @@ static void test_rename_invalid(void) {
 static void test_rename_default(void) {
 	int ret;
 
-	ret = lisa_ctx.sw_ops.vlan_rename(&lisa_ctx.sw_ops, DEFAULT_VLAN, NULL);
+	ret = switch_set_vlan_desc(DEFAULT_VLAN, NULL);
 	assert(ret == -1);
 	assert(errno == EPERM);
 }
@@ -45,49 +45,51 @@ static void test_rename_arbitrary(void) {
 	/* Initialize switch context as vlan description resides in mm. */
 	switch_init();
 	/* Try to add ARBITRARY_VLAN. If it already exists, just rename it. */
-	add_ret = lisa_ctx.sw_ops.vlan_add(&lisa_ctx.sw_ops, ARBITRARY_VLAN);
+	add_ret = sw_ops->vlan_add(sw_ops, ARBITRARY_VLAN);
 	if (add_ret == -1 && errno != EEXIST)
 		assert(0);
+	if (add_ret == 0) {
+		__default_vlan_name(desc, ARBITRARY_VLAN);
+		ret = switch_set_vlan_desc(ARBITRARY_VLAN, desc);
+		if (ret) {
+			ret = sw_ops->vlan_del(sw_ops, ARBITRARY_VLAN);
+			assert(ret == 0);
+			return;
+		}
+	}
 
 	strcpy(desc, DESC1);
 
 	/* If vlan_add returned EEXIST backup its description. */
 	if (add_ret == -1) {
-		ret = lisa_ctx.sw_ops.get_vlan_desc(&lisa_ctx.sw_ops,
-				ARBITRARY_VLAN, bkp_desc);
+		ret = switch_get_vlan_desc(ARBITRARY_VLAN, bkp_desc);
 		assert(ret == 0);
 		if (strcmp(desc, bkp_desc) == 0)
 			strcpy(desc, DESC2);
 	}
 
-	ret = lisa_ctx.sw_ops.vlan_rename(&lisa_ctx.sw_ops,
-			ARBITRARY_VLAN, desc);
+	ret = switch_set_vlan_desc(ARBITRARY_VLAN, desc);
 	assert(ret == 0);
-	ret= lisa_ctx.sw_ops.get_vlan_desc(&lisa_ctx.sw_ops, ARBITRARY_VLAN,
-			eq_desc);
+	ret= switch_get_vlan_desc(ARBITRARY_VLAN, eq_desc);
 	assert(ret == 0);
 	assert(strcmp(desc, eq_desc) == 0);
 
 	if (add_ret == 0) {
 		/* Cleanup. */
-		ret = lisa_ctx.sw_ops.vlan_del(&lisa_ctx.sw_ops,
-				ARBITRARY_VLAN);
+		ret = sw_ops->vlan_del(sw_ops, ARBITRARY_VLAN);
+		assert(ret == 0);
+		ret = switch_del_vlan_desc(ARBITRARY_VLAN);
 		assert(ret == 0);
 	}
 	else {
 		/* Restore description. */
-		ret = lisa_ctx.sw_ops.vlan_rename(&lisa_ctx.sw_ops,
-				ARBITRARY_VLAN, bkp_desc);
+		ret = switch_set_vlan_desc(ARBITRARY_VLAN, bkp_desc);
 		assert(ret == 0);
 	}
 }
 
 int main(int argc, char **argv) {
 
-//	if (argc < 3) {
-//		perror("err: vlan_rename vlan_id vlan_desc");
-//		return EXIT_FAILURE;
-//	}
 	test_rename_invalid();
 	printf("Rename Invalid test susccesful\n");
 	test_rename_default();

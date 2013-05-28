@@ -62,34 +62,10 @@ static int if_remove(struct switch_operations *sw_ops, int ifindex)
 	return ret;
 }
 
-static int get_vlan_desc(struct switch_operations *sw_ops, int vlan, char *desc)
-{
-	return switch_get_vlan_desc(vlan, desc);
-}
-
-static int vlan_rename(struct switch_operations *sw_ops, int vlan, char *desc)
-{
-	int rc;
-
-	if (sw_invalid_vlan(vlan)) {
-		rc = -1;
-		errno = EINVAL;
-	}
-	else if (sw_is_default_vlan(vlan)) {
-		rc = -1;
-		errno = EPERM;
-	}
-	else
-		rc = switch_set_vlan_desc(vlan, desc);
-
-	return rc;
-}
-
 static int vlan_add(struct switch_operations *sw_ops, int vlan)
 {
 	struct swcfgreq swcfgr;
-	int rc, sock_fd;
-	char desc[SW_MAX_VLAN_NAME];
+	int rc = 0, sock_fd;
 
 	struct lisa_context *uc = SWLiSA_CTX(sw_ops);
 
@@ -101,26 +77,15 @@ static int vlan_add(struct switch_operations *sw_ops, int vlan)
 	SW_SOCK_CLOSE(uc, sock_fd); /* this can overwrite ioctl errno */
 
 	/* Add default description for newly added vlan. */
-	if (rc == 0) {
-		__default_vlan_name(desc, vlan);
-		rc = switch_set_vlan_desc(vlan, desc);
-		if (rc) {
-			sw_ops->vlan_del(sw_ops, vlan);
-			goto exit;
-		}
-	}
 
-exit:
 	return rc;
 }
 
 static int vlan_del(struct switch_operations *sw_ops, int vlan)
 {
-	int rc, sock_fd;
+	int rc = 0, sock_fd;
 	struct swcfgreq swcfgr;
 	struct lisa_context *lc = SWLiSA_CTX(sw_ops);
-
-	rc = switch_del_vlan_desc(vlan);
 
 	swcfgr.vlan = vlan;
 	swcfgr.cmd = SWCFG_DELVLAN;
@@ -461,16 +426,6 @@ static int get_if_list(struct switch_operations *sw_ops, int type,
 	return 0;
 }
 
-static int if_set_desc(struct switch_operations *sw_ops, int ifindex, char *desc)
-{
-	return switch_set_if_desc(ifindex, desc);
-}
-
-static int if_get_desc(struct switch_operations *sw_ops, int ifindex, char *desc)
-{
-	return switch_get_if_desc(ifindex, desc);
-}
-
 static int set_age_time(struct switch_operations *sw_ops, int age_time)
 {
 	int ret, sock_fd;
@@ -683,14 +638,12 @@ struct lisa_context lisa_ctx = {
 		.if_disable = if_disable,
 		.vlan_add = vlan_add,
 		.vlan_del = vlan_del,
-		.vlan_rename = vlan_rename,
 
 		.vlan_set_mac_static = vlan_set_mac_static,
 		.vlan_del_mac_static = vlan_del_mac_static,
 		.vlan_del_mac_dynamic = vlan_del_mac_dynamic,
 		.get_mac = get_mac,
 
-		.get_vlan_desc = get_vlan_desc,
 		.get_vlan_interfaces = get_vlan_interfaces,
 		.get_if_list = get_if_list,
 		.get_vdb = get_vdb,
@@ -701,8 +654,6 @@ struct lisa_context lisa_ctx = {
 
 		.if_set_mode = if_set_mode,
 		.if_get_type = if_get_type,
-		.if_set_desc = if_set_desc,
-		.if_get_desc = if_get_desc,
 		.if_set_port_vlan = if_set_port_vlan,
 		.if_get_cfg = if_get_cfg,
 

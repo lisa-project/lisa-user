@@ -75,11 +75,6 @@ struct switch_operations {
 
 	int (*if_set_port_vlan) (struct switch_operations *sw_ops, int ifindex, int vlan);
 
-	int (*if_set_desc) (struct switch_operations *sw_ops, int ifindex, char *desc);
-	/**
-	 * @param desc  Get description from mm.
-	 */
-	int (*if_get_desc) (struct switch_operations *sw_ops, int ifindex, char *desc);
 	/**
 	 * @param vlans  Vlans are returned using bitmap positive logic.
 	 */
@@ -104,9 +99,22 @@ struct switch_operations {
 	int (*get_if_list) (struct switch_operations *sw_ops, int type,
 		struct list_head *net_devs);
 
+	/**
+	 * Add vlan to vlan database.
+	 *
+	 * Important: Vlan description is held within the shared memory segment.
+	 * If vlan_add returns successfully, call switch_set_vlan_desc (see
+	 * $LiSA_USER_HOME/tools/swctl.c for an example).
+	 */
 	int (*vlan_add) (struct switch_operations *sw_ops, int vlan);
+	/**
+	 * Remove a vlan from vlan database.
+	 *
+	 * Important: If vlan_del returns successfully, don't forget to also
+	 * remove the description using switch_del_vlan_desc() (see vlan_add
+	 * for further information).
+	 */
 	int (*vlan_del) (struct switch_operations *sw_ops, int vlan);
-	int (*vlan_rename) (struct switch_operations *sw_ops, int vlan, char *desc);
 	int (*vlan_set_mac_static) (struct switch_operations *sw_ops, int ifindex, int vlan, unsigned char *mac);
 	/**
 	 * @param mac   MAC in binary format.
@@ -122,12 +130,11 @@ struct switch_operations {
 	/**
 	 * Return a VLAN bitmap.
 	 *
-	 * VLAN descriptions can be obtained using get_vlan_desc().
+	 * VLAN descriptions can be obtained using swicth_get_vlan_desc().
 	 *
 	 * @param vlans  VLAN bitmap.
 	 */
 	int (*get_vdb) (struct switch_operations *sw_ops, unsigned char *vlans);
-	int (*get_vlan_desc) (struct switch_operations *sw_ops, int vlan, char *desc);
 
 	int (*mrouter_set) (struct switch_operations *sw_ops, int vlan, int ifindex, int setting);
 	/* Return a list of net_switch_mrouter_e. */

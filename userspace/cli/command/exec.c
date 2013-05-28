@@ -886,7 +886,7 @@ int cmd_show_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_no
 	if (vlan_desc != NULL) {
 		for (i = min_vlan; i <= max_vlan; i++)
 			if (sw_bitmap_test(vlans, i)) {
-				status = sw_ops->get_vlan_desc(sw_ops, i, vlan_name);
+				status = switch_get_vlan_desc(i, vlan_name);
 				if (!status && !strcmp(vlan_name, vlan_desc))
 					break;
 			}

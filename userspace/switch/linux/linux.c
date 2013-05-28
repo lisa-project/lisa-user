@@ -150,7 +150,6 @@ static int vlan_add(struct switch_operations *sw_ops, int vlan)
 	char vif_name[IFNAMSIZE];
 	struct net_switch_device vif_device;
 	struct linux_context *lnx_ctx = SWLINUX_CTX(sw_ops);
-	char desc[SW_MAX_VLAN_NAME];
 
 	/* Add a bridge for the new VLAN if it hadn't been added before */
 	if (!has_vlan_if(vlan)) {
@@ -194,13 +193,6 @@ static int vlan_add(struct switch_operations *sw_ops, int vlan)
 		br_add_if(lnx_ctx, vlan, vif_device.ifindex);
 	}
 	mm_unlock(mm);
-
-
-	/* Set the default VLAN description */
-	__default_vlan_name(desc, vlan);
-	ret = switch_set_vlan_desc(vlan, desc);
-	if (ret)
-		vlan_del(sw_ops, vlan);
 
 
 	/* Set the ageing time */
@@ -266,21 +258,6 @@ static int vif_del(struct switch_operations *sw_ops, int vlan)
 	if (has_vlan(vlan))
 		return 0;
 	return br_remove(lnx_ctx, vlan);
-}
-
-static int if_set_desc(struct switch_operations *sw_ops, int ifindex, char *desc)
-{
-	return switch_set_if_desc(ifindex, desc);
-}
-
-static int if_get_desc(struct switch_operations *sw_ops, int ifindex, char *desc)
-{
-	return switch_get_if_desc(ifindex, desc);
-}
-
-static int get_vlan_desc(struct switch_operations *sw_ops, int vlan, char *desc)
-{
-	return switch_get_vlan_desc(vlan, desc);
 }
 
 static int set_age_time(struct switch_operations *sw_ops, int age_time)
@@ -372,14 +349,11 @@ struct linux_context lnx_ctx = {
 		.if_add		= if_add,
 		.if_remove	= if_remove,
 
-		.if_set_desc	= if_set_desc,
-		.if_get_desc	= if_get_desc,
 		.if_get_type	= if_get_type,
 		.if_set_mode	= if_set_mode,
 
 		.vlan_add	= vlan_add,
 		.vlan_del	= vlan_del,
-		.get_vlan_desc	= get_vlan_desc,
 
 		.vif_add	= vif_add,
 		.vif_del	= vif_del,
