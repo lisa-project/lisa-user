@@ -294,3 +294,36 @@ int if_settings_cmd(int ifindex, int cmd, int sock_fd, struct ethtool_cmd *setti
 	settings->cmd = cmd;
 	return ioctl(sock_fd, SIOCETHTOOL, &ifr);
 }
+
+int if_get_flags(int ifindex, int sock_fd, int *flags)
+{
+	int ret = 0;
+	struct ifreq ifr;
+
+	assert(sock_fd != -1);
+	memset(&ifr, 0, sizeof(ifr));
+
+	/* Get the name of the interface */
+	if_get_name(ifindex, sock_fd, ifr.ifr_name);
+
+	ret = ioctl(sock_fd, SIOCSIFFLAGS, &ifr);
+	if (ret)
+		return ret;
+
+	*flags = ifr.ifr_flags;
+	return ret;
+}
+
+int if_set_flags(int ifindex, int sock_fd, int flags)
+{
+	struct ifreq ifr;
+
+	assert(sock_fd != -1);
+	memset(&ifr, 0, sizeof(ifr));
+
+	/* Get the name of the interface */
+	if_get_name(ifindex, sock_fd, ifr.ifr_name);
+
+	ifr.ifr_flags = flags;
+	return ioctl(sock_fd, SIOCSIFFLAGS, &ifr);
+}

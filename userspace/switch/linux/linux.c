@@ -93,6 +93,46 @@ clear_data:
 	return ret;
 }
 
+static int if_enable(struct switch_operations *sw_ops, int ifindex)
+{
+	int flags, if_sfd, ret = 0;
+	struct linux_context *lnx_ctx = SWLINUX_CTX(sw_ops);
+
+	/* Get the current interface flags */
+	IF_SOCK_OPEN(lnx_ctx, if_sfd);
+	ret = if_get_flags(ifindex, if_sfd, &flags);
+	if(ret)
+		return ret;
+
+
+	/* Set the IFF_UP flag */
+	flags |= IFF_UP;
+	ret = if_set_flags(ifindex, if_sfd, flags);
+	IF_SOCK_CLOSE(lnx_ctx, if_sfd);
+
+	return ret;
+}
+
+static int if_disable(struct switch_operations *sw_ops, int ifindex)
+{
+	int flags, if_sfd, ret = 0;
+	struct linux_context *lnx_ctx = SWLINUX_CTX(sw_ops);
+
+	/* Get the current interface flags */
+	IF_SOCK_OPEN(lnx_ctx, if_sfd);
+	ret = if_get_flags(ifindex, if_sfd, &flags);
+	if(ret)
+		return ret;
+
+
+	/* Reset the IFF_UP flag */
+	flags &= ~IFF_UP;
+	ret = if_set_flags(ifindex, if_sfd, flags);
+	IF_SOCK_CLOSE(lnx_ctx, if_sfd);
+
+	return ret;
+}
+
 static int vlan_del(struct switch_operations *sw_ops, int vlan)
 {
 	int ret = 0;
@@ -348,6 +388,8 @@ struct linux_context lnx_ctx = {
 
 		.if_add		= if_add,
 		.if_remove	= if_remove,
+		.if_enable	= if_enable,
+		.if_disable	= if_disable,
 
 		.if_get_type	= if_get_type,
 		.if_set_mode	= if_set_mode,

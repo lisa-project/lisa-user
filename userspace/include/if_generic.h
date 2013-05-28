@@ -61,6 +61,10 @@ char *short_if_name(struct net_switch_device *nsdev);
 
 char *if_get_name(int if_index, int sock_fd, char *name);
 
+int if_get_flags(int ifindex, int sock_fd, int *flags);
+
+int if_set_flags(int ifindex, int sock_fd, int flags);
+
 struct if_addr {
 	struct list_head lh;
 	int ifindex;
