@@ -300,6 +300,48 @@ static int vif_del(struct switch_operations *sw_ops, int vlan)
 	return br_remove(lnx_ctx, vlan);
 }
 
+static int get_vlan_interfaces(struct switch_operations *sw_ops, int vlan, int *ifindexes, int *no_ifs)
+{
+	int ret = 0, if_sfd, len = 0;
+	struct vlan_data *v_data;
+	char vif_name[IFNAMSIZE], if_name[IFNAMSIZE];
+	mm_ptr_t ptr;
+	struct linux_context *lnx_ctx = SWLINUX_CTX(sw_ops);
+
+	*no_ifs = 0;
+
+	/* Get VLAN data */
+	ret = get_vlan_data(vlan, &v_data);
+	if(ret)
+		return ret;
+	/* Iterate through virtual interfaces and get interface index */
+	mm_lock(mm);
+
+	mm_list_for_each(mm, ptr, mm_ptr(mm, &v_data->vif_list)){
+		struct if_data *vif_data =
+			mm_addr(mm, mm_list_entry(ptr, struct if_data, lh));
+
+		/* Get virtual interface name and extract interface name */
+		IF_SOCK_OPEN(lnx_ctx, if_sfd);
+
+		if_get_name(vif_data->device.ifindex, if_sfd, vif_name);
+
+		memset(if_name, 0, IFNAMSIZE);
+
+		len = strchr(vif_name, '.') - vif_name;
+		strncpy(if_name, vif_name, len);
+
+		ifindexes[(*no_ifs)++] = if_get_index(if_name, if_sfd);
+
+		IF_SOCK_CLOSE(lnx_ctx, if_sfd);
+
+	}
+
+	mm_unlock(mm);
+
+	return ret;
+}
+
 static int set_age_time(struct switch_operations *sw_ops, int age_time)
 {
 	mm_ptr_t ptr;
@@ -396,6 +438,9 @@ struct linux_context lnx_ctx = {
 
 		.vlan_add	= vlan_add,
 		.vlan_del	= vlan_del,
+
+		.get_vlan_interfaces = get_vlan_interfaces,
+
 
 		.vif_add	= vif_add,
 		.vif_del	= vif_del,
