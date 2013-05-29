@@ -163,7 +163,8 @@ void usage(void) {
 		"  \t\t\t\t\tnon-trunk (flag=0) mode\n"
 		"  setportvlan iface_name vlan_no\tAdd interface in vlan vlan_no\n"
 		"  \t\t\t\t\t(non-trunk mode)\n"
-		"  clearportmac iface_name\t\tClears fdb entries for interface\n"
+		"  clearportmac iface_name vlan\tClears dynamic fdb entries for interface\n"
+		"  delmacstatic iface_name vlan mac\tDelete static mac from fdb\n"
 		"  setagetime seconds / getagetime\t\tSets aging interval (in seconds) for fdb entries\n"
 		"  macstatic iface_name vlan_no hw_addr\tAdds a static mac to interface in vlan vlan_no\n"
 		"  addvif vlan_no\t\t\tCreates a virtual interface for\n"
@@ -491,13 +492,14 @@ int main(int argc, char **argv) {
 	}
 
 	if (!strcmp(argv[1], "clearportmac")) {
-		if (argc < 3) {
+		if (argc < 4) {
 			usage();
 			return 0;
 		}
-		user_arg.cmd = SWCFG_CLEARMACINT;
 		user_arg.ifindex = if_get_index(argv[2], sock);
-		status = ioctl(sock, SIOCSWCFG, &user_arg);
+		user_arg.vlan = atoi(argv[3]);
+		status = sw_ops->vlan_del_mac_dynamic(sw_ops, user_arg.ifindex,
+				user_arg.vlan);
 		if (status)
 			perror("clearportmac failed");
 		return 0;	
