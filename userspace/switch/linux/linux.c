@@ -330,7 +330,8 @@ static int vif_del(struct switch_operations *sw_ops, int vlan)
 	return br_remove(lnx_ctx, vlan);
 }
 
-static int get_vlan_interfaces(struct switch_operations *sw_ops, int vlan, int **ifindexes, int *no_ifs)
+static int get_vlan_interfaces(struct switch_operations *sw_ops, int vlan,
+		int **ifindexes, int *no_ifs)
 {
 	int ret = 0, if_sfd, len = 0;
 	struct vlan_data *v_data;
@@ -347,10 +348,8 @@ static int get_vlan_interfaces(struct switch_operations *sw_ops, int vlan, int *
 	/* Iterate through virtual interfaces and get interface index */
 	mm_lock(mm);
 
-	mm_list_for_each(mm, ptr, mm_ptr(mm, &v_data->vif_list)){
+	mm_list_for_each(mm, ptr, mm_ptr(mm, &v_data->vif_list))
 		(*no_ifs)++;
-
-	}
 
 	mm_unlock(mm);
 
@@ -493,10 +492,34 @@ static int if_set_port_vlan(struct switch_operations *sw_ops, int ifindex, int v
 	set_if_data(ifindex, data);
 
 
-	/* Add the interface to the new only if the VLAN exists */
+	/* Add the interface to the bridge only if the VLAN exists */
 	if (!has_vlan(vlan))
 		return 0;
 	return br_add_if(lnx_ctx, vlan, ifindex);
+}
+
+static int get_vdb(struct switch_operations *sw_ops, unsigned char *vlans)
+{
+	unsigned char bitmap[SW_VLAN_BMP_NO];
+	mm_ptr_t ptr;
+
+	memset(bitmap, 0x00, SW_VLAN_BMP_NO);
+
+
+	/* Walk through the vlan_data list */
+	mm_lock(mm);
+
+	mm_list_for_each(mm, ptr, mm_ptr(mm, &SHM->vlan_data)) {
+		struct vlan_data *v_data =
+			mm_addr(mm, mm_list_entry(ptr, struct vlan_data, lh));
+
+		sw_bitmap_set(bitmap, v_data->vlan_id);
+	}
+	mm_unlock(mm);
+
+	memcpy(vlans, bitmap, SW_VLAN_BMP_NO);
+
+	return 0;
 }
 
 struct linux_context lnx_ctx = {
@@ -516,6 +539,7 @@ struct linux_context lnx_ctx = {
 		.vlan_del	= vlan_del,
 
 		.get_vlan_interfaces = get_vlan_interfaces,
+		.get_vdb	= get_vdb,
 
 		.vif_add	= vif_add,
 		.vif_del	= vif_del,

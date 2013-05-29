@@ -95,6 +95,8 @@ struct if_desc {
 	struct mm_list_head lh;
 };
 
+
+/* Used only by the bridge + 8021q middleware by now */
 struct vlan_data {
 	int vlan_id;
 	struct mm_list_head vif_list;
@@ -108,6 +110,21 @@ struct if_data {
 	unsigned short access_vlan;
 	struct mm_list_head lh;
 };
+
+/* Temporarily copied from include/linux/net_switch.h */
+#define sw_bitmap_reset(bitmap, offset) ((bitmap)[(offset) / 8] &= ~(1 << ((offset) % 8)))
+#define sw_bitmap_set(bitmap, offset)	((bitmap)[(offset) / 8] |= (1 << ((offset) % 8)))
+#define sw_bitmap_test(bitmap, offset)	((bitmap)[(offset) / 8] & (1 << ((offset) % 8)))
+
+#define sw_allow_vlan(bitmap, vlan)	(sw_bitmap_reset(bitmap, vlan))
+#define sw_forbid_vlan(bitmap, vlan)	(sw_bitmap_set(bitmap, vlan))
+#define sw_forbidden_vlan(bitmap, vlan) (sw_bitmap_test(bitmap, vlan))
+#define sw_allowed_vlan(bitmap, vlan)	(!sw_bitmap_test(bitmap, vlan))
+
+#define sw_set_mrouter(bitmap, vlan)	(sw_bitmap_set(bitmap, vlan))
+#define sw_reset_mrouter(bitmap, vlan)	(sw_bitmap_reset(bitmap, vlan))
+#define sw_is_mrouter(bitmap, vlan)	(sw_bitmap_test(bitmap, vlan))
+
 
 #define __default_vlan_name(__buf, __vlan) snprintf(__buf, 9, "VLAN%04d", (__vlan))
 #define default_vlan_name(__lvalue, __vlan) do {\
