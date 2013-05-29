@@ -179,7 +179,7 @@ void usage(void) {
 		"  showmac\t\t\t\tPrints switch forwarding database\n"
 		"  getiftype if_name\t\t\tPrints the type of the the interface\n"
 		"  getvlanifs vlan_name\t\t\tPrints the interfaces associated with the vlan\n"
-		"  getiflist type\t\t\tPrints all the interfaces switch or routed(1), virtual(0)\n"
+		"  getiflist type\t\t\tPrints all the interfaces switched(1), routed(2), virtual(4)\n"
 		"  setifdesc if_name desc\t\tSet description for an interface\n"
 		"  getifdesc if_name\t\t\tDisplay description of the given interface\n"
 		"  getmrouters vlan\t\t\tDisplay the ports for which igmp is activated\n"
@@ -749,10 +749,7 @@ int main(int argc, char **argv) {
 			return 0;
 		}
 
-		if (atoi(argv[2]))
-			type = SW_IF_SWITCHED | SW_IF_ROUTED;
-		else
-			type = SW_IF_VIF;
+		type = atoi(argv[2]);
 
 		INIT_LIST_HEAD(&net_devs);
 		status = sw_ops->get_if_list(sw_ops, type, &net_devs);

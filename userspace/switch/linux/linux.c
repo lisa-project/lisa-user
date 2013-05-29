@@ -522,6 +522,37 @@ static int get_vdb(struct switch_operations *sw_ops, unsigned char *vlans)
 	return 0;
 }
 
+static int get_if_list(struct switch_operations *sw_ops, int type,
+	struct list_head *net_devs)
+{
+	struct net_switch_device *dev;
+	mm_ptr_t ptr;
+
+
+	/* Walk throught the list of interfaces */
+	mm_lock(mm);
+
+	mm_list_for_each(mm, ptr, mm_ptr(mm, &SHM->if_data)) {
+		struct if_data *if_data =
+			mm_addr(mm, mm_list_entry(ptr, struct if_data, lh));
+
+		if (!(type & if_data->device.type))
+			continue;
+
+		/* Copy from shared memory in a new structure */
+		dev = malloc(sizeof(struct net_switch_device));
+		if (!dev) {
+			errno = ENOMEM;
+			return -1;
+		}
+		*dev = if_data->device;
+		list_add_tail(&dev->lh, net_devs);
+	}
+	mm_unlock(mm);
+
+	return 0;
+}
+
 struct linux_context lnx_ctx = {
 	.sw_ops = (struct switch_operations) {
 		.backend_init	= linux_init,
@@ -538,6 +569,7 @@ struct linux_context lnx_ctx = {
 		.vlan_add	= vlan_add,
 		.vlan_del	= vlan_del,
 
+		.get_if_list	= get_if_list,
 		.get_vlan_interfaces = get_vlan_interfaces,
 		.get_vdb	= get_vdb,
 
