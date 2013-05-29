@@ -258,7 +258,7 @@ int cmd_cl_mac_addr_t(struct cli_context *ctx, int argc, char **argv, struct men
 
 	status = sw_ops->vlan_del_mac_dynamic(sw_ops, ifindex, vlan);
 
-	if (status == -1) {
+	if (status) {
 		EX_STATUS_REASON(ctx, "MAC address could not be removed\n"
 				"Address not found\n\n");
 		return CLI_EX_WARNING;

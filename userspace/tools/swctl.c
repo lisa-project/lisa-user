@@ -506,7 +506,7 @@ int main(int argc, char **argv) {
 		status = sw_ops->vlan_del_mac_dynamic(sw_ops, user_arg.ifindex,
 				user_arg.vlan);
 		if (status)
-			perror("clearportmac failed");
+			perror("No dynamic mac address found");
 		return 0;	
 	}
 
