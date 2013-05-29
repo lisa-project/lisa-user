@@ -288,7 +288,7 @@ int if_no_switchport(struct linux_context *lnx_ctx, int ifindex, int mode)
 
 	/* Remove the interface from the default bridge for ACCES mode */
 	if (IF_MODE_ACCESS == data.mode)
-		ret = br_remove_if(lnx_ctx, LINUX_DEFAULT_VLAN, ifindex);
+		ret = br_remove_if(lnx_ctx, data.access_vlan, ifindex);
 
 	else
 		/* Remove all trunk virtual interfaces */
@@ -300,9 +300,7 @@ int if_no_switchport(struct linux_context *lnx_ctx, int ifindex, int mode)
 	/* Set the interface type to "Routed" */
 	data.device.type = IF_TYPE_ROUTED;
 	del_if_data(ifindex);
-	ret = set_if_data(ifindex, data);
-
-	return ret;
+	return set_if_data(ifindex, data);
 }
 
 int if_mode_access(struct linux_context *lnx_ctx, int ifindex)
@@ -335,10 +333,10 @@ int if_mode_access(struct linux_context *lnx_ctx, int ifindex)
 	/* Set mode in interface private data */
 	data.device.type = IF_TYPE_SWITCHED;
 	data.mode = IF_MODE_ACCESS;
+	data.access_vlan = LINUX_DEFAULT_VLAN;
 	del_if_data(ifindex);
 
-	ret = set_if_data(ifindex, data);
-	return ret;
+	return set_if_data(ifindex, data);
 }
 
 int if_mode_trunk(struct linux_context *lnx_ctx, int ifindex)
@@ -358,7 +356,7 @@ int if_mode_trunk(struct linux_context *lnx_ctx, int ifindex)
 		return 0;
 
 	/* Make sure the interface is not in the default VLAN */
-	br_remove_if(lnx_ctx, LINUX_DEFAULT_VLAN, ifindex);
+	br_remove_if(lnx_ctx, data.access_vlan, ifindex);
 
 	/* Create virtual interfaces for each VLAN */
 	ret = add_vifs_to_trunk(lnx_ctx, ifindex);

@@ -103,8 +103,9 @@ struct vlan_data {
 
 struct if_data {
 	struct net_switch_device device;
-	unsigned char *bitmap;
 	int mode;
+	unsigned char *bitmap;
+	unsigned short access_vlan;
 	struct mm_list_head lh;
 };
 

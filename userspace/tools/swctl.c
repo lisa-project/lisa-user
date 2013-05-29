@@ -221,7 +221,7 @@ int main(int argc, char **argv) {
 		}
 
 		if_index = if_get_index(argv[2], sock);
-		status = sw_ops->if_add(sw_ops, if_index, 0);
+		status = sw_ops->if_add(sw_ops, if_index, IF_MODE_TRUNK);
 		if(status)
 			perror("add failed");
 		return 0;
@@ -307,7 +307,7 @@ int main(int argc, char **argv) {
 			perror("addvlan failed");
 			return -1;
 		}
-		return 0;	
+		return 0;
 	}
 
 	if (!strcmp(argv[1], "delvlan")) {

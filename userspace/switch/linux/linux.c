@@ -42,13 +42,19 @@ static int if_add(struct switch_operations *sw_ops, int ifindex, int mode)
 
 
 	/* Add the new interface to the default bridge */
-	if (IF_MODE_ACCESS == mode)
+	switch (mode) {
+	case IF_MODE_ACCESS:
 		ret = br_add_if(lnx_ctx, LINUX_DEFAULT_VLAN, ifindex);
+		data.access_vlan = LINUX_DEFAULT_VLAN;
+		break;
 
-	else
-		/* Create virtual interfaces for each VLAN */
+	case IF_MODE_TRUNK:
 		ret = add_vifs_to_trunk(lnx_ctx, ifindex);
+		break;
 
+	default:
+		return EINVAL;
+	}
 
 	/* Create interface specific data */
 	strncpy(device.name, if_name, IFNAMSIZ);
@@ -80,7 +86,7 @@ static int if_remove(struct switch_operations *sw_ops, int ifindex)
 
 	/* Remove access interface from the default bridge */
 	if (IF_MODE_ACCESS == data.mode)
-		ret = br_remove_if(lnx_ctx, LINUX_DEFAULT_VLAN, ifindex);
+		ret = br_remove_if(lnx_ctx, data.access_vlan, ifindex);
 
 	else
 		/* Remove all trunk virtual interfaces */
@@ -140,9 +146,6 @@ static int vlan_del(struct switch_operations *sw_ops, int vlan)
 	struct vlan_data *v_data;
 	mm_ptr_t ptr, tmp;
 
-	/* Remove VLAN description */
-	switch_del_vlan_desc(vlan);
-
 	/* Get VLAN data */
 	ret = get_vlan_data(vlan, &v_data);
 	if (ret)
@@ -170,6 +173,25 @@ static int vlan_del(struct switch_operations *sw_ops, int vlan)
 	}
 
 	mm_unlock(mm);
+
+
+	/* Delete all access interfaces from this bridge */
+	mm_lock(mm);
+
+	mm_list_for_each(mm, ptr, mm_ptr(mm, &SHM->if_data)) {
+		struct if_data *if_data =
+			mm_addr(mm, mm_list_entry(ptr, struct if_data, lh));
+
+		/* Filter only the appropriate access interfaces */
+		if (if_data->device.type != IF_TYPE_SWITCHED
+				|| if_data->mode != IF_MODE_ACCESS
+				|| if_data->access_vlan != vlan)
+			continue;
+
+		br_remove_if(lnx_ctx, vlan, if_data->device.ifindex);
+	}
+	mm_unlock(mm);
+
 
 	/* Remove the bridge associated with this VLAN if there is no
 	 * VLAN interface */
@@ -209,28 +231,36 @@ static int vlan_add(struct switch_operations *sw_ops, int vlan)
 		struct if_data *if_data =
 			mm_addr(mm, mm_list_entry(ptr, struct if_data, lh));
 
-		if (IF_MODE_ACCESS == if_data->mode ||
-				IF_TYPE_SWITCHED != if_data->device.type)
+		if (if_data->device.type != IF_TYPE_SWITCHED)
 			continue;
 
-		/* Create a new virtual interface */
-		ret = create_vif(lnx_ctx, if_data->device.name, vlan);
-		if (ret)
+		if (if_data->mode == IF_MODE_TRUNK) {
+			/* Create a new virtual interface */
+			ret = create_vif(lnx_ctx, if_data->device.name, vlan);
+			if (ret)
+				continue;
+
+			/* Add virtual interface information to VLAN data */
+			sprintf(vif_name, "%s.%d", if_data->device.name, vlan);
+			strcpy(vif_device.name, vif_name);
+			vif_device.vlan = vlan;
+
+			IF_SOCK_OPEN(lnx_ctx, if_sfd);
+			vif_device.ifindex = if_get_index(vif_name, if_sfd);
+			IF_SOCK_CLOSE(lnx_ctx, if_sfd);
+
+			add_vif_data(vlan, vif_device);
+
+			/* Add the virtual interface to VLAN's bridge */
+			br_add_if(lnx_ctx, vlan, vif_device.ifindex);
 			continue;
+		}
 
-		/* Add virtual interface information to VLAN data */
-		sprintf(vif_name, "%s.%d", if_data->device.name, vlan);
-		strcpy(vif_device.name, vif_name);
-		vif_device.vlan = vlan;
-
-		IF_SOCK_OPEN(lnx_ctx, if_sfd);
-		vif_device.ifindex = if_get_index(vif_name, if_sfd);
-		IF_SOCK_CLOSE(lnx_ctx, if_sfd);
-
-		add_vif_data(vlan, vif_device);
-
-		/* Add the virtual interface to VLAN's bridge */
-		br_add_if(lnx_ctx, vlan, vif_device.ifindex);
+		/* Add access mode interfaces to the new VLAN */
+		if (if_data->mode == IF_MODE_ACCESS &&
+				if_data->access_vlan == vlan) {
+			br_add_if(lnx_ctx, vlan, if_data->device.ifindex);
+		}
 	}
 	mm_unlock(mm);
 
@@ -436,6 +466,39 @@ static int if_set_mode(struct switch_operations *sw_ops, int ifindex,
 	return ret;
 }
 
+static int if_set_port_vlan(struct switch_operations *sw_ops, int ifindex, int vlan)
+{
+	int ret = 0;
+	struct linux_context *lnx_ctx = SWLINUX_CTX(sw_ops);
+	struct if_data data;
+
+
+	/* Get interface data */
+	ret = get_if_data(ifindex, &data);
+	if (ret)
+		return ret;
+
+	/* Filter Routed and trunk interfaces */
+	if (data.mode != IF_MODE_ACCESS || data.device.type != IF_TYPE_SWITCHED)
+		return EINVAL;
+	if (data.access_vlan == vlan)
+		return 0;
+
+
+	/* Make sure the interface is not the previous bridge */
+	ret = br_remove_if(lnx_ctx, data.access_vlan, ifindex);
+
+	data.access_vlan = vlan;
+	del_if_data(ifindex);
+	set_if_data(ifindex, data);
+
+
+	/* Add the interface to the new only if the VLAN exists */
+	if (!has_vlan(vlan))
+		return 0;
+	return br_add_if(lnx_ctx, vlan, ifindex);
+}
+
 struct linux_context lnx_ctx = {
 	.sw_ops = (struct switch_operations) {
 		.backend_init	= linux_init,
@@ -447,12 +510,12 @@ struct linux_context lnx_ctx = {
 
 		.if_get_type	= if_get_type,
 		.if_set_mode	= if_set_mode,
+		.if_set_port_vlan = if_set_port_vlan,
 
 		.vlan_add	= vlan_add,
 		.vlan_del	= vlan_del,
 
 		.get_vlan_interfaces = get_vlan_interfaces,
-
 
 		.vif_add	= vif_add,
 		.vif_del	= vif_del,
