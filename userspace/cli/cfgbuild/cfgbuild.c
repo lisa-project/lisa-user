@@ -349,8 +349,6 @@ vlans:
 		fprintf(out, "!\n");
 		if (if_out != out)
 			fclose(if_out);
-		list_del(iter);
-		free(dev);
 	}
 
 static_mac:
