@@ -576,6 +576,8 @@ int cmd_sh_ip_igmps_mrouter(struct cli_context *ctx, int argc, char **argv, stru
 			fprintf(out, fmt3, "", buf.str);\
 		}\
 	} while(0)
+	/* Print mrouter interfaces grouped by vlan. FIXME - reduce complexity
+	 * (use a hashtable with vlan as value for example) */
 	for (vlan = min_vlan; vlan <= max_vlan; vlan++) {
 		struct comma_buffer buf = COMMA_BUFFER_INIT(62);
 		firstline = 1;
@@ -939,12 +941,7 @@ int cmd_show_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_no
 			continue;
 		int vlan = i;
 		int vlif_no;
-		int *interfaces = malloc(sizeof(int) * INITIAL_BUF_SIZE);
-		if (!interfaces) {
-			EX_STATUS_PERROR(ctx, "alloc vlan ports array");
-			ret = CLI_EX_WARNING;
-			goto out_clean;
-		}
+		int *interfaces;
 
 		status = sw_ops->get_vlan_interfaces(sw_ops, vlan, &interfaces,
 				&vlif_no);
