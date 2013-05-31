@@ -139,9 +139,9 @@ int build_int_eth_config(FILE *out, char *if_name, int put_if_cmd) {
 	if(need_trunk_vlans)
 		list_vlans(bmp, out);
 	/* switchport mode */
-	if(ioctl_arg.ext.cfg.flags & SW_PFL_ACCESS)
+	if(ioctl_arg.ext.cfg.flags & IF_MODE_ACCESS)
 		fprintf(out, " switchport mode access\n");
-	if(ioctl_arg.ext.cfg.flags & SW_PFL_TRUNK)
+	if(ioctl_arg.ext.cfg.flags & IF_MODE_TRUNK)
 		fprintf(out, " switchport mode trunk\n");
 	/* speed */
 	if(ioctl_arg.ext.cfg.speed != SW_SPEED_AUTO) {

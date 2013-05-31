@@ -104,9 +104,9 @@ int build_config_interface(struct cli_context *ctx, FILE *out, struct net_switch
 		if(need_trunk_vlans)
 			list_vlans(out, bmp);
 		/* switchport mode */
-		if(flags & SW_PFL_ACCESS)
+		if(flags & IF_MODE_ACCESS)
 			fprintf(out, " switchport mode access\n");
-		if(flags & SW_PFL_TRUNK)
+		if(flags & IF_MODE_TRUNK)
 			fprintf(out, " switchport mode trunk\n");
 	}
 
