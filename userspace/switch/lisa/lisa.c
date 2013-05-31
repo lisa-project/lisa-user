@@ -24,6 +24,16 @@
 #include "util_lisa.h"
 #include "lisa.h"
 
+/* In kernel vlan bitmap is kept as forbidden vlan bitmap, so inverse bitmap */
+#define inverse_bitmap(vlans)					\
+	do {							\
+		if ((vlans)) {					\
+			int i;					\
+			for (i = 0; i < SW_VLAN_BMP_NO; i++)	\
+				vlans[i] = ~vlans[i];		\
+		}						\
+	}while(0)
+
 static int backend_init(struct switch_operations *sw_ops)
 {
 	return 0;
@@ -162,6 +172,8 @@ static int if_add_trunk_vlans(struct switch_operations *sw_ops,
 	struct swcfgreq swcfgr;
 	struct lisa_context *lc = SWLiSA_CTX(sw_ops);
 
+	inverse_bitmap(vlans);
+
 	swcfgr.cmd = SWCFG_ADDTRUNKVLANS;
 	swcfgr.ifindex = ifindex;
 	swcfgr.ext.bmp = vlans;
@@ -179,6 +191,8 @@ static int if_set_trunk_vlans(struct switch_operations *sw_ops,
 	int rc, sock_fd;
 	struct swcfgreq swcfgr;
 	struct lisa_context *lc = SWLiSA_CTX(sw_ops);
+
+	inverse_bitmap(vlans);
 
 	swcfgr.cmd = SWCFG_SETTRUNKVLANS;
 	swcfgr.ifindex = ifindex;
@@ -231,6 +245,8 @@ static int if_del_trunk_vlans(struct switch_operations *sw_ops,
 	int rc, sock_fd;
 	struct swcfgreq swcfgr;
 	struct lisa_context *lc = SWLiSA_CTX(sw_ops);
+
+	inverse_bitmap(vlans);
 
 	swcfgr.cmd = SWCFG_DELTRUNKVLANS;
 	swcfgr.ifindex = ifindex;
@@ -343,6 +359,7 @@ static int get_vlan_interfaces(struct switch_operations *sw_ops, int vlan,
 	free(swcfgr.buf.addr);
 	return 0;
 }
+
 static int get_vdb(struct switch_operations *sw_ops, unsigned char *vlans)
 {
 	int rc, sock_fd;
@@ -359,11 +376,15 @@ static int get_vdb(struct switch_operations *sw_ops, unsigned char *vlans)
 	rc = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
 	SW_SOCK_CLOSE(lc, sock_fd);
 
+	inverse_bitmap(vlans);
+
 	return rc;
 }
-static int if_get_cfg (struct switch_operations *sw_ops, int ifindex, int *flags,int *access_vlan, unsigned char *vlans)
+
+static int if_get_cfg (struct switch_operations *sw_ops, int ifindex,
+		int *flags,int *access_vlan, unsigned char *vlans)
 {
-	int rc, sock_fd, i;
+	int rc, sock_fd;
 	struct swcfgreq swcfgr;
 	struct lisa_context *lc = SWLiSA_CTX(sw_ops);
 
@@ -381,10 +402,8 @@ static int if_get_cfg (struct switch_operations *sw_ops, int ifindex, int *flags
 	*flags = swcfgr.ext.cfg.flags;
 	*access_vlan = swcfgr.ext.cfg.access_vlan;
 
-	if (vlans)
-		for (i = 0; i < SW_VLAN_BMP_NO ; i++){
-			vlans[i] = ~vlans[i];
-		}
+	inverse_bitmap(vlans);
+
 	return rc;
 
 }
@@ -499,7 +518,8 @@ static int mrouters_get(struct switch_operations *sw_ops, int vlan,
 	return 0;
 }
 int get_mac(struct switch_operations *sw_ops, int ifindex, int vlan,
-			int mac_type,unsigned char *mac_addr, struct list_head *macs)
+			int mac_type, unsigned char *mac_addr,
+			struct list_head *macs)
 {
 	int sock_fd, vlif_no, i;
 	struct net_switch_mac_e *entry;

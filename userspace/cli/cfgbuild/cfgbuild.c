@@ -307,15 +307,20 @@ vlans:
 	}
 	else
 		for (i = SW_MIN_VLAN, j = 0; i < SW_MAX_VLAN; i++) {
-			if (!sw_bitmap_test(vlans, i))
+			if (!sw_allowed_vlan(vlans, i))
 				continue;
 			if (sw_is_default_vlan(i))
 				continue;
 			fprintf(out, "!\nvlan %d\n", i);
-			switch_get_vlan_desc(i, vlan_name);
-			__default_vlan_name(def_name, i);
-			if (strcmp(vlan_name, def_name))
-				fprintf(out, " name %s\n", vlan_name);
+
+			memset(vlan_name, 0, SW_MAX_VLAN_NAME);
+			status = switch_get_vlan_desc(i, vlan_name);
+			if (!status) {
+				__default_vlan_name(def_name, i);
+				if (strcmp(vlan_name, def_name))
+					fprintf(out, " name %s\n", vlan_name);
+			}
+
 			j++;
 		}
 

@@ -937,18 +937,19 @@ int cmd_show_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_no
 	fprintf(out, fmt1, DASHES(4), DASHES(32), DASHES(9), DASHES(31));
 
 	for (i = min_vlan; i <= max_vlan; i++) {
-		if (!sw_bitmap_test(vlans, i))
+		if (!sw_allowed_vlan(vlans, i))
 			continue;
 		int vlan = i;
 		int vlif_no;
-		int *interfaces;
+		int *interfaces = NULL;
 
 		status = sw_ops->get_vlan_interfaces(sw_ops, vlan, &interfaces,
 				&vlif_no);
 		if (status < 0 || vlif_no < 0) {
 			EX_STATUS_PERROR(ctx, "getvlanif");
 			ret = CLI_EX_WARNING;
-			free(interfaces);
+			if (interfaces != NULL)
+				free(interfaces);
 			goto out_clean;
 		}
 		struct net_switch_device *nsdev;
