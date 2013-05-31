@@ -11,7 +11,7 @@ SUBDIRS = \
 	$(TOP_DIR)/test
 
 ifeq ($(IMPL), lisa)
-SUBDIRES +=
+SUBDIRS += \
 	$(TOP_DIR)/cdpd    \
 	$(TOP_DIR)/rstp
 endif
