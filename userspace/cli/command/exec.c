@@ -535,19 +535,22 @@ int cmd_sh_ip_igmps_mrouter(struct cli_context *ctx, int argc, char **argv, stru
 {
 	FILE *out;
 	int ret = CLI_EX_OK, sock_fd = -1;
-	int vlan = 0;
+	int vlan = 0, min_vlan = SW_MIN_VLAN, max_vlan = SW_MAX_VLAN;
 	struct list_head mrouters;
 	struct net_switch_mrouter_e *entry, *tmp;
 	int status;
 
 	const char *fmt1 = "%-4s    %s\n";
 	const char *fmt2 = "%4d    %s(static)\n";
+	const char *fmt3 = "%4s    %s\n";
 	char ifname[IFNAMSIZ];
+	int firstline;
 
 	SHIFT_ARG(argc, argv, nodev, 5);
 	if (argc) {
 		assert(argc > 1);
 		vlan = atoi(argv[1]);
+		min_vlan = max_vlan = vlan;
 	}
 	out = ctx->out_open(ctx, 1);
 
@@ -565,14 +568,40 @@ int cmd_sh_ip_igmps_mrouter(struct cli_context *ctx, int argc, char **argv, stru
 	fprintf(out, fmt1, "Vlan", "Ports");
 	fprintf(out, fmt1, DASHES(4), DASHES(8));
 
-	list_for_each_entry_safe(entry, tmp, &mrouters, lh) {
-		if_get_name(entry->ifindex, sock_fd, ifname);
-		fprintf(out, fmt2, entry->vlan, ifname);
+#define print_buf \
+	do {\
+		if (firstline) {\
+			fprintf(out, fmt2, vlan, buf.str); \
+		} else {\
+			fprintf(out, fmt3, "", buf.str);\
+		}\
+	} while(0)
+	for (vlan = min_vlan; vlan <= max_vlan; vlan++) {
+		struct comma_buffer buf = COMMA_BUFFER_INIT(62);
+		firstline = 1;
+		list_for_each_entry(entry, &mrouters, lh) {
+			if (entry->vlan != vlan)
+				continue;
+			if_get_name(entry->ifindex, sock_fd, ifname);
+			if (comma_buffer_append(&buf, ifname)) {
+				int tmp;
 
+				print_buf;
+				firstline = 0;
+				tmp = comma_buffer_reset(&buf, ifname);
+				assert(!tmp);
+			}
+		}
+		if (buf.offset > 0)
+			print_buf;
+	}
+#undef print_buf
+	SW_SOCK_CLOSE(ctx, sock_fd);
+
+	list_for_each_entry_safe(entry, tmp, &mrouters, lh) {
 		list_del(&entry->lh);
 		free(entry);
 	}
-	SW_SOCK_CLOSE(ctx, sock_fd);
 
 close_out:
 	fclose(out);
@@ -917,7 +946,7 @@ int cmd_show_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_no
 			goto out_clean;
 		}
 
-		status = sw_ops->get_vlan_interfaces(sw_ops, vlan, interfaces,
+		status = sw_ops->get_vlan_interfaces(sw_ops, vlan, &interfaces,
 				&vlif_no);
 		if (status < 0 || vlif_no < 0) {
 			EX_STATUS_PERROR(ctx, "getvlanif");

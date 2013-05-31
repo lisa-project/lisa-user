@@ -713,11 +713,6 @@ int main(int argc, char **argv) {
 		int no_ifs = 0;
 		int i;
 
-		if (!interfaces) {
-			perror("Couldn't allocate buffer for interfaces\n");
-			return -1;
-		}
-
 		user_arg.vlan = atoi(argv[2]);
 		status = sw_ops->get_vlan_interfaces(sw_ops, user_arg.vlan,
 					&interfaces, &no_ifs);
