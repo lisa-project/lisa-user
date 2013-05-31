@@ -111,6 +111,27 @@ struct if_data {
 };
 
 /* Temporarily copied from include/linux/net_switch.h */
+/* Minimum number a vlan may have */
+#define SW_MIN_VLAN 1
+
+/* Maximum number a vlan may have. Note that vlan-related vectors
+   must be at least SW_MAX_VLAN + 1 sized, because SW_MAX_VLAN
+   should be a valid index.
+ */
+#define SW_MAX_VLAN 4094
+
+/* Number of octet bitmaps that are necessary to store binary
+   information about vlans (i.e. allowed or forbidden on a certain
+   port).
+ */
+#define SW_VLAN_BMP_NO (SW_MAX_VLAN / 8 + 1)
+
+#define sw_valid_vlan(vlan) \
+	((vlan) >= SW_MIN_VLAN && (vlan) <= SW_MAX_VLAN)
+#define sw_invalid_vlan(vlan) \
+	((vlan) < SW_MIN_VLAN || (vlan) > SW_MAX_VLAN)
+#define sw_is_default_vlan(vlan) \
+	((vlan) == 1 || ((vlan) >= 1002 && (vlan) <= 1005))
 #define sw_bitmap_reset(bitmap, offset) ((bitmap)[(offset) / 8] &= ~(1 << ((offset) % 8)))
 #define sw_bitmap_set(bitmap, offset)	((bitmap)[(offset) / 8] |= (1 << ((offset) % 8)))
 #define sw_bitmap_test(bitmap, offset)	((bitmap)[(offset) / 8] & (1 << ((offset) % 8)))
