@@ -17,7 +17,6 @@
  */
 
 #include <linux/sockios.h>
-#include <linux/net_switch.h>
 
 #include <errno.h>
 #include <stdio.h>
@@ -194,9 +193,7 @@ void usage(void) {
 
 int main(int argc, char **argv) {
 	int sock;
-	int status, size;
-	struct swcfgreq user_arg;
-	char *buf;
+	int status;
 
 	if (argc < 2) {
 		usage();
@@ -294,16 +291,16 @@ int main(int argc, char **argv) {
 			usage();
 			return 0;
 		}
+		int vlan = atoi(argv[2]);
 
-		user_arg.vlan = atoi(argv[2]);
-		status = sw_ops->vlan_add(sw_ops, user_arg.vlan);
+		status = sw_ops->vlan_add(sw_ops, vlan);
 		if (status)
 			perror("addvlan failed");
 		char vlan_desc[SW_MAX_VLAN_NAME + 1];
-		__default_vlan_name(vlan_desc, user_arg.vlan);
-		status = switch_set_vlan_desc(user_arg.vlan, vlan_desc);
+		__default_vlan_name(vlan_desc, vlan);
+		status = switch_set_vlan_desc(vlan, vlan_desc);
 		if (status) {
-			sw_ops->vlan_del(sw_ops, user_arg.vlan);
+			sw_ops->vlan_del(sw_ops, vlan);
 			perror("addvlan failed");
 			return -1;
 		}
@@ -316,11 +313,11 @@ int main(int argc, char **argv) {
 			return 0;
 		}
 
-		user_arg.vlan = atoi(argv[2]);
-		status = sw_ops->vlan_del(sw_ops, user_arg.vlan);
+		int vlan = atoi(argv[2]);
+		status = sw_ops->vlan_del(sw_ops, vlan);
 		if (status)
 			perror("delvlan failed");
-		status = switch_del_vlan_desc(user_arg.vlan);
+		status = switch_del_vlan_desc(vlan);
 		if (status)
 			perror("del vlan desc failed");
 		return 0;
@@ -347,9 +344,9 @@ int main(int argc, char **argv) {
 
 		parse_vlan_list(argv[3], vlans);
 
-		user_arg.ifindex = if_get_index(argv[2], sock);
+		int ifindex = if_get_index(argv[2], sock);
 		status = sw_ops->if_set_trunk_vlans(sw_ops,
-				user_arg.ifindex, vlans);
+				ifindex, vlans);
 
 		if (status)
 			perror("settrunkvlans failed");
@@ -366,9 +363,9 @@ int main(int argc, char **argv) {
 
 		parse_vlan_list(argv[3], vlans);
 
-		user_arg.ifindex = if_get_index(argv[2], sock);
+		int ifindex = if_get_index(argv[2], sock);
 		status = sw_ops->if_add_trunk_vlans(sw_ops,
-				user_arg.ifindex, vlans);
+				ifindex, vlans);
 
 		if (status)
 			perror("addtrunkvlans failed");
@@ -385,9 +382,9 @@ int main(int argc, char **argv) {
 
 		parse_vlan_list(argv[3], vlans);
 
-		user_arg.ifindex = if_get_index(argv[2], sock);
+		int ifindex = if_get_index(argv[2], sock);
 		status = sw_ops->if_del_trunk_vlans(sw_ops,
-				user_arg.ifindex, vlans);
+				ifindex, vlans);
 
 		if (status)
 			perror("deltrunkvlans failed");
@@ -431,13 +428,15 @@ int main(int argc, char **argv) {
 		unsigned char vlans[SW_VLAN_BMP_NO];
 		int flags, access_vlan, i;
 
-		user_arg.ifindex = if_get_index(argv[2], sock);
+		int ifindex = if_get_index(argv[2], sock);
 		status = sw_ops->if_get_cfg(sw_ops,
-				user_arg.ifindex, &flags, &access_vlan,
+				ifindex, &flags, &access_vlan,
 					vlans);
 
 		if (status)
 			perror("ifgetcfg failed");
+
+		printf("Flags %d\n, access_vlan %d", flags, access_vlan);
 
 		printf("ALLOWED VLANS: ");
 
@@ -459,9 +458,9 @@ int main(int argc, char **argv) {
 			usage();
 			return 0;
 		}
-		user_arg.ifindex = if_get_index(argv[2], sock);
+		int ifindex = if_get_index(argv[2], sock);
 		status = sw_ops->if_set_mode(sw_ops,
-				user_arg.ifindex, IF_MODE_TRUNK, atoi(argv[3]));
+				ifindex, IF_MODE_TRUNK, atoi(argv[3]));
 
 		if (status)
 			perror("settrunk failed");
@@ -473,9 +472,9 @@ int main(int argc, char **argv) {
 			usage();
 			return 0;
 		}
-		user_arg.ifindex = if_get_index(argv[2], sock);
+		int ifindex = if_get_index(argv[2], sock);
 		status = sw_ops->if_set_mode(sw_ops,
-				user_arg.ifindex, IF_MODE_ACCESS, atoi(argv[3]));
+				ifindex, IF_MODE_ACCESS, atoi(argv[3]));
 
 		if (status)
 			perror("settrunk failed");
@@ -487,10 +486,10 @@ int main(int argc, char **argv) {
 			usage();
 			return 0;
 		}
-		user_arg.ifindex = if_get_index(argv[2], sock);
-		user_arg.vlan = atoi(argv[3]);
+		int ifindex = if_get_index(argv[2], sock);
+		int vlan = atoi(argv[3]);
 		status = sw_ops->if_set_port_vlan(sw_ops,
-				user_arg.ifindex, user_arg.vlan);
+				ifindex, vlan);
 		if (status)
 			perror("setportvlan failed");
 		return 0;
@@ -501,10 +500,9 @@ int main(int argc, char **argv) {
 			usage();
 			return 0;
 		}
-		user_arg.ifindex = if_get_index(argv[2], sock);
-		user_arg.vlan = atoi(argv[3]);
-		status = sw_ops->vlan_del_mac_dynamic(sw_ops, user_arg.ifindex,
-				user_arg.vlan);
+		int ifindex = if_get_index(argv[2], sock);
+		int vlan = atoi(argv[3]);
+		status = sw_ops->vlan_del_mac_dynamic(sw_ops, ifindex, vlan);
 		if (status)
 			perror("No dynamic mac address found");
 		return 0;	
@@ -515,11 +513,13 @@ int main(int argc, char **argv) {
 			usage();
 			return 0;
 		}
-		user_arg.ifindex = if_get_index(argv[2], sock);
-		user_arg.vlan = atoi(argv[3]);
-		parse_hw_addr(argv[4], user_arg.ext.mac.addr);
-		status = sw_ops->vlan_set_mac_static(sw_ops, user_arg.ifindex,
-				user_arg.vlan,user_arg.ext.mac.addr);
+		int ifindex = if_get_index(argv[2], sock);
+		int vlan = atoi(argv[3]);
+		unsigned char addr[ETH_ALEN];
+
+		parse_hw_addr(argv[4], addr);
+		status = sw_ops->vlan_set_mac_static(sw_ops, ifindex,
+				vlan, addr);
 		if (status)
 			perror("macstatic failed");
 		return 0;
@@ -530,11 +530,13 @@ int main(int argc, char **argv) {
 			usage();
 			return 0;
 		}
-		user_arg.ifindex = if_get_index(argv[2], sock);
-		user_arg.vlan = atoi(argv[3]);
-		parse_hw_addr(argv[4], user_arg.ext.mac.addr);
-		status = sw_ops->vlan_del_mac_static(sw_ops, user_arg.ifindex,
-				user_arg.vlan,user_arg.ext.mac.addr);
+		int ifindex = if_get_index(argv[2], sock);
+		int vlan = atoi(argv[3]);
+		unsigned char addr[ETH_ALEN];
+
+		parse_hw_addr(argv[4], addr);
+		status = sw_ops->vlan_del_mac_static(sw_ops, ifindex,
+				vlan, addr);
 		if (status)
 			perror("delmacstatic failed");
 		return 0;
@@ -553,10 +555,11 @@ int main(int argc, char **argv) {
 		struct net_switch_mac_e *entry;
 
 		mac_type = atoi(argv[4]);
-		user_arg.ifindex = if_get_index(argv[2], sock);
-		user_arg.vlan = atoi(argv[3]);
+		int ifindex = if_get_index(argv[2], sock);
+		int vlan = atoi(argv[3]);
+		unsigned char addr[ETH_ALEN];
 		if (strcmp(argv[5], "no_address"))
-		parse_hw_addr(argv[5], user_arg.ext.mac.addr);
+		parse_hw_addr(argv[5], addr);
 
 		switch(mac_type){
 		case 0:
@@ -579,11 +582,11 @@ int main(int argc, char **argv) {
 		INIT_LIST_HEAD(&macs);
 
 		if (!strcmp(argv[5], "no_address"))
-			status = sw_ops->get_mac(sw_ops, user_arg.ifindex,
-				user_arg.vlan, mac_type, NULL, &macs);
+			status = sw_ops->get_mac(sw_ops, ifindex,
+				vlan, mac_type, NULL, &macs);
 		else
-			status = sw_ops->get_mac(sw_ops, user_arg.ifindex,
-				user_arg.vlan, mac_type, user_arg.ext.mac.addr, 				&macs);
+			status = sw_ops->get_mac(sw_ops, ifindex,
+				vlan, mac_type, addr, &macs);
 
 		if(status < 0)
 			return -1;
@@ -616,12 +619,12 @@ int main(int argc, char **argv) {
 		}
 		int interface;
 
-		user_arg.vlan = atoi(argv[2]);
-		status = sw_ops->vif_add(sw_ops, user_arg.vlan, &interface);
+		int vlan = atoi(argv[2]);
+		status = sw_ops->vif_add(sw_ops, vlan, &interface);
 
 		if (status)
 			perror("addvif failed");
-		printf("[vlan] %d\t[vif_index] %d\n",user_arg.vlan, interface);
+		printf("[vlan] %d\t[vif_index] %d\n", vlan, interface);
 
 		return 0;
 	}
@@ -631,45 +634,12 @@ int main(int argc, char **argv) {
 			usage();
 			return 0;
 		}
-		user_arg.vlan = atoi(argv[2]);
-		status = sw_ops->vif_del(sw_ops, user_arg.vlan);
+		int vlan = atoi(argv[2]);
+		status = sw_ops->vif_del(sw_ops, vlan);
 
 		if (status)
 			perror("delvif failed");
-		printf("Succesfully deleted [vif] %d\n", user_arg.vlan);
-		return 0;
-	}
-
-	if (!strcmp(argv[1], "showmac")) {
-		buf = (char *)malloc(INITIAL_BUF_SIZE);
-		size = INITIAL_BUF_SIZE;
-		assert(buf);
-		user_arg.ifindex = 0;
-		user_arg.cmd = SWCFG_GETMAC;
-		memset(user_arg.ext.mac.addr, 0, ETH_ALEN);
-		user_arg.ext.mac.type = SW_FDB_ANY;
-		user_arg.vlan = 0;
-
-		do {
-			user_arg.buf.size = size;
-			user_arg.buf.addr = buf;
-			status = ioctl(sock, SIOCSWCFG, &user_arg);
-			printf("status %d\n", status);
-			if (status == -1) {
-				if (errno == ENOMEM) {
-					printf("Insufficient buffer space. Realloc'ing ... \n");
-					buf = realloc(buf, size+INITIAL_BUF_SIZE);
-					assert(buf);
-					size += INITIAL_BUF_SIZE;
-					continue;
-				}
-				perror("ioctl");
-				return (-1);
-			}
-		} while (status < 0);
-		/* the ioctl return value is actually the result size */
-		print_mac(stdout, (void *)&user_arg, status, NULL, NULL);
-		
+		printf("Succesfully deleted [vif] %d\n", vlan);
 		return 0;
 	}
 
@@ -678,10 +648,9 @@ int main(int argc, char **argv) {
 			usage();
 			return 0;
 		}
-		int type, ifvlan;
-		user_arg.ifindex = if_get_index(argv[2], sock);
+		int type, ifvlan, ifindex = if_get_index(argv[2], sock);
 		status = sw_ops->if_get_type(sw_ops,
-				user_arg.ifindex, &type, &ifvlan);
+				ifindex, &type, &ifvlan);
 		if (status < 0) {
 			printf("getting if type failed\n");
 			return status;
@@ -710,11 +679,10 @@ int main(int argc, char **argv) {
 			return 0;
 		}
 		int *interfaces;
-		int no_ifs = 0;
-		int i;
+		int i, vlan, no_ifs = 0;
 
-		user_arg.vlan = atoi(argv[2]);
-		status = sw_ops->get_vlan_interfaces(sw_ops, user_arg.vlan,
+		vlan = atoi(argv[2]);
+		status = sw_ops->get_vlan_interfaces(sw_ops, vlan,
 					&interfaces, &no_ifs);
 
 		if (status < 0) {
@@ -900,12 +868,14 @@ int main(int argc, char **argv) {
 
 	if (!strcmp(argv[1], "igmpget")) {
 		int snoop;
-		int status = sw_ops->igmp_get(sw_ops, NULL, &snoop);
+		char buff[1024];
+		int status = sw_ops->igmp_get(sw_ops, buff, &snoop);
 		printf("IGMP is ");
 		if (snoop)
 			printf("on\n");
 		else
 			printf("off\n");
+		printf("Buff: %s\n", buff);
 
 		return status;
 	}

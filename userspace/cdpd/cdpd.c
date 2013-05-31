@@ -54,7 +54,6 @@ static const char *cdp_field_name(unsigned short type) {
  * if_name for the switch socket bind().
  */
 static int setup_switch_socket(int fd, char *ifname) {
-	/*
 	struct sockaddr_sw addr;
 
 	memset(&addr, 0, sizeof(addr));
@@ -67,7 +66,6 @@ static int setup_switch_socket(int fd, char *ifname) {
 		return -1;
 	}
 	fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0) | O_NONBLOCK);
-	*/
 	return 0;
 }
 

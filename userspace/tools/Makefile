@@ -1,6 +1,13 @@
 TOP_DIR = ..
 
+include $(TOP_DIR)/scripts/Makefile.variables
+ifeq ($(IMPL), lisa)
 CFLAGS	= -DLiSA
+endif
+
+ifeq ($(IMPL), linux)
+CFLAGS 	+= -DLinux
+endif
 
 ifneq ($(MAKECMDGOALS), clean)
 $(info ********* Building testing tools *********)

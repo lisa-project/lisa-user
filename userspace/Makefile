@@ -8,9 +8,13 @@ SUBDIRS = \
 	$(TOP_DIR)/lib     \
 	$(TOP_DIR)/cli     \
 	$(TOP_DIR)/tools   \
-	$(TOP_DIR)/cdpd    \
-	$(TOP_DIR)/rstp    \
 	$(TOP_DIR)/test
+
+ifeq ($(IMPL), lisa)
+SUBDIRES +=
+	$(TOP_DIR)/cdpd    \
+	$(TOP_DIR)/rstp
+endif
 
 DEPFILE = lisa.dep
 
