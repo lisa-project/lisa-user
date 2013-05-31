@@ -25,7 +25,6 @@
 #include <sys/socket.h>
 
 #include <linux/netdevice.h>
-#include <linux/net_switch.h>
 #include <linux/sockios.h>
 
 #include <ctype.h>

@@ -9,7 +9,6 @@
 
 #include <linux/if.h>
 #include <linux/netdevice.h>
-#include <linux/net_switch.h>
 
 #include "swsock.h"
 #include "interface.h"

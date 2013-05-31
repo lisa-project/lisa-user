@@ -5,7 +5,7 @@
 static int parse_vlan_list(char *list, unsigned char *bmp)
 {
 	int state = 0;
-	int min, max;
+	int min = 0, max;
 	char *last = list, *ptr;
 
 	memset(bmp, 0xff, SW_VLAN_BMP_NO);

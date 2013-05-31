@@ -22,7 +22,6 @@
 
 #include <linux/if.h>
 #include <linux/if_ether.h>
-#include <linux/net_switch.h>
 #include <linux/sockios.h>
 #include <stdio.h>
 #include <errno.h>

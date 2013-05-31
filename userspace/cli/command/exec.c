@@ -216,7 +216,7 @@ int cmd_sh_mac_addr_t(struct cli_context *ctx, int argc, char **argv, struct men
 		 * have the same ifindex and if_get_name fallback is enough;
 		 * otherwise fetch interface list from kernel and init hash */
 		if (!ifindex) {
-			status = if_map_fetch(&if_map, SW_IF_SWITCHED);
+			status = if_map_fetch(&if_map, IF_TYPE_SWITCHED);
 			assert(!status);
 			status = if_map_init_ifindex_hash(&if_map);
 			assert(!status);
@@ -504,7 +504,7 @@ int cmd_sh_int(struct cli_context *ctx, int argc, char **argv, struct menu_node 
 		list_add_tail(&dev->lh, &if_map.dev);
 	}
 	else
-		if_map_fetch(&if_map, SW_IF_SWITCHED | SW_IF_ROUTED | SW_IF_VIF);
+		if_map_fetch(&if_map, IF_TYPE_SWITCHED | IF_TYPE_ROUTED | IF_TYPE_VIF);
 
 	err = show_interfaces(ctx, sock_fd, &if_map);
 
@@ -783,7 +783,7 @@ int cmd_sh_ip_igmps_groups(struct cli_context *ctx, int argc, char **argv, struc
 	}
 
 	/* Build ifindex => ifname hash */
-	status = if_map_fetch(&if_map, SW_IF_SWITCHED);
+	status = if_map_fetch(&if_map, IF_TYPE_SWITCHED);
 	if (status) {
 		EX_STATUS_PERROR(ctx, "if_map_fetch failed");
 		ret = CLI_EX_WARNING;
@@ -892,7 +892,7 @@ int cmd_show_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_no
 	SW_SOCK_OPEN(ctx, sock_fd);
 
 	if_map_init(&if_map);
-	status = if_map_fetch(&if_map, SW_IF_SWITCHED);
+	status = if_map_fetch(&if_map, IF_TYPE_SWITCHED);
 	if (status) {
 		EX_STATUS_PERROR(ctx, "if_map_fetch failed");
 		ret = CLI_EX_REJECTED;

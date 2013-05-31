@@ -110,6 +110,32 @@ struct if_data {
 	struct mm_list_head lh;
 };
 
+/* FDB entry type flags */
+#define SW_FDB_STATIC 0x01
+#define SW_FDB_IGMP   0x02
+
+/* Possible types of FDB entries.
+ *
+ * For granular selection of fdb entry types, both a mask and a check
+ * value are needed. For each entry, the entry type is bitwise-anded
+ * with the mask and the result is tested against the check value.
+ *
+ * For ease of use, both the mask and check value are combined into a
+ * single int. Since entry type is unsigned char, 8 bits are required
+ * for mask and check value. When combined into an int, mask is shifted
+ * left by 8 bits.
+ */
+enum {
+	/*                      Mask									Value */
+	SW_FDB_ANY = 0,
+	SW_FDB_MAC_ANY =		(SW_FDB_IGMP << 8) 						| 0x00,
+	SW_FDB_MAC_STATIC =		((SW_FDB_IGMP | SW_FDB_STATIC) << 8)	| SW_FDB_STATIC,
+	SW_FDB_MAC_DYNAMIC =	((SW_FDB_IGMP | SW_FDB_STATIC) << 8)	| 0x00,
+	SW_FDB_IGMP_ANY =		(SW_FDB_IGMP << 8)						| SW_FDB_IGMP,
+	SW_FDB_IGMP_STATIC =	((SW_FDB_IGMP | SW_FDB_STATIC) << 8)	| SW_FDB_IGMP | SW_FDB_STATIC,
+	SW_FDB_IGMP_DYNAMIC =	((SW_FDB_IGMP | SW_FDB_STATIC) << 8)	| SW_FDB_IGMP
+};
+
 /* Temporarily copied from include/linux/net_switch.h */
 /* Minimum number a vlan may have */
 #define SW_MIN_VLAN 1
@@ -119,6 +145,7 @@ struct if_data {
    should be a valid index.
  */
 #define SW_MAX_VLAN 4094
+#define SW_DEFAULT_AGE_TIME 300
 
 /* Number of octet bitmaps that are necessary to store binary
    information about vlans (i.e. allowed or forbidden on a certain

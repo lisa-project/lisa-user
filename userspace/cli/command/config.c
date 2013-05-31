@@ -351,11 +351,11 @@ static int cmd_no_int_any(struct cli_context *ctx, int argc, char **argv, struct
 		return CLI_EX_REJECTED;
 	}
 
-	if (iftype == SW_IF_VIF)
+	if (iftype == IF_TYPE_VIF)
 		return remove_if_vlan(ctx, ifvlan, ifr.ifr_ifindex);
 
 	return remove_if_ether(ctx, ifr.ifr_name, ifr.ifr_ifindex,
-			iftype != SW_IF_ROUTED);
+			iftype != IF_TYPE_ROUTED);
 }
 
 int cmd_int_any(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
@@ -417,11 +417,11 @@ int cmd_int_any(struct cli_context *ctx, int argc, char **argv, struct menu_node
 		return CLI_EX_REJECTED;
 	}
 
-	if (iftype == SW_IF_VIF)
+	if (iftype == IF_TYPE_VIF)
 		return use_if_vlan(ctx, ifvlan, ifr.ifr_ifindex);
 
 	return use_if_ether(ctx, ifr.ifr_name, ifr.ifr_ifindex,
-			iftype != SW_IF_ROUTED);
+			iftype != IF_TYPE_ROUTED);
 }
 
 int cmd_linevty(struct cli_context *__ctx, int argc, char **argv, struct menu_node **nodev)

@@ -203,7 +203,7 @@ int if_parse_args(char **argv, struct menu_node **nodev, char *name, int *n);
 		SW_SOCK_CLOSE(__ctx, __sock_fd);\
 		return CLI_EX_REJECTED;\
 	}\
-	if (__type == SW_IF_NONE) {\
+	if (__type == IF_TYPE_NONE) {\
 		EX_STATUS_REASON(__ctx, "interface %s not in switch", __name);\
 		SW_SOCK_CLOSE(__ctx, __sock_fd);\
 		return CLI_EX_REJECTED;\

@@ -69,8 +69,8 @@ int build_config_interface(struct cli_context *ctx, FILE *out, struct net_switch
 	}
 
 	switch (nsdev->type) {
-	case SW_IF_SWITCHED:
-	case SW_IF_ROUTED:
+	case IF_TYPE_SWITCHED:
+	case IF_TYPE_ROUTED:
 		status = sw_ops->if_get_cfg(sw_ops, nsdev->ifindex, &flags,
 				&access_vlan, bmp);
 		if (status == -1) {
@@ -84,7 +84,7 @@ int build_config_interface(struct cli_context *ctx, FILE *out, struct net_switch
 			fprintf(out, " description %s\n", desc);
 	}
 	
-	if (nsdev->type == SW_IF_SWITCHED) {
+	if (nsdev->type == IF_TYPE_SWITCHED) {
 		/* switchport access vlan */
 		if(access_vlan != 1)
 			fprintf(out, " switchport access vlan %d\n",
@@ -114,7 +114,7 @@ int build_config_interface(struct cli_context *ctx, FILE *out, struct net_switch
 	 * is there any way to determine if a speed/duplex was enforced or
 	 * auto-negociated? it's not ok to issue a "speed 10" command
 	 * if the speed was auto-negociated. Ionut, any thoughts on this?
-	if (nsdev->type == SW_IF_SWITCHED || nsdev->type == SW_IF_ROUTED) {
+	if (nsdev->type == IF_TYPE_SWITCHED || nsdev->type == IF_TYPE_ROUTED) {
 		/ * speed * /
 		if(swcfgr.ext.cfg.speed != SW_SPEED_AUTO) {
 			char *speed = NULL;
@@ -165,7 +165,7 @@ next:
 
 		assert(ins != -1);
 
-		if (nsdev->type != SW_IF_VIF && nsdev->type != SW_IF_ROUTED)
+		if (nsdev->type != IF_TYPE_VIF && nsdev->type != IF_TYPE_ROUTED)
 			break;
 		if (if_get_addr(nsdev->ifindex, AF_INET, &addrl, NULL))
 			break;
@@ -320,7 +320,7 @@ vlans:
 		}
 
 	/* physical interfaces and VIFs */
-	status = if_map_fetch(&if_map, SW_IF_SWITCHED | SW_IF_ROUTED | SW_IF_VIF);
+	status = if_map_fetch(&if_map, IF_TYPE_SWITCHED | IF_TYPE_ROUTED | IF_TYPE_VIF);
 	if (status) {
 		EX_STATUS_PERROR(ctx, "if_map_fetch failed");
 		ret = CLI_EX_WARNING;

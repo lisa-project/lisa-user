@@ -51,14 +51,14 @@ char *canonical_if_name(struct net_switch_device *nsdev)
 		return NULL;
 
 	switch (nsdev->type) {
-	case SW_IF_SWITCHED:
-	case SW_IF_ROUTED:
+	case IF_TYPE_SWITCHED:
+	case IF_TYPE_ROUTED:
 		if ((n = if_parse_ethernet(nsdev->name)) >= 0)
 			status = asprintf(&ret, "Ethernet %d", n);
 		else
 			status = asprintf(&ret, "netdev %s", nsdev->name);
 		break;
-	case SW_IF_VIF:
+	case IF_TYPE_VIF:
 		status = asprintf(&ret, "vlan %d", nsdev->vlan);
 		break;
 	}
@@ -75,14 +75,14 @@ char *short_if_name(struct net_switch_device *nsdev)
 		return NULL;
 
 	switch (nsdev->type) {
-	case SW_IF_SWITCHED:
-	case SW_IF_ROUTED:
+	case IF_TYPE_SWITCHED:
+	case IF_TYPE_ROUTED:
 		if ((n = if_parse_ethernet(nsdev->name)) >= 0)
 			status = asprintf(&ret, "Et%d", n);
 		else
 			status = asprintf(&ret, "net %s", nsdev->name);
 		break;
-	case SW_IF_VIF:
+	case IF_TYPE_VIF:
 		status = asprintf(&ret, "vlan %d", nsdev->vlan);
 		break;
 	}
