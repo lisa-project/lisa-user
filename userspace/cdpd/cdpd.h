@@ -29,7 +29,6 @@
 #include <sys/wait.h>
 #include <sys/select.h>
 #include <sys/socket.h>
-#include <linux/net_switch.h>
 #include <linux/sockios.h>
 
 #include <errno.h>

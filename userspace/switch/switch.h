@@ -20,7 +20,6 @@
 #ifndef _SHARED_H
 #define _SHARED_H
 
-#include <linux/net_switch.h>
 
 #include "cdp_client.h"
 #include "rstp_client.h"
