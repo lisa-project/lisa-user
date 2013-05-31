@@ -54,6 +54,7 @@ static const char *cdp_field_name(unsigned short type) {
  * if_name for the switch socket bind().
  */
 static int setup_switch_socket(int fd, char *ifname) {
+	/*
 	struct sockaddr_sw addr;
 
 	memset(&addr, 0, sizeof(addr));
@@ -66,6 +67,7 @@ static int setup_switch_socket(int fd, char *ifname) {
 		return -1;
 	}
 	fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0) | O_NONBLOCK);
+	*/
 	return 0;
 }
 
@@ -74,9 +76,8 @@ static int setup_switch_socket(int fd, char *ifname) {
  * interfaces.
  */
 void cdpd_register_interface(int if_index) {
-	int sock, status;
+	int sock, status, type, vlan;
 	struct ifreq ifr;
-	struct swcfgreq swcfgr;
 	struct cdp_interface *entry, *tmp;
 
 	sys_dbg("Enabling cdp on interface %d\n", if_index);
@@ -106,16 +107,15 @@ void cdpd_register_interface(int if_index) {
 	assert(sock>=0);
 
 	/* check if the interface is in the switch */
-	swcfgr.cmd = SWCFG_GETIFTYPE;
-	swcfgr.ifindex = if_index; 
-	if (ioctl(sock, SIOCSWCFG, &swcfgr)) {
+	status = sw_ops->if_get_type(sw_ops, if_index, &type, &vlan);
+	if (status) {
 		sys_dbg("interface %s is not in the switch.\n", ifr.ifr_name);
 		perror("ioctl");
 		close(sock);
 		return;
 	}
 
-	if (swcfgr.ext.switchport != SW_IF_SWITCHED) {
+	if (type != IF_TYPE_SWITCHED) {
 		sys_dbg("interface %s is not known by the switch.\n", ifr.ifr_name);
 		close(sock);
 		return;
