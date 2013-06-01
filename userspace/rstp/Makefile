@@ -26,6 +26,10 @@ all: $(TARGETS)
 include $(TOP_DIR)/scripts/Makefile.variables
 include $(TOP_DIR)/scripts/Makefile.rules
 
+ifeq ($(IMPL), lisa)
+CFLAGS	+= -DLiSA
+endif
+
 LIB_OBJS = $(TOP_DIR)/lib/util.o \
 	   $(TOP_DIR)/lib/mm.o \
 	   $(TOP_DIR)/lib/if_generic.o \

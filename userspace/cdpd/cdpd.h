@@ -30,6 +30,7 @@
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <linux/sockios.h>
+#include <linux/net_switch.h>
 
 #include <errno.h>
 #include <assert.h>

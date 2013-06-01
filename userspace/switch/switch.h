@@ -110,6 +110,8 @@ struct if_data {
 	struct mm_list_head lh;
 };
 
+#ifndef LiSA
+/* Temporarily copied from include/linux/net_switch.h */
 /* FDB entry type flags */
 #define SW_FDB_STATIC 0x01
 #define SW_FDB_IGMP   0x02
@@ -136,7 +138,6 @@ enum {
 	SW_FDB_IGMP_DYNAMIC =	((SW_FDB_IGMP | SW_FDB_STATIC) << 8)	| SW_FDB_IGMP
 };
 
-/* Temporarily copied from include/linux/net_switch.h */
 /* Minimum number a vlan may have */
 #define SW_MIN_VLAN 1
 
@@ -171,6 +172,7 @@ enum {
 #define sw_set_mrouter(bitmap, vlan)	(sw_bitmap_set(bitmap, vlan))
 #define sw_reset_mrouter(bitmap, vlan)	(sw_bitmap_reset(bitmap, vlan))
 #define sw_is_mrouter(bitmap, vlan)	(sw_bitmap_test(bitmap, vlan))
+#endif
 
 
 #define __default_vlan_name(__buf, __vlan) snprintf(__buf, 9, "VLAN%04d", (__vlan))
@@ -188,6 +190,26 @@ enum {
 		status = __default_iface_name(__lvalue); \
 		assert(status < 2); \
 } while (0)
+
+
+/* Interface specific socket open/close */
+#define IF_SOCK_OPEN(__ctx, __sock_fd) do {\
+	if (__ctx->if_sfd != -1) {\
+		__sock_fd = __ctx->if_sfd;\
+		break;\
+	}\
+	__sock_fd = socket(AF_INET, SOCK_DGRAM, 0); \
+	if (__sock_fd == -1) \
+		return -1; \
+} while(0)
+
+#define IF_SOCK_CLOSE(__ctx, __sock_fd) do {\
+	int tmp_errno = errno;		\
+	if (__sock_fd != __ctx->if_sfd)\
+		close(__sock_fd);	\
+	errno = tmp_errno;		\
+} while (0)
+
 
 /* Identifiers for the types of passwords stored in the
  * shared memory area

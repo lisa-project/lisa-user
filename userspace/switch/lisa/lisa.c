@@ -17,9 +17,6 @@
  *    MA  02111-1307  USA
  */
 
-#include <linux/net_switch.h>
-#include <errno.h>
-
 #include "switch.h"
 #include "util_lisa.h"
 #include "lisa.h"

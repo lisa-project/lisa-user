@@ -2,7 +2,10 @@
 #define _LISA_H
 
 #include <unistd.h>
+#include <errno.h>
 #include <linux/sockios.h>
+#include <linux/net_switch.h>
+#include <sys/ioctl.h>
 
 #include "sw_api.h"
 #include "swsock.h"
@@ -32,7 +35,7 @@ struct lisa_context {
 	struct switch_operations sw_ops;
 
 	/* Socket descriptor used for communication with LiSA module. */
-	int sock_fd;
+	int sock_fd, if_sfd;
 };
 
 extern struct lisa_context lisa_ctx;

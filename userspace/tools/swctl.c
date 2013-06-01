@@ -28,7 +28,7 @@
 
 #include <assert.h>
 
-#ifdef Lisa
+#ifdef LiSA
 #include "lisa.h"
 #endif
 
