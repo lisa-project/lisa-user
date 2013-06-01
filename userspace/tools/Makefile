@@ -2,11 +2,13 @@ TOP_DIR = ..
 
 include $(TOP_DIR)/scripts/Makefile.variables
 ifeq ($(IMPL), lisa)
-CFLAGS	= -DLiSA
+CFLAGS	+= -DLiSA
+INC = $(LINUX_INC) 
 endif
 
 ifeq ($(IMPL), linux)
 CFLAGS 	+= -DLinux
+INC =
 endif
 
 ifneq ($(MAKECMDGOALS), clean)
@@ -16,8 +18,7 @@ endif
 LDFLAGS = -lcrypt
 include $(TOP_DIR)/scripts/Makefile.includes
 include $(TOP_DIR)/switch/Makefile.switch
-INC	= $(LINUX_INC) \
-	  $(SWITCH_INC) \
+INC	+= $(SWITCH_INC) \
 	  $(TOP_DIR)/include
 
 SRCS	= filter.c login.c swctl.c swclid.c reboot.c
@@ -27,7 +28,6 @@ TARGETS = $(SIMPLE_TARGETS) swctl
 
 all: $(TARGETS)
 
-include $(TOP_DIR)/scripts/Makefile.variables
 include $(TOP_DIR)/scripts/Makefile.rules
 
 dep: $(DEPS)

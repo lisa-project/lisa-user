@@ -10,7 +10,9 @@
 #include <linux/if.h>
 #include <linux/netdevice.h>
 
-#include "swsock.h"
+#ifdef LiSA
+	#include "swsock.h"
+#endif
 #include "interface.h"
 
 int if_tok_if(struct cli_context *ctx, const char *buf,

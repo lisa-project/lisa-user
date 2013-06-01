@@ -1,4 +1,6 @@
-#include <linux/net_switch.h>
+#ifdef LiSA
+	#include <linux/net_switch.h>
+#endif
 #include <linux/sockios.h>
 #include <errno.h>
 #include <stdio.h>

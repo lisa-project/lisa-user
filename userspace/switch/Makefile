@@ -1,15 +1,16 @@
 TOP_DIR = ..
 CFLAGS  = -fPIC -g
 
+include $(TOP_DIR)/scripts/Makefile.variables
+
 ifneq ($(MAKECMDGOALS), clean)
-$(info ********* Building $(IMPL) switch middleware *********)
+$(info ********* Building [$(IMPL)] switch middleware *********)
 endif
 
-include $(TOP_DIR)/scripts/Makefile.variables
 include $(TOP_DIR)/scripts/Makefile.includes
-INC	= $(LINUX_INC) \
-	  $(TOP_DIR)/include \
-	  $(TOP_DIR)/switch
+
+INC	=	$(TOP_DIR)/include \
+		$(TOP_DIR)/switch
 
 # Switch middleware initialization
 LIBSWITCH_SRCS	= switch.c
@@ -17,7 +18,8 @@ LIBSWITCH_SRCS	= switch.c
 # LiSA specific middleware implementation
 ifeq ($(IMPL), lisa)
 CFLAGS		+= -DLiSA
-INC 		+= $(TOP_DIR)/switch/lisa
+INC 		+=	$(LINUX_INC) \
+				$(TOP_DIR)/switch/lisa
 LIBSWITCH_SRCS	+= lisa/lisa.c
 LIBSWITCH_SRCS	+= lisa/util_lisa.c
 endif

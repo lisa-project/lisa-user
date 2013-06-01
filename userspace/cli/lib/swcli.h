@@ -17,7 +17,9 @@
 #include <linux/netdevice.h>
 #include <linux/sockios.h>
 
-#include "swsock.h"
+#ifdef LiSA
+	#include "swsock.h"
+#endif
 #include "util.h"
 #include "switch.h"
 #include "cli.h"

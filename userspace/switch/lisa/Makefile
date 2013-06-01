@@ -1,5 +1,5 @@
 TOP_DIR		:= $(shell pwd)/../../
-CFLAGS		= -fPIC -g
+CFLAGS		+= -fPIC -g
 
 
 

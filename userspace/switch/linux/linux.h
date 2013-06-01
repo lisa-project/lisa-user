@@ -11,7 +11,6 @@
 
 #include "switch.h"
 #include "if_generic.h"
-#include "swsock.h"
 #include "sw_api.h"
 #include "util.h"
 

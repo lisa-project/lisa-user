@@ -1,9 +1,11 @@
 TOP_DIR = .
 
 include $(TOP_DIR)/scripts/Makefile.variables
+ifneq ($(MAKECMDGOALS), clean)
+$(info ********* Selected Backend: [$(IMPL)] *********)
+endif
 
 SUBDIRS = \
-	$(TOP_DIR)/include \
 	$(TOP_DIR)/switch \
 	$(TOP_DIR)/lib     \
 	$(TOP_DIR)/cli     \
@@ -12,6 +14,7 @@ SUBDIRS = \
 
 ifeq ($(IMPL), lisa)
 SUBDIRS += \
+	$(TOP_DIR)/include \
 	$(TOP_DIR)/cdpd    \
 	$(TOP_DIR)/rstp
 endif

@@ -25,7 +25,9 @@
 #include "rstp_client.h"
 #include "sw_api.h"
 #include "mm.h"
-#include "swsock.h"
+#ifdef LiSA
+	#include "swsock.h"
+#endif
 
 #define SW_CONFIG_ROOT	"/etc/lisa"
 #define SW_CONFIG_FILE	SW_CONFIG_ROOT"/config.text"

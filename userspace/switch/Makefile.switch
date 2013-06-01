@@ -1,3 +1,10 @@
-SWITCH_INC =	$(TOP_DIR)/switch/lisa \
-		$(TOP_DIR)/switch/linux \
-		$(TOP_DIR)/switch
+SWITCH_INC = $(TOP_DIR)/switch
+
+
+ifeq ($(IMPL), lisa)
+SWITCH_INC += $(TOP_DIR)/switch/lisa
+endif
+
+ifeq ($(IMPL), linux)
+SWITCH_INC += $(TOP_DIR)/switch/linux
+endif

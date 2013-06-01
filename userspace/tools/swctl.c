@@ -30,13 +30,13 @@
 
 #ifdef LiSA
 #include "lisa.h"
+#include "swsock.h"
 #endif
 
 #ifdef Linux
 #include "linux.h"
 #endif
 
-#include "swsock.h"
 #include "switch.h"
 #include "util.h"
 #include "if_generic.h"

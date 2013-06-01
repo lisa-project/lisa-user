@@ -1,21 +1,36 @@
 TOP_DIR		:= $(shell pwd)/../
-CFLAGS		= -fPIC -g
+CFLAGS		+= -fPIC -g
 # LDFLAGS		= -L. -lswcli -lrt
 
 ifneq ($(MAKECMDGOALS), clean)
 $(info ********* Building the Command Line Interface *********)
 endif
 
+include $(TOP_DIR)/scripts/Makefile.variables 
 include $(TOP_DIR)/scripts/Makefile.includes
+include $(TOP_DIR)/scripts/Makefile.rules
+
 include $(TOP_DIR)/switch/Makefile.switch
-INC		= $(LINUX_INC) \
-		  $(SWITCH_INC) \
+
+INC		= $(SWITCH_INC) \
 		  $(TOP_DIR)/include \
 		  $(TOP_DIR)/cli \
 		  $(TOP_DIR)/cli/lib \
 		  $(TOP_DIR)/cli/command \
 		  $(TOP_DIR)/cli/cfgbuild
+
 DEF		= _GNU_SOURCE CONFIG_CLI_TESTING
+
+ifeq ($(IMPL), lisa)
+CFLAGS      += -DLiSA
+INC			+= $(LINUX_INC) 
+endif
+
+ifeq ($(IMPL), linux)
+CFLAGS 		+= -DLinux
+
+endif
+
 
 ifndef DIST
 LOGIN_PATH	:= \"$(shell pwd)/swlogin\"
@@ -95,9 +110,6 @@ LIBSWCLI_TARGETS = swcli swcfgload swlogin swcon list_commands
 TARGETS	= libswcli.so $(LIBSWCLI_TARGETS)
 
 all: $(TARGETS)
-
-include $(TOP_DIR)/scripts/Makefile.variables
-include $(TOP_DIR)/scripts/Makefile.rules
 
 dep: $(DEPS)
 

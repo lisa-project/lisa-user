@@ -1,11 +1,10 @@
 TOP_DIR		:= $(shell pwd)/../../
-CFLAGS		= -fPIC -g
+CFLAGS		+= -fPIC -g
 
 
 
 include $(TOP_DIR)/scripts/Makefile.includes
-INC		= $(LINUX_INC) \
-		  $(TOP_DIR)/switch \
+INC		= $(TOP_DIR)/switch \
 		  $(TOP_DIR)/include
 
 # LiSA Middleware
