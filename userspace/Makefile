@@ -41,7 +41,9 @@ dep:
 	$(Q)-find . -name '*.d' -exec cat {} >> $(DEPFILE) \;
 
 install: build
+ifeq ($(IMPL), lisa)
 	install -m 755 -D cdpd/cdpd $(ROOT)/usr/sbin/cdpd
+endif
 	install -m 755 -D tools/filter $(ROOT)/bin/filter
 	install -m 755 -D tools/swclid $(ROOT)/usr/sbin/swclid
 ifneq ($(ROOT),)

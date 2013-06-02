@@ -192,25 +192,6 @@ enum {
 } while (0)
 
 
-/* Interface specific socket open/close */
-#define IF_SOCK_OPEN(__ctx, __sock_fd) do {\
-	if (__ctx->if_sfd != -1) {\
-		__sock_fd = __ctx->if_sfd;\
-		break;\
-	}\
-	__sock_fd = socket(AF_INET, SOCK_DGRAM, 0); \
-	if (__sock_fd == -1) \
-		return -1; \
-} while(0)
-
-#define IF_SOCK_CLOSE(__ctx, __sock_fd) do {\
-	int tmp_errno = errno;		\
-	if (__sock_fd != __ctx->if_sfd)\
-		close(__sock_fd);	\
-	errno = tmp_errno;		\
-} while (0)
-
-
 /* Identifiers for the types of passwords stored in the
  * shared memory area
  */

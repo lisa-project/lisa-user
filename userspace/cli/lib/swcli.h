@@ -54,7 +54,7 @@ struct swcli_context {
 		__sock_fd = SWCLI_CTX(__ctx)->sock_fd;\
 		break;\
 	}\
-	__sock_fd = socket(PF_SWITCH, SOCK_RAW, 0); \
+	__sock_fd = socket(AF_INET, SOCK_DGRAM, 0); \
 	if (__sock_fd == -1) {\
 		EX_STATUS_REASON(__ctx, "%s", strerror(errno)); \
 		return CLI_EX_REJECTED; \
