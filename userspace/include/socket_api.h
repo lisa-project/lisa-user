@@ -19,9 +19,10 @@
 #ifndef _SOCKET_API_H
 #define _SOCKET_API_H
 
-#define PACKET_SIZE	65536
-#define CDP_FILTER	"ether multicast and ether[20:2] = 0x2000 and ether src not %02hx:%02hx:%02hx:%02hx:%02hx:%02hx"
-#define NO_FILTER	""
+#define PACKET_SIZE		65536
+#define MAX_FILTER_SIZE		1024
+#define CDP_FILTER		"ether multicast and ether[20:2] = 0x2000 and ether src not %02hx:%02hx:%02hx:%02hx:%02hx:%02hx"
+#define NO_FILTER		""
 
 #include <pcap.h>
 

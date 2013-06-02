@@ -28,7 +28,9 @@ pthread_t sender_thread, listener_thread, cleaner_thread, shutdown_thread;
 /* cdp traffic statistics */
 struct cdp_traffic_stats cdp_stats;
 /* data buffer to read cdp frames into */
+#ifndef Linux
 static unsigned char packet[MAX_CDP_FRAME_SIZE];
+#endif
 
 extern neighbor_heap_t *nheap; 					/* cdp neighbor heap (cdp neighbor aging mechanism) */
 extern int hend, heap_size;						/* heap end, heap allocated size */ 
@@ -48,6 +50,7 @@ static const char *cdp_field_name(unsigned short type) {
 	return fields[i].desc;
 }
 
+#ifndef Linux
 /**
  * setup a switch socket.
  * FIXME FIXME FIXME: we should use if_index instead of
@@ -68,6 +71,7 @@ static int setup_switch_socket(int fd, char *ifname) {
 	fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0) | O_NONBLOCK);
 	return 0;
 }
+#endif
 
 /**
  * add an interface to the list of cdp-enabled
@@ -77,6 +81,11 @@ void cdpd_register_interface(int if_index) {
 	int sock, status, type, vlan;
 	struct ifreq ifr;
 	struct cdp_interface *entry, *tmp;
+#ifdef Linux
+	struct ifreq ifr_mac;
+	const unsigned char *mac;
+	char *filter;
+#endif
 
 	sys_dbg("Enabling cdp on interface %d\n", if_index);
 
@@ -97,12 +106,24 @@ void cdpd_register_interface(int if_index) {
 		close(sock);
 		return;
 	}
+
+#ifdef Linux
+	/* mac address */
+	status = ioctl(sock, SIOCGIFHWADDR, &ifr_mac);
+	assert(status >= 0);
 	close(sock);
 
+	mac = (unsigned char*)ifr_mac.ifr_hwaddr.sa_data;
+	filter = malloc(sizeof(CDP_FILTER));
+	sprintf(filter, CDP_FILTER, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 
 	/* Open a switch socket to check if the interface is in the switch */
+	sock = socket(PF_PACKET, SOCK_RAW, 0);
+	assert(sock >= 0);
+#else
 	sock = socket(PF_SWITCH, SOCK_RAW, 0);
 	assert(sock>=0);
+#endif
 
 	/* check if the interface is in the switch */
 	status = sw_ops->if_get_type(sw_ops, if_index, &type, &vlan);
@@ -130,10 +151,15 @@ void cdpd_register_interface(int if_index) {
 	/* search for the interface in the deregistered_interfaces list */
 	list_for_each_entry_safe(entry, tmp, &deregistered_interfaces, lh)
 		if (if_index == entry->if_index) {
+#ifndef Linux
 			/* if setup_switch_socket fails, the interface will not be
 			 registered */
 			if (setup_switch_socket(sock, ifr.ifr_name))
 				return;
+#else
+			status = register_filter(&entry->pcap, filter, ifr.ifr_name);
+			assert(status >= 0);
+#endif
 			entry->sw_sock_fd = sock;
 			list_del(&entry->lh);
 			list_add_tail(&entry->lh, &registered_interfaces);
@@ -142,8 +168,10 @@ void cdpd_register_interface(int if_index) {
 
 	/* Bind the switch socket to the interface before
 	 allocating the cdp_interface structure */
+#ifndef Linux
 	if (setup_switch_socket(sock, ifr.ifr_name))
 		return;
+#endif
 
 	/* if not found, we must allocate the structure and do the 
 	   proper intialization */
@@ -151,6 +179,11 @@ void cdpd_register_interface(int if_index) {
 	assert(entry);
 	entry->if_index = if_index;
 	entry->sw_sock_fd = sock;
+
+#ifdef Linux
+	status = register_filter(&entry->pcap, filter, ifr.ifr_name);
+	assert(status >= 0);
+#endif
 
 	status = sem_init(&entry->n_sem, 0, 1);
 	assert(!status);
@@ -464,8 +497,13 @@ static void cdp_recv_loop(void) {
 	struct cdp_interface *entry, *tmp;
 	struct cdp_neighbor *neighbor;
 	struct cdp_configuration cdp;
-	int fd, maxfd, status, len;
+	int fd, maxfd, status;
 	fd_set rdfs;
+#ifdef Linux
+	u_char* packet;
+#else
+	int len;
+#endif
 
 	/* the loop in which we capture the cdp frames */
 	for (;;) {
@@ -473,7 +511,11 @@ static void cdp_recv_loop(void) {
 		FD_ZERO(&rdfs);
 		maxfd = -1;
 		list_for_each_entry_safe(entry, tmp, &registered_interfaces, lh) {
+#ifndef Linux
 			fd = entry->sw_sock_fd;
+#else
+			fd = pcap_fileno(entry->pcap);
+#endif
 			FD_SET(fd, &rdfs);
 			if (fd > maxfd)
 				maxfd = fd;
@@ -490,10 +532,16 @@ static void cdp_recv_loop(void) {
 			if (!FD_ISSET(entry->sw_sock_fd, &rdfs))
 				continue;
 			sys_dbg("data available on interface %d\n", entry->if_index);
+
+#ifndef Linux
 			if ((len = recv(entry->sw_sock_fd, packet, sizeof(packet), 0)) < 0) {
 				perror("recv");
 				continue;
 			}
+#else
+			packet = recv_packet(entry->pcap);
+			assert(packet != NULL);
+#endif
 			switch_get_cdp(&cdp);
 			if (!cdp.enabled) {
 				sys_dbg("[cdp receiver]: cdp is disabled\n");

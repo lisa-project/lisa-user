@@ -52,6 +52,9 @@
 #include "swsock.h"
 #include "switch.h"
 #include "if_generic.h"
+#ifdef Linux
+#include "socket_api.h"
+#endif
 
 /* the pid file of the cdp daemon */
 #ifdef DEBUG
@@ -188,6 +191,9 @@ struct cdp_interface {
 	sem_t n_sem;							/* semaphore used for locking on the neighbor list */
 	struct list_head neighbors;				/* list of cdpd neighbors (on this interface) */
 	struct list_head lh;					/* list of cdp interfaces */
+#ifdef Linux
+	pcap_t *pcap;
+#endif
 };
 
 /* CDP neighbor heap (used for neighbor aging mechanism) */
