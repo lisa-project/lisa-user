@@ -1,0 +1,54 @@
+diff --git a/package/swconfig/Makefile b/package/swconfig/Makefile
+index adc2147..d775088 100644
+--- a/package/swconfig/Makefile
++++ b/package/swconfig/Makefile
+@@ -36,16 +36,19 @@ define Build/Prepare
+ endef
+ 
+ define Build/Compile
+-	CFLAGS="$(TARGET_CPPFLAGS) $(TARGET_CFLAGS)" \
++	CFLAGS="$(TARGET_CPPFLAGS) -fPIC $(TARGET_CFLAGS)" \
+ 	$(MAKE) -C $(PKG_BUILD_DIR) \
+ 		$(TARGET_CONFIGURE_OPTS) \
+ 		LIBS="$(TARGET_LDFLAGS) -lnl-tiny -lm -luci"
+ endef
+ 
+ define Package/swconfig/install
+-	$(INSTALL_DIR) $(1)/sbin $(1)/lib/network
++	$(INSTALL_DIR) $(1)/sbin $(1)/lib/network $(1)/usr/lib
++	$(INSTALL_BIN) $(PKG_BUILD_DIR)/swlib.so $(1)/usr/lib/swlib.so
+ 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/swconfig $(1)/sbin/swconfig
++	$(INSTALL_BIN) $(PKG_BUILD_DIR)/swscan $(1)/sbin/swscan
+ 	$(INSTALL_DATA) ./files/switch.sh $(1)/lib/network/
++	$(INSTALL_DATA) $(PKG_BUILD_DIR)/swlib.h $(STAGING_DIR)/usr/include/swlib.h 
+ endef
+ 
+ $(eval $(call BuildPackage,swconfig))
+diff --git a/package/swconfig/src/Makefile b/package/swconfig/src/Makefile
+index 0d56f43..865e973 100644
+--- a/package/swconfig/src/Makefile
++++ b/package/swconfig/src/Makefile
+@@ -1,12 +1,20 @@
+ ifndef CFLAGS
+-CFLAGS = -O2 -g -I ../src
++CFLAGS = -O2 -fPIC -g -I ../src
+ endif
+ LIBS=-lnl -lnl-genl
+ 
+-all: swconfig
++
++SWLIB_SRC = swlib.c
++SWLIB_OBJ = $(SWLIB_SRC:.c=.o)
++
++all: swlib.so swconfig
++
++swlib.so: $(SWLIB_OBJ)
++	$(CC) $(LDFLAGS) -shared -Wl,-soname,$@ -o $@ $^ $(LIBS)
+ 
+ %.o: %.c
+ 	$(CC) $(CFLAGS) -c -o $@ $^
+ 
+-swconfig: cli.o swlib.o uci.o
++swconfig: cli.o uci.o swlib.so
+ 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
++
