@@ -156,7 +156,7 @@ int main(int argc, char **argv) {
 		return -1;
 	}
 
-	ctx.sock_fd = socket(PF_SWITCH, SOCK_RAW, 0);
+	ctx.sock_fd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (ctx.sock_fd ==  -1) {
 		perror("socket");
 		return 1;

@@ -6,10 +6,7 @@ ifneq ($(MAKECMDGOALS), clean)
 $(info ********* Building the Command Line Interface *********)
 endif
 
-include $(TOP_DIR)/scripts/Makefile.variables 
 include $(TOP_DIR)/scripts/Makefile.includes
-include $(TOP_DIR)/scripts/Makefile.rules
-
 include $(TOP_DIR)/switch/Makefile.switch
 
 INC		= $(SWITCH_INC) \
@@ -110,6 +107,9 @@ LIBSWCLI_TARGETS = swcli swcfgload swlogin swcon list_commands
 TARGETS	= libswcli.so $(LIBSWCLI_TARGETS)
 
 all: $(TARGETS)
+
+include $(TOP_DIR)/scripts/Makefile.variables
+include $(TOP_DIR)/scripts/Makefile.rules
 
 dep: $(DEPS)
 
