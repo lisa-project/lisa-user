@@ -204,7 +204,7 @@ int main(int argc, char **argv) {
 	status = switch_init();
 	assert(!status);
 	
-	sock = socket(PF_SWITCH, SOCK_RAW, 0);
+	sock = socket(AF_INET, SOCK_DGRAM, 0);
 	if (sock == -1) {
 		perror("socket");
 		return 0;

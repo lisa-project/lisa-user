@@ -112,8 +112,8 @@ void print_mac_list(FILE *out, struct list_head *macs,
 
 void print_mac(FILE *out, void *buf, int size, char *(*get_if_name)(int, void*), void *priv)
 {
-	struct net_switch_mac *mac, *end =
-		(struct net_switch_mac *)((char *)buf + size);
+	struct net_switch_mac_e *mac, *end =
+		(struct net_switch_mac_e *)((char *)buf + size);
 
 	fprintf(out,
 			"Destination Address  Address Type  VLAN  Destination Port\n"
