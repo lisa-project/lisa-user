@@ -7,9 +7,15 @@ INC	= $(LINUX_INC) \
 	  $(SWITCH_INC) \
 	  $(TOP_DIR)/include \
 
-SRCS	= vlan_rename.c pktgen.c pktrecv.c test_sock.c mcast_recv.c mcast_send.c test_sock_api.c
-SIMPLE_TARGETS = pktgen pktrecv test_sock mcast_recv mcast_send
-TARGETS	= $(SIMPLE_TARGETS) vlan_rename test_sock_api
+SRCS	= vlan_rename.c pktgen.c pktrecv.c mcast_recv.c mcast_send.c
+SIMPLE_TARGETS = pktgen pktrecv mcast_recv mcast_send
+
+ifeq ($(IMPL), lisa)
+SRCS += test_sock.c test_sock_api.c
+SIMPLE_TARGETS += test_sock test_sock_api
+endif
+
+TARGETS	= $(SIMPLE_TARGETS) vlan_rename
 
 all: $(TARGETS)
 

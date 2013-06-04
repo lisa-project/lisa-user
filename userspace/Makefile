@@ -5,8 +5,13 @@ ifneq ($(MAKECMDGOALS), clean)
 $(info ********* Selected Backend: [$(IMPL)] *********)
 endif
 
+ifeq ($(IMPL), lisa)
 SUBDIRS = \
-	$(TOP_DIR)/switch \
+	$(TOP_DIR)/include
+endif
+
+SUBDIRS += \
+	$(TOP_DIR)/switch  \
 	$(TOP_DIR)/lib     \
 	$(TOP_DIR)/cli     \
 	$(TOP_DIR)/tools   \
@@ -14,7 +19,6 @@ SUBDIRS = \
 
 ifeq ($(IMPL), lisa)
 SUBDIRS += \
-	$(TOP_DIR)/include \
 	$(TOP_DIR)/cdpd    \
 	$(TOP_DIR)/rstp
 endif
