@@ -553,6 +553,88 @@ static int get_if_list(struct switch_operations *sw_ops, int type,
 	return 0;
 }
 
+static int igmp_set(struct switch_operations *sw_ops, int vlan, int snooping);
+
+static void set_global_igmp(struct switch_operations *sw_ops, int snooping)
+{
+	int i;
+	unsigned char vdb[SW_VLAN_BMP_NO];
+
+	get_vdb(sw_ops, vdb);
+	for (i = 1; i < SW_MAX_VLAN; i++) {
+		if (!sw_bitmap_test(vdb, i))
+			continue;
+
+		/* Set igmp for each VLAN in VDB */
+		igmp_set(sw_ops, i, snooping);
+	}
+}
+
+static int igmp_set(struct switch_operations *sw_ops, int vlan, int snooping)
+{
+	int ret = 0;
+	char file_name[255];
+	struct vlan_data *v_data;
+	FILE *f = NULL;
+
+	if (vlan == 0) {
+		set_global_igmp(sw_ops, snooping);
+
+		/* Change the global flag */
+		mm_lock(mm);
+		SHM->igmp_snooping = snooping;
+		mm_unlock(mm);
+
+		return 0;
+	}
+
+	mcast_snoop_file(file_name, vlan);
+
+	/* Open file and write mcast snooping */
+	f = fopen(file_name, "r+");
+	if (!f)
+		return EINVAL;
+	fprintf(f, "%d", snooping);
+
+
+	/* Get VLAN data */
+	ret = get_vlan_data(vlan, &v_data);
+	if (ret)
+		goto out_close;
+	v_data->snooping = snooping;
+	ret = set_vlan_data(vlan, *v_data);
+
+out_close:
+	fclose(f);
+	return ret;
+}
+
+static int igmp_get(struct switch_operations *sw_ops, char *buff, int *snooping)
+{
+	unsigned char map[SW_VLAN_BMP_NO];
+	mm_ptr_t ptr;
+
+	memset(map, 0, SW_VLAN_BMP_NO);
+
+	mm_lock(mm);
+	mm_list_for_each(mm, ptr, mm_ptr(mm, &SHM->vlan_data)) {
+		struct vlan_data *v_data =
+			mm_addr(mm, mm_list_entry(ptr, struct vlan_data, lh));
+
+		/* set bits for vlans with *disabled* igmp; this way
+		 * userspace config builder will know that (a) vlan
+		 * exists and (b) vlan has igmp snooping disabled */
+		if (!v_data->snooping)
+			sw_bitmap_set(map, v_data->vlan_id);
+	}
+
+	*snooping = SHM->igmp_snooping;
+	mm_unlock(mm);
+
+	memcpy(buff, map, SW_VLAN_BMP_NO);
+	return 0;
+}
+
 struct linux_context lnx_ctx = {
 	.sw_ops = (struct switch_operations) {
 		.backend_init	= linux_init,
@@ -576,8 +658,11 @@ struct linux_context lnx_ctx = {
 		.vif_add	= vif_add,
 		.vif_del	= vif_del,
 
-		.get_age_time = get_age_time,
-		.set_age_time = set_age_time
+		.get_age_time	= get_age_time,
+		.set_age_time	= set_age_time,
+
+		.igmp_set	= igmp_set,
+		.igmp_get	= igmp_get
 	},
 	.vlan_sfd	= -1,
 	.bridge_sfd	= -1,

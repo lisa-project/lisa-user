@@ -589,6 +589,7 @@ int add_vlan_data(int vlan_id)
 	}
 
 	data->vlan_id = vlan_id;
+	data->snooping = 1;
 	MM_INIT_LIST_HEAD(mm, mm_ptr(mm, &data->vif_list));
 
 	mm_list_add(mm, mm_ptr(mm, &data->lh), mm_ptr(mm, &SHM->vlan_data));
@@ -606,6 +607,37 @@ int del_vlan_data(int vlan_id)
 	ret = __del_vlan_data(vlan_id);
 	mm_unlock(mm);
 
+	return ret;
+}
+
+int set_vlan_data(int vlan_id, struct vlan_data v_data)
+{
+	mm_ptr_t mm_v_data;
+	struct vlan_data *data;
+	int ret = 0;
+
+	mm_lock(mm);
+
+	ret = __del_vlan_data(vlan_id);
+	if (ret)
+		goto out_unlock;
+
+	/* Create new VLAN data */
+	mm_v_data = mm_alloc(mm, sizeof(struct vlan_data));
+	data = mm_addr(mm, mm_v_data);
+	if (NULL == data) {
+		errno = ENOMEM;
+		ret = -1;
+		goto out_unlock;
+	}
+
+	v_data.vlan_id = vlan_id;
+	*data = v_data;
+
+	mm_list_add(mm, mm_ptr(mm, &data->lh), mm_ptr(mm, &SHM->vlan_data));
+
+out_unlock:
+	mm_unlock(mm);
 	return ret;
 }
 

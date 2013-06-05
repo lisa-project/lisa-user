@@ -78,6 +78,17 @@
 #define LINUX_DEFAULT_VLAN		1
 #define VLAN_NAME_LEN			9
 
+#define MSNOOP_DESCRIPTOR	"/sys/devices/virtual/net/vlan%d/bridge/multicast_snooping"
+#define MROUTER_DESCRIPTOR	"/sys/devices/virtual/net/vlan%d/bridge/multicast_router"
+
+#define mcast_snoop_file(__file_name, __vlan_id) do {	\
+	sprintf(__file_name, MSNOOP_DESCRIPTOR, __vlan_id);	\
+} while(0)
+
+#define mcast_router_file(__file_name, __vlan_id) do {		\
+	sprintf(__file_name, MROUTER_DESCRIPTOR, __vlan_id);	\
+} while(0)
+
 struct linux_context {
 	struct switch_operations sw_ops;
 

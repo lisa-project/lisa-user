@@ -76,6 +76,7 @@ struct switch_mem {
 	struct mm_list_head if_data;
 	/* Bridge + 8021q age time */
 	int age_time;
+	int igmp_snooping;
 };
 
 struct if_tag {
@@ -102,6 +103,7 @@ struct vlan_data {
 	int vlan_id;
 	struct mm_list_head vif_list;
 	struct mm_list_head lh;
+	int snooping;
 };
 
 struct if_data {
@@ -292,6 +294,9 @@ int add_vlan_data(int vlan_id);
 /* Remove VLAN data for a given vlan_id
  */
 int del_vlan_data(int vlan_id);
+
+/* Replace VLAN data for a given vlan_id */
+int set_vlan_data(int vlan_id, struct vlan_data v_data);
 
 
 

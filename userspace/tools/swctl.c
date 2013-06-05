@@ -867,15 +867,20 @@ int main(int argc, char **argv) {
 	}
 
 	if (!strcmp(argv[1], "igmpget")) {
-		int snoop;
+		int snoop, i;
 		char buff[1024];
 		int status = sw_ops->igmp_get(sw_ops, buff, &snoop);
-		printf("IGMP is ");
-		if (snoop)
-			printf("on\n");
-		else
+		printf("Global IGMP is ");
+		if (!snoop) {
 			printf("off\n");
-		printf("Buff: %s\n", buff);
+			return status;
+		}
+
+		printf("on\n");
+		for (i = 0; i < SW_MAX_VLAN; i++) {
+			if (sw_bitmap_test(buff, i))
+				printf("Vlan %d igmp off\n", i);
+		}
 
 		return status;
 	}
