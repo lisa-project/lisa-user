@@ -110,6 +110,7 @@ struct if_data {
 	struct net_switch_device device;
 	int mode;
 	unsigned char *bitmap;
+	mm_ptr_t mrouters;
 	unsigned short access_vlan;
 	struct mm_list_head lh;
 };

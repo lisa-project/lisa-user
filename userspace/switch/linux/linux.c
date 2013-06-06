@@ -635,6 +635,63 @@ static int igmp_get(struct switch_operations *sw_ops, char *buff, int *snooping)
 	return 0;
 }
 
+static int mrouter_set(struct switch_operations *sw_ops, int vlan,
+		int ifindex, int setting)
+{
+	int if_sfd, ret = 0;
+	FILE *f = NULL;
+	char if_name[IFNAMSIZE], file_name[255];
+	struct linux_context *lnx_ctx = SWLINUX_CTX(sw_ops);
+	struct if_data data;
+	unsigned char *mrouters;
+
+	/* Get the name of the interface */
+	IF_SOCK_OPEN(lnx_ctx, if_sfd);
+	if_get_name(ifindex, if_sfd, if_name);
+	IF_SOCK_CLOSE(lnx_ctx, if_sfd);
+	sprintf(if_name, "%s.%d", if_name, vlan);
+
+	printf("Interface name %s.\n", if_name);
+	mcast_router_file(file_name, if_name);
+	printf("Config file name %s.\n", file_name);
+
+
+	/* Configure mrouter in sysfs */
+	f = fopen(file_name, "r+");
+	if (!f)
+		return EINVAL;
+	ret = fprintf(f, "%d", setting);
+	if (ret <= 0) {
+		ret = EINVAL;
+		goto out_close;
+	}
+
+
+	/* Change the interface's bitmap */
+	ret = get_if_data(ifindex, &data);
+	if (ret)
+		goto out_close;
+	printf("Got interface data for %d\n", ifindex);
+
+	mm_lock(mm);
+	mrouters = mm_addr(mm, data.mrouters);
+	if (setting)
+		sw_set_mrouter(mrouters, vlan);
+	else
+		sw_reset_mrouter(mrouters, vlan);
+	mm_unlock(mm);
+
+out_close:
+	fclose(f);
+	return ret;
+}
+
+static int mrouters_get(struct switch_operations *sw_ops, int vlan,
+		struct list_head *mrouters)
+{
+	return 0;
+}
+
 struct linux_context lnx_ctx = {
 	.sw_ops = (struct switch_operations) {
 		.backend_init	= linux_init,
@@ -662,7 +719,9 @@ struct linux_context lnx_ctx = {
 		.set_age_time	= set_age_time,
 
 		.igmp_set	= igmp_set,
-		.igmp_get	= igmp_get
+		.igmp_get	= igmp_get,
+		.mrouters_get	= mrouters_get,
+		.mrouter_set	= mrouter_set
 	},
 	.vlan_sfd	= -1,
 	.bridge_sfd	= -1,

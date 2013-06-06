@@ -211,14 +211,20 @@ static mm_ptr_t __get_if_data(int if_index)
 
 static int __del_if_data(int if_index)
 {
-	mm_ptr_t lh = __get_if_data(if_index);
+	mm_ptr_t mm_data, lh = __get_if_data(if_index);
+	struct if_data *data;
 
 	if (MM_NULL == lh) {
 		errno = ENODEV;
 		return -1;
 	}
 	mm_list_del(mm, lh);
-	mm_free(mm, mm_list_entry(lh, struct if_data, lh));
+
+	mm_data = mm_list_entry(lh, struct if_data, lh);
+	data = mm_addr(mm, mm_data);
+
+	mm_free(mm, data->mrouters);
+	mm_free(mm, mm_data);
 	return 0;
 }
 
@@ -660,7 +666,7 @@ int get_if_data(int if_index, struct if_data *data)
 
 int set_if_data(int if_index, struct if_data new_data)
 {
-	mm_ptr_t lh, mm_if_data;
+	mm_ptr_t lh, mm_if_data, mrouters;
 	struct if_data *data;
 	int ret = 0;
 
@@ -669,16 +675,14 @@ int set_if_data(int if_index, struct if_data new_data)
 	lh = __get_if_data(if_index);
 	/* Interface data already exists */
 	if (MM_NULL != lh) {
-		data = mm_addr(mm, mm_list_entry(lh, struct vlan_data, lh));
+		data = mm_addr(mm, mm_list_entry(lh, struct if_data, lh));
 		*data = new_data;
 		goto out_unlock;
 	}
 
 	/* Interface data does not exist */
 	mm_if_data = mm_alloc(mm, sizeof(struct if_data));
-	/* first save mm pointer obtained from mm_alloc, then compute s_desc
-	 * pointer, because mm_alloc() can change mm->area if the shm area
-	 * is extended (refer to README.mm for details) */
+	mrouters = mm_alloc(mm, SW_VLAN_BMP_NO);
 	data = mm_addr(mm, mm_if_data);
 	if (NULL == data) {
 		errno = ENOMEM;
@@ -686,6 +690,7 @@ int set_if_data(int if_index, struct if_data new_data)
 		goto out_unlock;
 	}
 
+	new_data.mrouters = mrouters;
 	*data = new_data;
 	mm_list_add(mm, mm_ptr(mm, &data->lh), mm_ptr(mm, &SHM->if_data));
 
