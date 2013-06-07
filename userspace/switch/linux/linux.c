@@ -651,9 +651,7 @@ static int mrouter_set(struct switch_operations *sw_ops, int vlan,
 	IF_SOCK_CLOSE(lnx_ctx, if_sfd);
 	sprintf(if_name, "%s.%d", if_name, vlan);
 
-	printf("Interface name %s.\n", if_name);
 	mcast_router_file(file_name, if_name);
-	printf("Config file name %s.\n", file_name);
 
 
 	/* Configure mrouter in sysfs */
@@ -671,7 +669,6 @@ static int mrouter_set(struct switch_operations *sw_ops, int vlan,
 	ret = get_if_data(ifindex, &data);
 	if (ret)
 		goto out_close;
-	printf("Got interface data for %d\n", ifindex);
 
 	mm_lock(mm);
 	mrouters = mm_addr(mm, data.mrouters);
@@ -689,6 +686,34 @@ out_close:
 static int mrouters_get(struct switch_operations *sw_ops, int vlan,
 		struct list_head *mrouters)
 {
+	mm_ptr_t ptr;
+	unsigned char *if_mrouters;
+	struct net_switch_mrouter_e *entry;
+
+	mm_lock(mm);
+
+	mm_list_for_each(mm, ptr, mm_ptr(mm, &SHM->if_data)) {
+		struct if_data *if_data =
+			mm_addr(mm, mm_list_entry(ptr, struct if_data, lh));
+
+		if_mrouters = mm_addr(mm, if_data->mrouters);
+
+		if (!sw_is_mrouter(if_mrouters, vlan))
+			continue;
+
+		entry = malloc(sizeof(struct net_switch_mrouter_e));
+		if (!entry) {
+			errno = ENOMEM;
+			mm_unlock(mm);
+			return -1;
+		}
+
+		entry->ifindex = if_data->device.ifindex;
+		entry->vlan = vlan;
+		list_add_tail(&entry->lh, mrouters);
+	}
+	mm_unlock(mm);
+
 	return 0;
 }
 
