@@ -717,6 +717,54 @@ static int mrouters_get(struct switch_operations *sw_ops, int vlan,
 	return 0;
 }
 
+static int if_add_trunk_vlans(struct switch_operations *sw_ops,
+	int ifindex, unsigned char *vlans)
+{
+	return 0;
+}
+
+static int if_set_trunk_vlans(struct switch_operations *sw_ops,
+	int ifindex, unsigned char *vlans)
+{
+	return 0;
+}
+
+static int if_del_trunk_vlans(struct switch_operations *sw_ops,
+	int ifindex, unsigned char *vlans)
+{
+	return 0;
+}
+
+static int if_get_cfg (struct switch_operations *sw_ops, int ifindex,
+		int *flags,int *access_vlan, unsigned char *vlans)
+{
+	return 0;
+}
+
+static int vlan_set_mac_static(struct switch_operations *sw_ops, int ifindex,
+		int vlan, unsigned char *mac)
+{
+	return 0;
+}
+
+static int vlan_del_mac_static(struct switch_operations *sw_ops, int ifindex,
+		int vlan, unsigned char *mac)
+{
+	return 0;
+}
+
+static int vlan_del_mac_dynamic(struct switch_operations *sw_ops, int ifindex, int vlan)
+{
+	return 0;
+}
+
+static int get_mac(struct switch_operations *sw_ops, int ifindex, int vlan,
+			int mac_type, unsigned char *mac_addr,
+			struct list_head *macs)
+{
+	return 0;
+}
+
 struct linux_context lnx_ctx = {
 	.sw_ops = (struct switch_operations) {
 		.backend_init	= linux_init,
@@ -725,26 +773,36 @@ struct linux_context lnx_ctx = {
 		.if_remove	= if_remove,
 		.if_enable	= if_enable,
 		.if_disable	= if_disable,
-
-		.if_get_type	= if_get_type,
-		.if_set_mode	= if_set_mode,
-		.if_set_port_vlan = if_set_port_vlan,
-
 		.vlan_add	= vlan_add,
 		.vlan_del	= vlan_del,
 
-		.get_if_list	= get_if_list,
+		.vlan_set_mac_static = vlan_set_mac_static,
+		.vlan_del_mac_static = vlan_del_mac_static,
+		.vlan_del_mac_dynamic = vlan_del_mac_dynamic,
+		.get_mac = get_mac,
+
 		.get_vlan_interfaces = get_vlan_interfaces,
+		.get_if_list	= get_if_list,
 		.get_vdb	= get_vdb,
 
-		.vif_add	= vif_add,
-		.vif_del	= vif_del,
+		.if_add_trunk_vlans = if_add_trunk_vlans,
+		.if_set_trunk_vlans = if_set_trunk_vlans,
+		.if_del_trunk_vlans = if_del_trunk_vlans,
+
+		.if_set_mode	= if_set_mode,
+		.if_get_type	= if_get_type,
+		.if_set_port_vlan = if_set_port_vlan,
+		.if_get_cfg	= if_get_cfg,
 
 		.get_age_time	= get_age_time,
 		.set_age_time	= set_age_time,
 
+		.vif_add	= vif_add,
+		.vif_del	= vif_del,
+
 		.igmp_set	= igmp_set,
 		.igmp_get	= igmp_get,
+
 		.mrouters_get	= mrouters_get,
 		.mrouter_set	= mrouter_set
 	},

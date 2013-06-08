@@ -104,7 +104,8 @@ static int vlan_del(struct switch_operations *sw_ops, int vlan)
 	return rc;
 }
 
-int vlan_set_mac_static(struct switch_operations *sw_ops, int ifindex, int vlan, unsigned char *mac)
+static int vlan_set_mac_static(struct switch_operations *sw_ops, int ifindex,
+		int vlan, unsigned char *mac)
 {
 	int rc, sock_fd;
 	struct swcfgreq swcfgr;
@@ -125,7 +126,8 @@ int vlan_set_mac_static(struct switch_operations *sw_ops, int ifindex, int vlan,
 
 }
 
-int vlan_del_mac_static(struct switch_operations *sw_ops, int ifindex, int vlan, unsigned char *mac)
+static int vlan_del_mac_static(struct switch_operations *sw_ops, int ifindex,
+		int vlan, unsigned char *mac)
 {
 	int rc, sock_fd;
 	struct swcfgreq swcfgr;
@@ -514,7 +516,8 @@ static int mrouters_get(struct switch_operations *sw_ops, int vlan,
 
 	return 0;
 }
-int get_mac(struct switch_operations *sw_ops, int ifindex, int vlan,
+
+static int get_mac(struct switch_operations *sw_ops, int ifindex, int vlan,
 			int mac_type, unsigned char *mac_addr,
 			struct list_head *macs)
 {
