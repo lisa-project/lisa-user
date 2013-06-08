@@ -31,7 +31,6 @@ static int if_add(struct switch_operations *sw_ops, int ifindex, int mode)
 	struct net_switch_device device;
 	int ret = 0, if_sfd;
 	char if_name[IFNAMSIZE];
-	unsigned char vlan_bitmap[512];
 	struct linux_context *lnx_ctx = SWLINUX_CTX(sw_ops);
 
 
@@ -62,10 +61,8 @@ static int if_add(struct switch_operations *sw_ops, int ifindex, int mode)
 	device.type = IF_TYPE_SWITCHED;
 	data.device = device;
 
-	init_vlan_bitmap(vlan_bitmap);
-	data.bitmap = vlan_bitmap;
 	data.mode = mode;
-	set_if_data(ifindex, data);
+	add_if_data(ifindex, data);
 
 	return ret;
 }
@@ -488,7 +485,6 @@ static int if_set_port_vlan(struct switch_operations *sw_ops, int ifindex, int v
 	ret = br_remove_if(lnx_ctx, data.access_vlan, ifindex);
 
 	data.access_vlan = vlan;
-	del_if_data(ifindex);
 	set_if_data(ifindex, data);
 
 

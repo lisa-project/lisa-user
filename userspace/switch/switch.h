@@ -109,7 +109,7 @@ struct vlan_data {
 struct if_data {
 	struct net_switch_device device;
 	int mode;
-	unsigned char *bitmap;
+	mm_ptr_t allowed_vlans;
 	mm_ptr_t mrouters;
 	unsigned short access_vlan;
 	struct mm_list_head lh;
@@ -305,6 +305,9 @@ int set_vlan_data(int vlan_id, struct vlan_data v_data);
  * interface has data assigned, negative value otherwise and set errno
  */
 int get_if_data(int if_index, struct if_data *data);
+
+/* Create new interface data */
+int add_if_data(int if_index, struct if_data new_data);
 
 /* Buld new interface data if there is no data assigned to if_index
  * or replace the structure with a new one

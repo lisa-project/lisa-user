@@ -299,7 +299,6 @@ int if_no_switchport(struct linux_context *lnx_ctx, int ifindex, int mode)
 
 	/* Set the interface type to "Routed" */
 	data.device.type = IF_TYPE_ROUTED;
-	del_if_data(ifindex);
 	return set_if_data(ifindex, data);
 }
 
@@ -334,7 +333,6 @@ int if_mode_access(struct linux_context *lnx_ctx, int ifindex)
 	data.device.type = IF_TYPE_SWITCHED;
 	data.mode = IF_MODE_ACCESS;
 	data.access_vlan = LINUX_DEFAULT_VLAN;
-	del_if_data(ifindex);
 
 	return set_if_data(ifindex, data);
 }

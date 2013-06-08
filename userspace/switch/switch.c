@@ -224,6 +224,7 @@ static int __del_if_data(int if_index)
 	data = mm_addr(mm, mm_data);
 
 	mm_free(mm, data->mrouters);
+	mm_free(mm, data->allowed_vlans);
 	mm_free(mm, mm_data);
 	return 0;
 }
@@ -664,9 +665,50 @@ int get_if_data(int if_index, struct if_data *data)
 	return 0;
 }
 
+int add_if_data(int if_index, struct if_data new_data)
+{
+	mm_ptr_t mm_if_data, mrouters, allowed_vlans;
+	struct if_data *data;
+	unsigned char *bitmap;
+	int ret = 0;
+
+	mm_lock(mm);
+
+	/* Interface data does not exist */
+	mm_if_data = mm_alloc(mm, sizeof(struct if_data));
+	mrouters = mm_alloc(mm, SW_VLAN_BMP_NO);
+	allowed_vlans = mm_alloc(mm, SW_VLAN_BMP_NO);
+
+	data = mm_addr(mm, mm_if_data);
+	if (NULL == data) {
+		errno = ENOMEM;
+		ret = -1;
+		goto out_unlock;
+	}
+
+	/* Initiate the allowed VLANs bitmap */
+	bitmap = mm_addr(mm, allowed_vlans);
+	if (NULL == bitmap) {
+		errno = ENOMEM;
+		ret = -1;
+		goto out_unlock;
+	}
+	init_vlan_bitmap(bitmap);
+	new_data.allowed_vlans = allowed_vlans;
+
+	new_data.mrouters = mrouters;
+	*data = new_data;
+	mm_list_add(mm, mm_ptr(mm, &data->lh), mm_ptr(mm, &SHM->if_data));
+
+out_unlock:
+	mm_unlock(mm);
+	return ret;
+
+}
+
 int set_if_data(int if_index, struct if_data new_data)
 {
-	mm_ptr_t lh, mm_if_data, mrouters;
+	mm_ptr_t lh;
 	struct if_data *data;
 	int ret = 0;
 
@@ -677,26 +719,13 @@ int set_if_data(int if_index, struct if_data new_data)
 	if (MM_NULL != lh) {
 		data = mm_addr(mm, mm_list_entry(lh, struct if_data, lh));
 		*data = new_data;
-		goto out_unlock;
+
+		mm_unlock(mm);
+		return ret;
 	}
-
-	/* Interface data does not exist */
-	mm_if_data = mm_alloc(mm, sizeof(struct if_data));
-	mrouters = mm_alloc(mm, SW_VLAN_BMP_NO);
-	data = mm_addr(mm, mm_if_data);
-	if (NULL == data) {
-		errno = ENOMEM;
-		ret = -1;
-		goto out_unlock;
-	}
-
-	new_data.mrouters = mrouters;
-	*data = new_data;
-	mm_list_add(mm, mm_ptr(mm, &data->lh), mm_ptr(mm, &SHM->if_data));
-
-out_unlock:
 	mm_unlock(mm);
-	return ret;
+
+	return add_if_data(if_index, new_data);
 }
 
 int del_if_data(int if_index)
