@@ -18,46 +18,46 @@
  */
 
 #include "swconfig.h"
-#include <swlib.h>
+#include </home/gear/w/swconfig/swlib.h>
 
 static int swconfig_init(struct switch_operations *sw_ops)
 {
 	/* External swlib.so switch device ptr, defined in swlib.h */
 	extern struct switch_dev *dev;
 	struct swconfig_context *sw_ctx = SWCONFIG_CTX(sw_ops);
-	int ret;
+	int ret = 0;
 
 	/* get all registered switches, and 'select' the first one */
 	dev = swlib_connect(NULL); 
 
 	if(!dev) {
-		swlib_free_all(dev);
-		return ENODEV;
+		ret = ENODEV;
+		goto out;
 	}
+	sw_ctx->dev = dev;
+
 	/* first switch_dev is 'switch0' */	
 	sw_ctx->switch_id = dev->id;  /* = 0 */
+
 	
-	/* FIXME: should name, dev_name be stored in shared mm ? */
-	sw_ctx->dev_name = malloc(sizeof(dev->dev_name));
-	sw_ctx->name = malloc(sizeof(dev->name));
-	if(!sw_ctx->name || !sw_ctx->dev_name) {
-		swlib_free_all(dev);
-		return ENOMEM;
-	}
-	strncpy(sw_ctx->dev_name, (const char *)dev->dev_name, sizeof(dev->dev_name));
-	strncpy(sw_ctx->name, (const char *)dev->name, sizeof(dev->name));
+	strncpy(SHM->swconfig_devname, dev->dev_name, sizeof(dev->dev_name));
+	
 	sw_ctx->ports = dev->ports;
 	sw_ctx->vlans = dev->vlans;
 	sw_ctx->cpu_port = dev->cpu_port;
 
-	/* enable switch VLAN mode */
-	ret = switch_enable_vlans(sw_ctx);
-	if(ret)
-		return ret;
+	/* probe switch drivers for cmds * attrs */
+	swlib_scan(dev);
+
+	/* enable switch global VLAN mode */
+	if((ret = switch_enable_vlans(sw_ctx)))
+		goto out;
+	ret = switch_apply(sw_ctx);
 		
+out:
 	/* clear SWLIB allocated switch data */	
 	swlib_free_all(dev);
-	return 0;
+	return ret;
 }
 
 
@@ -71,16 +71,16 @@ static int if_add(struct switch_operations *sw_ops, int ifindex, int mode) {
 
 	switch(mode) {
 		case IF_MODE_ACCESS:
-			ret = port_set_untag(SWLIB_UNTAGGED, ifindex, sw_ctx);
+			ret = port_set_untag(ifindex, sw_ctx, SWLIB_UNTAGGED);
 			break;
 		case IF_MODE_TRUNK:
-			ret = port_set_untag(SWLIB_TAGGED, ifindex, sw_ctx);
+			ret = port_set_untag(ifindex, sw_ctx, SWLIB_TAGGED);
 			break;
 		default:
 			return EINVAL;
 	}
 
-	return 0;
+	return ret;
 }
 
 static int if_remove(struct switch_operations *sw_ops, int ifindex) {
@@ -91,11 +91,13 @@ static int if_remove(struct switch_operations *sw_ops, int ifindex) {
 	if(! (ifindex < sw_ctx->vlans))
 		return EINVAL;
 
-	/* disable port before  */
+	/* FIXME: disable port before removal ?  */
+/*
 	if((ret = port_disable(ifindex, sw_ctx)))
 		return ret;
+*/
 
-	return 0;
+	return ret;
 }
 
 static int if_enable(struct switch_operations *sw_ops, int ifindex) {
@@ -107,9 +109,11 @@ static int if_enable(struct switch_operations *sw_ops, int ifindex) {
 		return EINVAL;
 	
 	if((ret = port_enable(ifindex, sw_ctx)))
-		return ret;
+		goto out;
+	ret = switch_apply(sw_ctx);
 
-	return 0;
+out:
+	return ret;
 }
 
 static int if_disable(struct switch_operations *sw_ops, int ifindex) {
@@ -121,23 +125,84 @@ static int if_disable(struct switch_operations *sw_ops, int ifindex) {
 		return EINVAL;
 	
 	if((ret = port_disable(ifindex, sw_ctx)))
-		return ret;
+		goto out;
+	ret = switch_apply(sw_ctx);
 
-	return 0;
+out:
+	return ret;
 }
 
 static int if_set_mode(struct switch_operations *sw_ops, int ifindex, int mode, int flag) {
-	return 0;
-};
+	if (0 == flag) /* routed */
+		return EINVAL;
+	int ret = 0;	
+	struct swconfig_context *sw_ctx = SWCONFIG_CTX(sw_ops);
+	
+	if(! (ifindex < sw_ctx->vlans))
+		return EINVAL;
+
+	switch (mode) {
+	case IF_MODE_ACCESS:
+		ret = port_set_untag(ifindex, sw_ctx, SWLIB_UNTAGGED);
+		break;
+	case IF_MODE_TRUNK:
+		ret = port_set_untag(ifindex, sw_ctx, SWLIB_TAGGED);
+		break;
+	default:
+		return EINVAL;
+	}
+
+	if(ret)
+		goto out;
+	ret = switch_apply(sw_ctx);
+
+out:
+	return ret;
+}
+
 static int if_set_port_vlan(struct switch_operations *sw_ops, int ifindex, int vlan) {
-	return 0;
-};
+	int ret = 0;	
+	struct swconfig_context *sw_ctx = SWCONFIG_CTX(sw_ops);
+	
+	if(! (ifindex < sw_ctx->vlans))
+		return EINVAL;
+	
+	if((ret = port_set_pvid(ifindex, sw_ctx, vlan)))
+		goto out;
+	ret = switch_apply(sw_ctx);
+
+out:
+	return ret;
+}
+
 static int if_get_cfg(struct switch_operations *sw_ops, int ifindex, int *flags, int *access_vlan, unsigned char *vlans) {
 	return 0;
 };
+
 static int if_get_type(struct switch_operations *sw_ops, int ifindex, int *type, int *vlan) {
-	return 0;
-};
+	int ret = 0;	
+	struct swconfig_context *sw_ctx = SWCONFIG_CTX(sw_ops);
+	int untag;
+	
+	if(! (ifindex < sw_ctx->vlans))
+		return EINVAL;
+
+	ret = port_get_untag(ifindex, sw_ctx, &untag);
+	if(ret)
+		goto out;
+	switch(untag) {
+		case SWLIB_UNTAGGED:	*type = IF_MODE_ACCESS; 
+			break;
+		case SWLIB_TAGGED:		*type = IF_MODE_TRUNK;
+			break;
+		default:
+			return EINVAL;
+	}
+
+out:
+	return ret;
+}
+
 static int if_clear_mac(struct switch_operations *sw_ops, int ifindex) {
 	return 0;
 };
@@ -153,13 +218,16 @@ static int if_del_trunk_vlans(struct switch_operations *sw_ops, int ifindex, uns
 };
 
 static int get_if_list(struct switch_operations *sw_ops, int type, struct list_head *net_devs) {
+/* TODO: */
 	return 0;
 };
 
 static int vlan_add(struct switch_operations *sw_ops, int vlan) {
+/* TODO: */
 	return 0;
 };
 static int vlan_del(struct switch_operations *sw_ops, int vlan) {
+/* TODO: */
 	return 0;
 };
 
@@ -174,6 +242,7 @@ static int vlan_del_mac_dynamic(struct switch_operations *sw_ops, int ifindex, i
 };
 
 static int get_vlan_interfaces(struct switch_operations *sw_ops, int vlan, int **ifindexes, int *no_ifs) {
+/* TODO: */
 	return 0;
 };
 
@@ -221,6 +290,7 @@ struct swconfig_context sw_ctx = {
 		.if_remove	= if_remove,
 		.if_enable	= if_enable,
 		.if_disable	= if_disable,
+		.if_clear_mac = if_clear_mac,
 		.vlan_add	= vlan_add,
 		.vlan_del	= vlan_del,
 
