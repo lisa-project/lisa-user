@@ -15,7 +15,7 @@ INC	=	$(TOP_DIR)/include \
 # Switch middleware initialization
 LIBSWITCH_SRCS	= switch.c
 
-# LiSA specific middleware implementation
+# LiSA kernel module specific middleware implementation
 ifeq ($(IMPL), lisa)
 CFLAGS		+= -DLiSA
 INC 		+=	$(LINUX_INC) \
@@ -24,12 +24,23 @@ LIBSWITCH_SRCS	+= lisa/lisa.c
 LIBSWITCH_SRCS	+= lisa/util_lisa.c
 endif
 
+
+# Linux bridge+8021q specific middleware implementation
 ifeq ($(IMPL), linux)
 CFLAGS 		+= -DLinux
 INC 		+= $(TOP_DIR)/switch/linux
 LIBSWITCH_SRCS	+= linux/linux.c
 LIBSWITCH_SRCS	+= linux/util_linux.c
 endif
+
+# OpenWRT swconfig specific middleware implementation
+ifeq ($(IMPL), openwrt)
+CFLAGS 		+= -DOpenWRT
+INC 		+= $(TOP_DIR)/switch/swconfig
+LIBSWITCH_SRCS	+= swconfig/swconfig.c
+LIBSWITCH_SRCS	+= swconfig/util_swlib.c
+endif
+
 
 SRCS		= $(LIBSWITCH_SRCS)
 

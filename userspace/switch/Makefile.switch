@@ -8,3 +8,7 @@ endif
 ifeq ($(IMPL), linux)
 SWITCH_INC += $(TOP_DIR)/switch/linux
 endif
+
+ifeq ($(IMPL), openwrt)
+SWITCH_INC += $(TOP_DIR)/switch/swconfig
+endif

@@ -1,8 +1,9 @@
 MAKEFLAGS += --no-builtin-rules --no-print-directory
 
 ifndef IMPL
-	IMPL = lisa
-	#IMPL = linux
+	#IMPL = lisa
+	IMPL = linux
+	#IMPL = openwrt
 endif
 
 CFLAGS += -O3 -fno-strict-aliasing -Wall -Wstrict-prototypes -Wwrite-strings
