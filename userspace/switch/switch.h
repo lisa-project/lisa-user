@@ -130,7 +130,7 @@ struct swport_data {
 	unsigned short doubletag;	/* optional feature, vlan/vlan encapsulation */
 	unsigned short untag;		/* 1 = mode ACCESS, 0 = mode TRUNK */
 	struct mm_list_head lh;
-}
+};
 
 
 #ifdef Linux
