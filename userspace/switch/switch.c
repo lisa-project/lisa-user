@@ -31,6 +31,10 @@
 #include "linux.h"
 #endif
 
+#ifdef OpenWRT
+#include "swconfig.h"
+#endif
+
 struct mm_private *mm = NULL;
 struct switch_operations *sw_ops;
 
@@ -276,9 +280,14 @@ int switch_init(void)
 	char desc[SW_MAX_VLAN_NAME + 1];
 #ifdef LiSA
 	sw_ops = &lisa_ctx.sw_ops;
-#else
+#endif
+#ifdef Linux
 	sw_ops = &lnx_ctx.sw_ops;
 #endif
+#ifdef OpenWRT
+	sw_ops = &sw_ctx.sw_ops;
+#endif
+
 	if (mm)
 		return 0;
 	mm = mm_create("lisa", sizeof(struct switch_mem), 4096);
@@ -296,9 +305,14 @@ int switch_init(void)
 	MM_INIT_LIST_HEAD(mm, mm_ptr(mm, &SHM->vlan_data));
 	MM_INIT_LIST_HEAD(mm, mm_ptr(mm, &SHM->if_data));
 #endif
-
+	
+#ifdef OpenWRT
+	MM_INIT_LIST_HEAD(mm, mm_ptr(mm, &SHM->swport_data));
+#else
+	/* no CDP/RSTP possible when using HW sw */
 	switch_init_cdp();
 	switch_init_rstp();
+#endif
 
 	if (sw_ops->backend_init(sw_ops))
 		return -1;

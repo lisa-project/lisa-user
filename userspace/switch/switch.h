@@ -77,6 +77,10 @@ struct switch_mem {
 	/* Bridge + 8021q age time */
 	int age_time;
 	int igmp_snooping;
+	/* swconfig switch port data */
+	struct mm_list_head swport_data;
+	/* swconfig switch device name */
+	char swconfig_devname[IFNAMSIZE];
 };
 
 struct if_tag {
@@ -115,7 +119,21 @@ struct if_data {
 	struct mm_list_head lh;
 };
 
-#ifndef LiSA
+
+/* Used only by for OpenWRT swconfig backend */
+
+struct swport_data {
+	int port_id;				/* HW port number, 0+ */
+	int pvid;					/* primary VLAN ID / native vlan */
+	mm_ptr_t allowed_vlans;
+	unsigned short disable;		/* 1 = disables, 0 = enabled; */
+	unsigned short doubletag;	/* optional feature, vlan/vlan encapsulation */
+	unsigned short untag;		/* 1 = mode ACCESS, 0 = mode TRUNK */
+	struct mm_list_head lh;
+}
+
+
+#ifdef Linux
 /* Temporarily copied from include/linux/net_switch.h */
 /* FDB entry type flags */
 #define SW_FDB_STATIC 0x01
@@ -179,6 +197,7 @@ enum {
 #define sw_is_mrouter(bitmap, vlan)	(sw_bitmap_test(bitmap, vlan))
 #endif
 
+/* end of include/linux/net_switch.h */
 
 #define __default_vlan_name(__buf, __vlan) snprintf(__buf, 9, "VLAN%04d", (__vlan))
 #define default_vlan_name(__lvalue, __vlan) do {\
