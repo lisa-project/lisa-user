@@ -716,6 +716,31 @@ static int mrouters_get(struct switch_operations *sw_ops, int vlan,
 static int if_add_trunk_vlans(struct switch_operations *sw_ops,
 	int ifindex, unsigned char *vlans)
 {
+	int ret = 0, i;
+	struct linux_context *lnx_ctx = SWLINUX_CTX(sw_ops);
+	struct if_data data;
+	unsigned char *bitmap;
+
+	/* Get interface data */
+	get_if_data(ifindex, &data);
+
+	mm_lock(mm);
+
+	bitmap = mm_addr(mm, data.allowed_vlans);
+
+	if (data.mode == IF_MODE_ACCESS) {
+
+		/* TODO turn this into a macro */
+		for(i = 0; i < SW_VLAN_BMP_NO; i++){
+			bitmap[i] = bitmap[i] | vlans[i];
+		}
+	}
+	if (data.mode == IF_MODE_TRUNK) {
+		/* TODO add vifs for the newly added vlans*/
+	}
+
+	mm_unlock(mm);
+
 	return 0;
 }
 
