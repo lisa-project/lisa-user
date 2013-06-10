@@ -23,8 +23,8 @@
 
 #include "cdp_client.h"
 #include "rstp_client.h"
-#include "sw_api.h"
-#include "mm.h"
+#include "multiengine.h"
+
 #ifdef LiSA
 	#include "swsock.h"
 #endif

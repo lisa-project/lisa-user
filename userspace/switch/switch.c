@@ -278,6 +278,11 @@ int switch_init(void)
 #else
 	sw_ops = &lnx_ctx.sw_ops;
 #endif
+	/* register switch to the multiengine */
+	if (!register_switch(sw_ops)) {
+		return -1;
+	}
+
 	if (mm)
 		return 0;
 	mm = mm_create("lisa", sizeof(struct switch_mem), 4096);
@@ -323,6 +328,7 @@ int switch_init(void)
 	}
 out_unlock:
 	mm_unlock(mm);
+
 	return ret;
 }
 
