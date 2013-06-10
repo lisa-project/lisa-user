@@ -133,6 +133,12 @@ struct swport_data {
 };
 
 
+#define init_vlan_bitmap(__bitmap) do {	\
+	int i = 0;			\
+	for (i = 0; i < 512; i++)	\
+		__bitmap[i] = 0xFF;	\
+} while(0)
+
 #ifdef Linux
 /* Temporarily copied from include/linux/net_switch.h */
 /* FDB entry type flags */

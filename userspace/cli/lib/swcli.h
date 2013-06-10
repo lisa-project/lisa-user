@@ -19,6 +19,7 @@
 
 #ifdef LiSA
 	#include "swsock.h"
+	#include "linux/net_switch.h"
 #endif
 #include "util.h"
 #include "switch.h"

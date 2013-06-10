@@ -18,14 +18,14 @@ INC		= $(SWITCH_INC) \
 
 DEF		= _GNU_SOURCE CONFIG_CLI_TESTING
 
+include $(TOP_DIR)/scripts/Makefile.variables
 ifeq ($(IMPL), lisa)
-CFLAGS      += -DLiSA
-INC			+= $(LINUX_INC) 
+CFLAGS      	+= -DLiSA
+INC		+= $(LINUX_INC)
 endif
 
 ifeq ($(IMPL), linux)
 CFLAGS 		+= -DLinux
-
 endif
 
 
@@ -108,7 +108,6 @@ TARGETS	= libswcli.so $(LIBSWCLI_TARGETS)
 
 all: $(TARGETS)
 
-include $(TOP_DIR)/scripts/Makefile.variables
 include $(TOP_DIR)/scripts/Makefile.rules
 
 dep: $(DEPS)

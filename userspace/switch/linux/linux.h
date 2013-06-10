@@ -68,12 +68,6 @@
 } while (0)
 
 
-#define init_vlan_bitmap(__bitmap) do {	\
-	int i = 0;			\
-	for (i = 0; i < 512; i++)	\
-		__bitmap[i] = 0xFF;	\
-} while(0)
-
 #define LINUX_DEFAULT_BRIDGE		"vlan1"
 #define LINUX_DEFAULT_VLAN		1
 #define VLAN_NAME_LEN			9
