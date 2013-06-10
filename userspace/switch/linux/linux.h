@@ -139,9 +139,11 @@ extern int create_vif(struct linux_context *lnx_ctx, char *if_name, int vlan_id)
 extern int remove_vif(struct linux_context *lnx_ctx, char *if_name);
 
 /* Create virtual interfaces for a trunk interface */
-int add_vifs_to_trunk(struct linux_context *lnx_ctx, int ifindex);
+int add_vifs_to_trunk(struct linux_context *lnx_ctx, int ifindex,
+	unsigned char *bitmap);
 
 /* Remove all the virtual interfaces of a trunk interface */
-extern int remove_vifs_from_trunk(struct linux_context *lnx_ctx, int ifindex);
+extern int remove_vifs_from_trunk(struct linux_context *lnx_ctx, int ifindex,
+	unsigned char *bitmap);
 
 #endif

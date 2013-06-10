@@ -139,6 +139,24 @@ struct swport_data {
 		__bitmap[i] = 0xFF;	\
 } while(0)
 
+#define sw_bitmap_or(__old_bitmap, __bitmap, __new_bitmap) do {		\
+	int i = 0;							\
+	for (i = 0; i < 512; i++)					\
+		__new_bitmap[i] = __old_bitmap[i] | __bitmap[i];	\
+} while(0)
+
+#define sw_bitmap_and(__old_bitmap, __bitmap, __new_bitmap) do {	\
+	int i = 0;							\
+	for (i = 0; i < 512; i++)					\
+		__new_bitmap[i] = __old_bitmap[i] & __bitmap[i];	\
+} while(0)
+
+#define sw_bitmap_xor(__old_bitmap, __bitmap, __new_bitmap) do {	\
+	int i = 0;							\
+	for (i = 0; i < 512; i++)					\
+		__new_bitmap[i] = __old_bitmap[i] ^ __bitmap[i];	\
+} while(0)
+
 #ifdef Linux
 /* Temporarily copied from include/linux/net_switch.h */
 /* FDB entry type flags */

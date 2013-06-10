@@ -39,6 +39,15 @@ static int if_add(struct switch_operations *sw_ops, int ifindex, int mode)
 	if_get_name(ifindex, if_sfd, if_name);
 	IF_SOCK_CLOSE(lnx_ctx, if_sfd);
 
+	/* Create interface specific data */
+	strncpy(device.name, if_name, IFNAMSIZ);
+	device.ifindex = ifindex;
+	device.type = IF_TYPE_SWITCHED;
+	data.device = device;
+
+	data.mode = mode;
+	add_if_data(ifindex, data);
+
 
 	/* Add the new interface to the default bridge */
 	switch (mode) {
@@ -48,21 +57,12 @@ static int if_add(struct switch_operations *sw_ops, int ifindex, int mode)
 		break;
 
 	case IF_MODE_TRUNK:
-		ret = add_vifs_to_trunk(lnx_ctx, ifindex);
+		ret = add_vifs_to_trunk(lnx_ctx, ifindex, NULL);
 		break;
 
 	default:
 		return EINVAL;
 	}
-
-	/* Create interface specific data */
-	strncpy(device.name, if_name, IFNAMSIZ);
-	device.ifindex = ifindex;
-	device.type = IF_TYPE_SWITCHED;
-	data.device = device;
-
-	data.mode = mode;
-	add_if_data(ifindex, data);
 
 	return ret;
 }
@@ -87,7 +87,7 @@ static int if_remove(struct switch_operations *sw_ops, int ifindex)
 
 	else
 		/* Remove all trunk virtual interfaces */
-		ret = remove_vifs_from_trunk(lnx_ctx, ifindex);
+		ret = remove_vifs_from_trunk(lnx_ctx, ifindex, NULL);
 
 
 	/* Remove the interface specific data */
@@ -716,10 +716,11 @@ static int mrouters_get(struct switch_operations *sw_ops, int vlan,
 static int if_add_trunk_vlans(struct switch_operations *sw_ops,
 	int ifindex, unsigned char *vlans)
 {
-	int ret = 0, i;
+	int ret = 0;
 	struct linux_context *lnx_ctx = SWLINUX_CTX(sw_ops);
 	struct if_data data;
 	unsigned char *bitmap;
+	unsigned char aux_bitmap[SW_VLAN_BMP_NO];
 
 	/* Get interface data */
 	get_if_data(ifindex, &data);
@@ -730,24 +731,80 @@ static int if_add_trunk_vlans(struct switch_operations *sw_ops,
 
 	if (data.mode == IF_MODE_ACCESS) {
 
-		/* TODO turn this into a macro */
-		for(i = 0; i < SW_VLAN_BMP_NO; i++){
-			bitmap[i] = bitmap[i] | vlans[i];
-		}
+		sw_bitmap_or(bitmap, vlans, bitmap);
+		/* TODO return errno here */
+
 	}
 	if (data.mode == IF_MODE_TRUNK) {
-		/* TODO add vifs for the newly added vlans*/
+
+		sw_bitmap_xor(bitmap, vlans, aux_bitmap);
+		sw_bitmap_and(vlans, aux_bitmap, aux_bitmap);
+
+		/* set new allowed vlans */
+		sw_bitmap_or(bitmap, vlans, bitmap);
+
+		mm_unlock(mm);
+
+		add_vifs_to_trunk(lnx_ctx, ifindex, aux_bitmap);
+
+		mm_lock(mm);
+
 	}
 
 	mm_unlock(mm);
 
-	return 0;
+	return ret;
 }
 
 static int if_set_trunk_vlans(struct switch_operations *sw_ops,
 	int ifindex, unsigned char *vlans)
 {
-	return 0;
+	int ret = 0;
+	struct linux_context *lnx_ctx = SWLINUX_CTX(sw_ops);
+	struct if_data data;
+	unsigned char *bitmap;
+	unsigned char aux_bitmap[SW_VLAN_BMP_NO];
+
+	/* Get interface data */
+	get_if_data(ifindex, &data);
+
+	mm_lock(mm);
+
+	/*  get allowed vlans bitmap  */
+	bitmap = mm_addr(mm, data.allowed_vlans);
+
+	if (data.mode == IF_MODE_ACCESS) {
+		memset(bitmap, 0x00, SW_VLAN_BMP_NO);
+		sw_bitmap_or(bitmap, vlans, bitmap);
+	}
+	if (data.mode == IF_MODE_TRUNK) {
+
+		sw_bitmap_xor(bitmap, vlans, aux_bitmap);
+		sw_bitmap_and(vlans, aux_bitmap, aux_bitmap);
+
+		mm_unlock(mm);
+
+		add_vifs_to_trunk(lnx_ctx, ifindex, aux_bitmap);
+
+		mm_lock(mm);
+
+		sw_bitmap_xor(bitmap, vlans, aux_bitmap);
+		sw_bitmap_and(bitmap,aux_bitmap, aux_bitmap);
+
+		mm_unlock(mm);
+
+		remove_vifs_from_trunk(lnx_ctx, ifindex, aux_bitmap);
+
+		mm_lock(mm);
+
+		memset(bitmap, 0, SW_VLAN_BMP_NO);
+		sw_bitmap_or(bitmap, vlans, bitmap);
+
+	}
+
+	mm_unlock(mm);
+
+	return ret;
 }
 
 static int if_del_trunk_vlans(struct switch_operations *sw_ops,
