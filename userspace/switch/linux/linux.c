@@ -810,7 +810,41 @@ static int if_set_trunk_vlans(struct switch_operations *sw_ops,
 static int if_del_trunk_vlans(struct switch_operations *sw_ops,
 	int ifindex, unsigned char *vlans)
 {
-	return 0;
+	int ret = 0;
+	struct linux_context *lnx_ctx = SWLINUX_CTX(sw_ops);
+	struct if_data data;
+	unsigned char *bitmap;
+	unsigned char aux_bitmap[SW_VLAN_BMP_NO];
+
+	/* Get interface data */
+	get_if_data(ifindex, &data);
+
+	mm_lock(mm);
+
+	bitmap = mm_addr(mm, data.allowed_vlans);
+
+	if (data.mode == IF_MODE_ACCESS) {
+
+		sw_bitmap_xor(bitmap, vlans, aux_bitmap);
+		sw_bitmap_and(bitmap, aux_bitmap, bitmap);
+		/* TODO return errno here */
+
+	}
+	if (data.mode == IF_MODE_TRUNK) {
+
+		sw_bitmap_and(bitmap, vlans, aux_bitmap);
+
+		mm_unlock(mm);
+
+		remove_vifs_from_trunk(lnx_ctx, ifindex, aux_bitmap);
+
+		mm_lock(mm);
+
+		sw_bitmap_xor(bitmap, vlans, aux_bitmap);
+		sw_bitmap_and(bitmap, aux_bitmap, bitmap);
+
+	}
+
 }
 
 static int if_get_cfg (struct switch_operations *sw_ops, int ifindex,
