@@ -18,7 +18,6 @@
  */
 
 #include "swconfig.h"
-#include </home/gear/w/swconfig/swlib.h>
 
 static int swconfig_init(struct switch_operations *sw_ops)
 {
@@ -40,7 +39,7 @@ static int swconfig_init(struct switch_operations *sw_ops)
 	sw_ctx->switch_id = dev->id;  /* = 0 */
 
 	
-	strncpy(SHM->swconfig_devname, dev->dev_name, sizeof(dev->dev_name));
+	strncpy(SHM->swconfig_devname, dev->dev_name, strlen(dev->dev_name)+1);
 	
 	sw_ctx->ports = dev->ports;
 	sw_ctx->vlans = dev->vlans;

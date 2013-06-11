@@ -18,11 +18,11 @@
  */
 
 #include "swconfig.h"
-#include <swlib.h>
+#include "swlib.h"
 
 
 /* activate changes in HW switch */
-int switch_apply(sw_ctx *ctx){
+int switch_apply(struct swconfig_context *sw_ctx){
 	int ret = 0;
 	struct switch_attr *a;
 	if(NULL == sw_ctx->dev) return -1;
@@ -35,7 +35,7 @@ int switch_apply(sw_ctx *ctx){
 }
 
 /* reset hw switch */
-int switch_reset(sw_ctx *ctx){
+int switch_reset(struct swconfig_context *sw_ctx){
 	int ret = 0;
 	struct switch_attr *a;
 	if(NULL == sw_ctx->dev) return -1;
@@ -47,7 +47,7 @@ int switch_reset(sw_ctx *ctx){
 }
 
 /* enable switch VLAN mode */
-int switch_enable_vlans(sw_ctx *ctx){
+int switch_enable_vlans(struct swconfig_context *sw_ctx){
 	int ret = 0;
 	struct switch_attr *a;
 	if(NULL == sw_ctx->dev) return -1;
@@ -55,12 +55,12 @@ int switch_enable_vlans(sw_ctx *ctx){
 	a = swlib_lookup_attr(sw_ctx->dev, SWLIB_ATTR_GROUP_GLOBAL, "enable_vlan");
 	if(!a)	/* attribute unknown */
 		return -1;
-	ret = swlib_set_attr_string(sw_ctx->dev, a, -1, 1);
+	ret = swlib_set_attr_string(sw_ctx->dev, a, -1, "1");
 	return ret;
 } 
 
 /* disable switch VLAN mode */
-int switch_disable_vlans(sw_ctx *ctx){
+int switch_disable_vlans(struct swconfig_context *sw_ctx){
 	int ret = 0;
 	struct switch_attr *a;
 	if(NULL == sw_ctx->dev) return -1;
@@ -68,9 +68,8 @@ int switch_disable_vlans(sw_ctx *ctx){
 	a = swlib_lookup_attr(sw_ctx->dev, SWLIB_ATTR_GROUP_GLOBAL, "enable_vlan");
 	if(!a)	/* attribute unknown */
 		return -1;
-	ret = swlib_set_attr_string(sw_ctx->dev, a, -1, 0);
+	ret = swlib_set_attr_string(sw_ctx->dev, a, -1, "0");
 	return ret;
-
 }
 
 
@@ -78,14 +77,14 @@ int switch_disable_vlans(sw_ctx *ctx){
 
 /* set/get VLAN->Port assignments */
 
-int set_vlan_ports(int vlan, sw_ctx *ctx, int count, struct switch_port **ports){
-	return ret;
+int set_vlan_ports(int vlan, struct swconfig_context *sw_ctx, int count, struct switch_port **ports){
+	return 0;
 }
 
-int get_vlan_ports(int vlan, sw_ctx *ctx, int *count, struct switch_port **ports){
+int get_vlan_ports(int vlan, struct swconfig_context *sw_ctx, int *count, struct switch_port **ports){
 	int ret = 0;
 	struct switch_attr *a;
-	struct sitch_val val;
+	struct switch_val val;
 	if(NULL == sw_ctx->dev) return -1;
 
 	ports = NULL;
@@ -95,8 +94,8 @@ int get_vlan_ports(int vlan, sw_ctx *ctx, int *count, struct switch_port **ports
 		return -1;
 	if((ret = swlib_get_attr(sw_ctx->dev, a, &val))<0)
 		goto out;
-	count = val.len;
-	ports = val.value.ports;
+	*count = val.len;
+	*ports = val.value.ports;
 out:
 	return ret;
 }
@@ -105,7 +104,7 @@ out:
 /*** Switch Port Functions ***/
 
 /* enable/disable switch port */
-int port_enable(int id, sw_ctx *ctx){
+int port_enable(int id, struct swconfig_context *sw_ctx){
 	int ret = 0;
 	struct switch_attr *a;
 	if(NULL == sw_ctx->dev) return -1;
@@ -113,11 +112,11 @@ int port_enable(int id, sw_ctx *ctx){
 	a = swlib_lookup_attr(sw_ctx->dev, SWLIB_ATTR_GROUP_PORT, "disable");
 	if(!a)	/* attribute unknown */
 		return -1;
-	ret = swlib_set_attr_string(sw_ctx->dev, a, id, 1);
+	ret = swlib_set_attr_string(sw_ctx->dev, a, id, "1");
 	return ret;
 }
 
-int port_disable(int id, sw_ctx *ctx){
+int port_disable(int id, struct swconfig_context *sw_ctx){
 	int ret = 0;
 	struct switch_attr *a;
 	if(NULL == sw_ctx->dev) return -1;
@@ -125,27 +124,29 @@ int port_disable(int id, sw_ctx *ctx){
 	a = swlib_lookup_attr(sw_ctx->dev, SWLIB_ATTR_GROUP_PORT, "disable");
 	if(!a)	/* attribute unknown */
 		return -1;
-	ret = swlib_set_attr_string(sw_ctx->dev, a, id, 0);
+	ret = swlib_set_attr_string(sw_ctx->dev, a, id, "0");
 	return ret;
 }
 
 /* set/get switch port untagged */
-int port_set_untag(int id, sw_ctx *ctx, int untag){
+int port_set_untag(int id, struct swconfig_context *sw_ctx, int untag){
 	int ret = 0;
 	struct switch_attr *a;
+	char *f;
 	if(NULL == sw_ctx->dev) return -1;
 
 	a = swlib_lookup_attr(sw_ctx->dev, SWLIB_ATTR_GROUP_PORT, "untag");
 	if(!a)	/* attribute unknown */
 		return -1;
-	ret = swlib_set_attr_string(sw_ctx->dev, a, id, untag);
+	sprintf(f, "%d", untag);
+	ret = swlib_set_attr_string(sw_ctx->dev, a, id, f);
 	return ret;
 }
 
-int port_get_untag(int id, sw_ctx *ctx, int *untag){
+int port_get_untag(int id, struct swconfig_context *sw_ctx, int *untag){
 	int ret = 0;
 	struct switch_attr *a;
-	struct sitch_val val;
+	struct switch_val val;
 	if(NULL == sw_ctx->dev) return -1;
 
 	*untag = -1;
@@ -155,27 +156,29 @@ int port_get_untag(int id, sw_ctx *ctx, int *untag){
 		return -1;
 	ret = swlib_get_attr(sw_ctx->dev, a, &val);
 	if(!ret) 
-		untag = val.value.i;
+		*untag = val.value.i;
 	return ret;
 }
 
 /* set/get switch port pvid (native vlan) */
-int port_set_pvid(int id, sw_ctx *ctx, int vlan){
+int port_set_pvid(int id, struct swconfig_context *sw_ctx, int vlan){
 	int ret = 0;
-	struct switch_attr *a;
+	struct switch_attr *a; 
+	char *v;
 	if(NULL == sw_ctx->dev) return -1;
 
 	a = swlib_lookup_attr(sw_ctx->dev, SWLIB_ATTR_GROUP_PORT, "pvid");
 	if(!a)	/* attribute unknown */
 		return -1;
-	ret = swlib_set_attr_string(sw_ctx->dev, a, id, vlan);
+	sprintf(v, "%d", vlan);
+	ret = swlib_set_attr_string(sw_ctx->dev, a, id, v);
 	return ret;
 }
 
-int port_get_pvid(int id, sw_ctx *ctx, int *vlan){
+int port_get_pvid(int id, struct swconfig_context *sw_ctx, int *vlan){
 	int ret = 0;
 	struct switch_attr *a;
-	struct sitch_val val;
+	struct switch_val val;
 	if(NULL == sw_ctx->dev) return -1;
 
 	*vlan = -1;
@@ -185,52 +188,58 @@ int port_get_pvid(int id, sw_ctx *ctx, int *vlan){
 		return -1;
 	ret = swlib_get_attr(sw_ctx->dev, a, &val);
 	if(!ret) 
-		vlan= val.value.i;
+		*vlan= val.value.i;
 	return ret;
 }
 
 /* set/get switch port doubletagging */
-int port_set_doubletag(int id, sw_ctx *ctx){
+int port_set_doubletag(int id, struct swconfig_context *sw_ctx){
 	return 0;
 }
 
-int port_get_doubletag(int id, sw_ctx *ctx){
+int port_get_doubletag(int id, struct swconfig_context *sw_ctx){
 	return 0;
 }
 
-/* set/get switch port HW group: 1 = lan, 0 = wan */
-int port_set_hwgroup(int id, sw_ctx *ctx, int lan){
+/* set/get switch port HW group: 1 = Lan, 0 = Wan */
+int port_set_hwgroup(int id, struct swconfig_context *sw_ctx, int lan){
 	return 0;
 }
 
-int port_get_hwgroup(int id, sw_ctx *ctx, int lan){
-	lan = 1 // lan;
+int port_get_hwgroup(int id, struct swconfig_context *sw_ctx, int lan){
+	lan = 1;  /* Lan */
 	return 0; 
 }
 
-/* get switch port link information */
-int port_get_link(int id, char *info, sw_ctx *ctx, char *info){
-	int ret = 0;
+/* get switch port state,link,speed,duplex information */
+int port_get_link(int id, struct swconfig_context *sw_ctx, char *link){
+	int ret = -1;
 	struct switch_attr *a;
 	struct switch_val val;
-	if(NULL == sw_ctx->dev) return -1;
+	if(NULL == sw_ctx->dev) return ret;
 
-	info = NULL;
+	link = NULL;
 	val.port_vlan = id;
 	a = swlib_lookup_attr(sw_ctx->dev, SWLIB_ATTR_GROUP_PORT, "link");
 	if(!a)	/* attribute unknown */
-		return -1;
-	ret = swlib_get_attr(sw_ctx->dev, a, &val);
-	if(!ret) 
-		info = val.value.s;
+		goto out;
+	if((ret = swlib_get_attr(sw_ctx->dev, a, &val)))
+		goto out;
+	if(NULL == (link = malloc(strlen(val.value.s)+1)))
+		goto out;
+	if(NULL == strcpy(link, val.value.s))
+		goto out;
+	ret = 0;
+out:
+	free((void *)val.value.s);
 	return ret;
 }
 
 /* get switch port receive good packet count */
-int port_get_recv_good(int id, sw_ctx *ctx, int *count){
+int port_get_recv_good(int id, struct swconfig_context *sw_ctx, int *count){
 	int ret = 0;
 	struct switch_attr *a;
-	struct sitch_val val;
+	struct switch_val val;
 	if(NULL == sw_ctx->dev) return -1;
 
 	*count = 0;
@@ -240,15 +249,15 @@ int port_get_recv_good(int id, sw_ctx *ctx, int *count){
 		return -1;
 	ret = swlib_get_attr(sw_ctx->dev, a, &val);
 	if(!ret) 
-		untag = val.value.i;
+		*count = val.value.i;
 	return ret;
 }
 
 /* get switch port receive bad packet count */
-int port_get_recv_bad(int id, sw_ctx *ctx, int *count){
+int port_get_recv_bad(int id, struct swconfig_context *sw_ctx, int *count){
 	int ret = 0;
 	struct switch_attr *a;
-	struct sitch_val val;
+	struct switch_val val;
 	if(NULL == sw_ctx->dev) return -1;
 
 	*count = 0;
@@ -258,7 +267,7 @@ int port_get_recv_bad(int id, sw_ctx *ctx, int *count){
 		return -1;
 	ret = swlib_get_attr(sw_ctx->dev, a, &val);
 	if(!ret) 
-		untag = val.value.i;
+		*count = val.value.i;
 	return ret;
 }
 

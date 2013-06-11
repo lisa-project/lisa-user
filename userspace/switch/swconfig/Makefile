@@ -1,6 +1,7 @@
 TOP_DIR		:= $(shell pwd)/../../
 CFLAGS		+= -fPIC -g
 
+SWLIB_INC	:= $(TOP_DIR)/../../swconfig
 
 include $(TOP_DIR)/scripts/Makefile.includes
 INC		= $(TOP_DIR)/switch \
@@ -18,7 +19,7 @@ include $(TOP_DIR)/scripts/Makefile.rules
 
 all: $(OBJS)
 
-util_swlib.o: $(OBJS) swconfig.h
+swconfig.o: $(OBJS) swconfig.h
 	$(QUIET_LD)$(CC) $(CFLAGS) $(LDFLAGS) -lswlib $(OBJS)
 
 dep: $(DEPS)

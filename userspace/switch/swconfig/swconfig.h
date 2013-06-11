@@ -8,6 +8,7 @@
 #include "switch.h"
 #include "sw_api.h"
 
+#include "swlib.h"
 
 #define SWCONFIG_CTX(sw_ops) ((struct swconfig_context *)(sw_ops))
 
@@ -44,7 +45,7 @@ struct swconfig_context {
 
 struct swconfig_context sw_ctx;
 
-/* extern struct switch_port; */
+// extern struct switch_port; 
 
 #define	SWLIB_UNTAGGED	1
 #define	SWLIB_TAGGED	0
@@ -82,8 +83,8 @@ extern int port_get_untag(int id, struct swconfig_context *ctx, int *untag);
 
 
 /* set/get switch port primary vlan id */
-extern int port_set_pvid(int id, sw_ctx *ctx, int vlan);
-extern int port_get_pvid(int id, sw_ctx *ctx, int *vlan);
+extern int port_set_pvid(int id, struct swconfig_context *ctx, int vlan);
+extern int port_get_pvid(int id, struct swconfig_context *ctx, int *vlan);
 
 /* set/get switch port doubletagging */
 extern int port_set_doubletag(int id, struct swconfig_context *ctx);
