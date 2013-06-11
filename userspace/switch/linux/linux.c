@@ -814,9 +814,31 @@ static int if_del_trunk_vlans(struct switch_operations *sw_ops,
 }
 
 static int if_get_cfg (struct switch_operations *sw_ops, int ifindex,
-		int *flags,int *access_vlan, unsigned char *vlans)
+		int *flags, int *access_vlan, unsigned char *vlans)
 {
-	return 0;
+	int ret = 0;
+	struct if_data data;
+	unsigned char *allowed_vlans;
+
+
+	/* Get interface data */
+	ret = get_if_data(ifindex, &data);
+	if (ret)
+		return ret;
+
+	*flags = data.mode;
+	if (data.mode == IF_MODE_ACCESS)
+		*access_vlan = data.access_vlan;
+	else {
+		mm_lock(mm);
+
+		allowed_vlans = mm_addr(mm, data.mrouters);
+		memcpy(vlans, allowed_vlans, SW_VLAN_BMP_NO);
+
+		mm_unlock(mm);
+	}
+
+	return ret;
 }
 
 static int vlan_set_mac_static(struct switch_operations *sw_ops, int ifindex,
