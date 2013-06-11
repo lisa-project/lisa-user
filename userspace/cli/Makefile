@@ -28,6 +28,10 @@ ifeq ($(IMPL), linux)
 CFLAGS 		+= -DLinux
 endif
 
+ifeq ($(IMPL), openwrt)
+CFLAGS 		+= -DOpenWRT
+endif
+
 
 ifndef DIST
 LOGIN_PATH	:= \"$(shell pwd)/swlogin\"

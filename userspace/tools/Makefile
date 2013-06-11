@@ -11,6 +11,12 @@ CFLAGS 	+= -DLinux
 INC =
 endif
 
+ifeq ($(IMPL), openwrt)
+CFLAGS 	+= -DOpenWRT
+INC =
+endif
+
+
 ifneq ($(MAKECMDGOALS), clean)
 $(info ********* Building testing tools *********)
 endif

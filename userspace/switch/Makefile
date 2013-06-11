@@ -36,7 +36,8 @@ endif
 # OpenWRT swconfig specific middleware implementation
 ifeq ($(IMPL), openwrt)
 CFLAGS 		+= -DOpenWRT
-INC 		+= $(TOP_DIR)/switch/swconfig
+SWLIB_INC	:= $(TOP_DIR)/../../swconfig
+INC 		+= $(TOP_DIR)/switch/swconfig $(SWLIB_INC)
 LIBSWITCH_SRCS	+= swconfig/swconfig.c
 LIBSWITCH_SRCS	+= swconfig/util_swlib.c
 endif
