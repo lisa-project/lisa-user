@@ -157,7 +157,7 @@ struct swport_data {
 		__new_bitmap[i] = __old_bitmap[i] ^ __bitmap[i];	\
 } while(0)
 
-#ifdef Linux
+#ifndef LiSA
 /* Temporarily copied from include/linux/net_switch.h */
 /* FDB entry type flags */
 #define SW_FDB_STATIC 0x01
@@ -219,8 +219,8 @@ enum {
 #define sw_set_mrouter(bitmap, vlan)	(sw_bitmap_set(bitmap, vlan))
 #define sw_reset_mrouter(bitmap, vlan)	(sw_bitmap_reset(bitmap, vlan))
 #define sw_is_mrouter(bitmap, vlan)	(sw_bitmap_test(bitmap, vlan))
-#endif
 
+#endif
 /* end of include/linux/net_switch.h */
 
 #define __default_vlan_name(__buf, __vlan) snprintf(__buf, 9, "VLAN%04d", (__vlan))

@@ -233,6 +233,7 @@ static int __del_if_data(int if_index)
 	return 0;
 }
 
+#ifndef OpenWRT
 static void switch_init_rstp(void)
 {
 	struct rstp_configuration rstp;
@@ -273,6 +274,7 @@ static void switch_init_cdp(void)
 	/* store initial config into the shared memory */
 	switch_set_cdp(&cdp);
 }
+#endif
 
 int switch_init(void)
 {
