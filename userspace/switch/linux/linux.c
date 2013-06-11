@@ -866,7 +866,7 @@ static int if_get_cfg (struct switch_operations *sw_ops, int ifindex,
 	else {
 		mm_lock(mm);
 
-		allowed_vlans = mm_addr(mm, data.mrouters);
+		allowed_vlans = mm_addr(mm, data.allowed_vlans);
 		memcpy(vlans, allowed_vlans, SW_VLAN_BMP_NO);
 
 		mm_unlock(mm);
