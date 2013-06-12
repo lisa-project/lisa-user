@@ -341,10 +341,10 @@ int main(int argc, char **argv) {
 			return 0;
 		}
 		unsigned char vlans[SW_VLAN_BMP_NO];
-		int i;
 		parse_vlan_list(argv[3], vlans);
 
 		#ifdef _LINUX_H
+		int i;
 
 		for(i = 0; i < SW_VLAN_BMP_NO; i++)
 		{
@@ -369,12 +369,12 @@ int main(int argc, char **argv) {
 			return 0;
 		}
 		unsigned char vlans[SW_VLAN_BMP_NO];
-		int i;
 
 		parse_vlan_list(argv[3], vlans);
 
 		#ifdef _LINUX_H
 
+		int i;
 		for(i = 0; i < SW_VLAN_BMP_NO; i++)
 		{
 			vlans[i] = ~vlans[i];

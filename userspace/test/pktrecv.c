@@ -27,7 +27,7 @@ int main(int argc, char **argv) {
 			perror("recv");
 			continue;
 		}
-		printf("Received %d byte(s). buf[0] is '%c'\n", s, buf[0]);
+		printf("Received %zd byte(s). buf[0] is '%c'\n", s, buf[0]);
 	} while(s);
 
 	return 0;

@@ -237,7 +237,7 @@ void cdp_print_neighbors_detail(struct cdp_session *session, FILE *out)
 		fprintf(out, "Version :\n");
 		fprintf(out, "%s\n\n", n->software_version);
 		fprintf(out, "advertisement version: %d\n", n->cdp_version);
-		fprintf(out, "Protocol Hello: OUI=0x%02X%02X%02X, Protocol ID=0x%02X%02X; payload len=%d, value=",
+		fprintf(out, "Protocol Hello: OUI=0x%02X%02X%02X, Protocol ID=0x%02X%02X; payload len=%lu, value=",
 				n->oui >> 16, (n->oui >> 8) & 0xFF, n->oui &0xFF,
 				n->protocol_id >> 8, n->protocol_id & 0xFF,
 				sizeof(n->payload));

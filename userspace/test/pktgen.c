@@ -29,7 +29,7 @@ int main(int argc, char **argv) {
 
 	s = sendto(sock, buf, sizeof(buf), MSG_CONFIRM, __to, sizeof(to));
 	assert(s == sizeof(buf));
-	printf("Successfully sent %d byte(s)\n", s);
+	printf("Successfully sent %zd byte(s)\n", s);
 
 	return 0;
 }
