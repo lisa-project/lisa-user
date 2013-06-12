@@ -157,6 +157,7 @@ void usage(void) {
 		"  addvlan vlan_no\t\t\tAdds a vlan to the vlan database\n"
 		"  delvlan vlan_no\t\t\tDeletes a vlan from the vlan database\n"
 		"  chvlan vlan_no new_vlan_name\t\tRenames vlan_no to new_vlan_name\n"
+		"  getvdb\t\t\t\tPrints vlan database\n"
 		"  settrunk iface_name flag\t\tPuts interface in trunk (flag=1) \n"
 		"  setaccess iface_name flag\t\tPuts interface in access (flag=1)\n"
 		"  settrunkvlans iface_name vlan\t\tAllow vlan on interface.\n"
