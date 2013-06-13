@@ -147,6 +147,8 @@ void mm_lock(struct mm_private *mm)
 int mm_extend(struct mm_private *mm, size_t size)
 {
 	size_t mm_size;
+	struct mm_shared shr = *(struct mm_shared *)mm->area;
+
 	if (!size)
 		return 0;
 
@@ -160,6 +162,10 @@ int mm_extend(struct mm_private *mm, size_t size)
 	munmap(mm->area, mm->mapped_size);
 	mm->mapped_size = mm_size;
 	mm->area = mm_map(mm);
+	((struct mm_shared *)mm->area)->static_size = shr.static_size;
+	((struct mm_shared *)mm->area)->dynamic_size = mm->mapped_size -
+		(sizeof(struct mm_shared) + shr.static_size);
+	((struct mm_shared *)mm->area)->lh = shr.lh;
 
 	mm_unlock(mm);
 	return 0;
@@ -188,6 +194,7 @@ mm_ptr_t mm_alloc(struct mm_private *mm, size_t size)
 		/* find first gap that can accomodate */
 		mm_list_for_each_entry(mm, chunk, mm_ptr(mm, &shr->lh), lh) {
 			struct mm_list_head *lh = &chunk->lh;
+
 			if (mm_ptr(mm, chunk) - last < real_size) {
 				last = mm_ptr(mm, chunk) + chunk->size;
 				continue;
@@ -208,9 +215,12 @@ mm_ptr_t mm_alloc(struct mm_private *mm, size_t size)
 			mm_unlock(mm);
 			return MM_NULL;
 		}
+	shr = (struct mm_shared *)mm->area;
 	chunk = mm_addr(mm, last);
 	chunk->size = real_size;
+
 	mm_list_add_tail(mm, mm_ptr(mm, &chunk->lh), mm_ptr(mm, &shr->lh));
+
 	mm_unlock(mm);
 	return last + sizeof(struct mm_chunk);
 	/* don't use mm_ptr() on chunk, because we know it's at last ;) */
