@@ -207,6 +207,7 @@ static int vlan_add(struct switch_operations *sw_ops, int vlan)
 	int ret = 0, if_sfd;
 	mm_ptr_t ptr;
 	char vif_name[IFNAMSIZE];
+	unsigned char *allowed_vlans;
 	struct net_switch_device vif_device;
 	struct linux_context *lnx_ctx = SWLINUX_CTX(sw_ops);
 
@@ -227,6 +228,10 @@ static int vlan_add(struct switch_operations *sw_ops, int vlan)
 	mm_list_for_each(mm, ptr, mm_ptr(mm, &SHM->if_data)) {
 		struct if_data *if_data =
 			mm_addr(mm, mm_list_entry(ptr, struct if_data, lh));
+
+		allowed_vlans = mm_addr(mm, if_data->allowed_vlans);
+		if (!sw_bitmap_test(allowed_vlans, vlan))
+			continue;
 
 		if (if_data->device.type != IF_TYPE_SWITCHED)
 			continue;
@@ -844,6 +849,9 @@ static int if_del_trunk_vlans(struct switch_operations *sw_ops,
 		sw_bitmap_and(bitmap, aux_bitmap, bitmap);
 
 	}
+	mm_unlock(mm);
+	
+	return ret;
 
 }
 

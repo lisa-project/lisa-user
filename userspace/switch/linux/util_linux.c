@@ -390,7 +390,6 @@ int if_mode_trunk(struct linux_context *lnx_ctx, int ifindex)
 	/* Set mode in interface private data */
 	data.device.type = IF_TYPE_SWITCHED;
 	data.mode = IF_MODE_TRUNK;
-	del_if_data(ifindex);
 
 	return set_if_data(ifindex, data);
 }

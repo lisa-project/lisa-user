@@ -399,8 +399,14 @@ int main(int argc, char **argv) {
 			return 0;
 		}
 		unsigned char vlans[SW_VLAN_BMP_NO];
+		int i;
 
 		parse_vlan_list(argv[3], vlans);
+
+		for(i = 0; i < SW_VLAN_BMP_NO; i++)
+		{
+			vlans[i] = ~vlans[i];
+		}
 
 		int ifindex = if_get_index(argv[2], sock);
 		status = sw_ops->if_del_trunk_vlans(sw_ops,
