@@ -1,0 +1,39 @@
+{
+	"comment"	: "The first backend should _always_ be _linux_
+to be able to add virtual interfaces on it. **Ignore** this object when
+parsing the json file.",
+	"backend_objects" : [
+	{
+	"type"		: "linux",
+	"shared_object"	: "libswitch.so",
+	"locality"	: "local",
+	"interfaces"		: [
+		{ "if_name"	: "dummy3"},
+		{ "if_name"	: "dummy0"},
+		{ "if_name"	: "dummy1"}
+		]
+	},
+	{
+	"type"		: "linux",
+	"shared_object"	: "libswitch.so",
+	"locality"	: "local",
+	"interfaces"	:[ 
+		{ "if_name"	: "dummy0"},
+		{ "if_name"	: "dummy1"},
+		{ "if_name"	: "dummy2"}
+		]
+		
+	},
+	{
+	"type"		: "lisa",
+	"shared_object"	: "libswitch.so",
+	"locality"	: "remote",
+	"ip"		: "192.168.101.23",
+	"port"		:  "5598",
+	"interfaces"	: [
+		{ "if_name"	: "dummy2"},
+		{ "if_name"	: "dummy3"},
+		{ "if_name"	: "dummy4"}
+		]
+	}]
+}

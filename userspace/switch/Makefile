@@ -1,5 +1,6 @@
 TOP_DIR = ..
-CFLAGS  = -fPIC -g -I$(TOP_DIR)/include
+CFLAGS  = -fPIC -g -I../include
+LDFLAGS = -ldl -lm
 
 include $(TOP_DIR)/scripts/Makefile.variables
 
@@ -22,7 +23,6 @@ INC 		+=	$(LINUX_INC) \
 			$(TOP_DIR)/switch/lisa
 LIBSWITCH_SRCS	+= lisa/lisa.c
 LIBSWITCH_SRCS	+= lisa/util_lisa.c
-LIBSWITCH_SRCS	+= multiengine.c
 endif
 
 ifeq ($(IMPL), linux)
@@ -33,7 +33,7 @@ LIBSWITCH_SRCS	+= linux/util_linux.c
 
 endif
 
-SRCS		= $(LIBSWITCH_SRCS)
+SRCS		= $(LIBSWITCH_SRCS) multiengine.c
 
 LIBSWITCH_OBJS	= $(LIBSWITCH_SRCS:.c=.o)
 
@@ -45,8 +45,10 @@ include $(TOP_DIR)/scripts/Makefile.rules
 
 dep: $(DEPS)
 
-libswitch.so: $(LIBSWITCH_OBJS) $(OBJS)
-	$(QUIET_LD)$(CC) $(CFLAGS) --export-dynamic -shared -Wl,-soname,$@ -o $@ $^ -ldl -lrt
+libswitch.so: $(LIBSWITCH_OBJS) $(OBJS) $(TOP_DIR)/lib/cJSON.o
+	$(QUIET_LD)$(CC) $(CFLAGS) --export-dynamic -shared -Wl,-soname,$@ -o $@ $^ -lrt -ldl -lm
 
-multiengine:
-	$(QUIET_LD)$(CC) $(CFLAGS) -o multiengine multiengine.o -ldl
+multiengine: multiengine.o
+	$(QUIET_LD)$(CC) $(CFLAGS) -o $@ $^ $(TOP_DIR)/lib/cJSON.o $(LDFLAGS)
+
+

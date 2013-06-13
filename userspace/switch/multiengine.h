@@ -19,14 +19,32 @@
 #ifndef _MULTIENGINE_H
 #define _MULTIENGINE_H
 
+#include "cJSON.h"
 #include "sw_api.h"
 
-struct sw_ops_entries {
-	struct switch_operations *sw_ops;
+#define CONFIG_FILENAME 	"backend_implementations.json"
+#define JSON_SWITCH_NODE	"backend_objects"
+#define MAX_NAME_SIZE		64
+#define SW_LOCAL		"local"
+
+
+struct switch_interface {
+	char if_name[MAX_NAME_SIZE];
 	struct list_head lh;
 };
 
-int register_switch(struct switch_operations *sw_ops);
-int multiengine_init(void);
+struct sw_ops_entries {
+	int sw_index;
+	char port[MAX_NAME_SIZE];
+	char ip[MAX_NAME_SIZE];
+	char type[MAX_NAME_SIZE];
+	char locality[MAX_NAME_SIZE];
+	struct switch_operations *sw_ops;
+	struct list_head if_names_lh;
+	struct list_head lh;
+};
 
+
+int register_switch(struct switch_operations *sw_ops);
+void multiengine_init(void);
 #endif

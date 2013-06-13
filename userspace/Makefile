@@ -11,8 +11,8 @@ SUBDIRS = \
 endif
 
 SUBDIRS += \
-	$(TOP_DIR)/switch  \
 	$(TOP_DIR)/lib     \
+	$(TOP_DIR)/switch  \
 	$(TOP_DIR)/cli     \
 	$(TOP_DIR)/tools   \
 	$(TOP_DIR)/test

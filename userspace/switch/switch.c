@@ -278,10 +278,11 @@ int switch_init(void)
 #else
 	sw_ops = &lnx_ctx.sw_ops;
 #endif
+#ifdef multiengine
 	/* register switch to the multiengine */
-	if (!register_switch(sw_ops)) {
+	if (-1 == register_switch(sw_ops))
 		return -1;
-	}
+#endif
 
 	if (mm)
 		return 0;
