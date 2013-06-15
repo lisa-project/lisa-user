@@ -278,11 +278,6 @@ int switch_init(void)
 #else
 	sw_ops = &lnx_ctx.sw_ops;
 #endif
-#ifdef multiengine
-	/* register switch to the multiengine */
-	if (-1 == register_switch(sw_ops))
-		return -1;
-#endif
 
 	if (mm)
 		return 0;
@@ -331,6 +326,12 @@ out_unlock:
 	mm_unlock(mm);
 
 	return ret;
+}
+
+
+void register_switch(struct switch_operations *ops)
+{
+	memcpy(ops, sw_ops, sizeof(struct switch_operations));
 }
 
 int switch_auth(int type, int level,

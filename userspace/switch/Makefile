@@ -15,6 +15,7 @@ INC	=	$(TOP_DIR)/include \
 
 # Switch middleware initialization
 LIBSWITCH_SRCS	= switch.c
+MULTIENGINE_SRCS = cJSON.c multiengine.c
 
 # LiSA specific middleware implementation
 ifeq ($(IMPL), lisa)
@@ -33,11 +34,11 @@ LIBSWITCH_SRCS	+= linux/util_linux.c
 
 endif
 
-SRCS		= $(LIBSWITCH_SRCS) multiengine.c
+SRCS		= $(LIBSWITCH_SRCS)
 
 LIBSWITCH_OBJS	= $(LIBSWITCH_SRCS:.c=.o)
 
-TARGETS = $(OBJS) libswitch.so multiengine
+TARGETS = $(OBJS) libswitch.so multiengine.o multiengine
 
 all: $(TARGETS)
 
@@ -45,10 +46,11 @@ include $(TOP_DIR)/scripts/Makefile.rules
 
 dep: $(DEPS)
 
-libswitch.so: $(LIBSWITCH_OBJS) $(OBJS) $(TOP_DIR)/lib/cJSON.o
-	$(QUIET_LD)$(CC) $(CFLAGS) --export-dynamic -shared -Wl,-soname,$@ -o $@ $^ -lrt -ldl -lm
+libswitch.so: $(LIBSWITCH_OBJS) $(OBJS) $(TOP_DIR)/lib/mm.o $(TOP_DIR)/lib/cJSON.o
+	$(QUIET_LD)$(CC) $(CFLAGS) --export-dynamic -rdynamic -shared -Wl,-soname,$@ -o $@ $^ -lrt -ldl -lm
 
-multiengine: multiengine.o
-	$(QUIET_LD)$(CC) $(CFLAGS) -o $@ $^ $(TOP_DIR)/lib/cJSON.o $(LDFLAGS)
+multiengine.o: multiengine.c
+	$(QUIET_LD)$(CC) $(CFLAGS) -c -o $@  $^
 
-
+multiengine: multiengine.o $(TOP_DIR)/lib/cJSON.o
+	$(QUIET_LD)$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)

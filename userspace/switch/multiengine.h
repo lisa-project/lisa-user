@@ -22,9 +22,9 @@
 #include "cJSON.h"
 #include "sw_api.h"
 
+#define MAX_NAME_SIZE		128
 #define CONFIG_FILENAME 	"backend_implementations.json"
 #define JSON_SWITCH_NODE	"backend_objects"
-#define MAX_NAME_SIZE		64
 #define SW_LOCAL		"local"
 
 
@@ -45,6 +45,5 @@ struct sw_ops_entries {
 };
 
 
-int register_switch(struct switch_operations *sw_ops);
 void multiengine_init(void);
 #endif

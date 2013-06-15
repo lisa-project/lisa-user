@@ -34,6 +34,7 @@
 	tmp = cJSON_GetObjectItem((json_ptr), entry_name)->valuestring; \
 	if (NULL != tmp) {\
 		memcpy((entry_ptr)->entry_name, tmp, strlen(tmp));\
+		((entry_ptr)->entry_name)[strlen(tmp)] = '\0';\
 		free(tmp); \
 	}\
 } while(0)
@@ -46,32 +47,16 @@ static char if_name[]	= "if_name";
 
 struct list_head head_sw_ops;
 
-struct sw_ops_entries *current_sw_ops_entry;
-
-int register_switch(struct switch_operations *ops)
-{
-	if (current_sw_ops_entry == NULL) {
-		printf("Entry not set\n");
-		return -1;
-	}
-	current_sw_ops_entry->sw_ops = ops;
-
-	return 0;
-}
-
 void multiengine_init(void)
 {
 	INIT_LIST_HEAD(&head_sw_ops);
 }
 
-int open_so_local(char *so_name)
+int open_so_local(char *so_name, struct sw_ops_entries *entry)
 {
-	void *handle, *handle_workspace;
-
-	handle_workspace = dlopen(NULL,RTLD_NOW|RTLD_GLOBAL);
-	if (NULL == handle_workspace) {
-		return -1;
-	}
+	void *handle;
+	char *error;
+	void (*register_switch_so)(struct switch_operations*);
 
 	/* open switch libraries */
 	handle = dlopen(so_name, RTLD_LAZY);
@@ -80,6 +65,22 @@ int open_so_local(char *so_name)
 		return -1;
 	}
 
+	dlerror();
+	register_switch_so = (void*)dlsym(handle, "register_switch");
+	if ((error = dlerror()) != NULL)  {
+		printf("Error dlsym(): %s\n", error);
+		exit(1);
+	}
+
+	entry->sw_ops = malloc(sizeof(struct switch_operations));
+	if (NULL == entry->sw_ops) {
+		printf("Couldn't allocate space\n");
+		return -1;
+	}
+
+	(*register_switch_so)(entry->sw_ops);
+
+	dlclose(handle);
 	return 0;
 }
 
@@ -96,12 +97,7 @@ int get_shared_object(cJSON *item, struct sw_ops_entries *entry)
 
 	/* set the current entry in the list of sw_ops_entries to be
 	 * populated with the sw_ops structure */
-	current_sw_ops_entry = entry;
-
-	printf("Open object %s\n", so_name);
-	ret =  open_so_local(so_name);
-	printf("Open so finished\n");
-	fflush(stdin);
+	ret =  open_so_local(so_name, entry);
 
 	return ret;
 }
@@ -202,11 +198,13 @@ int parse_config_file(char *data)
 	}
 
 	cJSON_Delete(root);
+	free(data);
+
 	return 0;
 }
 
 /* obtain content of configuration file */
-int read_config_file(void)
+char* read_config_file(void)
 {
 	int fd, read_size, read_total;
 	off_t offset;
@@ -215,15 +213,15 @@ int read_config_file(void)
 	/* open configuration file */
 	fd = open(CONFIG_FILENAME, O_RDONLY);
 	if (-1 == fd)
-		return -1;
+		return NULL;
 
 	/* go to the end of file */
 	offset = lseek(fd, 0, SEEK_END);
 	if (-1 == offset)
-		return -1;
+		return NULL;
 
 	if (-1 == lseek(fd, 0, SEEK_SET))
-		return -1;
+		return NULL;
 
 	data = (char*)malloc(offset + 1);
 
@@ -235,12 +233,8 @@ int read_config_file(void)
 	}
 
 	close(fd);
-	if (-1 == parse_config_file(data))
-		return -1;
 
-	free(data);
-
-	return 0;
+	return data;
 }
 
 
@@ -249,7 +243,7 @@ void print_lists(void)
 	struct sw_ops_entries *iter_sw;
 	struct switch_interface *iter_names;
 
-	printf("---- LIST of SWICHES ----");
+	printf("\n---- LIST of SWICHES ----");
 	list_for_each_entry(iter_sw, &head_sw_ops, lh)  {
 		printf("\n[SW_IDX] %d\n", iter_sw->sw_index);
 		printf("\tType: %s\n",iter_sw->type);
@@ -272,8 +266,17 @@ void print_lists(void)
 
 int main()
 {
+	char *data;
 	multiengine_init();
-	read_config_file();
+	if(NULL == (data = read_config_file()))
+		return -1;
+
+	if(-1 == parse_config_file(data)) {
+		printf("Failed parsing config file\n");
+		return -1;
+	}
+
+
 	print_lists();
 	return 0;
 }
