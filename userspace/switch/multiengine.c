@@ -97,9 +97,7 @@ int get_shared_object(cJSON *item, struct sw_ops_entries *entry)
 
 	/* set the current entry in the list of sw_ops_entries to be
 	 * populated with the sw_ops structure */
-	ret =  open_so_local(so_name, entry);
-
-	return ret;
+	return  open_so_local(so_name, entry);
 }
 
 /* obtain the names of the interfaces or the ports associated with a switch */
@@ -243,7 +241,7 @@ void print_lists(void)
 	struct sw_ops_entries *iter_sw;
 	struct switch_interface *iter_names;
 
-	printf("\n---- LIST of SWICHES ----");
+	printf("\n---- LIST of SWITCHES ----");
 	list_for_each_entry(iter_sw, &head_sw_ops, lh)  {
 		printf("\n[SW_IDX] %d\n", iter_sw->sw_index);
 		printf("\tType: %s\n",iter_sw->type);
@@ -267,11 +265,13 @@ void print_lists(void)
 int main()
 {
 	char *data;
+
 	multiengine_init();
-	if(NULL == (data = read_config_file()))
+
+	if (NULL == (data = read_config_file()))
 		return -1;
 
-	if(-1 == parse_config_file(data)) {
+	if (-1 == parse_config_file(data)) {
 		printf("Failed parsing config file\n");
 		return -1;
 	}
