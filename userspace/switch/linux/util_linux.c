@@ -393,3 +393,60 @@ int if_mode_trunk(struct linux_context *lnx_ctx, int ifindex)
 
 	return set_if_data(ifindex, data);
 }
+static int br_get_fdb_entries(struct linux_context *lnx_ctx, int vlan_id,
+		void *buff,int maxnum, int offset)
+{
+	int ret = 0, bridge_sfd;
+	struct ifreq ifr;
+	char br_name[VLAN_NAME_LEN];
+	unsigned long args[4] = { BRCTL_GET_FDB_ENTRIES,
+				(unsigned long)(buff+offset), maxnum, offset };
+
+	/* Build the name of the bridge */
+	sprintf(br_name, "vlan%d", vlan_id);
+
+	/* Add the interface to the bridge */
+	strncpy(ifr.ifr_name, br_name, IFNAMSIZ);
+	ifr.ifr_data = (char *) args;
+
+	BRIDGE_SOCK_OPEN(lnx_ctx, bridge_sfd);
+	ret = ioctl(bridge_sfd, SIOCDEVPRIVATE, &ifr);
+	BRIDGE_SOCK_CLOSE(lnx_ctx, bridge_sfd);
+
+	return ret;
+
+}
+int br_get_all_fdb_entries(struct linux_context *lnx_ctx, int vlan_id, void** buffer )
+{
+	int ret = 0, offset = 0;
+	int maxnum = sysconf(_SC_PAGESIZE)/sizeof(struct __fdb_entry);
+	int num_bytes = maxnum * sizeof(struct __fdb_entry);
+	int num_entries = 0;
+
+	*buffer = malloc(num_bytes);
+
+	if (*buffer == NULL)
+		return -ENOMEM;
+	while(1)
+	{
+		ret = br_get_fdb_entries(lnx_ctx, vlan_id, *buffer, maxnum, offset);
+		if (ret < 0)
+			return ret;
+		num_entries += ret;
+
+		if (ret < maxnum)
+			break;
+		if (ret == maxnum)
+		{
+			num_bytes += maxnum * sizeof(struct __fdb_entry);
+			*buffer = realloc(*buffer,num_bytes);
+			offset += maxnum;
+
+			if (*buffer == NULL)
+				return -ENOMEM;
+		}
+
+	}
+
+	return num_entries;
+}

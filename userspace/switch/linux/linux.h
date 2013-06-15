@@ -13,7 +13,8 @@
 #include "if_generic.h"
 #include "sw_api.h"
 #include "util.h"
-
+#define BRCTL_SET_MAC_STATIC 0
+#define BRCTL_DEL_MAC 1
 #define SWLINUX_CTX(sw_ops) ((struct linux_context *)(sw_ops))
 
 #define VLAN_SOCK_OPEN(__ctx, __sock_fd) do {\
@@ -145,5 +146,9 @@ int add_vifs_to_trunk(struct linux_context *lnx_ctx, int ifindex,
 /* Remove all the virtual interfaces of a trunk interface */
 extern int remove_vifs_from_trunk(struct linux_context *lnx_ctx, int ifindex,
 	unsigned char *bitmap);
+/* Get all fdb entries from a bridge */
+extern int br_get_all_fdb_entries(struct linux_context *lnx_ctx, int vlan_id,
+	void** buffer );
+
 
 #endif
