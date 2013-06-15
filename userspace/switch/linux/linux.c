@@ -104,7 +104,7 @@ static int if_enable(struct switch_operations *sw_ops, int ifindex)
 	/* Get the current interface flags */
 	IF_SOCK_OPEN(lnx_ctx, if_sfd);
 	ret = if_get_flags(ifindex, if_sfd, &flags);
-	if(ret)
+	if (ret)
 		return ret;
 
 
@@ -124,7 +124,7 @@ static int if_disable(struct switch_operations *sw_ops, int ifindex)
 	/* Get the current interface flags */
 	IF_SOCK_OPEN(lnx_ctx, if_sfd);
 	ret = if_get_flags(ifindex, if_sfd, &flags);
-	if(ret)
+	if (ret)
 		return ret;
 
 
@@ -335,52 +335,63 @@ static int vif_del(struct switch_operations *sw_ops, int vlan)
 static int get_vlan_interfaces(struct switch_operations *sw_ops, int vlan,
 		int **ifindexes, int *no_ifs)
 {
-	int ret = 0, if_sfd, len = 0;
+	int ret = 0, ifs = 0, *ifaces;
 	struct vlan_data *v_data;
-	char vif_name[IFNAMSIZE], if_name[IFNAMSIZE];
 	mm_ptr_t ptr;
-	struct linux_context *lnx_ctx = SWLINUX_CTX(sw_ops);
-
-	*no_ifs = 0;
+	unsigned char *bitmap;
 
 	/* Get VLAN data */
 	ret = get_vlan_data(vlan, &v_data);
-	if(ret)
-		return ret;
-	/* Iterate through virtual interfaces and get interface index */
-	mm_lock(mm);
-
-	mm_list_for_each(mm, ptr, mm_ptr(mm, &v_data->vif_list))
-		(*no_ifs)++;
-
-	mm_unlock(mm);
-
-	*ifindexes = malloc((*no_ifs) * sizeof(int));
-	*no_ifs = 0;
-
-	mm_lock(mm);
-
-	mm_list_for_each(mm, ptr, mm_ptr(mm, &v_data->vif_list)){
-		struct if_data *vif_data =
-			mm_addr(mm, mm_list_entry(ptr, struct if_data, lh));
-
-		/* Get virtual interface name and extract interface name */
-		IF_SOCK_OPEN(lnx_ctx, if_sfd);
-
-		if_get_name(vif_data->device.ifindex, if_sfd, vif_name);
-
-		memset(if_name, 0, IFNAMSIZE);
-
-		len = strchr(vif_name, '.') - vif_name;
-		strncpy(if_name, vif_name, len);
-
-		(*ifindexes)[(*no_ifs)++] = if_get_index(if_name, if_sfd);
-
-		IF_SOCK_CLOSE(lnx_ctx, if_sfd);
-
+	if (ret) {
+		*no_ifs = 0;
+		return 0;
 	}
 
+	/* Iterate through all interfaces and count them */
+	mm_lock(mm);
+
+	mm_list_for_each(mm, ptr, mm_ptr(mm, &SHM->if_data)) {
+		struct if_data *if_data =
+			mm_addr(mm, mm_list_entry(ptr, struct if_data, lh));
+
+		/* Count access interfaces */
+		if (if_data->mode == IF_MODE_ACCESS || if_data->access_vlan == vlan) {
+			ifs++;
+			continue;
+		}
+
+		/* Count trunk interfaces */
+		bitmap = mm_addr(mm, if_data->allowed_vlans);
+		if (bitmap != NULL && sw_bitmap_test(bitmap, vlan))
+			ifs++;
+	}
 	mm_unlock(mm);
+
+	ifaces = malloc((ifs) * sizeof(int));
+	*no_ifs = ifs;
+	ifs = 0;
+
+	mm_lock(mm);
+	mm_list_for_each(mm, ptr, mm_ptr(mm, &SHM->if_data)) {
+		struct if_data *if_data =
+			mm_addr(mm, mm_list_entry(ptr, struct if_data, lh));
+
+		if (!(if_data->device.type & IF_TYPE_SWITCHED))
+			continue;
+
+		/* Count access interfaces */
+		if (if_data->mode == IF_MODE_ACCESS || if_data->access_vlan == vlan) {
+			ifaces[ifs++] = if_data->device.ifindex;
+			continue;
+		}
+
+		/* Count trunk interfaces */
+		bitmap = mm_addr(mm, if_data->allowed_vlans);
+		if (bitmap != NULL && sw_bitmap_test(bitmap, vlan))
+			ifaces[ifs++] = if_data->device.ifindex;
+	}
+	mm_unlock(mm);
+	*ifindexes = ifaces;
 
 	return ret;
 }
@@ -504,7 +515,7 @@ static int get_vdb(struct switch_operations *sw_ops, unsigned char *vlans)
 	unsigned char bitmap[SW_VLAN_BMP_NO];
 	mm_ptr_t ptr;
 
-	memset(bitmap, 0x00, SW_VLAN_BMP_NO);
+	memset(bitmap, 0xFF, SW_VLAN_BMP_NO);
 
 
 	/* Walk through the vlan_data list */
@@ -514,7 +525,7 @@ static int get_vdb(struct switch_operations *sw_ops, unsigned char *vlans)
 		struct vlan_data *v_data =
 			mm_addr(mm, mm_list_entry(ptr, struct vlan_data, lh));
 
-		sw_bitmap_set(bitmap, v_data->vlan_id);
+		sw_bitmap_reset(bitmap, v_data->vlan_id);
 	}
 	mm_unlock(mm);
 
@@ -929,8 +940,8 @@ static int vlan_del_mac_static(struct switch_operations *sw_ops, int ifindex,
 	struct ifreq ifr;
 	struct linux_context *lnx_ctx = SWLINUX_CTX(sw_ops);
 	char br_name[IFNAMSIZ];
-	unsigned long args[5] = {BRCTL_DEL_MAC, ifindex, vlan,
-		(unsigned long) mac, 1};
+	unsigned long args[4] = {BRCTL_DEL_MAC, ifindex, vlan,
+		(unsigned long) mac};
 
 	sprintf(br_name, "vlan%d", vlan);
 	strcpy(ifr.ifr_name, br_name);
@@ -949,7 +960,7 @@ static int vlan_del_mac_dynamic(struct switch_operations *sw_ops, int ifindex, i
 	struct ifreq ifr;
 	struct linux_context *lnx_ctx = SWLINUX_CTX(sw_ops);
 	char br_name[IFNAMSIZ];
-	unsigned long args[5] = {BRCTL_DEL_MAC, ifindex, vlan, 0, 0};
+	unsigned long args[4] = {BRCTL_DEL_MAC, ifindex, vlan, 0};
 
 	sprintf(br_name, "vlan%d", vlan);
 	strcpy(ifr.ifr_name, br_name);
