@@ -393,6 +393,7 @@ int if_mode_trunk(struct linux_context *lnx_ctx, int ifindex)
 
 	return set_if_data(ifindex, data);
 }
+
 static int br_get_fdb_entries(struct linux_context *lnx_ctx, int vlan_id,
 		void *buff,int maxnum, int offset)
 {
@@ -416,6 +417,7 @@ static int br_get_fdb_entries(struct linux_context *lnx_ctx, int vlan_id,
 	return ret;
 
 }
+
 int br_get_all_fdb_entries(struct linux_context *lnx_ctx, int vlan_id, void** buffer )
 {
 	int ret = 0, offset = 0;
@@ -449,4 +451,41 @@ int br_get_all_fdb_entries(struct linux_context *lnx_ctx, int vlan_id, void** bu
 	}
 
 	return num_entries;
+}
+
+int send_mac_cmd(struct linux_context *lnx_ctx, int ifindex, int vlan,
+		unsigned long *args)
+{
+	int ret, bridge_sfd, if_sfd;
+	struct ifreq ifr;
+	char br_name[IFNAMSIZ], br_if_name[IFNAMSIZ];
+	struct if_data data;
+
+
+	/* Get interface data */
+	ret = get_if_data(ifindex, &data);
+	if (ret)
+		return ret;
+
+	if (data.mode == IF_MODE_TRUNK) {
+		/* For trunk interfaces consider the appropriate virtual
+		 * interfaces included in the bridge */
+		IF_SOCK_OPEN(lnx_ctx, if_sfd);
+
+		if_get_name(ifindex, if_sfd, br_if_name);
+		sprintf(br_if_name, "%s.%d", br_if_name, vlan);
+		args[1] = if_get_index(br_if_name, if_sfd);
+
+		IF_SOCK_CLOSE(lnx_ctx, if_sfd);
+	}
+
+	sprintf(br_name, "vlan%d", vlan);
+	strcpy(ifr.ifr_name, br_name);
+	ifr.ifr_data = (char *) args;
+
+	BRIDGE_SOCK_OPEN(lnx_ctx, bridge_sfd);
+	ret = ioctl(bridge_sfd, SIOCDEVPRIVATE, &ifr);
+	BRIDGE_SOCK_CLOSE(lnx_ctx, bridge_sfd);
+
+	return ret;
 }

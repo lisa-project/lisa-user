@@ -897,80 +897,29 @@ static int if_get_cfg (struct switch_operations *sw_ops, int ifindex,
 static int vlan_set_mac_static(struct switch_operations *sw_ops, int ifindex,
 		int vlan, unsigned char *mac)
 {
-	int ret, bridge_sfd, if_sfd;
-	struct ifreq ifr;
 	struct linux_context *lnx_ctx = SWLINUX_CTX(sw_ops);
-	char br_name[IFNAMSIZ], br_if_name[IFNAMSIZ];
-	struct if_data data;
-	unsigned long args[4] = {BRCTL_SET_MAC_STATIC, ifindex, vlan,
+	unsigned long args[4] = {BRCTL_SET_MAC_STATIC, ifindex, VLAN_N_VID,
 		(unsigned long) mac};
 
-
-	/* Get interface data */
-	ret = get_if_data(ifindex, &data);
-	if (ret)
-		return ret;
-	if (data.mode == IF_MODE_TRUNK) {
-		/* For trunk interfaces consider the appropriate virtual
-		 * interfaces included in the bridge */
-		IF_SOCK_OPEN(lnx_ctx, if_sfd);
-
-		if_get_name(ifindex, if_sfd, br_if_name);
-		sprintf(br_if_name, "%s.%d", br_if_name, vlan);
-		args[1] = if_get_index(br_if_name, if_sfd);
-
-		IF_SOCK_CLOSE(lnx_ctx, if_sfd);
-	}
-
-	sprintf(br_name, "vlan%d", vlan);
-	strcpy(ifr.ifr_name, br_name);
-	ifr.ifr_data = (char *) args;
-
-	BRIDGE_SOCK_OPEN(lnx_ctx, bridge_sfd);
-	ret = ioctl(bridge_sfd, SIOCDEVPRIVATE, &ifr);
-	BRIDGE_SOCK_CLOSE(lnx_ctx, bridge_sfd);
-
-	return ret;
+	return send_mac_cmd(lnx_ctx, ifindex, vlan, args);
 }
 
 static int vlan_del_mac_static(struct switch_operations *sw_ops, int ifindex,
 		int vlan, unsigned char *mac)
 {
-	int ret, bridge_sfd;
-	struct ifreq ifr;
 	struct linux_context *lnx_ctx = SWLINUX_CTX(sw_ops);
-	char br_name[IFNAMSIZ];
-	unsigned long args[4] = {BRCTL_DEL_MAC, ifindex, vlan,
+	unsigned long args[4] = {BRCTL_DEL_MAC, ifindex, VLAN_N_VID,
 		(unsigned long) mac};
 
-	sprintf(br_name, "vlan%d", vlan);
-	strcpy(ifr.ifr_name, br_name);
-	ifr.ifr_data = (char *) args;
-
-	BRIDGE_SOCK_OPEN(lnx_ctx, bridge_sfd);
-	ret = ioctl(bridge_sfd, SIOCDEVPRIVATE, &ifr);
-	BRIDGE_SOCK_CLOSE(lnx_ctx, bridge_sfd);
-
-	return ret;
+	return send_mac_cmd(lnx_ctx, ifindex, vlan, args);
 }
 
 static int vlan_del_mac_dynamic(struct switch_operations *sw_ops, int ifindex, int vlan)
 {
-	int ret, bridge_sfd;
-	struct ifreq ifr;
 	struct linux_context *lnx_ctx = SWLINUX_CTX(sw_ops);
-	char br_name[IFNAMSIZ];
-	unsigned long args[4] = {BRCTL_DEL_MAC, ifindex, vlan, 0};
+	unsigned long args[4] = {BRCTL_DEL_MAC, ifindex, VLAN_N_VID, 0};
 
-	sprintf(br_name, "vlan%d", vlan);
-	strcpy(ifr.ifr_name, br_name);
-	ifr.ifr_data = (char *) args;
-
-	BRIDGE_SOCK_OPEN(lnx_ctx, bridge_sfd);
-	ret = ioctl(bridge_sfd, SIOCDEVPRIVATE, &ifr);
-	BRIDGE_SOCK_CLOSE(lnx_ctx, bridge_sfd);
-
-	return ret;
+	return send_mac_cmd(lnx_ctx, ifindex, vlan, args);
 }
 
 static int get_mac(struct switch_operations *sw_ops, int ifindex, int vlan,

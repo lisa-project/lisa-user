@@ -13,8 +13,6 @@
 #include "if_generic.h"
 #include "sw_api.h"
 #include "util.h"
-#define BRCTL_SET_MAC_STATIC 0
-#define BRCTL_DEL_MAC 1
 #define SWLINUX_CTX(sw_ops) ((struct linux_context *)(sw_ops))
 
 #define VLAN_SOCK_OPEN(__ctx, __sock_fd) do {\
@@ -72,6 +70,7 @@
 #define LINUX_DEFAULT_BRIDGE		"vlan1"
 #define LINUX_DEFAULT_VLAN		1
 #define VLAN_NAME_LEN			9
+#define VLAN_N_VID			4096
 
 #define MSNOOP_DESCRIPTOR	"/sys/devices/virtual/net/vlan%d/bridge/multicast_snooping"
 #define MROUTER_DESCRIPTOR	"/sys/devices/virtual/net/%s/brport/multicast_router"
@@ -149,6 +148,10 @@ extern int remove_vifs_from_trunk(struct linux_context *lnx_ctx, int ifindex,
 /* Get all fdb entries from a bridge */
 extern int br_get_all_fdb_entries(struct linux_context *lnx_ctx, int vlan_id,
 	void** buffer );
+
+/* Send a set/del mac command to bridge */
+extern int send_mac_cmd(struct linux_context *lnx_ctx, int ifindex, int vlan,
+	unsigned long *args);
 
 
 #endif
