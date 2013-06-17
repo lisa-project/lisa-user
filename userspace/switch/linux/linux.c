@@ -977,6 +977,45 @@ static int get_mac(struct switch_operations *sw_ops, int ifindex, int vlan,
 			int mac_type, unsigned char *mac_addr,
 			struct list_head *macs)
 {
+	int ret = 0, i = 0, mac_no;
+	struct net_switch_mac_e *entry;
+	struct linux_context *lnx_ctx = SWLINUX_CTX(sw_ops);
+	struct __fdb_entry** buffer;
+
+	buffer = malloc( sizeof(*buffer) );
+
+	if(!buffer) {
+		errno = ENOMEM;
+		return -1;
+	}
+
+	if(vlan) {
+		ret = br_get_all_fdb_entries(lnx_ctx, vlan, (void **)buffer);
+
+		if (ret < 0){
+			errno = -ret;
+			return -1;
+		}
+
+		mac_no = ret;
+		for (i = 0; i < mac_no; ++i) {
+
+			entry = malloc(sizeof(struct net_switch_mac_e));
+			if (!entry) {
+				errno = ENOMEM;
+				return -1;
+			}
+
+			entry->ifindex = 0;
+			entry->vlan = 0;
+			entry->type = 0;
+			memcpy(entry->addr, (*buffer)[i].mac_addr, ETH_ALEN);
+
+			list_add_tail(&entry->lh, macs);
+		}
+		free(*buffer);
+
+	}
 	return 0;
 }
 
