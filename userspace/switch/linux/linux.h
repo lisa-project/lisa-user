@@ -13,6 +13,8 @@
 #include "if_generic.h"
 #include "sw_api.h"
 #include "util.h"
+
+#define BR_MAX_PORTS (1 << 10)
 #define SWLINUX_CTX(sw_ops) ((struct linux_context *)(sw_ops))
 
 #define VLAN_SOCK_OPEN(__ctx, __sock_fd) do {\
@@ -95,6 +97,8 @@ extern struct linux_context lnx_ctx;
 
 
 /********* util_linux.c ***********/
+/* Return ifindex from vif index */
+extern int if_get_index_from_vif(struct linux_context *lnx_ctx, int vifindex);
 
 /* Check if there is a VLAN in switch */
 extern int has_vlan(int vlan);
@@ -148,10 +152,12 @@ extern int remove_vifs_from_trunk(struct linux_context *lnx_ctx, int ifindex,
 /* Get all fdb entries from a bridge */
 extern int br_get_all_fdb_entries(struct linux_context *lnx_ctx, int vlan_id,
 	void** buffer );
+/* Get all ifindices mapped by port number */
+extern int br_get_port_list(struct linux_context *lnx_ctx, int vlan_id,
+		int num_ports, int* ifindices);
 
 /* Send a set/del mac command to bridge */
 extern int send_mac_cmd(struct linux_context *lnx_ctx, int ifindex, int vlan,
 	unsigned long *args);
-
 
 #endif

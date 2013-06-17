@@ -926,10 +926,12 @@ static int get_mac(struct switch_operations *sw_ops, int ifindex, int vlan,
 			int mac_type, unsigned char *mac_addr,
 			struct list_head *macs)
 {
-	int ret = 0, i = 0, mac_no;
+	int ret = 0, i = 0, mac_no, port_no, index, vlan_id;
 	struct net_switch_mac_e *entry;
 	struct linux_context *lnx_ctx = SWLINUX_CTX(sw_ops);
 	struct __fdb_entry** buffer;
+	int *ifindexes;
+	unsigned char bitmap[SW_VLAN_BMP_NO];
 
 	buffer = malloc( sizeof(*buffer) );
 
@@ -947,23 +949,111 @@ static int get_mac(struct switch_operations *sw_ops, int ifindex, int vlan,
 		}
 
 		mac_no = ret;
+
+		ifindexes = malloc(BR_MAX_PORTS* sizeof(int));
+		ret = br_get_port_list(lnx_ctx, vlan, BR_MAX_PORTS, ifindexes);
+
+		if (ret < 0){
+			errno = -ret;
+			return -1;
+		}
+
 		for (i = 0; i < mac_no; ++i) {
 
+			port_no = (*buffer)[i].port_no + ((*buffer)[i].port_hi << 8);
+
+			index = if_get_index_from_vif(lnx_ctx,
+					ifindexes[port_no]);
+
+			/* do filtering here */
+			if (ifindex && index != ifindex)
+				continue;
+			if (mac_addr && memcmp((*buffer)[i].mac_addr, mac_addr, ETH_ALEN))
+				continue;
+
 			entry = malloc(sizeof(struct net_switch_mac_e));
+
 			if (!entry) {
 				errno = ENOMEM;
 				return -1;
 			}
+			entry->ifindex = index;
+			entry->vlan = vlan;
 
-			entry->ifindex = 0;
-			entry->vlan = 0;
-			entry->type = 0;
+			if ((*buffer)[i].ageing_timer_value)
+				entry->type = SW_FDB_STATIC;
+			else
+				entry->type = SW_FDB_IGMP;
+
 			memcpy(entry->addr, (*buffer)[i].mac_addr, ETH_ALEN);
 
 			list_add_tail(&entry->lh, macs);
 		}
+
+		free(ifindexes);
 		free(*buffer);
 
+	}
+	else {
+		sw_ops->get_vdb(sw_ops, bitmap);
+		for (vlan_id = 0 ; vlan_id < SW_MAX_VLAN; vlan_id++) {
+			if (!sw_bitmap_test(bitmap, vlan_id)) {
+
+			 ret = br_get_all_fdb_entries(lnx_ctx, vlan, (void **)buffer);
+
+			if (ret < 0){
+				errno = -ret;
+				return -1;
+			}
+
+			mac_no = ret;
+
+			ifindexes = malloc(BR_MAX_PORTS* sizeof(int));
+			ret = br_get_port_list(lnx_ctx, vlan, BR_MAX_PORTS, ifindexes);
+
+			if (ret < 0){
+				errno = -ret;
+				return -1;
+			}
+
+			for (i = 0; i < mac_no; ++i) {
+
+				port_no = (*buffer)[i].port_no + ((*buffer)[i].port_hi << 8);
+
+				index = if_get_index_from_vif(lnx_ctx,
+					ifindexes[port_no]);
+
+				/* do filtering here */
+				if (ifindex && index != ifindex)
+					continue;
+				if (mac_addr && memcmp((*buffer)[i].mac_addr, mac_addr, ETH_ALEN))
+					continue;
+
+				entry = malloc(sizeof(struct net_switch_mac_e));
+
+				if (!entry) {
+					errno = ENOMEM;
+					return -1;
+				}
+				entry->ifindex = index;
+				entry->vlan = vlan_id;
+
+				if ((*buffer)[i].ageing_timer_value)
+					entry->type = SW_FDB_STATIC;
+				else
+					entry->type = SW_FDB_IGMP;
+
+				memcpy(entry->addr, (*buffer)[i].mac_addr, ETH_ALEN);
+
+				list_add_tail(&entry->lh, macs);
+			}
+
+			free(ifindexes);
+			free(*buffer);
+
+			}
+
+		}
 	}
 	return 0;
 }

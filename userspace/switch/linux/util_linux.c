@@ -19,6 +19,33 @@
 
 #include "linux.h"
 
+/* returns index from vif index */
+int if_get_index_from_vif(struct linux_context *lnx_ctx, int vifindex)
+{
+	int ret = 0, if_sfd, len = 0;
+	char vif_name[IFNAMSIZE], if_name[IFNAMSIZE];
+	char *poz;
+
+	IF_SOCK_OPEN(lnx_ctx, if_sfd);
+
+	if_get_name(vifindex, if_sfd, vif_name);
+	memset(if_name, 0, IFNAMSIZE);
+	poz = strchr(vif_name, '.');
+	
+	if (!poz) {
+		IF_SOCK_CLOSE(lnx_ctx, if_sfd);
+		return vifindex;
+	}
+	else {
+		len = poz - vif_name;
+		strncpy(if_name, vif_name, len);
+		ret = if_get_index(if_name, if_sfd);
+	}
+
+	IF_SOCK_CLOSE(lnx_ctx, if_sfd);
+
+	return ret;
+}
 /* Returns 1 if the switch has this VLAN, 0 otherwise */
 int has_vlan(int vlan)
 {
@@ -481,6 +508,28 @@ int send_mac_cmd(struct linux_context *lnx_ctx, int ifindex, int vlan,
 
 	sprintf(br_name, "vlan%d", vlan);
 	strcpy(ifr.ifr_name, br_name);
+	ifr.ifr_data = (char *) args;
+
+	BRIDGE_SOCK_OPEN(lnx_ctx, bridge_sfd);
+	ret = ioctl(bridge_sfd, SIOCDEVPRIVATE, &ifr);
+	BRIDGE_SOCK_CLOSE(lnx_ctx, bridge_sfd);
+
+	return ret;
+}
+
+int br_get_port_list(struct linux_context *lnx_ctx, int vlan_id,
+		int num_ports, int* buffer)
+{
+	int ret = 0, bridge_sfd;
+	struct ifreq ifr;
+	char br_name[VLAN_NAME_LEN];
+	unsigned long args[4] = { BRCTL_GET_PORT_LIST,
+				(unsigned long)buffer, num_ports, 0 };
+
+	/* Build the name of the bridge */
+	sprintf(br_name, "vlan%d", vlan_id);
+
+	strncpy(ifr.ifr_name, br_name, IFNAMSIZ);
 	ifr.ifr_data = (char *) args;
 
 	BRIDGE_SOCK_OPEN(lnx_ctx, bridge_sfd);
