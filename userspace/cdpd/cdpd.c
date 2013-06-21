@@ -480,7 +480,7 @@ static void print_cdp_neighbor(struct cdp_neighbor *neighbor) {
 			n->oui &0xFF);
 	sys_dbg("\t\tProtocol ID: 0x%02X%02X\n", n->protocol_id >> 8,
 			n->protocol_id & 0xFF);
-	sys_dbg("\t\tpayload len: %lu\n", sizeof(n->payload));
+	sys_dbg("\t\tpayload len: %u\n", sizeof(n->payload));
 	sys_dbg("\t\tvalue: ");
 	for (i=0; i<sizeof(n->payload); i++) {
 		sys_dbg("%02X", n->payload[i]);
