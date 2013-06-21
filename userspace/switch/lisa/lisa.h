@@ -35,7 +35,7 @@ struct lisa_context {
 	struct switch_operations sw_ops;
 
 	/* Socket descriptor used for communication with LiSA module. */
-	int sock_fd, if_sfd;
+	int sock_fd;
 };
 
 extern struct lisa_context lisa_ctx;

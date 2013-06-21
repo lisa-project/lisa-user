@@ -81,7 +81,7 @@ static int vlan_add(struct switch_operations *sw_ops, int vlan)
 
 	SW_SOCK_OPEN(uc, sock_fd);
 	rc = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
-	SW_SOCK_CLOSE(uc, sock_fd); /* this can overwrite ioctl errno */
+	SW_SOCK_CLOSE(uc, sock_fd);
 
 	return rc;
 }
@@ -97,7 +97,7 @@ static int vlan_del(struct switch_operations *sw_ops, int vlan)
 
 	SW_SOCK_OPEN(lc, sock_fd);
 	rc = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
-	SW_SOCK_CLOSE(lc, sock_fd); /* this can overwrite ioctl errno */
+	SW_SOCK_CLOSE(lc, sock_fd);
 
 	return rc;
 }
@@ -115,13 +115,11 @@ static int vlan_set_mac_static(struct switch_operations *sw_ops, int ifindex,
 
 	memcpy(swcfgr.ext.mac.addr, mac, ETH_ALEN);
 
-
 	SW_SOCK_OPEN(lc, sock_fd);
 	rc = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
 	SW_SOCK_CLOSE(lc, sock_fd);
 
 	return rc;
-
 }
 
 static int vlan_del_mac_static(struct switch_operations *sw_ops, int ifindex,
@@ -142,10 +140,10 @@ static int vlan_del_mac_static(struct switch_operations *sw_ops, int ifindex,
 	SW_SOCK_CLOSE(lc, sock_fd);
 
 	return rc;
-
 }
 
-static int vlan_del_mac_dynamic(struct switch_operations *sw_ops, int ifindex, int vlan)
+static int vlan_del_mac_dynamic(struct switch_operations *sw_ops, int ifindex,
+		int vlan)
 {
 	int rc, sock_fd;
 	struct swcfgreq swcfgr = {
@@ -310,7 +308,8 @@ static int vif_del(struct switch_operations *sw_ops, int vlan)
 	return rc;
 }
 
-static int if_set_port_vlan(struct switch_operations *sw_ops, int ifindex, int vlan)
+static int if_set_port_vlan(struct switch_operations *sw_ops, int ifindex,
+		int vlan)
 {
 	int rc, sock_fd;
 	struct swcfgreq swcfgr;
@@ -402,7 +401,6 @@ static int if_get_cfg (struct switch_operations *sw_ops, int ifindex,
 	inverse_bitmap(vlans);
 
 	return rc;
-
 }
 
 static int get_if_list(struct switch_operations *sw_ops, int type,
@@ -559,8 +557,6 @@ static int get_mac(struct switch_operations *sw_ops, int ifindex, int vlan,
 	}
 
 	return 0;
-
-
 }
 
 static int mrouter_set(struct switch_operations *sw_ops, int vlan,
