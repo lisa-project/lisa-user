@@ -202,10 +202,6 @@ out:
 	return ret;
 }
 
-static int if_clear_mac(struct switch_operations *sw_ops, int ifindex) {
-	return 0;
-};
-
 static int if_add_trunk_vlans(struct switch_operations *sw_ops, int ifindex, unsigned char *vlans) {
 	return 0;
 };
@@ -289,7 +285,6 @@ struct swconfig_context sw_ctx = {
 		.if_remove	= if_remove,
 		.if_enable	= if_enable,
 		.if_disable	= if_disable,
-		.if_clear_mac = if_clear_mac,
 		.vlan_add	= vlan_add,
 		.vlan_del	= vlan_del,
 
