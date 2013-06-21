@@ -83,8 +83,6 @@ static int vlan_add(struct switch_operations *sw_ops, int vlan)
 	rc = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
 	SW_SOCK_CLOSE(uc, sock_fd); /* this can overwrite ioctl errno */
 
-	/* Add default description for newly added vlan. */
-
 	return rc;
 }
 
