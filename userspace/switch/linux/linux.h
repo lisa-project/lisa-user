@@ -6,6 +6,7 @@
 #include <linux/sockios.h>
 #include <linux/if_vlan.h>
 #include <linux/if_bridge.h>
+#include <netlink.h>
 #include <sys/ioctl.h>
 
 
@@ -156,8 +157,7 @@ extern int br_get_all_fdb_entries(struct linux_context *lnx_ctx, int vlan_id,
 extern int br_get_port_list(struct linux_context *lnx_ctx, int vlan_id,
 		int num_ports, int* ifindices);
 
-/* Send a set/del mac command to bridge */
-extern int send_mac_cmd(struct linux_context *lnx_ctx, int ifindex, int vlan,
-	unsigned long *args);
+/* Get the appropriate bridge port given an ifindex */
+int get_bridge_port(struct linux_context *lnx_ctx, int *p_index, int ifindex, int vlan);
 
 #endif

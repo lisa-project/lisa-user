@@ -26,6 +26,7 @@
 #include <arpa/inet.h>
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
+#include <linux/neighbour.h>
 
 #include <assert.h>
 #include <errno.h>

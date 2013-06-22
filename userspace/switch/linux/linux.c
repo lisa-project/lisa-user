@@ -897,29 +897,86 @@ static int if_get_cfg (struct switch_operations *sw_ops, int ifindex,
 static int vlan_set_mac_static(struct switch_operations *sw_ops, int ifindex,
 		int vlan, unsigned char *mac)
 {
+	int ret = 0;
 	struct linux_context *lnx_ctx = SWLINUX_CTX(sw_ops);
-	unsigned long args[4] = {BRCTL_SET_MAC_STATIC, ifindex, VLAN_N_VID,
-		(unsigned long) mac};
+	struct rtnl_handle rth = { .fd = -1 };
+	struct {
+		struct nlmsghdr     n;
+		struct ndmsg        ndm;
+		char            buf[256];
+	} req;
 
-	return send_mac_cmd(lnx_ctx, ifindex, vlan, args);
+
+	/* Get the appropriate bridge port */
+	ret = get_bridge_port(lnx_ctx, &ifindex, ifindex, vlan);
+	if (ret)
+		return ret;
+
+
+	/* Build netlink socket request */
+	memset(&req, 0, sizeof(req));
+	req.n.nlmsg_len = NLMSG_LENGTH(sizeof(struct ndmsg));
+	req.n.nlmsg_flags = NLM_F_REQUEST | NLM_F_CREATE | NLM_F_EXCL | 0x02;
+	req.n.nlmsg_type = RTM_NEWNEIGH;
+	req.ndm.ndm_family = PF_BRIDGE;
+	req.ndm.ndm_state = NUD_NOARP;
+	addattr_l(&req.n, sizeof(req), NDA_LLADDR, mac, ETH_ALEN);
+
+	req.ndm.ndm_ifindex = ifindex;
+
+	/* Open socket and send command */
+	if (rtnl_open(&rth) < 0)
+		        return -1;
+	if (rtnl_talk(&rth, &req.n) < 0)
+		return -1;
+	rtnl_close(&rth);
+
+	return 0;
 }
 
 static int vlan_del_mac_static(struct switch_operations *sw_ops, int ifindex,
 		int vlan, unsigned char *mac)
 {
+	int ret = 0;
 	struct linux_context *lnx_ctx = SWLINUX_CTX(sw_ops);
-	unsigned long args[4] = {BRCTL_DEL_MAC, ifindex, VLAN_N_VID,
-		(unsigned long) mac};
+	struct rtnl_handle rth = { .fd = -1 };
+	struct {
+		struct nlmsghdr     n;
+		struct ndmsg        ndm;
+		char            buf[256];
+	} req;
 
-	return send_mac_cmd(lnx_ctx, ifindex, vlan, args);
+
+	/* Get the appropriate bridge port */
+	ret = get_bridge_port(lnx_ctx, &ifindex, ifindex, vlan);
+	if (ret)
+		return ret;
+
+
+	/* Build netlink socket request */
+	memset(&req, 0, sizeof(req));
+	req.n.nlmsg_len = NLMSG_LENGTH(sizeof(struct ndmsg));
+	req.n.nlmsg_flags = NLM_F_REQUEST | 0x02;
+	req.n.nlmsg_type = RTM_DELNEIGH;
+	req.ndm.ndm_family = PF_BRIDGE;
+	req.ndm.ndm_state = NUD_NOARP;
+	addattr_l(&req.n, sizeof(req), NDA_LLADDR, mac, ETH_ALEN);
+
+	req.ndm.ndm_ifindex = ifindex;
+
+	/* Open socket and send command */
+	if (rtnl_open(&rth) < 0)
+		        return -1;
+	if (rtnl_talk(&rth, &req.n) < 0)
+		return -1;
+	rtnl_close(&rth);
+
+	return 0;
 }
 
 static int vlan_del_mac_dynamic(struct switch_operations *sw_ops, int ifindex, int vlan)
 {
-	struct linux_context *lnx_ctx = SWLINUX_CTX(sw_ops);
-	unsigned long args[4] = {BRCTL_DEL_MAC, ifindex, VLAN_N_VID, 0};
-
-	return send_mac_cmd(lnx_ctx, ifindex, vlan, args);
+	return 0;
 }
 
 static int get_mac(struct switch_operations *sw_ops, int ifindex, int vlan,
@@ -999,57 +1056,57 @@ static int get_mac(struct switch_operations *sw_ops, int ifindex, int vlan,
 		for (vlan_id = 0 ; vlan_id < SW_MAX_VLAN; vlan_id++) {
 			if (!sw_bitmap_test(bitmap, vlan_id)) {
 
-			 ret = br_get_all_fdb_entries(lnx_ctx, vlan, (void **)buffer);
+				ret = br_get_all_fdb_entries(lnx_ctx, vlan, (void **)buffer);
 
-			if (ret < 0){
-				errno = -ret;
-				return -1;
-			}
-
-			mac_no = ret;
-
-			ifindexes = malloc(BR_MAX_PORTS* sizeof(int));
-			ret = br_get_port_list(lnx_ctx, vlan, BR_MAX_PORTS, ifindexes);
-
-			if (ret < 0){
-				errno = -ret;
-				return -1;
-			}
-
-			for (i = 0; i < mac_no; ++i) {
-
-				port_no = (*buffer)[i].port_no + ((*buffer)[i].port_hi << 8);
-
-				index = if_get_index_from_vif(lnx_ctx,
-					ifindexes[port_no]);
-
-				/* do filtering here */
-				if (ifindex && index != ifindex)
-					continue;
-				if (mac_addr && memcmp((*buffer)[i].mac_addr, mac_addr, ETH_ALEN))
-					continue;
-
-				entry = malloc(sizeof(struct net_switch_mac_e));
-
-				if (!entry) {
-					errno = ENOMEM;
+				if (ret < 0){
+					errno = -ret;
 					return -1;
 				}
-				entry->ifindex = index;
-				entry->vlan = vlan_id;
 
-				if ((*buffer)[i].ageing_timer_value)
-					entry->type = SW_FDB_STATIC;
-				else
-					entry->type = SW_FDB_IGMP;
+				mac_no = ret;
 
-				memcpy(entry->addr, (*buffer)[i].mac_addr, ETH_ALEN);
+				ifindexes = malloc(BR_MAX_PORTS* sizeof(int));
+				ret = br_get_port_list(lnx_ctx, vlan, BR_MAX_PORTS, ifindexes);
 
-				list_add_tail(&entry->lh, macs);
-			}
+				if (ret < 0){
+					errno = -ret;
+					return -1;
+				}
 
-			free(ifindexes);
-			free(*buffer);
+				for (i = 0; i < mac_no; ++i) {
+
+					port_no = (*buffer)[i].port_no + ((*buffer)[i].port_hi << 8);
+
+					index = if_get_index_from_vif(lnx_ctx,
+							ifindexes[port_no]);
+
+					/* do filtering here */
+					if (ifindex && index != ifindex)
+						continue;
+					if (mac_addr && memcmp((*buffer)[i].mac_addr, mac_addr, ETH_ALEN))
+						continue;
+
+					entry = malloc(sizeof(struct net_switch_mac_e));
+
+					if (!entry) {
+						errno = ENOMEM;
+						return -1;
+					}
+					entry->ifindex = index;
+					entry->vlan = vlan_id;
+
+					if ((*buffer)[i].ageing_timer_value)
+						entry->type = SW_FDB_STATIC;
+					else
+						entry->type = SW_FDB_IGMP;
+
+					memcpy(entry->addr, (*buffer)[i].mac_addr, ETH_ALEN);
+
+					list_add_tail(&entry->lh, macs);
+				}
+
+				free(ifindexes);
+				free(*buffer);
 
 			}
 
