@@ -43,6 +43,8 @@
 #define SW_MAX_VLAN_NAME	31
 #define SW_MAX_PORT_DESC	31
 
+#define BRCTL_DEL_MAC 1
+#define BRCTL_SET_MAC_STATIC 2
 extern struct switch_operations *sw_ops;
 extern struct mm_private *mm;
 #define SHM ((struct switch_mem *)MM_STATIC(mm))
@@ -138,6 +140,16 @@ struct swport_data {
 	for (i = 0; i < 512; i++)	\
 		__bitmap[i] = 0xFF;	\
 } while(0)
+
+#define inverse_bitmap(vlans)					\
+	do {							\
+		if ((vlans)) {					\
+			int i;					\
+			for (i = 0; i < SW_VLAN_BMP_NO; i++)	\
+				vlans[i] = ~vlans[i];		\
+		}						\
+	}while(0)
+
 
 #define sw_bitmap_or(__old_bitmap, __bitmap, __new_bitmap) do {		\
 	int i = 0;							\

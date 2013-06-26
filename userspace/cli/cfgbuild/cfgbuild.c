@@ -90,7 +90,7 @@ int build_config_interface(struct cli_context *ctx, FILE *out, struct net_switch
 			fprintf(out, " switchport access vlan %d\n",
 					access_vlan);
 		/* switchport trunk allowed vlan */
-		do {
+		/*do {
 			int i;
 			if((bmp[0] | 0x01) != 0x01)
 				break;
@@ -100,7 +100,7 @@ int build_config_interface(struct cli_context *ctx, FILE *out, struct net_switch
 			if(i)
 				break;
 			need_trunk_vlans = 0;
-		} while(0);
+		} while(0);*/
 		if(need_trunk_vlans)
 			list_vlans(out, bmp);
 		/* switchport mode */
@@ -434,6 +434,7 @@ static __inline__ int __cmd_show_run(struct cli_context *ctx, int argc, char **a
 		if_args_to_ifindex(ctx, argv, nodev, sock_fd, nsdev.ifindex, iftype, nsdev.name);
 		if_get_type(ctx, sock_fd, nsdev.ifindex, nsdev.name, iftype, ifvlan);
 		nsdev.type = iftype;
+		nsdev.vlan = ifvlan;
 	}
 
 	tmp_fd = mkstemp(tmp_name);

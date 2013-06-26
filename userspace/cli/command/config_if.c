@@ -8,7 +8,7 @@ static int parse_vlan_list(char *list, unsigned char *bmp)
 	int min = 0, max;
 	char *last = list, *ptr;
 
-	memset(bmp, 0xff, SW_VLAN_BMP_NO);
+	memset(bmp, 0, SW_VLAN_BMP_NO);
 	for(ptr = list; *ptr != '\0'; ptr++) {
 		switch(state) {
 		case 0: /* First number */
@@ -27,7 +27,7 @@ static int parse_vlan_list(char *list, unsigned char *bmp)
 				if(sw_invalid_vlan(min))
 					return 1;
 				last = ptr + 1;
-				sw_allow_vlan(bmp, min);
+				sw_forbid_vlan(bmp, min);
 				continue;
 			}
 			return 2;
@@ -39,7 +39,7 @@ static int parse_vlan_list(char *list, unsigned char *bmp)
 				if(sw_invalid_vlan(max))
 					return 1;
 				while(min <= max) {
-					sw_allow_vlan(bmp, min);
+					sw_forbid_vlan(bmp, min);
 					min++;
 				}
 				last = ptr + 1;
@@ -53,14 +53,14 @@ static int parse_vlan_list(char *list, unsigned char *bmp)
 		min = atoi(last);
 		if(sw_invalid_vlan(min))
 			return 1;
-		sw_allow_vlan(bmp, min);
+		sw_forbid_vlan(bmp, min);
 		break;
 	case 1:
 		max = atoi(last);
 		if(sw_invalid_vlan(max))
 			return 1;
 		while(min <= max) {
-			sw_allow_vlan(bmp, min);
+			sw_forbid_vlan(bmp, min);
 			min++;
 		}
 		break;
@@ -205,7 +205,7 @@ int cmd_trunk_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_n
 		break;
 	case CMD_VLAN_ALL:
 	case CMD_VLAN_NO:
-		memset(bmp, 0, SW_VLAN_BMP_NO);
+		memset(bmp, 0xff, SW_VLAN_BMP_NO);
 		status = sw_ops->if_set_trunk_vlans(sw_ops, ifindex, bmp);
 		break;
 	case CMD_VLAN_EXCEPT:
@@ -215,7 +215,7 @@ int cmd_trunk_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_n
 		status = sw_ops->if_set_trunk_vlans(sw_ops, ifindex, bmp);
 		break;
 	case CMD_VLAN_NONE:
-		memset(bmp, 0xff, SW_VLAN_BMP_NO);
+		memset(bmp, 0x00, SW_VLAN_BMP_NO);
 		status = sw_ops->if_set_trunk_vlans(sw_ops, ifindex, bmp);
 		break;
 	case CMD_VLAN_REMOVE:

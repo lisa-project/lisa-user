@@ -33,6 +33,15 @@ static int if_add(struct switch_operations *sw_ops, int ifindex, int mode)
 	char if_name[IFNAMSIZE];
 	struct linux_context *lnx_ctx = SWLINUX_CTX(sw_ops);
 
+	ret = get_if_data(ifindex, &data);
+
+	if (!ret) {
+		errno = EBUSY;
+		return -1;
+	}
+	else {
+		errno = 0;
+	}
 
 	/* Get the name of the interface */
 	IF_SOCK_OPEN(lnx_ctx, if_sfd);
@@ -45,23 +54,26 @@ static int if_add(struct switch_operations *sw_ops, int ifindex, int mode)
 	device.type = IF_TYPE_SWITCHED;
 	data.device = device;
 
-	data.mode = mode;
+	if (mode == IF_MODE_TRUNK || mode == IF_MODE_ACCESS) {
+		data.mode = mode;
+	}
+	else {
+		data.mode = IF_MODE_ACCESS;
+	}
+
+	data.access_vlan = LINUX_DEFAULT_VLAN;
 	add_if_data(ifindex, data);
 
-
 	/* Add the new interface to the default bridge */
-	switch (mode) {
-	case IF_MODE_ACCESS:
-		ret = br_add_if(lnx_ctx, LINUX_DEFAULT_VLAN, ifindex);
-		data.access_vlan = LINUX_DEFAULT_VLAN;
-		break;
+	switch (data.mode) {
 
 	case IF_MODE_TRUNK:
 		ret = add_vifs_to_trunk(lnx_ctx, ifindex, NULL);
 		break;
 
-	default:
-		return EINVAL;
+	case IF_MODE_ACCESS:
+		ret = br_add_if(lnx_ctx, LINUX_DEFAULT_VLAN, ifindex);
+		break;
 	}
 
 	return ret;
@@ -143,6 +155,12 @@ static int vlan_del(struct switch_operations *sw_ops, int vlan)
 	struct vlan_data *v_data;
 	mm_ptr_t ptr, tmp;
 
+	/*if VLAN is default */
+	if (sw_is_default_vlan(vlan)) {
+		errno = EACCES;
+		return -1;
+	}
+
 	/* Get VLAN data */
 	ret = get_vlan_data(vlan, &v_data);
 	if (ret)
@@ -219,7 +237,9 @@ static int vlan_add(struct switch_operations *sw_ops, int vlan)
 	}
 
 	/* Create VLAN specific data */
-	add_vlan_data(vlan);
+	ret = add_vlan_data(vlan);
+	if (ret)
+		return ret;
 
 
 	/* Add new virtual interfaces for all the trunk interfaces */
@@ -229,14 +249,14 @@ static int vlan_add(struct switch_operations *sw_ops, int vlan)
 		struct if_data *if_data =
 			mm_addr(mm, mm_list_entry(ptr, struct if_data, lh));
 
-		allowed_vlans = mm_addr(mm, if_data->allowed_vlans);
-		if (!sw_bitmap_test(allowed_vlans, vlan))
-			continue;
-
 		if (if_data->device.type != IF_TYPE_SWITCHED)
 			continue;
 
 		if (if_data->mode == IF_MODE_TRUNK) {
+
+			allowed_vlans = mm_addr(mm, if_data->allowed_vlans);
+			if (!sw_bitmap_test(allowed_vlans, vlan))
+							continue;
 			/* Create a new virtual interface */
 			ret = create_vif(lnx_ctx, if_data->device.name, vlan);
 			if (ret)
@@ -294,8 +314,16 @@ static int vif_add(struct switch_operations *sw_ops, int vlan, int *ifindex)
 	sprintf(vif_name, "vlan%d", vlan);
 
 	IF_SOCK_OPEN(lnx_ctx, if_sfd);
-	vif_device.ifindex = if_get_index(vif_name, if_sfd);
+	ret = if_get_index(vif_name, if_sfd);
 	IF_SOCK_CLOSE(lnx_ctx, if_sfd);
+
+	if (ret <= 0)
+	{
+		errno = EINVAL;
+		return -1;
+	}
+
+	vif_device.ifindex = ret;
 
 	strncpy(vif_device.name, vif_name, IFNAMSIZ);
 	vif_device.type = IF_TYPE_VIF;
@@ -305,7 +333,7 @@ static int vif_add(struct switch_operations *sw_ops, int vlan, int *ifindex)
 
 	*ifindex = vif_device.ifindex;
 
-	return ret;
+	return 0;
 }
 
 static int vif_del(struct switch_operations *sw_ops, int vlan)
@@ -353,10 +381,14 @@ static int get_vlan_interfaces(struct switch_operations *sw_ops, int vlan,
 	mm_list_for_each(mm, ptr, mm_ptr(mm, &SHM->if_data)) {
 		struct if_data *if_data =
 			mm_addr(mm, mm_list_entry(ptr, struct if_data, lh));
+		
+		if (!(if_data->device.type & IF_TYPE_SWITCHED))
+			continue;
 
 		/* Count access interfaces */
-		if (if_data->mode == IF_MODE_ACCESS || if_data->access_vlan == vlan) {
-			ifs++;
+		if (if_data->mode == IF_MODE_ACCESS) {
+			if (if_data->access_vlan == vlan)
+				ifs++;
 			continue;
 		}
 
@@ -380,8 +412,9 @@ static int get_vlan_interfaces(struct switch_operations *sw_ops, int vlan,
 			continue;
 
 		/* Count access interfaces */
-		if (if_data->mode == IF_MODE_ACCESS || if_data->access_vlan == vlan) {
-			ifaces[ifs++] = if_data->device.ifindex;
+		if (if_data->mode == IF_MODE_ACCESS) {
+			if (if_data->access_vlan == vlan)
+				ifaces[ifs++] = if_data->device.ifindex;
 			continue;
 		}
 
@@ -491,8 +524,11 @@ static int if_set_port_vlan(struct switch_operations *sw_ops, int ifindex, int v
 		return ret;
 
 	/* Filter Routed and trunk interfaces */
-	if (data.mode != IF_MODE_ACCESS || data.device.type != IF_TYPE_SWITCHED)
-		return EINVAL;
+	if (data.mode != IF_MODE_ACCESS 
+		|| data.device.type != IF_TYPE_SWITCHED) {
+		errno = EINVAL;
+		return -1;
+	}
 	if (data.access_vlan == vlan)
 		return 0;
 
@@ -529,6 +565,8 @@ static int get_vdb(struct switch_operations *sw_ops, unsigned char *vlans)
 	}
 	mm_unlock(mm);
 
+	inverse_bitmap(bitmap);
+
 	memcpy(vlans, bitmap, SW_VLAN_BMP_NO);
 
 	return 0;
@@ -555,6 +593,7 @@ static int get_if_list(struct switch_operations *sw_ops, int type,
 		dev = malloc(sizeof(struct net_switch_device));
 		if (!dev) {
 			errno = ENOMEM;
+			mm_unlock(mm);
 			return -1;
 		}
 		*dev = if_data->device;
@@ -880,16 +919,15 @@ static int if_get_cfg (struct switch_operations *sw_ops, int ifindex,
 		return ret;
 
 	*flags = data.mode;
-	if (data.mode == IF_MODE_ACCESS)
-		*access_vlan = data.access_vlan;
-	else {
-		mm_lock(mm);
+	*access_vlan = data.access_vlan;
+	mm_lock(mm);
 
-		allowed_vlans = mm_addr(mm, data.allowed_vlans);
-		memcpy(vlans, allowed_vlans, SW_VLAN_BMP_NO);
+	allowed_vlans = mm_addr(mm, data.allowed_vlans);
+	memcpy(vlans, allowed_vlans, SW_VLAN_BMP_NO);
 
-		mm_unlock(mm);
-	}
+	mm_unlock(mm);
+
+	inverse_bitmap(vlans);
 
 	return ret;
 }

@@ -369,7 +369,10 @@ int if_mode_access(struct linux_context *lnx_ctx, int ifindex)
 	/* Return if interface is already access */
 	if (data.mode == IF_MODE_ACCESS &&
 			data.device.type == IF_TYPE_SWITCHED)
-		return 0;
+	{
+		errno = EEXIST;
+		return -1;
+	}
 
 
 	/* Make sure all trunk virtual interfaces are removed */
@@ -377,7 +380,7 @@ int if_mode_access(struct linux_context *lnx_ctx, int ifindex)
 
 
 	/* Add the interface to the default bridge */
-	ret = br_add_if(lnx_ctx, LINUX_DEFAULT_VLAN, ifindex);
+	ret = br_add_if(lnx_ctx, data.access_vlan, ifindex);
 	if (ret)
 		return ret;
 
@@ -385,7 +388,6 @@ int if_mode_access(struct linux_context *lnx_ctx, int ifindex)
 	/* Set mode in interface private data */
 	data.device.type = IF_TYPE_SWITCHED;
 	data.mode = IF_MODE_ACCESS;
-	data.access_vlan = LINUX_DEFAULT_VLAN;
 
 	return set_if_data(ifindex, data);
 }
@@ -404,7 +406,10 @@ int if_mode_trunk(struct linux_context *lnx_ctx, int ifindex)
 	/* Return if interface is already trunk */
 	if (data.mode == IF_MODE_TRUNK &&
 			data.device.type == IF_TYPE_SWITCHED)
-		return 0;
+	{
+		errno = EEXIST;
+		return -1;
+	}
 
 	/* Make sure the interface is not in the default VLAN */
 	br_remove_if(lnx_ctx, data.access_vlan, ifindex);

@@ -596,8 +596,11 @@ int add_vlan_data(int vlan_id)
 
 	lh = __get_vlan_data(vlan_id);
 	/* VLAN data already exists */
-	if (MM_NULL != lh)
+	if (MM_NULL != lh){
+		errno = EEXIST;
+		ret = -1;
 		goto out_unlock;
+	}
 
 	/* VLAN data does not exist */
 	mm_v_data = mm_alloc(mm, sizeof(struct vlan_data));
@@ -683,12 +686,20 @@ int get_if_data(int if_index, struct if_data *data)
 
 int add_if_data(int if_index, struct if_data new_data)
 {
-	mm_ptr_t mm_if_data, mrouters, allowed_vlans;
+	mm_ptr_t mm_if_data, mrouters, allowed_vlans, lh;
 	struct if_data *data;
 	unsigned char *bitmap;
 	int ret = 0;
 
 	mm_lock(mm);
+
+	lh = __get_if_data(if_index);
+	/* Interface data already exists */
+	if (MM_NULL != lh) {
+		mm_unlock(mm);
+		return 0;
+	}
+
 
 	/* Interface data does not exist */
 	mm_if_data = mm_alloc(mm, sizeof(struct if_data));
