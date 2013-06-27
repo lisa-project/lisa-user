@@ -1021,7 +1021,7 @@ static int get_mac(struct switch_operations *sw_ops, int ifindex, int vlan,
 			int mac_type, unsigned char *mac_addr,
 			struct list_head *macs)
 {
-	int ret = 0, i = 0, mac_no, port_no, index, vlan_id;
+	int ret = 0, i = 0,mac_filtering = 0, mac_no, port_no, index, vlan_id;
 	struct net_switch_mac_e *entry;
 	struct linux_context *lnx_ctx = SWLINUX_CTX(sw_ops);
 	struct __fdb_entry** buffer;
@@ -1034,6 +1034,10 @@ static int get_mac(struct switch_operations *sw_ops, int ifindex, int vlan,
 		errno = ENOMEM;
 		return -1;
 	}
+
+	if (mac_addr[0] || mac_addr[1] || mac_addr[2]
+			|| mac_addr[3] || mac_addr[4] || mac_addr[5])
+				mac_filtering = 1;
 
 	if(vlan) {
 		ret = br_get_all_fdb_entries(lnx_ctx, vlan, (void **)buffer);
@@ -1063,7 +1067,7 @@ static int get_mac(struct switch_operations *sw_ops, int ifindex, int vlan,
 			/* do filtering here */
 			if (ifindex && index != ifindex)
 				continue;
-			if (mac_addr && memcmp((*buffer)[i].mac_addr, mac_addr, ETH_ALEN))
+			if (mac_filtering && memcmp((*buffer)[i].mac_addr, mac_addr, ETH_ALEN))
 				continue;
 
 			entry = malloc(sizeof(struct net_switch_mac_e));
@@ -1091,10 +1095,10 @@ static int get_mac(struct switch_operations *sw_ops, int ifindex, int vlan,
 	}
 	else {
 		sw_ops->get_vdb(sw_ops, bitmap);
-		for (vlan_id = 0 ; vlan_id < SW_MAX_VLAN; vlan_id++) {
-			if (!sw_bitmap_test(bitmap, vlan_id)) {
+		for (vlan_id = 1 ; vlan_id < SW_MAX_VLAN; vlan_id++) {
+			if (sw_bitmap_test(bitmap, vlan_id)) {
 
-				ret = br_get_all_fdb_entries(lnx_ctx, vlan, (void **)buffer);
+				ret = br_get_all_fdb_entries(lnx_ctx, vlan_id, (void **)buffer);
 
 				if (ret < 0){
 					errno = -ret;
@@ -1104,7 +1108,7 @@ static int get_mac(struct switch_operations *sw_ops, int ifindex, int vlan,
 				mac_no = ret;
 
 				ifindexes = malloc(BR_MAX_PORTS* sizeof(int));
-				ret = br_get_port_list(lnx_ctx, vlan, BR_MAX_PORTS, ifindexes);
+				ret = br_get_port_list(lnx_ctx, vlan_id, BR_MAX_PORTS, ifindexes);
 
 				if (ret < 0){
 					errno = -ret;
@@ -1121,7 +1125,7 @@ static int get_mac(struct switch_operations *sw_ops, int ifindex, int vlan,
 					/* do filtering here */
 					if (ifindex && index != ifindex)
 						continue;
-					if (mac_addr && memcmp((*buffer)[i].mac_addr, mac_addr, ETH_ALEN))
+					if (mac_filtering && memcmp((*buffer)[i].mac_addr, mac_addr, ETH_ALEN))
 						continue;
 
 					entry = malloc(sizeof(struct net_switch_mac_e));

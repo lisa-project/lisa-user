@@ -177,6 +177,7 @@ static int if_add_trunk_vlans(struct switch_operations *sw_ops,
 	rc = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
 	SW_SOCK_CLOSE(lc, sock_fd);
 
+
 	return rc;
 }
 
@@ -372,8 +373,6 @@ static int get_vdb(struct switch_operations *sw_ops, unsigned char *vlans)
 	rc = ioctl(sock_fd, SIOCSWCFG, &swcfgr);
 	SW_SOCK_CLOSE(lc, sock_fd);
 
-	inverse_bitmap(vlans);
-
 	return rc;
 }
 
@@ -398,7 +397,7 @@ static int if_get_cfg (struct switch_operations *sw_ops, int ifindex,
 	*flags = swcfgr.ext.cfg.flags;
 	*access_vlan = swcfgr.ext.cfg.access_vlan;
 
-	inverse_bitmap(vlans);
+	//inverse_bitmap(vlans);
 
 	return rc;
 }
