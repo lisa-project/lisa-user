@@ -55,8 +55,7 @@ void multiengine_init(void)
 int open_so_local(char *so_name, struct sw_ops_entries *entry)
 {
 	void *handle;
-	char *error;
-	void (*register_switch_so)(struct switch_operations*);
+	struct switch_operations *sw_ops;
 
 	/* open switch libraries */
 	handle = dlopen(so_name, RTLD_LAZY);
@@ -66,21 +65,10 @@ int open_so_local(char *so_name, struct sw_ops_entries *entry)
 	}
 
 	dlerror();
-	register_switch_so = (void*)dlsym(handle, "register_switch");
-	if ((error = dlerror()) != NULL)  {
-		printf("Error dlsym(): %s\n", error);
-		exit(1);
-	}
+	sw_ops = (struct switch_operations *)dlsym(handle, "sw_ops");
 
-	entry->sw_ops = malloc(sizeof(struct switch_operations));
-	if (NULL == entry->sw_ops) {
-		printf("Couldn't allocate space\n");
-		return -1;
-	}
+	entry->sw_ops = sw_ops;
 
-	(*register_switch_so)(entry->sw_ops);
-
-	dlclose(handle);
 	return 0;
 }
 
@@ -89,7 +77,6 @@ int open_so_local(char *so_name, struct sw_ops_entries *entry)
 int get_shared_object(cJSON *item, struct sw_ops_entries *entry)
 {
 	char *so_name;
-	int ret;
 
 	so_name = cJSON_GetObjectItem(item, "shared_object")->valuestring;
 	if (NULL == so_name)
