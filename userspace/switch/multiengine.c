@@ -64,11 +64,8 @@ int open_so_local(char *so_name, struct sw_ops_entries *entry)
 		return -1;
 	}
 
-	dlerror();
 	sw_ops = (struct switch_operations *)dlsym(handle, "sw_ops");
-
 	entry->sw_ops = sw_ops;
-
 	return 0;
 }
 
