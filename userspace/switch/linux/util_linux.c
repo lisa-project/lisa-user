@@ -255,6 +255,9 @@ int add_vifs_to_trunk(struct linux_context *lnx_ctx, int ifindex,
 		vif_device.ifindex = if_get_index(vif_name, if_sfd);
 		IF_SOCK_CLOSE(lnx_ctx, if_sfd);
 
+		/* Enable the virtual interface */
+		if_enable(&lnx_ctx->sw_ops, vif_device.ifindex);
+
 		add_vif_data(v_data->vlan_id, vif_device);
 
 		/* Add the new interface to VLAN's bridge */

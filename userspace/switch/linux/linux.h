@@ -160,4 +160,6 @@ extern int br_get_port_list(struct linux_context *lnx_ctx, int vlan_id,
 /* Get the appropriate bridge port given an ifindex */
 int get_bridge_port(struct linux_context *lnx_ctx, int *p_index, int ifindex, int vlan);
 
+int if_enable(struct switch_operations *sw_ops, int ifindex);
+
 #endif

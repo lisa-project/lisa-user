@@ -108,7 +108,7 @@ clear_data:
 	return ret;
 }
 
-static int if_enable(struct switch_operations *sw_ops, int ifindex)
+int if_enable(struct switch_operations *sw_ops, int ifindex)
 {
 	int flags, if_sfd, ret = 0;
 	struct linux_context *lnx_ctx = SWLINUX_CTX(sw_ops);
@@ -270,6 +270,9 @@ static int vlan_add(struct switch_operations *sw_ops, int vlan)
 			IF_SOCK_OPEN(lnx_ctx, if_sfd);
 			vif_device.ifindex = if_get_index(vif_name, if_sfd);
 			IF_SOCK_CLOSE(lnx_ctx, if_sfd);
+
+			/* Enable the virtual interface */
+			if_enable(&lnx_ctx->sw_ops, vif_device.ifindex);
 
 			add_vif_data(vlan, vif_device);
 

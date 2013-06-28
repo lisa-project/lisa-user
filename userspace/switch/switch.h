@@ -43,8 +43,6 @@
 #define SW_MAX_VLAN_NAME	31
 #define SW_MAX_PORT_DESC	31
 
-#define BRCTL_DEL_MAC 1
-#define BRCTL_SET_MAC_STATIC 2
 extern struct switch_operations *sw_ops;
 extern struct mm_private *mm;
 #define SHM ((struct switch_mem *)MM_STATIC(mm))
