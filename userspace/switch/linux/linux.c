@@ -707,11 +707,12 @@ static int mrouter_set(struct switch_operations *sw_ops, int vlan,
 
 	/* Configure mrouter in sysfs */
 	f = fopen(file_name, "r+");
-	if (!f)
-		return EINVAL;
+	if (!f) {
+		return -1;
+	}
 	ret = fprintf(f, "%d", setting);
 	if (ret <= 0) {
-		ret = EINVAL;
+		ret = -1;
 		goto out_close;
 	}
 
