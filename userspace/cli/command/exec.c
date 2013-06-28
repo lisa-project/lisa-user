@@ -555,11 +555,15 @@ int cmd_sh_ip_igmps_mrouter(struct cli_context *ctx, int argc, char **argv, stru
 	out = ctx->out_open(ctx, 1);
 
 	INIT_LIST_HEAD(&mrouters);
-	status = sw_ops->mrouters_get(sw_ops, vlan, &mrouters);
-	if (status < 0) {
-		EX_STATUS_PERROR(ctx, "failed to get mrouters");
-		ret = CLI_EX_REJECTED;
-		goto close_out;
+
+	for (vlan = min_vlan; vlan <= max_vlan; vlan++) {
+
+		status = sw_ops->mrouters_get(sw_ops, vlan, &mrouters);
+		if (status < 0) {
+			EX_STATUS_PERROR(ctx, "failed to get mrouters");
+			ret = CLI_EX_REJECTED;
+			goto close_out;
+		}
 	}
 
 	/* Open socket for if_get_name. */
