@@ -55,7 +55,8 @@ void multiengine_init(void)
 int open_so_local(char *so_name, struct sw_ops_entries *entry)
 {
 	void *handle;
-	struct switch_operations *sw_ops;
+	char *error;
+	void (*register_switch_so)(struct switch_operations*);
 
 	/* open switch libraries */
 	handle = dlopen(so_name, RTLD_LAZY);
@@ -64,8 +65,24 @@ int open_so_local(char *so_name, struct sw_ops_entries *entry)
 		return -1;
 	}
 
+	dlerror();
 	sw_ops = (struct switch_operations *)dlsym(handle, "sw_ops");
-	entry->sw_ops = sw_ops;
+	register_switch_so = (void*)dlsym(handle, "register_switch");
+	if ((error = dlerror()) != NULL)  {
+		printf("Error dlsym(): %s\n", error);
+		exit(1);
+	}
+
+	entry->sw_ops = malloc(sizeof(struct switch_operations));
+	if (NULL == entry->sw_ops) {
+		printf("Couldn't allocate space\n");
+		return -1;
+	}
+
+	(*register_switch_so)(entry->sw_ops);
+
+
+	dlclose(handle);
 	return 0;
 }
 
