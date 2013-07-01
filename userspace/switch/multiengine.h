@@ -45,5 +45,5 @@ struct sw_ops_entries {
 };
 
 
-void multiengine_init(void);
+void multiengine_init(void)__attribute__((constructor));
 #endif

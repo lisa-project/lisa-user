@@ -47,16 +47,11 @@ static char if_name[]	= "if_name";
 
 struct list_head head_sw_ops;
 
-void multiengine_init(void)
-{
-	INIT_LIST_HEAD(&head_sw_ops);
-}
 
 int open_so_local(char *so_name, struct sw_ops_entries *entry)
 {
 	void *handle;
-	char *error;
-	void (*register_switch_so)(struct switch_operations*);
+	struct switch_operations *sw_ops;
 
 	/* open switch libraries */
 	handle = dlopen(so_name, RTLD_LAZY);
@@ -67,22 +62,9 @@ int open_so_local(char *so_name, struct sw_ops_entries *entry)
 
 	dlerror();
 	sw_ops = (struct switch_operations *)dlsym(handle, "sw_ops");
-	register_switch_so = (void*)dlsym(handle, "register_switch");
-	if ((error = dlerror()) != NULL)  {
-		printf("Error dlsym(): %s\n", error);
-		exit(1);
-	}
 
-	entry->sw_ops = malloc(sizeof(struct switch_operations));
-	if (NULL == entry->sw_ops) {
-		printf("Couldn't allocate space\n");
-		return -1;
-	}
+	entry->sw_ops = sw_ops;
 
-	(*register_switch_so)(entry->sw_ops);
-
-
-	dlclose(handle);
 	return 0;
 }
 
@@ -263,9 +245,24 @@ void print_lists(void)
 	printf("\n");
 }
 
-int main()
+void multiengine_init(void)
 {
 	char *data;
+
+	INIT_LIST_HEAD(&head_sw_ops);
+
+	if (NULL == (data = read_config_file()))
+		return ;
+
+	if (-1 == parse_config_file(data)) {
+		printf("Failed parsing config file\n");
+		return ;
+	}
+}
+
+/*
+int main()
+{
 
 	multiengine_init();
 
@@ -281,4 +278,4 @@ int main()
 	print_lists();
 	return 0;
 }
-
+*/
