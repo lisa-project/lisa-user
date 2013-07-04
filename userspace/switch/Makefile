@@ -8,6 +8,8 @@ ifneq ($(MAKECMDGOALS), clean)
 $(info ********* Building [$(IMPL)] switch middleware *********)
 endif
 
+LIBSWITCH_NAME = "libswitch.so"
+
 include $(TOP_DIR)/scripts/Makefile.includes
 
 INC	=	$(TOP_DIR)/include \
@@ -19,6 +21,7 @@ MULTIENGINE_SRCS = cJSON.c multiengine.c
 
 # LiSA specific middleware implementation
 ifeq ($(IMPL), lisa)
+LIBSWITCH_NAME   = liblisa.so
 CFLAGS		+= -DLiSA
 INC 		+=	$(LINUX_INC) \
 			$(TOP_DIR)/switch/lisa
@@ -27,6 +30,7 @@ LIBSWITCH_SRCS	+= lisa/util_lisa.c
 endif
 
 ifeq ($(IMPL), linux)
+LIBSWITCH_NAME   = liblinux.so
 CFLAGS 		+= -DLinux
 INC 		+= $(TOP_DIR)/switch/linux
 LIBSWITCH_SRCS	+= linux/linux.c
@@ -38,7 +42,7 @@ SRCS		= $(LIBSWITCH_SRCS)
 
 LIBSWITCH_OBJS	= $(LIBSWITCH_SRCS:.c=.o)
 
-TARGETS = $(OBJS) libswitch.so multiengine.o multiengine
+TARGETS = $(OBJS) $(LIBSWITCH_NAME) multiengine.o
 
 all: $(TARGETS)
 
@@ -46,11 +50,11 @@ include $(TOP_DIR)/scripts/Makefile.rules
 
 dep: $(DEPS)
 
-libswitch.so: $(LIBSWITCH_OBJS) $(OBJS) $(TOP_DIR)/lib/mm.o $(TOP_DIR)/lib/cJSON.o
+$(LIBSWITCH_NAME): $(LIBSWITCH_OBJS) $(OBJS) $(TOP_DIR)/lib/mm.o $(TOP_DIR)/lib/cJSON.o
 	$(QUIET_LD)$(CC) $(CFLAGS) --export-dynamic -rdynamic -shared -Wl,-soname,$@ -o $@ $^ -lrt -ldl -lm
 
 multiengine.o: multiengine.c
 	$(QUIET_LD)$(CC) $(CFLAGS) -c -o $@  $^
 
-multiengine: multiengine.o $(TOP_DIR)/lib/cJSON.o
-	$(QUIET_LD)$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+#multiengine: multiengine.o $(TOP_DIR)/lib/cJSON.o
+#	$(QUIET_LD)$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)

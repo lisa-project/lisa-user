@@ -17,8 +17,8 @@
  *    MA  02111-1307  USA
  */
 
-#ifndef _SW_API_H
-#define _SW_API_H
+#ifndef _BACKEND_API_H
+#define _BACKEND_API_H
 
 #include "list.h"
 #include "mm.h"

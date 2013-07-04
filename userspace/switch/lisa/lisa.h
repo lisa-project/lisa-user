@@ -7,7 +7,7 @@
 #include <linux/net_switch.h>
 #include <sys/ioctl.h>
 
-#include "sw_api.h"
+#include "backend_api.h"
 #include "swsock.h"
 
 #define SWLiSA_CTX(sw_ops) ((struct lisa_context *)(sw_ops))

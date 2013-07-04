@@ -8,6 +8,7 @@ endif
 
 include $(TOP_DIR)/scripts/Makefile.includes
 include $(TOP_DIR)/switch/Makefile.switch
+include $(TOP_DIR)/scripts/Makefile.variables
 
 INC		= $(SWITCH_INC) \
 		  $(TOP_DIR)/include \
@@ -19,13 +20,14 @@ INC		= $(SWITCH_INC) \
 DEF		= _GNU_SOURCE CONFIG_CLI_TESTING
 
 ifeq ($(IMPL), lisa)
+LIBSWITCH_NAME = liblisa.so
 CFLAGS      += -DLiSA
-INC			+= $(LINUX_INC) 
+INC			+= $(LINUX_INC)
 endif
 
 ifeq ($(IMPL), linux)
 CFLAGS 		+= -DLinux
-
+LIBSWITCH_NAME  = liblinux.so
 endif
 
 
@@ -108,7 +110,6 @@ TARGETS	= libswcli.so $(LIBSWCLI_TARGETS)
 
 all: $(TARGETS)
 
-include $(TOP_DIR)/scripts/Makefile.variables
 include $(TOP_DIR)/scripts/Makefile.rules
 
 dep: $(DEPS)
@@ -118,5 +119,5 @@ libswcli.so: $(LIBSWCLI_OBJS)
 	$(QUIET_LD)$(CC) $(CFLAGS) -shared -Wl,-soname,$@ -o $@ -lreadline -lcurses -lutil -lcrypt -lrt \
 		$^ ../lib/util.o ../lib/mm.o ../lib/if_generic.o ../lib/netlink.o ../lib/cdp_client.o ../lib/rstp_client.o
 
-$(LIBSWCLI_TARGETS): % : %.o libswcli.so $(TOP_DIR)/switch/libswitch.so
+$(LIBSWCLI_TARGETS): % : %.o libswcli.so $(TOP_DIR)/switch/$(LIBSWITCH_NAME)
 	$(QUIET_LD)$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^

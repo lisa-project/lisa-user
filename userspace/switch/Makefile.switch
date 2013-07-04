@@ -1,4 +1,4 @@
-SWITCH_INC = $(TOP_DIR)/switch
+SWITCH_INC = $(TOP_DIR)/switch  $(TOP_DIR)/switch_api
 
 
 ifeq ($(IMPL), lisa)

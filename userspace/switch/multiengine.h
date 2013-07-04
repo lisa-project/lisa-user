@@ -20,7 +20,7 @@
 #define _MULTIENGINE_H
 
 #include "cJSON.h"
-#include "sw_api.h"
+#include "backend_api.h"
 
 #define MAX_NAME_SIZE		128
 #define CONFIG_FILENAME 	"backend_implementations.json"
