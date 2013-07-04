@@ -21,6 +21,11 @@ ifeq ($(IMPL), lisa)
 SUBDIRS += \
 	$(TOP_DIR)/cdpd    \
 	$(TOP_DIR)/rstp
+LIBSWITCH_NAME = liblisa.so
+endif
+
+ifeq ($(IMPL), linux)
+LIBSWITCH_NAME = liblinux.so
 endif
 
 DEPFILE = lisa.dep
@@ -61,7 +66,7 @@ endif
 	install -m 755 -D cli/swcon $(ROOT)/usr/sbin/swcon
 	install -m 755 -D cli/swlogin $(ROOT)/usr/sbin/swlogin
 	install -m 755 -D cli/libswcli.so $(ROOT)/usr/lib/libswcli.so
-	install -m 755 -D switch/libswitch.so $(ROOT)/usr/lib/libswitch.so
+	install -m 755 -D switch/$(LIBSWITCH_NAME) $(ROOT)/usr/lib/$(LIBSWITCH_NAME)
 ifneq ($(ROOT),)
 	install -m 755 -D tools/login $(ROOT)/bin/login
 endif
