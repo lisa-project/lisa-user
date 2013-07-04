@@ -44,6 +44,8 @@ struct sw_ops_entries {
 	struct list_head lh;
 };
 
+struct list_head head_sw_ops;
 
+void print_lists(struct list_head head_sw_ops);
 void multiengine_init(void)__attribute__((constructor));
 #endif

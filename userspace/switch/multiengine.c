@@ -39,14 +39,15 @@
 	}\
 } while(0)
 
+
 static char type[] 	= "type";
 static char locality[] 	= "locality";
 static char ip[]	= "ip";
 static char port[]	= "port";
 static char if_name[]	= "if_name";
 
-struct list_head head_sw_ops;
 
+extern struct list_head head_sw_ops;
 
 int open_so_local(char *so_name, struct sw_ops_entries *entry)
 {
@@ -219,7 +220,7 @@ char* read_config_file(void)
 }
 
 
-void print_lists(void)
+void print_lists(struct list_head head_sw_ops)
 {
 	struct sw_ops_entries *iter_sw;
 	struct switch_interface *iter_names;
@@ -249,15 +250,20 @@ void multiengine_init(void)
 {
 	char *data;
 
+	printf("multiengine init\n");
+
 	INIT_LIST_HEAD(&head_sw_ops);
 
 	if (NULL == (data = read_config_file()))
 		return ;
 
+	printf("finished reading config file\n");
 	if (-1 == parse_config_file(data)) {
 		printf("Failed parsing config file\n");
 		return ;
 	}
+
+	print_lists(head_sw_ops);
 }
 
 /*

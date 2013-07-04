@@ -13,14 +13,15 @@ endif
 SUBDIRS += \
 	$(TOP_DIR)/lib     \
 	$(TOP_DIR)/switch  \
-	$(TOP_DIR)/cli     \
-	$(TOP_DIR)/tools   \
-	$(TOP_DIR)/test
+	$(TOP_DIR)/switch/switch_api  \
+	$(TOP_DIR)/cli    # \
+#	$(TOP_DIR)/tools   \
+#	$(TOP_DIR)/test
 
 ifeq ($(IMPL), lisa)
 SUBDIRS += \
-	$(TOP_DIR)/cdpd    \
-	$(TOP_DIR)/rstp
+#	$(TOP_DIR)/cdpd    \
+#	$(TOP_DIR)/rstp
 LIBSWITCH_NAME = liblisa.so
 endif
 
@@ -54,7 +55,7 @@ dep:
 
 install: build
 ifeq ($(IMPL), lisa)
-	install -m 755 -D cdpd/cdpd $(ROOT)/usr/sbin/cdpd
+#	install -m 755 -D cdpd/cdpd $(ROOT)/usr/sbin/cdpd
 endif
 	install -m 755 -D tools/filter $(ROOT)/bin/filter
 	install -m 755 -D tools/swclid $(ROOT)/usr/sbin/swclid

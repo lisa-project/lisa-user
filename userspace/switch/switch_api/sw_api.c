@@ -30,7 +30,7 @@
 #include "sw_api.h"
 #include "if_generic.h"
 
-static struct switch_operations* get_switch_operations(int sw_index)
+static struct switch_operations* get_switch_operations(struct list_head head_sw_ops, int sw_index)
 {
 	int counter = 0;
 	struct sw_ops_entries *iter_sw;
@@ -38,9 +38,12 @@ static struct switch_operations* get_switch_operations(int sw_index)
 	printf("Switch index is %d\n", sw_index);
 	
 	list_for_each_entry(iter_sw, &head_sw_ops, lh) {
+		printf("Enter iterator\n");
 		if (sw_index == DEFAULT_SW) {
-			if (strcmp(iter_sw->type, LINUX_BACKEND) == 0)
+			if (strcmp(iter_sw->type, LINUX_BACKEND) == 0) {
+				printf("found linux back-end\n");
 				return iter_sw->sw_ops;
+			}
 		} else {
 			if (counter == sw_index) {
 				return iter_sw->sw_ops;
@@ -52,14 +55,16 @@ static struct switch_operations* get_switch_operations(int sw_index)
 	return NULL;
 }
 
-int if_add(int sw_index, char *if_name, int mode)
+int if_add(struct list_head head_sw_ops, int sw_index, char *if_name, int mode)
 {
 	int if_index, sock_fd;
 	struct switch_operations *sw_ops;
 
+	printf("Enter interface add multiengine\n");
+	print_lists(head_sw_ops);
 	/* get switch operations which correspond to the switch
 	 * implementation */
-	if (NULL == (sw_ops = get_switch_operations(sw_index)))
+	if (NULL == (sw_ops = get_switch_operations(head_sw_ops, sw_index)))
 		return 1;
 
 	/* cast the name of the interface into an interface index */
@@ -71,6 +76,7 @@ int if_add(int sw_index, char *if_name, int mode)
 	if (if_index <= 0)
 		return 1;
 
+	printf("Interface index is %d\n", if_index);
 	close(sock_fd);
 
 	return sw_ops->if_add(sw_ops, if_index, mode);

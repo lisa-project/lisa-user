@@ -21,7 +21,9 @@
 	#include "swsock.h"
 	#include "linux/net_switch.h"
 #endif
+
 #include "util.h"
+#include "multiengine.h"
 #include "switch.h"
 #include "cli.h"
 #include "cdp_client.h"
