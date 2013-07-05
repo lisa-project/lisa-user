@@ -55,29 +55,49 @@ static int interface_in_switch(struct backend_entries *entry, char *if_name)
 	return 1;
 }
 
-int if_add(int sw_index, char *if_name, int mode)
+/**
+ * For a given interface name and switch index it returns the entry
+ * associated with the switch and the index of the interface
+ * 
+ * The index of the interface is returned to the caller function as a
+ * side effect.(*if_index parameter)
+ */
+static struct backend_entries *get_if_params(int sw_index, char *if_name, int *if_index)
 {
-	int if_index, sock_fd;
+	int sock_fd;
 	struct backend_entries *entry;
 
 	/* get switch back-end which corresponds to the switch index */
 	if (NULL == (entry = get_switch_entry(sw_index)))
-		return 1;
+		return NULL;
 
 	/* verify if the switch contains a certain interface */
 	if (interface_in_switch(entry, if_name) < 0)
-		return 1;
+		return NULL;
 
 	/* cast the name of the interface into an interface index */
 	sock_fd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (sock_fd < 0)
-		return 1;
+		return NULL;
 
-	if_index = if_get_index(if_name, sock_fd);
-	if (if_index <= 0)
-		return 1;
+	*if_index = if_get_index(if_name, sock_fd);
+	if (*if_index <= 0)
+		return NULL;
 
 	close(sock_fd);
+
+	return entry;
+}
+
+
+int if_add(int sw_index, char *if_name, int mode)
+{
+	struct backend_entries *entry;
+	int if_index;
+
+	entry = get_if_params(sw_index, if_name, &if_index);
+	if (NULL == entry)
+		return 1;
 
 	return entry->sw_ops->if_add(entry->sw_ops, if_index, mode);
 }
@@ -86,23 +106,87 @@ int if_add(int sw_index, char *if_name, int mode)
 int if_remove(int sw_index, char *if_name)
 {
 	struct backend_entries *entry;
-	int sock_fd, if_index;
+	int if_index;
 
-	/* find the switch that contains the interface */
-	if (NULL == (entry = get_switch_entry(sw_index)))
+	entry = get_if_params(sw_index, if_name, &if_index);
+	if (NULL == entry)
 		return 1;
+
+	/* delete the interface from the identified switch */
+	return entry->sw_ops->if_remove(entry->sw_ops, if_index);
+}
+
+int if_set_mode(int sw_index, int if_index, int mode, int flag)
+{
+	struct backend_entries *entry;
+	char *if_name;
+	int sock_fd;
 
 	/* cast the name of the interface into an interface index */
 	sock_fd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (sock_fd < 0)
 		return 1;
 
-	if_index = if_get_index(if_name, sock_fd);
-	if (if_index <= 0)
+	if_name = if_get_name(if_index, sock_fd, NULL);
+	if (if_name == NULL)
 		return 1;
 
 	close(sock_fd);
 
+	entry = get_switch_entry(sw_index);
+	if (NULL == entry)
+		return 1;
+
+	if (0 != interface_in_switch(entry, if_name))
+		return 1;
+
 	/* delete the interface from the identified switch */
-	return entry->sw_ops->if_remove(entry->sw_ops, if_index);
+	return entry->sw_ops->if_set_mode(entry->sw_ops, if_index, mode, flag);
 }
+
+
+int if_set_port_vlan(int sw_index, int if_index, int vlan)
+{
+	struct backend_entries *entry;
+	char *if_name;
+	int sock_fd;
+
+	/* cast the name of the interface into an interface index */
+	sock_fd = socket(AF_INET, SOCK_DGRAM, 0);
+	if (sock_fd < 0)
+		return 1;
+
+	if_name = if_get_name(if_index, sock_fd, NULL);
+	if (if_name == NULL)
+		return 1;
+
+	close(sock_fd);
+
+	entry = get_switch_entry(sw_index);
+	if (NULL == entry)
+		return 1;
+
+	if (0 != interface_in_switch(entry, if_name))
+		return 1;
+
+	return entry->sw_ops->if_set_port_vlan(entry->sw_ops, if_index, vlan);
+}
+
+
+int if_get_type(int sw_index, char *if_name, int *type, int *vlan)
+{
+	struct backend_entries *entry;
+	int if_index;
+
+	entry = get_if_params(sw_index, if_name, &if_index);
+	if (NULL == entry)
+		return 1;
+
+	return entry->sw_ops->if_get_type(entry->sw_ops, if_index, type, vlan);
+}
+/*int if_enable(int sw_index, char *if_name);
+int if_disable(int sw_index, char *if_name);
+int if_clear_mac(int sw_index, char *if_name);
+int if_add_trunk_vlans(int sw_index, char *if_name, char *vlans);
+int if_set_trunk_vlans(int sw_index, char *if_name, char *vlans);
+int if_del_trunk_vlans(int sw_index, char *if_name, char *vlans);*/

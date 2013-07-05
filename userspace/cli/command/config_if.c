@@ -242,13 +242,15 @@ int cmd_nomode(struct cli_context *ctx, int argc, char **argv, struct menu_node 
 	struct swcli_context *uc = SWCLI_CTX(ctx);
 	int ret = CLI_EX_OK, status;
 
-	status = sw_ops->if_set_mode(sw_ops, uc->ifindex, IF_MODE_TRUNK, 0);
+	//status = sw_ops->if_set_mode(sw_ops, uc->ifindex, IF_MODE_TRUNK, 0);
+	status = if_set_mode(DEFAULT_SW, uc->ifindex, IF_MODE_TRUNK, 0);
 	if (status < 0) {
 		EX_STATUS_PERROR(ctx, "unset mode trunk failed");
 		ret = CLI_EX_WARNING;
 	}
 
-	status = sw_ops->if_set_mode(sw_ops, uc->ifindex, IF_MODE_ACCESS, 0);
+	//status = sw_ops->if_set_mode(sw_ops, uc->ifindex, IF_MODE_ACCESS, 0);
+	status = if_set_mode(DEFAULT_SW, uc->ifindex, IF_MODE_ACCESS, 0);
 	if (status < 0) {
 		EX_STATUS_PERROR(ctx, "unset mode access failed");
 		ret = CLI_EX_WARNING;
@@ -271,7 +273,8 @@ int cmd_setmode(struct cli_context *ctx, int argc, char **argv, struct menu_node
 		return CLI_EX_REJECTED;
 	}
 
-	status = sw_ops->if_set_mode(sw_ops, uc->ifindex, mode, 1);
+//	status = sw_ops->if_set_mode(sw_ops, uc->ifindex, mode, 1);
+	status = if_set_mode(DEFAULT_SW, uc->ifindex, mode, 1);
 	if (status < 0) {
 		EX_STATUS_PERROR(ctx, "set mode failed");
 		return CLI_EX_WARNING;
@@ -309,7 +312,8 @@ int cmd_acc_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_nod
 
 	if (strcmp(nodev[0]->name, "no"))
 		vlan = atoi(argv[3]);
-	status = sw_ops->if_set_port_vlan(sw_ops, uc->ifindex, vlan);
+	//status = sw_ops->if_set_port_vlan(sw_ops, uc->ifindex, vlan);
+	status = if_set_port_vlan(DEFAULT_SW, uc->ifindex, vlan);
 	if (status < 0) {
 		EX_STATUS_PERROR(ctx, "set switchport access failed");
 		return CLI_EX_WARNING;

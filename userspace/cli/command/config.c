@@ -346,7 +346,8 @@ static int cmd_no_int_any(struct cli_context *ctx, int argc, char **argv, struct
 	SW_SOCK_CLOSE(ctx, sock_fd);
 
 	/* ask switch kernel module what it knows about this interface */
-	status = (sw_ops->if_get_type)(sw_ops, ifr.ifr_ifindex, &iftype, &ifvlan);
+	//status = (sw_ops->if_get_type)(sw_ops, ifr.ifr_ifindex, &iftype, &ifvlan);
+	status = if_get_type_api(DEFAULT_SW, ifr.ifr_name, &iftype, &ifvlan);
 
 	if (status) {
 		EX_STATUS_REASON_IOCTL(ctx, errno);
@@ -412,7 +413,8 @@ int cmd_int_any(struct cli_context *ctx, int argc, char **argv, struct menu_node
 	SW_SOCK_CLOSE(ctx, sock_fd);
 
 	/* ask switch kernel module what it knows about this interface */
-	status = (sw_ops->if_get_type)(sw_ops, ifr.ifr_ifindex, &iftype, &ifvlan);
+//	status = (sw_ops->if_get_type)(sw_ops, ifr.ifr_ifindex, &iftype, &ifvlan);
+	status = if_get_type_api(DEFAULT_SW, ifr.ifr_name, &iftype, &ifvlan);
 
 	if (status) {
 		EX_STATUS_REASON_IOCTL(ctx, errno);

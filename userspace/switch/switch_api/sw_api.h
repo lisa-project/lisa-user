@@ -31,10 +31,10 @@
 
 int if_add(int sw_index, char *if_name, int mode);
 int if_remove(int sw_index, char *if_name);
-int if_set_mode(int sw_index, char *if_name, int mode, int flag);
-int if_set_port_vlan(int sw_index, char *if_name, int vlan);
-int if_get_cfg(int sw_index, char *if_name, int *flags, int *access_vlan, unsigned char *vlans);
-int if_get_type(int sw_index, char *if_name, int *type, int *vlan);
+int if_set_mode(int sw_index, int if_index, int mode, int flag);
+int if_set_port_vlan(int sw_index, int if_index, int vlan);
+int if_get_cfg(int sw_index, char *if_name, int *flags, int *access_vlan, unsigned char *vlans);//TODO
+int if_get_type_api(int sw_index, char *if_name, int *type, int *vlan);
 int if_enable(int sw_index, char *if_name);
 int if_disable(int sw_index, char *if_name);
 int if_clear_mac(int sw_index, char *if_name);
