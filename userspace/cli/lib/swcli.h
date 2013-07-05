@@ -23,7 +23,7 @@
 #endif
 
 #include "util.h"
-#include "multiengine.h"
+#include "switch_api/sw_api.h"
 #include "switch.h"
 #include "cli.h"
 #include "cdp_client.h"

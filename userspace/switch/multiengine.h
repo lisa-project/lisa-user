@@ -33,7 +33,7 @@ struct switch_interface {
 	struct list_head lh;
 };
 
-struct sw_ops_entries {
+struct backend_entries {
 	int sw_index;
 	char port[MAX_NAME_SIZE];
 	char ip[MAX_NAME_SIZE];
@@ -46,6 +46,6 @@ struct sw_ops_entries {
 
 struct list_head head_sw_ops;
 
-void print_lists(struct list_head head_sw_ops);
+void print_lists(void);
 void multiengine_init(void)__attribute__((constructor));
 #endif

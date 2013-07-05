@@ -19,7 +19,9 @@
 #ifndef _SW_API_H
 #define _SW_API_H
 
+#include "list.h"
 #include "multiengine.h"
+
 /* If the default interface is given as parameter to a function, the
  * operation will be applied to the first linux implementation.
  * */
@@ -27,12 +29,12 @@
 #define LINUX_BACKEND	"linux"
 #define LiSA_BACKEND	"lisa"
 
-int if_add(struct list_head head_sw_ops, int sw_index, char *if_name, int mode);
+int if_add(int sw_index, char *if_name, int mode);
 int if_remove(int sw_index, char *if_name);
 int if_set_mode(int sw_index, char *if_name, int mode, int flag);
 int if_set_port_vlan(int sw_index, char *if_name, int vlan);
 int if_get_cfg(int sw_index, char *if_name, int *flags, int *access_vlan, unsigned char *vlans);
-int if_get_type_multiengine(int sw_index, char *if_name, int *type, int *vlan);
+int if_get_type(int sw_index, char *if_name, int *type, int *vlan);
 int if_enable(int sw_index, char *if_name);
 int if_disable(int sw_index, char *if_name);
 int if_clear_mac(int sw_index, char *if_name);

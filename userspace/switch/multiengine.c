@@ -46,13 +46,12 @@ static char ip[]	= "ip";
 static char port[]	= "port";
 static char if_name[]	= "if_name";
 
-
 extern struct list_head head_sw_ops;
 
-int open_so_local(char *so_name, struct sw_ops_entries *entry)
+int open_so_local(char *so_name, struct backend_entries *entry)
 {
 	void *handle;
-	struct switch_operations *sw_ops;
+	struct switch_operations **sw_ops;
 
 	/* open switch libraries */
 	handle = dlopen(so_name, RTLD_LAZY);
@@ -62,16 +61,16 @@ int open_so_local(char *so_name, struct sw_ops_entries *entry)
 	}
 
 	dlerror();
-	sw_ops = (struct switch_operations *)dlsym(handle, "sw_ops");
+	sw_ops = (struct switch_operations **)dlsym(handle, "sw_ops");
 
-	entry->sw_ops = sw_ops;
+	entry->sw_ops = *sw_ops;
 
 	return 0;
 }
 
 /* obtain the name of the shared object associated with the switch and
  * open the object for registration */
-int get_shared_object(cJSON *item, struct sw_ops_entries *entry)
+int get_shared_object(cJSON *item, struct backend_entries *entry)
 {
 	char *so_name;
 
@@ -79,13 +78,13 @@ int get_shared_object(cJSON *item, struct sw_ops_entries *entry)
 	if (NULL == so_name)
 		return -1;
 
-	/* set the current entry in the list of sw_ops_entries to be
+	/* set the current entry in the list of backend_entries to be
 	 * populated with the sw_ops structure */
 	return  open_so_local(so_name, entry);
 }
 
 /* obtain the names of the interfaces or the ports associated with a switch */
-int get_interface_names(cJSON *item, struct sw_ops_entries *entry)
+int get_interface_names(cJSON *item, struct backend_entries *entry)
 {
 	int size, idx;
 	cJSON *root, *child;
@@ -122,7 +121,7 @@ int get_interface_names(cJSON *item, struct sw_ops_entries *entry)
 int parse_config_file(char *data)
 {
 	cJSON *root, *sw_items, *child;
-	struct sw_ops_entries *entry;
+	struct backend_entries *entry;
 	int item_idx, size;
 
 	root = cJSON_Parse(data);
@@ -139,7 +138,7 @@ int parse_config_file(char *data)
 
 	for (item_idx = 0; child && item_idx < size; ++item_idx, child = child->next) {
 		/* alloc a new entry */
-		entry = malloc(sizeof(struct sw_ops_entries));
+		entry = malloc(sizeof(struct backend_entries));
 		if (NULL == entry) {
 			printf("Error allocating new entry\n");
 			return -1;
@@ -179,7 +178,6 @@ int parse_config_file(char *data)
 		list_add_tail(&entry->lh, &head_sw_ops);
 	}
 
-	cJSON_Delete(root);
 	free(data);
 
 	return 0;
@@ -220,9 +218,9 @@ char* read_config_file(void)
 }
 
 
-void print_lists(struct list_head head_sw_ops)
+void print_lists()
 {
-	struct sw_ops_entries *iter_sw;
+	struct backend_entries *iter_sw;
 	struct switch_interface *iter_names;
 
 	printf("\n---- LIST of SWITCHES ----");
@@ -250,26 +248,24 @@ void multiengine_init(void)
 {
 	char *data;
 
-	printf("multiengine init\n");
-
 	INIT_LIST_HEAD(&head_sw_ops);
 
-	if (NULL == (data = read_config_file()))
+	if (NULL == (data = read_config_file())) {
+		printf("Problem reading config file!\n");
 		return ;
+	}
 
-	printf("finished reading config file\n");
 	if (-1 == parse_config_file(data)) {
 		printf("Failed parsing config file\n");
 		return ;
 	}
-
-	print_lists(head_sw_ops);
 }
 
-/*
-int main()
+
+/*int main()
 {
 
+	char *data;
 	multiengine_init();
 
 	if (NULL == (data = read_config_file()))
@@ -283,5 +279,5 @@ int main()
 
 	print_lists();
 	return 0;
-}
-*/
+}*/
+

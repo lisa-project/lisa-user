@@ -1,6 +1,5 @@
 #include "swcli.h"
 #include "config.h"
-#include "switch_api/sw_api.h"
 
 #include <regex.h>
 
@@ -9,7 +8,6 @@ extern struct menu_node config_main;
 extern struct menu_node config_if_main;
 extern struct menu_node config_vlan_main;
 extern struct menu_node config_line_main;
-extern struct list_head head_sw_ops;
 
 static char hostname_default[] = "Switch\0";
 
@@ -196,8 +194,8 @@ static int use_if_ether(struct cli_context *ctx, char *name, int index, int swit
 		return CLI_EX_REJECTED;
 	}
 
-	//status = sw_ops->if_add(sw_ops, index, switchport);
-	status = if_add(head_sw_ops, DEFAULT_SW, name, switchport);
+	status = if_add(DEFAULT_SW, name, switchport);
+
 	ioctl_errno = errno;
 
 	if (status) {
@@ -289,7 +287,8 @@ static int remove_if_ether(struct cli_context *ctx, char *name, int index, int s
 
 	SW_SOCK_CLOSE(ctx, sock_fd);
 
-	status = sw_ops->if_remove(sw_ops, index);
+	//status = sw_ops->if_remove(sw_ops, index);
+	status = if_remove(DEFAULT_SW, name);
 	if (status) {
 		EX_STATUS_REASON(ctx, "if_remove failed");
 		return CLI_EX_REJECTED;
