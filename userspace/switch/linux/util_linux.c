@@ -110,7 +110,7 @@ int br_set_age_time(struct linux_context *lnx_ctx, int vlan, int age_time)
 
 int br_add(struct linux_context *lnx_ctx, int vlan_id)
 {
-	int ret = 0, bridge_sfd;
+	int ret = 0, bridge_sfd, if_sfd, vifindex;
 	char name[VLAN_NAME_LEN];
 
 	sprintf(name, "vlan%d", vlan_id);
@@ -118,6 +118,13 @@ int br_add(struct linux_context *lnx_ctx, int vlan_id)
 	BRIDGE_SOCK_OPEN(lnx_ctx, bridge_sfd);
 	ret = ioctl(bridge_sfd, SIOCBRADDBR, name);
 	BRIDGE_SOCK_CLOSE(lnx_ctx, bridge_sfd);
+
+	IF_SOCK_OPEN(lnx_ctx, if_sfd);
+	vifindex = if_get_index(name, if_sfd);
+	IF_SOCK_CLOSE(lnx_ctx, if_sfd);
+
+	/* Enable the bridge interface */
+	if_enable(&lnx_ctx->sw_ops, vifindex);
 
 	return ret;
 }
