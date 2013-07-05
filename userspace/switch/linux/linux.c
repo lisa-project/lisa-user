@@ -117,14 +117,20 @@ int if_enable(struct switch_operations *sw_ops, int ifindex)
 	IF_SOCK_OPEN(lnx_ctx, if_sfd);
 	ret = if_get_flags(ifindex, if_sfd, &flags);
 	if (ret)
-		return ret;
+		goto out;
 
+	/* Test if the interface is already up */
+	if (flags & IFF_UP) {
+		ret = 0;
+		goto out;
+	}
 
 	/* Set the IFF_UP flag */
 	flags |= IFF_UP;
 	ret = if_set_flags(ifindex, if_sfd, flags);
-	IF_SOCK_CLOSE(lnx_ctx, if_sfd);
 
+out:
+	IF_SOCK_CLOSE(lnx_ctx, if_sfd);
 	return ret;
 }
 
@@ -137,14 +143,20 @@ static int if_disable(struct switch_operations *sw_ops, int ifindex)
 	IF_SOCK_OPEN(lnx_ctx, if_sfd);
 	ret = if_get_flags(ifindex, if_sfd, &flags);
 	if (ret)
-		return ret;
+		goto out;
 
+	/* Test if the interface is already down */
+	if (!(flags & IFF_UP)) {
+		ret = 0;
+		goto out;
+	}
 
 	/* Reset the IFF_UP flag */
 	flags &= ~IFF_UP;
 	ret = if_set_flags(ifindex, if_sfd, flags);
-	IF_SOCK_CLOSE(lnx_ctx, if_sfd);
 
+out:
+	IF_SOCK_CLOSE(lnx_ctx, if_sfd);
 	return ret;
 }
 

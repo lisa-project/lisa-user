@@ -306,7 +306,7 @@ int if_get_flags(int ifindex, int sock_fd, int *flags)
 	/* Get the name of the interface */
 	if_get_name(ifindex, sock_fd, ifr.ifr_name);
 
-	ret = ioctl(sock_fd, SIOCSIFFLAGS, &ifr);
+	ret = ioctl(sock_fd, SIOCGIFFLAGS, &ifr);
 	if (ret)
 		return ret;
 
