@@ -525,7 +525,7 @@ int cmd_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **
 	vlan = atoi(argv[argc - 1]);
 	if (strcmp(nodev[0]->name, "no")) {
 		/* vlan is added */
-		status = sw_ops->vlan_add(sw_ops, vlan);
+		status = vlan_add(vlan);
 		cmd_errno = errno;
 		if (status == 0) {
 			char desc[SW_MAX_VLAN_NAME];
@@ -533,7 +533,7 @@ int cmd_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **
 			status = switch_set_vlan_desc(vlan, desc);
 			if (status) {
 				EX_STATUS_PERROR(ctx, "addvlan failed");
-				sw_ops->vlan_del(sw_ops, vlan);
+				vlan_del(vlan);
 				ret = CLI_EX_REJECTED;
 				goto out;
 			}
@@ -541,7 +541,7 @@ int cmd_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_node **
 		added = 1;
 	} else {
 		/* vlan is removed */
-		status = sw_ops->vlan_del(sw_ops, vlan);
+		status = vlan_del(vlan);
 		cmd_errno = errno;
 		if (status == 0)
 			status = switch_del_vlan_desc(vlan);

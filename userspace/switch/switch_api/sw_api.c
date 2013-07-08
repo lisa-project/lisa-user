@@ -25,16 +25,19 @@ static struct backend_entries* get_switch_entry(int sw_index)
 	struct backend_entries *iter_sw;
 
 	list_for_each_entry(iter_sw, &head_sw_ops, lh) {
-		if (sw_index == DEFAULT_SW) {
-			if (strcmp(iter_sw->type, LINUX_BACKEND) == 0) {
-				return iter_sw;
-			}
-		} else {
-			if (counter == sw_index) {
-				return iter_sw;
+		if (strcmp(iter_sw->locality, SW_LOCAL) == 0) {
+			if (sw_index == DEFAULT_SW) {
+				if (strcmp(iter_sw->type, LINUX_BACKEND) == 0) {
+					return iter_sw;
+				}
+			} else {
+				if (counter == sw_index) {
+					return iter_sw;
+				}
 			}
 		}
 		++counter;
+		
 	}
 
 	return NULL;
@@ -184,9 +187,77 @@ int if_get_type_api(int sw_index, char *if_name, int *type, int *vlan)
 
 	return entry->sw_ops->if_get_type(entry->sw_ops, if_index, type, vlan);
 }
-/*int if_enable(int sw_index, char *if_name);
-int if_disable(int sw_index, char *if_name);
-int if_clear_mac(int sw_index, char *if_name);
-int if_add_trunk_vlans(int sw_index, char *if_name, char *vlans);
-int if_set_trunk_vlans(int sw_index, char *if_name, char *vlans);
-int if_del_trunk_vlans(int sw_index, char *if_name, char *vlans);*/
+
+int if_enable(int sw_index, char *if_name)
+{
+
+	struct backend_entries *entry;
+	int if_index;
+
+	entry = get_if_params(sw_index, if_name, &if_index);
+	if (NULL == entry)
+		return 1;
+
+	return entry->sw_ops->if_enable(entry->sw_ops, if_index);
+}
+
+int if_disable(int sw_index, char *if_name)
+{
+	struct backend_entries *entry;
+	int if_index;
+
+	entry = get_if_params(sw_index, if_name, &if_index);
+	if (NULL == entry)
+		return 1;
+
+	return entry->sw_ops->if_disable(entry->sw_ops, if_index);
+}
+
+int vlan_add(int vlan)
+{
+	struct backend_entries *iter_sw;
+	int status, counter = 0;
+
+	list_for_each_entry(iter_sw, &head_sw_ops, lh) {
+		if (strcmp(iter_sw->locality, SW_LOCAL) == 0) {
+			status = iter_sw->sw_ops->vlan_add(iter_sw->sw_ops, vlan);
+			if (status) {
+				goto del_vlan;
+			}
+			++counter;
+		}
+	}
+	return 0;
+
+del_vlan:
+	list_for_each_entry(iter_sw, &head_sw_ops, lh) {
+		if (strcmp(iter_sw->locality, SW_LOCAL)) {
+			if (counter == 0)
+				break;
+
+			status = iter_sw->sw_ops->vlan_del(iter_sw->sw_ops, vlan);
+			if (status != 0)
+				return -1;
+
+			--counter;
+		}
+	}
+
+	return -1;
+}
+
+int vlan_del(int vlan)
+{
+	struct backend_entries *iter_sw;
+	int status;
+
+	list_for_each_entry(iter_sw, &head_sw_ops, lh) {
+		if (strcmp(iter_sw->locality, SW_LOCAL) == 0) {
+			status = iter_sw->sw_ops->vlan_del(iter_sw->sw_ops, vlan);
+			if (status != 0)
+				return -1;
+		}
+	}
+
+	return 0;
+}

@@ -286,16 +286,23 @@ int cmd_setmode(struct cli_context *ctx, int argc, char **argv, struct menu_node
 int cmd_shutdown(struct cli_context *ctx, int argc, char **argv, struct menu_node **nodev)
 {
 	struct swcli_context *uc = SWCLI_CTX(ctx);
-	int status;
+	int status, sock_fd;
 	int shutdown = 0;
 	const char *fmt = "failed to %s interface";
+	char *if_name;
+
+	SW_SOCK_OPEN(ctx, sock_fd);
+
+	if_name = if_get_name(uc->ifindex, sock_fd, NULL);
 
 	if (strcmp(nodev[0]->name, "no")) {
-		status = sw_ops->if_disable(sw_ops, uc->ifindex);
+		//status = sw_ops->if_disable(sw_ops, uc->ifindex);
+		status = if_disable(DEFAULT_SW, if_name);
 		shutdown = 1;
 	}
 	else
-		status = sw_ops->if_enable(sw_ops, uc->ifindex);
+		//status = sw_ops->if_enable(sw_ops, uc->ifindex);
+		status = if_enable(DEFAULT_SW, if_name);
 	if (status < 0) {
 		EX_STATUS_PERROR(ctx, fmt, (shutdown)? "disable" : "enable");
 		return CLI_EX_WARNING;
