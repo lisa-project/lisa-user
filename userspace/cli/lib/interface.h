@@ -13,6 +13,8 @@
 #include "cli.h"
 #include "if_generic.h"
 
+#define DEFAULT_IDX	-1
+
 #define IF_MENU_NODE(__subtree, __help, __priv...) {\
 	.name		= "interface",\
 	.help		= __help,\
@@ -170,6 +172,12 @@ int if_tok_if(struct cli_context *ctx, const char *buf,
  * which is 0 for unknown interface type and -1 for invalid netdev name.
  */
 int if_parse_args(char **argv, struct menu_node **nodev, char *name, int *n);
+
+/**
+ */
+int get_index_switch(char if_name[]);
+void get_interface_name(char if_name_cmd[], char if_name[]);
+
 
 #define __if_args_to_ifindex(__ctx, __argv, __nodev, __sock_fd, __index, __type, __name, ...) do {\
 	int n;\

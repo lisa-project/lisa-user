@@ -71,3 +71,39 @@ int if_parse_args(char **argv, struct menu_node **nodev, char *name, int *n)
 
 	return ret;
 }
+
+int get_index_switch(char if_name[])
+{
+	int number, idx;
+
+	if (strchr(if_name, '/') == NULL) {
+		return DEFAULT_IDX;
+	}
+
+	/* command incorrect if no index is specified before '/' */
+	if (if_name[0] == '/')
+		return 1;
+
+	/* extract de index of the switch */
+	for ( number = 0, idx = 0; if_name[idx] != '/'; ++idx) {
+		number = number * 10 + (if_name[idx] - '0');
+	}
+
+	return number;
+}
+
+void get_interface_name(char if_name_cmd[], char if_name[])
+{
+	char *tmp;
+
+	tmp = strchr(if_name_cmd, '/');
+	if (NULL == tmp) {
+		strncpy(if_name, if_name_cmd, strlen(if_name_cmd));
+		if_name[strlen(if_name_cmd)] = '\0';
+		return;
+	}
+	tmp++;
+
+	strncpy(if_name, tmp, strlen(tmp));
+	if_name[strlen(tmp)] = '\0';
+}

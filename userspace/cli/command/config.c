@@ -178,33 +178,37 @@ int cmd_hostname(struct cli_context *ctx, int argc, char **argv, struct menu_nod
 
 static int use_if_ether(struct cli_context *ctx, char *name, int index, int switchport)
 {
-	int status, sock_fd, ioctl_errno;
+	int status, sock_fd, ioctl_errno, idx_sw;
 	struct swcli_context *uc = SWCLI_CTX(ctx);
 	struct cdp_session *cdp;
 	FILE *out;
+	char if_name[IFNAMSIZ];
+
+	idx_sw = get_index_switch(name);
+	get_interface_name(name, if_name);
 
 	SW_SOCK_OPEN(ctx, sock_fd);
 
 	if (!index)
-		index = if_get_index(name, sock_fd);
+		index = if_get_index(if_name, sock_fd);
 
 	if (!index) {
-		EX_STATUS_REASON(ctx, "interface %s does not exist", name);
+		EX_STATUS_REASON(ctx, "interface %s does not exist", if_name);
 		SW_SOCK_CLOSE(ctx, sock_fd);
 		return CLI_EX_REJECTED;
 	}
 
-	status = if_add(DEFAULT_SW, name, switchport);
+	status = if_add(idx_sw, if_name, switchport);
 
 	ioctl_errno = errno;
 
 	if (status) {
 		switch (ioctl_errno) {
 		case ENODEV:
-			EX_STATUS_REASON(ctx, "interface %s does not exist", name);
+			EX_STATUS_REASON(ctx, "interface %s does not exist", if_name);
 			return CLI_EX_REJECTED;
 		case EINVAL:
-			EX_STATUS_REASON(ctx, "interface %s is a VIF", name);
+			EX_STATUS_REASON(ctx, "interface %s is a VIF", if_name);
 			return CLI_EX_REJECTED;
 		case EBUSY:
 			break;
@@ -365,15 +369,20 @@ int cmd_int_any(struct cli_context *ctx, int argc, char **argv, struct menu_node
 {
 	int status, n, sock_fd;
 	struct ifreq ifr;
-	int iftype, ifvlan;
+	int iftype, ifvlan, idx_sw;
+	char if_name[IFNAMSIZ], tmp_copy[IFNAMSIZ];
 
 	if (!strcmp(nodev[0]->name, "no"))
 		return cmd_no_int_any(ctx, argc - 1, argv + 1, nodev + 1);
 
 	status = if_parse_args(argv + 1, nodev + 1, ifr.ifr_name, &n);
 
+	idx_sw = get_index_switch(ifr.ifr_name);
+	get_interface_name(ifr.ifr_name, if_name);
+
 	switch (status) {
 	case IF_T_ETHERNET:
+		//return use_if_ether(ctx, ifr.ifr_name, 0, 1);
 		return use_if_ether(ctx, ifr.ifr_name, 0, 1);
 	case IF_T_VLAN:
 		return use_if_vlan(ctx, n, 0);
@@ -395,13 +404,20 @@ int cmd_int_any(struct cli_context *ctx, int argc, char **argv, struct menu_node
 
 	/* first test if the interface already exists; SIOCGIFINDEX works
 	 * on any socket type (see man (7) netdevice for details) */
+	strncpy(tmp_copy, ifr.ifr_name, strlen(ifr.ifr_name));
+	tmp_copy[strlen(ifr.ifr_name)] = '\0';
+
+	strncpy(ifr.ifr_name, if_name, strlen(if_name));
+	ifr.ifr_name[strlen(if_name)] = '\0';
+
 	do {
 		if (!ioctl(sock_fd, SIOCGIFINDEX, &ifr))
 			break;
 		SW_SOCK_CLOSE(ctx, sock_fd);
 
 		/* test for VIF addition */
-		status = if_parse_vlan(ifr.ifr_name);
+		//status = if_parse_vlan(ifr.ifr_name);
+		status = if_parse_vlan(if_name);
 		if (status >= 0)
 			return use_if_vlan(ctx, status, 0);
 
@@ -414,7 +430,8 @@ int cmd_int_any(struct cli_context *ctx, int argc, char **argv, struct menu_node
 
 	/* ask switch kernel module what it knows about this interface */
 //	status = (sw_ops->if_get_type)(sw_ops, ifr.ifr_ifindex, &iftype, &ifvlan);
-	status = if_get_type_api(DEFAULT_SW, ifr.ifr_name, &iftype, &ifvlan);
+	//status = if_get_type_api(DEFAULT_SW, ifr.ifr_name, &iftype, &ifvlan);
+	status = if_get_type_api(idx_sw, if_name, &iftype, &ifvlan);
 
 	if (status) {
 		EX_STATUS_REASON_IOCTL(ctx, errno);
@@ -423,6 +440,9 @@ int cmd_int_any(struct cli_context *ctx, int argc, char **argv, struct menu_node
 
 	if (iftype == IF_TYPE_VIF)
 		return use_if_vlan(ctx, ifvlan, ifr.ifr_ifindex);
+
+	strncpy(ifr.ifr_name, tmp_copy, strlen(tmp_copy));
+	ifr.ifr_name[strlen(tmp_copy)] = '\0';
 
 	return use_if_ether(ctx, ifr.ifr_name, ifr.ifr_ifindex,
 			iftype != IF_TYPE_ROUTED);

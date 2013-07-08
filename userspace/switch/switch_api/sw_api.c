@@ -173,7 +173,7 @@ int if_set_port_vlan(int sw_index, int if_index, int vlan)
 }
 
 
-int if_get_type(int sw_index, char *if_name, int *type, int *vlan)
+int if_get_type_api(int sw_index, char *if_name, int *type, int *vlan)
 {
 	struct backend_entries *entry;
 	int if_index;

@@ -56,5 +56,5 @@ $(LIBSWITCH_NAME): $(LIBSWITCH_OBJS) $(OBJS) $(TOP_DIR)/lib/mm.o $(TOP_DIR)/lib/
 multiengine.o: multiengine.c
 	$(QUIET_LD)$(CC) $(CFLAGS) -c -o $@  $^
 
-#multiengine: multiengine.o $(TOP_DIR)/lib/cJSON.o
-#	$(QUIET_LD)$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+multiengine: multiengine.o $(TOP_DIR)/lib/cJSON.o
+	$(QUIET_LD)$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
