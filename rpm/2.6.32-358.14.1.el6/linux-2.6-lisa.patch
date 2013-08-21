@@ -1,0 +1,4548 @@
+commit cc931fb32760bcc502da2daa732a68d5290790ff
+Author: Mindbit RPM Build <rpmbuild@mindbit.ro>
+Date:   Thu Feb 10 15:26:16 2011 +0200
+
+    Lisa for linux 2.6.32
+    
+    Applied lisa patch on v2.6.32
+    
+    Signed-off-by: Mindbit RPM Build <rpmbuild@mindbit.ro>
+
+diff --git a/include/linux/net_switch.h b/include/linux/net_switch.h
+new file mode 100644
+index 0000000..26b3e04
+--- /dev/null
++++ b/include/linux/net_switch.h
+@@ -0,0 +1,277 @@
++/*
++ *    This file is part of Linux Multilayer Switch.
++ *
++ *    Linux Multilayer Switch is free software; you can redistribute it and/or
++ *    modify it under the terms of the GNU General Public License as published
++ *    by the Free Software Foundation; either version 2 of the License, or
++ *    (at your option) any later version.
++ *
++ *    Linux Multilayer Switch is distributed in the hope that it will be 
++ *    useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *    GNU General Public License for more details.
++ *
++ *    You should have received a copy of the GNU General Public License
++ *    along with Linux Multilayer Switch; if not, write to the Free Software
++ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++ */
++
++#ifndef _NET_SWITCH_H
++#define _NET_SWITCH_H
++
++enum {
++	/* Generic port manipulation */
++	SWCFG_ADDIF,			/* add interface to switch */
++	SWCFG_DELIF,			/* remove interface from switch */
++	SWCFG_SETSWPORT,		/* set port type to switched (1) or routed (0) */
++	SWCFG_GETIFLIST,		/* get a list of all known interfaces */
++
++	/* Generic switched interface manipulation */
++	SWCFG_SETIFDESC,		/* set interface description */
++
++	/* VDB manipulation */
++	SWCFG_ADDVLAN,			/* add vlan to vlan database */
++	SWCFG_DELVLAN,			/* delete vlan from vlan database */
++	SWCFG_RENAMEVLAN,		/* rename vlan from vlan database */
++	SWCFG_GETVDB,			/* copy the whole vlan database to userspace */
++	SWCFG_GETVLANIFS,		/* get a list of interfaces in a specific vlan */
++
++	/* Vlan-related switched interface manipulation */
++	SWCFG_ADDVLANPORT,		/* add a port to a vlan (trunk mode) */
++	SWCFG_DELVLANPORT ,		/* remove a port from a vlan (trunk mode) */
++	SWCFG_SETACCESS,		/* put a port in access mode */
++	SWCFG_SETTRUNK,			/* put a port in trunk mode */
++	SWCFG_SETPORTVLAN ,		/* add a port in a vlan (non-trunk mode) */
++	SWCFG_ADDTRUNKVLANS,	/* add ports to the bitmap of forbidden trunk ports */
++	SWCFG_DELTRUNKVLANS,	/* remove ports from the bitmap of forbidden trunk ports */
++	SWCFG_SETTRUNKVLANS,	/* set the bitmap of forbidden trunk ports */
++	SWCFG_SETMROUTER,	/* set a port as mrouter on a vlan  */
++	SWCFG_GETMROUTERS,	/* get a list of mrouters */
++	SWCFG_SETIGMPS,		/* enable/disable igmp snooping on switch or vlan */
++	SWCFG_GETIGMPS,		/* igmp snooping on switch or vlan */
++
++	/* FDB manipulation */
++	SWCFG_GETMAC,			/* fetch mac addresses from the fdb */
++	SWCFG_GETAGETIME,		/* get fdb aging time interval */
++	SWCFG_SETAGETIME,		/* set fdb entry aging time interval (in ms) */
++	SWCFG_CLEARMACINT,		/* clear all macs for a given port */
++	SWCFG_MACSTATIC,		/* add static mac */
++	SWCFG_DELMACSTATIC,		/* delete static mac */
++	SWCFG_DELMACDYN,		/* clear dynamic mac addresses from the fdb */
++
++	/* Generic interface functions */
++	SWCFG_GETIFCFG,			/* get physical port configuration and status */
++	SWCFG_GETIFTYPE,		/* determine interface relation to switch */
++	SWCFG_DISABLE_IF,		/* administratively disable port or vif */
++	SWCFG_ENABLE_IF,		/* enable port or vif */
++
++	/* VIF manipulation */
++	SWCFG_ADDVIF,			/* add virtual interface for vlan */
++	SWCFG_DELVIF,			/* remove virtual interface for vlan */
++};
++
++enum {
++	SW_IF_NONE		= 0x00,	/* interface is not related to switch */
++	SW_IF_SWITCHED	= 0x01,	/* interface is a standard switched port */
++	SW_IF_ROUTED	= 0x02,	/* interface is registered to switch, but routed */
++	SW_IF_VIF		= 0x04	/* interface is lisa vlan virtual interface */
++};
++
++#define SW_PFL_DISABLED     0x01
++#define SW_PFL_ACCESS		0x02
++#define SW_PFL_TRUNK		0x04
++#define SW_PFL_DROPALL		0x08
++#define SW_PFL_ADMDISABLED	0x10
++#define SW_PFL_NOSWITCHPORT	0x20
++
++#ifdef __KERNEL__
++#include <linux/if.h>
++#else
++#ifndef _LINUX_IF_H
++#include <sys/types.h>
++#include <sys/ioctl.h>
++#include <sys/socket.h>
++
++#include <linux/if.h>
++#include <linux/if_ether.h>
++
++#endif
++#endif
++
++struct net_switch_ifcfg {
++	int flags;
++	int access_vlan;
++	unsigned char *forbidden_vlans;
++	char *description;
++};
++
++/**
++ * FDB query result.
++ *
++ * Only used to fill userspace buffer on ioctl() queries.
++ */
++struct net_switch_mac {
++	unsigned char addr[ETH_ALEN];
++	unsigned char type;
++	int vlan;
++	int ifindex;
++};
++
++#define SW_DEFAULT_AGE_TIME 300
++
++#define SW_MAX_VLAN_NAME	31
++
++/**
++ * VDB query result.
++ *
++ * Only used to fill userspace buffer on ioctl() queries.
++ */
++struct net_switch_vdb {
++	int vlan;
++	char name[SW_MAX_VLAN_NAME + 1];
++};
++
++/**
++ * Interface list query result
++ *
++ * Only used to fill userspace buffer on ioctl() queries.
++ */
++struct net_switch_dev {
++	char name[IFNAMSIZ];
++	int ifindex;
++	int type;
++	int vlan; /* only used for VIFs */
++};
++
++/**
++ * Mrouter list query result
++ *
++ * Only used to fill userspace buffer on ioctl() queries.
++ */
++struct net_switch_mrouter {
++	int ifindex;
++	int vlan;
++};
++
++struct swcfgreq {
++	int cmd;
++	int ifindex;
++	int vlan;
++	union {
++		int access;
++		int trunk;
++		int nsec;
++		unsigned char *bmp;
++		char *vlan_desc;
++		char *iface_desc;
++		int speed;
++		int duplex;
++		struct net_switch_ifcfg cfg;
++		struct {
++			unsigned char addr[ETH_ALEN];
++			int type;
++		} mac;
++		int switchport;
++		int mrouter;
++		int snooping;
++	} ext;
++
++	/* Userspace supplied buffer for dumping large data such as
++	 * mac list or vdb entry list */
++	struct {
++		char *addr;
++		int size;
++	} buf;
++};
++
++/* FDB entry type flags */
++#define SW_FDB_STATIC 0x01
++#define SW_FDB_IGMP   0x02
++
++/* Possible types of FDB entries.
++ *
++ * For granular selection of fdb entry types, both a mask and a check
++ * value are needed. For each entry, the entry type is bitwise-anded
++ * with the mask and the result is tested against the check value.
++ *
++ * For ease of use, both the mask and check value are combined into a
++ * single int. Since entry type is unsigned char, 8 bits are required
++ * for mask and check value. When combined into an int, mask is shifted
++ * left by 8 bits.
++ */
++enum {
++	/*                      Mask									Value */
++	SW_FDB_ANY = 0,
++	SW_FDB_MAC_ANY =		(SW_FDB_IGMP << 8) 						| 0x00,
++	SW_FDB_MAC_STATIC =		((SW_FDB_IGMP | SW_FDB_STATIC) << 8)	| SW_FDB_STATIC,
++	SW_FDB_MAC_DYNAMIC =	((SW_FDB_IGMP | SW_FDB_STATIC) << 8)	| 0x00,
++	SW_FDB_IGMP_ANY =		(SW_FDB_IGMP << 8)						| SW_FDB_IGMP,
++	SW_FDB_IGMP_STATIC =	((SW_FDB_IGMP | SW_FDB_STATIC) << 8)	| SW_FDB_IGMP | SW_FDB_STATIC,
++	SW_FDB_IGMP_DYNAMIC =	((SW_FDB_IGMP | SW_FDB_STATIC) << 8)	| SW_FDB_IGMP
++};
++
++/* Minimum number a vlan may have */
++#define SW_MIN_VLAN 1
++
++/* Maximum number a vlan may have. Note that vlan-related vectors
++   must be at least SW_MAX_VLAN + 1 sized, because SW_MAX_VLAN
++   should be a valid index.
++ */
++#define SW_MAX_VLAN 4094
++
++/* Number of octet bitmaps that are necessary to store binary
++   information about vlans (i.e. allowed or forbidden on a certain
++   port).
++ */
++#define SW_VLAN_BMP_NO (SW_MAX_VLAN / 8 + 1)
++
++#define sw_valid_vlan(vlan) \
++	((vlan) >= SW_MIN_VLAN && (vlan) <= SW_MAX_VLAN)
++#define sw_invalid_vlan(vlan) \
++	((vlan) < SW_MIN_VLAN || (vlan) > SW_MAX_VLAN)
++#define sw_is_default_vlan(vlan) \
++	((vlan) == 1 || ((vlan) >= 1002 && (vlan) <= 1005))
++
++#define sw_bitmap_reset(bitmap, offset) ((bitmap)[(offset) / 8] &= ~(1 << ((offset) % 8)))
++#define sw_bitmap_set(bitmap, offset) 	((bitmap)[(offset) / 8] |= (1 << ((offset) % 8)))
++#define sw_bitmap_test(bitmap, offset) 	((bitmap)[(offset) / 8] & (1 << ((offset) % 8)))
++
++#define sw_allow_vlan(bitmap, vlan) 	(sw_bitmap_reset(bitmap, vlan))
++#define sw_forbid_vlan(bitmap, vlan) 	(sw_bitmap_set(bitmap, vlan))
++#define sw_forbidden_vlan(bitmap, vlan) (sw_bitmap_test(bitmap, vlan))
++#define sw_allowed_vlan(bitmap, vlan) 	(!sw_bitmap_test(bitmap, vlan))
++
++#define sw_set_mrouter(bitmap, vlan) 	(sw_bitmap_set(bitmap, vlan))
++#define sw_reset_mrouter(bitmap, vlan) 	(sw_bitmap_reset(bitmap, vlan))
++#define sw_is_mrouter(bitmap, vlan)		(sw_bitmap_test(bitmap, vlan))
++
++/* Maximum length of port description */
++#define SW_MAX_PORT_DESC	31
++
++#define is_mcast_mac(ptr) \
++	((ptr)[0] == 0x01 && (ptr)[1] == 0x00 && (ptr)[2] == 0x5e && (ptr[3] < 0x80))
++#define is_l2_mac(ptr) \
++	((ptr)[0] == 0x01 && (ptr)[1] == 0x80 && (ptr)[2] == 0xc2)
++#define is_null_mac(ptr) \
++	(((ptr)[0] | (ptr)[1] | (ptr)[2] | (ptr)[3] | (ptr)[4] | (ptr)[5]) == 0)
++#define is_bcast_mac(ptr) \
++	(((ptr)[0] & (ptr)[1] & (ptr)[2] & (ptr)[3] & (ptr)[4] & (ptr)[5]) == 0xff)
++
++/* Dummy "ethernet" protocol types (in addition to those defined in
++ * include/linux/if_ether.h.
++ *
++ * We use these for our custom protocol family implementation. They
++ * have no meaning whatsoever with respect to the protocol field of
++ * ethernet frames.
++ */
++#define ETH_P_CDP	0x0020
++#define ETH_P_VTP	0x0021
++#define ETH_P_RSTP	0x0022
++
++struct sockaddr_sw {
++	unsigned short			ssw_family;
++	char					ssw_if_name[IFNAMSIZ];
++	int						ssw_proto;
++};
++
++#endif
+diff --git a/include/linux/netdevice.h b/include/linux/netdevice.h
+index 812a5f3..dfc95f7 100644
+--- a/include/linux/netdevice.h
++++ b/include/linux/netdevice.h
+@@ -892,6 +892,15 @@ struct net_device
+ 	/* GARP */
+ 	struct garp_port	*garp_port;
+ 
++ 	/* Switch port pointer
++ 
++ 	   This will be initialized to NULL since the whole structure is
++ 	   filled with 0.
++ 
++ 	   We change this pointer when an interface is added to the switch. 
++ 	 */
++ 	struct net_switch_port	*sw_port;
++ 
+ 	/* class/net/name entry */
+ 	struct device		dev;
+ 	/* space for optional statistics and wireless sysfs groups */
+diff --git a/include/linux/socket.h b/include/linux/socket.h
+index 3273a0c..144f265 100644
+--- a/include/linux/socket.h
++++ b/include/linux/socket.h
+@@ -180,7 +180,8 @@ struct ucred {
+ #define AF_ISDN		34	/* mISDN sockets 		*/
+ #define AF_PHONET	35	/* Phonet sockets		*/
+ #define AF_IEEE802154	36	/* IEEE802154 sockets		*/
+-#define AF_MAX		37	/* For now.. */
++#define AF_SWITCH	37	/* Linux Multilayer Switch	*/
++#define AF_MAX		38	/* For now.. */
+ 
+ /* Protocol families, same as address families. */
+ #define PF_UNSPEC	AF_UNSPEC
+@@ -220,6 +221,7 @@ struct ucred {
+ #define PF_ISDN		AF_ISDN
+ #define PF_PHONET	AF_PHONET
+ #define PF_IEEE802154	AF_IEEE802154
++#define PF_SWITCH	AF_SWITCH
+ #define PF_MAX		AF_MAX
+ 
+ /* Maximum queue length specifiable by listen.  */
+diff --git a/include/linux/sockios.h b/include/linux/sockios.h
+index 241f179..75d7727 100644
+--- a/include/linux/sockios.h
++++ b/include/linux/sockios.h
+@@ -125,6 +125,9 @@
+ /* hardware time stamping: parameters in linux/net_tstamp.h */
+ #define SIOCSHWTSTAMP   0x89b0
+ 
++/* switch calls */
++#define SIOCSWCFG	0x89c0
++
+ /* Device private ioctl calls */
+ 
+ /*
+diff --git a/net/Kconfig b/net/Kconfig
+index 041c35e..bd82ed7 100644
+--- a/net/Kconfig
++++ b/net/Kconfig
+@@ -189,6 +189,7 @@ source "net/atm/Kconfig"
+ source "net/802/Kconfig"
+ source "net/bridge/Kconfig"
+ source "net/dsa/Kconfig"
++source "net/switch/Kconfig"
+ source "net/8021q/Kconfig"
+ source "net/decnet/Kconfig"
+ source "net/llc/Kconfig"
+diff --git a/net/Makefile b/net/Makefile
+index 1542e72..ab20a1e 100644
+--- a/net/Makefile
++++ b/net/Makefile
+@@ -26,6 +26,7 @@ obj-$(CONFIG_PACKET)		+= packet/
+ obj-$(CONFIG_NET_KEY)		+= key/
+ obj-$(CONFIG_BRIDGE)		+= bridge/
+ obj-$(CONFIG_NET_DSA)		+= dsa/
++obj-$(CONFIG_SWITCH)		+= switch/
+ obj-$(CONFIG_IPX)		+= ipx/
+ obj-$(CONFIG_ATALK)		+= appletalk/
+ obj-$(CONFIG_WAN_ROUTER)	+= wanrouter/
+diff --git a/net/core/dev.c b/net/core/dev.c
+index fe10551..4a0af25 100644
+--- a/net/core/dev.c
++++ b/net/core/dev.c
+@@ -2720,6 +2720,41 @@
+ 	}
+ 	return openvswitch_handle_frame_hook(skb);
+ }
++ 
++/* Define switch handling hook */
++#if defined(CONFIG_SWITCH) || defined (CONFIG_SWITCH_MODULE)
++int (*sw_handle_frame_hook)(struct net_switch_port *, struct sk_buff **, int *);
++EXPORT_SYMBOL_GPL(sw_handle_frame_hook);
++
++static __inline__ int handle_switch(struct sk_buff **pskb,
++				    struct packet_type **pt_prev, int *ret,
++					struct net_device *orig_dev)
++{
++	struct net_switch_port *port;
++
++	if ((*pskb)->pkt_type == PACKET_LOOPBACK ||
++	    (port = rcu_dereference((*pskb)->dev->sw_port)) == NULL) {
++		/* This packed is not meant for us, so let netif_receive_skb()
++		   call the other handlers.
++		 */
++		return 0;
++	}
++
++	/* If there is a handler left from the list traversal (the
++	   handler list was not empty), call the handler here because
++	   we'll exit from netif_receive_skb() upon return from
++	   handle_switch().
++	 */
++	if (*pt_prev) {
++		*ret = deliver_skb(*pskb, *pt_prev, orig_dev);
++		*pt_prev = NULL;
++	}
++	
++	return sw_handle_frame_hook(port, pskb, ret);
++}
++#else
++#define handle_switch(skb, pt_prev, ret, orig_dev)	(0)
++#endif
+ 
+ #ifdef CONFIG_NET_CLS_ACT
+ /* TODO: Maybe we should just force sch_ingress to be compiled in
+@@ -2808,6 +2843,15 @@
+ 	}
+ #endif
+ 
++	/* Generic packet handlers are called here. The list traversal uses
++	   "post-processing" of elements (that is we process the previous
++	   element i.e. pt_prev) at each step because the usage count on the
++	   skb must be increased for only n-1 elements (where n is the element
++	   count in the list).
++
++	   Each halder is responsible for releasing the skb, but if we have
++	   no handlers, we'll eventually free the skb ourselves.
++	 */
+ 	list_for_each_entry_rcu(ptype, &ptype_all, list) {
+ 		if (ptype->dev == null_or_orig || ptype->dev == skb->dev ||
+ 		    ptype->dev == orig_dev) {
+@@ -2830,6 +2874,8 @@
+ 	skb = handle_macvlan(skb, &pt_prev, &ret, orig_dev);
+ 	if (!skb)
+ 		goto out;
++	if (handle_switch(&skb, &pt_prev, &ret, orig_dev))
++		goto out;
+ 
+ 	/*
+ 	 * Make sure frames received on VLAN interfaces stacked on
+@@ -2846,6 +2892,10 @@
+ 	/* either one will determine the exact match */
+ 	exact_dev = skb->deliver_no_wcard ? null_or_orig : null_or_bond;
+ 	type = skb->protocol;
++	/* Protocol-specific handlers are called here. This list is also
++	   traversed unsing post-processing of elements. Note that we might
++	   have a "previous element" left from the generic handlers list.
++	 */
+ 	list_for_each_entry_rcu(ptype,
+ 			&ptype_base[ntohs(type) & PTYPE_HASH_MASK], list) {
+ 		if (ptype->type == type && (ptype->dev == skb->dev ||
+@@ -2860,6 +2910,7 @@
+ 	if (pt_prev) {
+ 		ret = pt_prev->func(skb, skb->dev, pt_prev, orig_dev);
+ 	} else {
++		/* It looks like we had no handlers. We have to free the skb. */
+ 		kfree_skb(skb);
+ 		/* Jamal, now you will not able to escape explaining
+ 		 * me how you were going to use this. :-)
+@@ -6478,4 +6529,3 @@
+ }
+ 
+ late_initcall_sync(initialize_hashrnd);
+-
+diff --git a/net/switch/Kconfig b/net/switch/Kconfig
+new file mode 100644
+index 0000000..578a9af
+--- /dev/null
++++ b/net/switch/Kconfig
+@@ -0,0 +1,11 @@
++#
++# Linux Multilayer Switch
++#
++
++config SWITCH
++	tristate "Linux Multilayer Switch"
++	---help---
++	  This is the help section.
++	  
++	  If unsure, say N.
++
+diff --git a/net/switch/Makefile b/net/switch/Makefile
+new file mode 100644
+index 0000000..5d81e7b
+--- /dev/null
++++ b/net/switch/Makefile
+@@ -0,0 +1,50 @@
++obj-$(CONFIG_SWITCH) += switch.o
++
++switch-objs := sw.o sw_fdb.o sw_proc.o sw_vdb.o sw_forward.o sw_ioctl.o sw_vif.o sw_socket.o
++
++##
++# LiSA kernel api version
++##
++
++LISA_KAPI_MAJOR = 2
++LISA_KAPI_MINOR = 0
++LISA_KAPI_PATCH = 1
++
++##
++# Config section; will be moved to kernel config
++##
++
++# What to do when a non-trunk interface is assigned a vlan that does
++# not exist:
++# 1			Create the requested vlan (if we're not vtp client)
++# 2			Shutdown the interface
++CFGFLAGS += -DNET_SWITCH_NOVLANFORIF=1
++
++# Force default vlans to always be allowed in trunk mode
++# CFGFLAGS += -DNET_SWITCH_TRUNKDEFAULTVLANS
++
++# Make additional checks when identifying CDP, VTP and STP frames
++CFGFLAGS += -DSW_SOCK_FILTER_PARANOIA
++
++# Enable debugging
++CFGFLAGS += -g
++
++##
++# End of config section
++##
++
++EXTRA_CFLAGS += $(CFGFLAGS)
++
++#KVER := $(shell uname -r)
++#KDIR := /lib/modules/$(KVER)/build
++KDIR := ../..
++
++PWD=$(shell pwd)
++
++all: modules
++
++modules:
++	$(MAKE) -C $(KDIR) M=$(PWD) modules
++
++clean:
++	rm -f *.o *.ko *.mod.* *.mod
+diff --git a/net/switch/sw.c b/net/switch/sw.c
+new file mode 100644
+index 0000000..834f74b
+--- /dev/null
++++ b/net/switch/sw.c
+@@ -0,0 +1,358 @@
++/*
++ *    This file is part of Linux Multilayer Switch.
++ *
++ *    Linux Multilayer Switch is free software; you can redistribute it and/or
++ *    modify it under the terms of the GNU General Public License as published
++ *    by the Free Software Foundation; either version 2 of the License, or
++ *    (at your option) any later version.
++ *
++ *    Linux Multilayer Switch is distributed in the hope that it will be 
++ *    useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *    GNU General Public License for more details.
++ *
++ *    You should have received a copy of the GNU General Public License
++ *    along with Linux Multilayer Switch; if not, write to the Free Software
++ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++ */
++
++#include <linux/kernel.h>
++#include <linux/module.h>
++#include <linux/netdevice.h>
++#include <linux/rtnetlink.h>
++#include <linux/slab.h>
++#include <linux/if_ether.h>
++
++#include "sw_private.h"
++#include "sw_proc.h"
++#include "sw_socket.h"
++
++MODULE_DESCRIPTION("Cool stuff");
++MODULE_AUTHOR("us");
++MODULE_LICENSE("GPL");
++MODULE_VERSION("0.1");
++
++/**
++ * String representation of VIF (Per-Vlan Virtual Interfaces) mac
++ * address.
++ *
++ * First byte means "locally administrated address" and unicast, last
++ * 4 bytes are hex representation of "LiSA".
++ */
++static char *vif_mac = "02:00:4c:69:53:41";
++module_param(vif_mac, charp, S_IRUGO);
++MODULE_PARM_DESC(vif_mac, "Per-Vlan Virtual Interfaces (VIF) MAC address");
++
++extern int (*sw_handle_frame_hook)(struct net_switch_port *, struct sk_buff **, int *);
++
++struct net_switch sw;
++extern struct mutex sw_ioctl_mutex;
++
++void dump_packet(const struct sk_buff *skb) {
++	int i;
++	
++	printk(KERN_DEBUG "dev=%s: proto=0x%hx mac_len=%d len=%d "
++			"head=0x%p data=0x%p tail=0x%p end=0x%p mac=0x%p\n",
++			skb->dev->name, ntohs(skb->protocol), skb->mac_len,
++			skb->len,
++			skb->head, skb->data, skb->tail, skb->end, skb_mac_header(skb));
++	printk("MAC dump: ");
++	if(skb_mac_header_was_set(skb))
++		for(i = 0; i < skb->mac_len; i++)
++			printk("0x%x ", skb_mac_header(skb)[i]);
++	printk("\nDATA dump: ");
++	if(skb->data)
++		for(i = 0; i < 4; i++)
++			printk("0x%x ", skb->data[i]);
++	printk("\n");
++}
++
++static int sw_netdev_event(struct notifier_block *nb, unsigned long event, void *ptr);
++
++struct notifier_block sw_netdev_notifier = {
++	.notifier_call = sw_netdev_event
++};
++
++/* Catch net device unregister events */
++static int sw_netdev_event(struct notifier_block *nb, unsigned long event, void *ptr)
++{
++	struct net_device *dev = (struct net_device *)ptr;
++
++	if (!dev)
++		return NOTIFY_DONE;
++
++	if (event == NETDEV_UNREGISTER) {
++		dbg("Received unregister event for net device %p\n", dev);
++		mutex_lock(&sw_ioctl_mutex);
++		sw_delif(dev);
++		mutex_unlock(&sw_ioctl_mutex);
++	}
++
++	return NOTIFY_DONE;
++}
++
++/* Handle a frame received on a physical interface
++
++   1. This is the general picture of the packet flow:
++   		driver_poll() {
++			dev_alloc_skb();
++			eth_copy_and_sum();
++			eth_type_trans();
++			netif_receive_skb() {
++				skb->dev->poll && netpoll_rx(skb);
++				deliver_skb();
++				(struct packet_type).func(skb, ...); // general packet handlers
++				handle_switch() {
++					sw_handle_frame(skb);
++				}
++			}
++		}
++	  
++	  driver_poll() is either the poll method of the driver (if it uses
++	  NAPI) or the poll method of the backlog device, (if the driver
++	  uses old Softnet).
++
++   2. This function and all called functions rely on rcu being already
++      locked. This is normally done in netif_receive_skb(). If for any
++	  stupid reason this doesn't happen, things will go terribly wrong.
++
++   3. The value we put in ret is propagated back to driver_poll(). We should
++      return NET_RX_DROP if the packet was discarded for any reason or
++	  NET_RX_SUCCES if we handled the packet. We shouldn't however put
++	  NET_RX_DROP if we touched the packet in any way.
++   4. Return non-zero if we processed the packet (and we "absorbed" it).
++      Otherwise (on zero return value) the packet will be processed by
++	  upper layers. This is used for routed switch ports.
++ */
++static int sw_handle_frame(struct net_switch_port *port,
++		struct sk_buff **pskb, int *ret) {
++	struct sk_buff *skb = *pskb;
++	struct skb_extra skb_e;
++
++	if(port->flags & SW_PFL_DISABLED) {
++		dbg("Received frame on disabled port %s\n", port->dev->name);
++		goto free_skb;
++	}
++	
++	/* Pass incoming packets through the switch socket filter */
++	if (sw_socket_filter(skb, port))
++		goto free_skb;
++
++	/* SW_PFL_DROPALL and SW_PFL_NOSWITCHPORT must not affect
++	 * switch sockets. SW_PFL_DROPALL is used for synchronization
++	 * during port configuration transitions. CDP packets for
++	 * instance can be passed to userspace while port configuration
++	 * changes. CDP packets must be passed to userspace even when
++	 * port is routed.
++	 */
++
++	if(port->flags & SW_PFL_DROPALL)
++		goto free_skb;
++
++	/* If port is routed, pass the skb back for upper layer
++	 * processing. Still SW_PFL_DROPALL has priority over
++	 * SW_PFL_NOSWITCHPORT because SW_PFL_DROPALL is used for
++	 * synchronization during configuration changes.
++	 */
++	if (port->flags & SW_PFL_NOSWITCHPORT)
++		return 0;
++
++	/* Switched packet processing begins here */
++	if(skb->protocol == ntohs(ETH_P_8021Q)) {
++		skb_e.vlan = ntohs(*(unsigned short *)skb->data) & 4095;
++		skb_e.has_vlan_tag = 1;
++	} else {
++		skb_e.vlan = port->vlan;
++		skb_e.has_vlan_tag = 0;
++	}
++
++	/* Perform some sanity checks */
++	if (!sw.vdb[skb_e.vlan]) {
++		dbg("Vlan %d doesn't exist int the vdb\n", skb_e.vlan);
++		goto free_skb;
++	}
++	if((port->flags & SW_PFL_TRUNK) && !skb_e.has_vlan_tag) {
++		dbg("Received untagged frame on TRUNK port %s\n", port->dev->name);
++		goto free_skb;
++	}
++	if(!(port->flags & SW_PFL_TRUNK) && skb_e.has_vlan_tag) {
++		dbg("Received tagged frame on non-TRUNK port %s\n", port->dev->name);
++		goto free_skb;
++	}
++
++	/* If interface is in trunk, check if the vlan is allowed */
++	if((port->flags & SW_PFL_TRUNK) &&
++			(port->forbidden_vlans[skb_e.vlan / 8] & (1 << (skb_e.vlan % 8)))) {
++		dbg("Received frame on vlan %d, which is forbidden on %s\n",
++				skb_e.vlan, port->dev->name);
++		goto free_skb;
++	}
++
++	/* Perform some sanity checks on source mac */
++	if(is_null_mac(skb_mac_header(skb) + 6)) {
++		dbg("Received null-smac packet on %s\n", port->dev->name);
++		goto free_skb;
++	}
++
++	if(is_bcast_mac(skb_mac_header(skb) + 6)) {
++		dbg("Received bcast-smac packet on %s\n", port->dev->name);
++		goto free_skb;
++	}
++
++
++	/* Update the fdb */
++	fdb_learn(skb_mac_header(skb) + 6, port, skb_e.vlan, SW_FDB_MAC_DYNAMIC);
++
++	sw_forward(port, skb, &skb_e);
++	*ret = NET_RX_SUCCESS;
++	return 1;
++
++free_skb:
++	dev_kfree_skb(skb);
++	*ret = NET_RX_DROP;
++	return 1;
++}
++
++void sw_device_up(struct net_device *dev) {
++	rtnl_lock();
++	dev_open(dev);
++	rtnl_unlock();
++}
++
++void sw_device_down(struct net_device *dev) {
++	rtnl_lock();
++	dev_close(dev);
++	rtnl_unlock();
++}
++
++/* Enable a port */
++void sw_enable_port(struct net_switch_port *port) {
++	/* Someday this will trigger some user-space callback to help
++	   the cli display warnings about a port changing state. For
++	   now just set the disabled flag */
++	if(!(port->flags & SW_PFL_DISABLED) || port->flags & SW_PFL_ADMDISABLED)
++		return;
++	sw_res_port_flag(port, SW_PFL_DISABLED);
++	sw_device_up(port->dev);
++	dbg("Enabled port %s\n", port->dev->name);
++}
++
++/* Disable a port */
++void sw_disable_port(struct net_switch_port *port) {
++	/* Someday this will trigger some user-space callback to help
++	   the cli display warnings about a port changing state. For
++	   now just set the disabled flag */
++	if(port->flags & SW_PFL_DISABLED)
++		return;
++	sw_set_port_flag(port, SW_PFL_DISABLED);
++	sw_device_down(port->dev);
++	dbg("Disabled port %s\n", port->dev->name);
++}
++
++/* Initialize everything associated with a switch */
++static void init_switch(struct net_switch *sw, const unsigned char *vif_mac) {
++	int i;
++	
++	memset(sw, 0, sizeof(struct net_switch));
++	INIT_LIST_HEAD(&sw->ports);
++	for (i=0; i<SW_VIF_HASH_SIZE; i++) {
++		INIT_LIST_HEAD(&sw->vif[i]);
++	}
++	memcpy(sw->vif_mac, vif_mac, 6);
++	atomic_set(&sw->fdb_age_time, SW_DEFAULT_AGE_TIME * HZ);
++	sw->igmp_snooping = 1;
++	sw_fdb_init(sw);
++	init_switch_proc();
++	sw_vdb_init(sw);
++}
++
++/* Free everything associated with a switch */
++static void exit_switch(struct net_switch *sw) {
++	struct list_head *pos, *n;
++	struct net_switch_port *port;
++
++	/* Remove all interfaces from switch */
++	list_for_each_safe(pos, n, &sw->ports) {
++		port = list_entry(pos, struct net_switch_port, lh);
++		sw_delif(port->dev);
++	}
++	sw_fdb_exit(sw);
++	sw_vdb_exit(sw);
++	sw_vif_cleanup(sw);
++	cleanup_switch_proc();
++}
++
++static void switch_cleanup(void) {
++	exit_switch(&sw);
++	sw_handle_frame_hook = NULL;
++	sw_sock_exit();
++}
++
++static inline int parse_vif_mac_arg(unsigned char *dest)
++{
++	int i, x[6];
++	char c;
++
++	i = sscanf(vif_mac, "%x%c%x%c%x%c%x%c%x%c%x", &x[0], &c,
++			&x[1], &c, &x[2], &c, &x[3], &c, &x[4], &c, &x[5]);
++
++	if (i < 11)
++		return -EINVAL;
++
++	for (i = 0; i < 6; i++) {
++		if (x[i] > 0xff)
++			return -EINVAL;
++		dest[i] = x[i];
++	}
++
++	return 0;
++}
++
++/* Module initialization */
++static int switch_init(void)
++{
++	int err;
++	unsigned char m[6];
++
++	if ((err = parse_vif_mac_arg(m)))
++		goto out;
++	dbg("Switch vif mac %02x:%02x:%02x:%02x:%02x:%02x\n", (int)m[0],
++			(int)m[1], (int)m[2], (int)m[3], (int)m[4], (int)m[5]);
++	
++	if ((err = sw_sock_init()))
++		goto out;
++
++	init_switch(&sw, m);
++	sw_handle_frame_hook = sw_handle_frame;
++
++	/* Register ourselves to receive notifications for net devices */
++	if ((err = register_netdevice_notifier(&sw_netdev_notifier)))
++		goto out2;
++
++	dbg("Switch module initialized, switch_init at 0x%p, "
++			"sw_handle_frame at 0x%p\n", switch_init, sw_handle_frame);
++out:
++	return err;
++out2:
++	switch_cleanup();
++	return err;
++}
++
++/* Module cleanup */
++static void switch_exit(void) {
++	int err = 0;
++
++	if ((err = unregister_netdevice_notifier(&sw_netdev_notifier)))
++		dbg("Error unregistering netdevice notifier.\n");
++
++	switch_cleanup();
++
++	dbg("Switch module unloaded\n");
++}
++
++#ifdef DEBUG
++EXPORT_SYMBOL(sw_handle_frame);
++#endif
++
++module_init(switch_init);
++module_exit(switch_exit);
+diff --git a/net/switch/sw_fdb.c b/net/switch/sw_fdb.c
+new file mode 100644
+index 0000000..ed5cd01
+--- /dev/null
++++ b/net/switch/sw_fdb.c
+@@ -0,0 +1,353 @@
++/*
++ *    This file is part of Linux Multilayer Switch.
++ *
++ *    Linux Multilayer Switch is free software; you can redistribute it and/or
++ *    modify it under the terms of the GNU General Public License as published
++ *    by the Free Software Foundation; either version 2 of the License, or
++ *    (at your option) any later version.
++ *
++ *    Linux Multilayer Switch is distributed in the hope that it will be 
++ *    useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *    GNU General Public License for more details.
++ *
++ *    You should have received a copy of the GNU General Public License
++ *    along with Linux Multilayer Switch; if not, write to the Free Software
++ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++ */
++
++#include "sw_private.h"
++
++void sw_fdb_init(struct net_switch *sw) {
++	int i;
++
++	for (i=0; i<SW_HASH_SIZE; i++) {
++		INIT_LIST_HEAD(&sw->fdb[i].entries);
++		spin_lock_init(&sw->fdb[i].lock);
++	}
++	sw->fdb_cache = KMEM_CACHE(net_switch_fdb_entry, SLAB_HWCACHE_ALIGN);
++		
++	dbg("Initialized hash of %d buckets\n", SW_HASH_SIZE);	
++}
++
++static __inline__ unsigned long sw_age_time(struct net_switch_fdb_entry *entry) {
++	return atomic_read(&entry->port->sw->fdb_age_time);
++}
++
++void sw_free_entry_rcu(struct rcu_head *rcu) {
++	struct net_switch_fdb_entry *entry = container_of(rcu, struct net_switch_fdb_entry, rcu);
++	dbg("About to free fdb entry at 0x%p for port %s (age timer expired)\n",
++			entry, entry->port->dev->name);
++	kmem_cache_free(entry->port->sw->fdb_cache, entry);
++}
++
++void sw_age_timer_expired(unsigned long arg) {
++	struct net_switch_fdb_entry *entry;
++
++	entry = (struct net_switch_fdb_entry *)arg;
++	if (time_before_eq(entry->stamp + sw_age_time(entry), jiffies)) {
++		spin_lock(&entry->bucket->lock);
++		del_timer(&entry->age_timer);
++		list_del_rcu(&entry->lh);
++		spin_unlock(&entry->bucket->lock);
++		call_rcu(&entry->rcu, sw_free_entry_rcu);
++	}
++	else {
++		dbg("Reactivating timer for fdb entry at 0x%p for port %s\n",
++				entry, entry->port->dev->name);
++		mod_timer(&entry->age_timer, entry->stamp + sw_age_time(entry));
++	}
++}
++
++static void sw_timer_add(struct timer_list *timer,
++		void (* callback)(unsigned long),
++		unsigned long data,
++		unsigned long expires) {
++	init_timer(timer);
++	timer->function = callback;
++	timer->data = data;
++	timer->expires = expires;
++	add_timer(timer);
++}
++
++/* Walk the fdb and delete all entries referencing a given port.
++   
++   This is (should be) always called from user space, so locking is
++   done _with_ softirqs disabled (spin_lock_bh()).
++
++   Writing is done in a transactional manner: first check if we need
++   to change a bucket, and then lock the bucket only if we need to
++   change it. While holding the lock search for the entry again to
++   avoid races.
++ */
++int fdb_cleanup_port(struct net_switch_port *port, int entry_type) {
++    struct net_switch *sw = port->sw;
++    struct net_switch_fdb_entry *entry, *tmp;
++	LIST_HEAD(del_list);
++    int i, ret = 0;
++	
++	for (i = 0; i < SW_HASH_SIZE; i++) {
++		list_for_each_entry_rcu(entry, &sw->fdb[i].entries, lh) {
++			if(entry->port == port && fdb_entry_match(entry->type, entry_type))
++                break;
++		}
++        if(&entry->lh == &sw->fdb[i].entries)
++            continue;
++        /* We found entries; lock for write and delete them */
++        spin_lock_bh(&sw->fdb[i].lock);
++		list_for_each_entry_safe(entry, tmp, &sw->fdb[i].entries, lh) {
++			if(entry->port == port && fdb_entry_match(entry->type, entry_type)) {
++				if (!(entry->type & SW_FDB_STATIC))
++					del_timer(&entry->age_timer);
++                list_del_rcu(&entry->lh);
++				list_add(&entry->lh, &del_list);
++            }
++		}
++        spin_unlock_bh(&sw->fdb[i].lock);
++	}
++	synchronize_sched();
++	list_for_each_entry_safe(entry, tmp, &del_list, lh) {
++		dbg("About to free fdb entry at 0x%p for port %s\n",
++				entry, entry->port->dev->name);
++		kmem_cache_free(sw->fdb_cache, entry);
++		ret++;
++	}
++	return ret;
++}
++
++/* Walk the fdb and delete all entries by type. */
++int fdb_cleanup_by_type(struct net_switch *sw, int entry_type) {
++    struct net_switch_fdb_entry *entry, *tmp;
++	LIST_HEAD(del_list);
++    int i, ret = 0;
++	
++	for (i = 0; i < SW_HASH_SIZE; i++) {
++        spin_lock_bh(&sw->fdb[i].lock);
++		list_for_each_entry_safe(entry, tmp, &sw->fdb[i].entries, lh) {
++			if (fdb_entry_match(entry->type, entry_type)) {
++				if (!(entry->type & SW_FDB_STATIC))
++					del_timer(&entry->age_timer);
++                list_del_rcu(&entry->lh);
++				list_add(&entry->lh, &del_list);
++            }
++		}
++        spin_unlock_bh(&sw->fdb[i].lock);
++	}
++	synchronize_sched();
++	list_for_each_entry_safe(entry, tmp, &del_list, lh) {
++		dbg("About to free fdb entry at 0x%p for port %s\n",
++				entry, entry->port->dev->name);
++		kmem_cache_free(sw->fdb_cache, entry);
++		ret++;
++	}
++	return ret;
++}
++
++/* Walk the fdb and delete all entries referencing a given vlan.
++   
++   This is (should be) always called from user space, so locking is
++   done _with_ softirqs disabled (spin_lock_bh()).
++
++   Writing is done in a transactional manner: first check if we need
++   to change a bucket, and then lock the bucket only if we need to
++   change it. While holding the lock search for the entry again to
++   avoid races.
++ */
++int fdb_cleanup_vlan(struct net_switch *sw, int vlan, int entry_type) {
++    struct net_switch_fdb_entry *entry, *tmp;
++	LIST_HEAD(del_list);
++    int i, ret = 0;
++	
++	for (i = 0; i < SW_HASH_SIZE; i++) {
++		list_for_each_entry_rcu(entry, &sw->fdb[i].entries, lh) {
++			if (entry->vlan == vlan && fdb_entry_match(entry->type, entry_type))
++                break;
++		}
++        if(&entry->lh == &sw->fdb[i].entries)
++            continue;
++        /* We found entries; lock for write and delete them */
++        spin_lock_bh(&sw->fdb[i].lock);
++		list_for_each_entry_safe(entry, tmp, &sw->fdb[i].entries, lh) {
++			if (entry->vlan == vlan && fdb_entry_match(entry->type, entry_type)) {
++				if (!(entry->type & SW_FDB_STATIC))
++					del_timer(&entry->age_timer);
++                list_del_rcu(&entry->lh);
++				list_add(&entry->lh, &del_list);
++            }
++		}
++        spin_unlock_bh(&sw->fdb[i].lock);
++	}
++	synchronize_sched();
++	list_for_each_entry_safe(entry, tmp, &del_list, lh) {
++		dbg("About to free fdb entry at 0x%p for port %s\n",
++				entry, entry->port->dev->name);
++		kmem_cache_free(sw->fdb_cache, entry);
++		ret++;
++	}
++	return ret;
++}
++
++/* Delete all entries having a specific address.
++   
++   This is (should be) always called from user space, so locking is
++   done _with_ softirqs disabled (spin_lock_bh()).
++
++   Writing is done in a transactional manner: first check if we need
++   to change a bucket, and then lock the bucket only if we need to
++   change it. While holding the lock search for the entry again to
++   avoid races.
++ */
++int fdb_del(struct net_switch *sw, unsigned char *mac,
++		struct net_switch_port *port, int vlan, int entry_type) {
++	struct net_switch_fdb_entry *entry, *tmp;
++	LIST_HEAD(del_list);
++	struct net_switch_bucket *bucket = &sw->fdb[sw_mac_hash(mac)];
++	int ret = 0;
++
++	list_for_each_entry_rcu(entry, &bucket->entries, lh) {
++		if((!vlan || entry->vlan == vlan) && (!port || entry->port == port) &&
++				fdb_entry_match(entry->type, entry_type) &&
++				!memcmp(entry->mac, mac, ETH_ALEN))
++			break;
++	}
++	if(&entry->lh == &bucket->entries)
++		return ret;
++	/* We found entries; lock for write and delete them */
++	spin_lock_bh(&bucket->lock);
++	list_for_each_entry_safe(entry, tmp, &bucket->entries, lh) {
++		if((!vlan || entry->vlan == vlan) && (!port || entry->port == port) &&
++				fdb_entry_match(entry->type, entry_type) &&
++				!memcmp(entry->mac, mac, ETH_ALEN)) {
++			if (!(entry->type & SW_FDB_STATIC))
++				del_timer(&entry->age_timer);
++			list_del_rcu(&entry->lh);
++			list_add(&entry->lh, &del_list);
++		}
++	}
++	spin_unlock_bh(&bucket->lock);
++	synchronize_sched();
++	list_for_each_entry_safe(entry, tmp, &del_list, lh) {
++		dbg("About to free fdb entry at 0x%p for port %s\n",
++				entry, entry->port->dev->name);
++		kmem_cache_free(sw->fdb_cache, entry);
++		ret++;
++	}
++	return ret;
++}
++
++static void __fdb_change_to_static(struct net_switch_fdb_entry *entry) {
++	local_bh_disable();
++	del_timer(&entry->age_timer);
++	entry->type |= SW_FDB_STATIC;
++	local_bh_enable();
++}
++
++int fdb_lookup(struct net_switch_bucket *bucket, unsigned char *mac,
++		int vlan, struct net_switch_fdb_entry **pentry) {
++	struct net_switch_fdb_entry *entry;	
++
++	list_for_each_entry_rcu(entry, &bucket->entries, lh) {
++		if (!memcmp(entry->mac, mac, ETH_ALEN) && entry->vlan == vlan) {
++			*pentry = entry;
++			return 1;
++		}
++	}
++	return 0;
++}
++
++/* FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME
++ * we should check for overlapping between multicast group virtual
++ * mac and regular mac addresses
++ * FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME
++ */
++static inline int __fdb_learn(struct net_switch_bucket *bucket,
++		unsigned char *mac, struct net_switch_port *port, int vlan,
++		struct net_switch_fdb_entry **pentry) {
++	struct net_switch_fdb_entry *entry;
++
++	list_for_each_entry_rcu(entry, &bucket->entries, lh) {
++		if(entry->vlan == vlan && (port == NULL || entry->port == port) &&
++				!memcmp(entry->mac, mac, ETH_ALEN)) {
++			*pentry = entry;
++			return 1;
++		}
++	}
++	return 0;
++}
++
++/* This is called from both softirq and user context, so we do locking with
++   softirqs disabled
++ */
++int fdb_learn(unsigned char *mac, struct net_switch_port *port,
++		int vlan, int entry_type) {
++	struct net_switch_bucket *bucket = &port->sw->fdb[sw_mac_hash(mac)];
++	struct net_switch_fdb_entry *entry;
++
++	if(is_l2_mac(mac))
++		return -EINVAL;
++
++	if(__fdb_learn(bucket, mac, (entry_type & SW_FDB_IGMP) ? port : NULL, vlan, &entry)) {
++		/* we found a matching entry */
++		if ((entry->type & SW_FDB_STATIC))
++			return -EBUSY; /* don't modify a static fdb entry */
++		entry->port = port;
++		entry->stamp = jiffies;
++		if (entry_type & SW_FDB_STATIC)
++			__fdb_change_to_static(entry);
++		return 0;
++	}
++
++	/* No matching entry. This time lock bucket, but search for the entry
++	   again, because someone might have added it in the meantime.
++	 */
++	spin_lock_bh(&bucket->lock);
++	if(__fdb_learn(bucket, mac, (entry_type & SW_FDB_IGMP) ? port : NULL, vlan, &entry)) {
++		/* we found a matching entry */
++		if ((entry->type & SW_FDB_STATIC))
++			return -EBUSY;
++		entry->port = port;
++		entry->stamp = jiffies;
++		if (entry_type & SW_FDB_STATIC)
++			__fdb_change_to_static(entry);
++		spin_unlock_bh(&bucket->lock);
++		return 0;
++	}
++
++	/*
++		we try to alloc an entry from the cache.
++		If that fails we return.
++	*/
++	entry = kmem_cache_alloc(port->sw->fdb_cache, GFP_ATOMIC);
++	if (!entry) {
++		spin_unlock_bh(&bucket->lock);
++		dbg("cache out of memory");
++		return -ENOMEM;
++	}
++
++	memcpy(entry->mac, mac, ETH_ALEN);
++	entry->vlan = vlan;
++	entry->port = port;
++	entry->stamp = jiffies;
++	entry->bucket = bucket;
++	entry->type = entry_type;
++	if (!(entry->type & SW_FDB_STATIC))
++		sw_timer_add(&entry->age_timer, sw_age_timer_expired,
++				(unsigned long)entry, entry->stamp + sw_age_time(entry));
++	/* FIXME smp_wmb() here ?? */
++	list_add_tail_rcu(&entry->lh, &bucket->entries);
++	spin_unlock_bh(&bucket->lock);
++	return 0;
++}
++
++#ifdef DEBUG
++EXPORT_SYMBOL(fdb_cleanup_port);
++EXPORT_SYMBOL(fdb_lookup);
++EXPORT_SYMBOL(fdb_learn);
++#endif
++
++void sw_fdb_exit(struct net_switch *sw) {
++	/* Entries are freed by __sw_delif(), which is called for
++       all interfaces before this
++     */
++	kmem_cache_destroy(sw->fdb_cache);
++}
+diff --git a/net/switch/sw_forward.c b/net/switch/sw_forward.c
+new file mode 100644
+index 0000000..39c5a08
+--- /dev/null
++++ b/net/switch/sw_forward.c
+@@ -0,0 +1,623 @@
++/*
++ *    This file is part of Linux Multilayer Switch.
++ *
++ *    Linux Multilayer Switch is free software; you can redistribute it and/or
++ *    modify it under the terms of the GNU General Public License as published
++ *    by the Free Software Foundation; either version 2 of the License, or
++ *    (at your option) any later version.
++ *
++ *    Linux Multilayer Switch is distributed in the hope that it will be 
++ *    useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *    GNU General Public License for more details.
++ *
++ *    You should have received a copy of the GNU General Public License
++ *    along with Linux Multilayer Switch; if not, write to the Free Software
++ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++ */
++
++#include "sw_private.h"
++#include <linux/ip.h>
++#include <linux/igmp.h>
++
++static inline short sw_eth_hproto(const struct sk_buff *skb, const struct skb_extra *skb_e)
++{
++	return ntohs(*(__be16 *)(skb_mac_header(skb) + (skb_e->has_vlan_tag ? 14 : 12)));
++}
++
++static inline struct iphdr *sw_ip_hdr(const struct sk_buff *skb, const struct skb_extra *skb_e)
++{
++	return (struct iphdr *)(skb_mac_header(skb) + 14 + (skb_e->has_vlan_tag ? 2 : 0));
++}
++
++static inline struct igmphdr *sw_igmp_hdr(const struct sk_buff *skb, const struct skb_extra *skb_e)
++{
++	struct iphdr *iph = sw_ip_hdr(skb, skb_e);
++	return (struct igmphdr *)((unsigned char *)iph + iph->ihl * 4);
++}
++
++static __inline__ void add_vlan_tag(struct sk_buff *skb, int vlan)
++{
++	int nhead = (ETH_HLEN + VLAN_TAG_BYTES) - (skb->data - skb->head);
++	
++	dbg("%s: head=%p data=%p mac.raw=%p nh.raw=%p h.raw=%p csum=%x "
++			"csum_start=%x csum_offset=%x ip_summed=%d\n",
++			__func__, skb->head, skb->data, skb_mac_header(skb),
++			skb_network_header(skb), skb_transport_header(skb),
++			skb->csum, skb->csum_start, skb->csum_offset,
++			(int)skb->ip_summed);
++	/* If we don't have enough headroom, we make some :D */
++	/* FIXME daca nu avem destul headroom, poate avem destul tailroom
++	   si atunci e mai eficient sa mutam datele decat sa copiem tot
++	   pachetul si sa mutam headerul */
++	if (nhead > 0) {
++		pskb_expand_head(skb, nhead, 0, GFP_ATOMIC); 
++		/* FIXME maybe this can break ip_summed, csum and Xen (although
++		 * these fields are not touched in pskb_expand_head) */
++		dbg("add_vlan_tag: pskb_expand_head necessary\n");
++		dbg("add_vlan_tag(after expand): skb=0x%p skb headroom: %d (head=0x%p data=0x%p)\n",
++			skb, skb->data - skb->head, skb->head, skb->data);
++	}
++	memmove(skb_mac_header(skb)-VLAN_TAG_BYTES, skb_mac_header(skb), 2 * ETH_ALEN);
++	skb->mac_header -= VLAN_TAG_BYTES;
++	/* adding to or subtracting from skb->mac_header should work the same
++	   with both offset and pointer skb storage implementations */
++	skb_push(skb, VLAN_TAG_BYTES);
++	skb_reset_network_header(skb);
++	/* FIXME: old comment says "skb->h.raw doesn't need to be set here,
++	   because it's properly set later in dev_queue_xmit(), but now we
++	   cannot find any change on skb->transport_header in dev_queue_xmit()
++	   unless skb->ip_summed == CHECKSUM_PARTIAL (where the transport
++	   header is explicitly set) */
++	*(short *)skb->data = htons((short)vlan);
++	*(short *)(skb_mac_header(skb) + ETH_HLEN - 2) = htons(ETH_P_8021Q);
++#ifdef CONFIG_XEN
++	/* This is pretty obscure :) First of all, unless we have xen,
++	 * ip_summed is either CHECKSUM_NONE or CHECKSUM_COMPLETE
++	 * (but never CHECKSUM_PARTIAL - the value here is the one we
++	 * get from the rx stack and CHECKSUM_PARTIAL has no meaning
++	 * for rx).
++	 *
++	 * If we do have xen and get CHECKSUM_PARTIAL, then the packet
++	 * came from a xennet backend and checksum must be carried out
++	 * here in dom0 for optimization. Even if we don't touch
++	 * ip_summed and hand it with CHECKSUM_PARTIAL to the tx stack,
++	 * things go wrong becauze Ether Type is no longer ip (0x8000)
++	 * but 802.1q (0x8100). NICs that support hardware ip sum seem
++	 * to get confused and don't do the checksum. So do it here in
++	 * software to avoid trouble.
++	 */
++	if (skb->ip_summed == CHECKSUM_PARTIAL && skb->protocol == htons(ETH_P_IP)) {
++		dbg("%s: applying xen ip checksum fix\n", __func__);
++		skb->csum_start -= ETH_HLEN;
++		/* skb->h.raw = skb->head + skb->csum_start; */
++		skb_set_transport_header(skb, skb->csum_start - skb_headroom(skb));
++		skb_checksum_help(skb);
++		/* skb_checksum_help() sets skb->ip_summed to CHECKSUM_NONE */
++		skb->csum = 0;
++	}
++#endif
++	dbg("%s: head=%p data=%p mac.raw=%p nh.raw=%p h.raw=%p csum=%x\n",
++			__func__, skb->head, skb->data, skb_mac_header(skb),
++			skb_network_header(skb), skb_transport_header(skb),
++			skb->csum);
++}
++
++static __inline__ void strip_vlan_tag(struct sk_buff *skb)
++{
++	memmove(skb_mac_header(skb)+VLAN_TAG_BYTES, skb_mac_header(skb), 2 * ETH_ALEN);
++	skb->mac_header += VLAN_TAG_BYTES;
++	skb_pull(skb, VLAN_TAG_BYTES);
++	skb->protocol = *(short *)(skb_mac_header(skb) + ETH_HLEN - 2);
++}
++
++static __inline__ void __strip_vlan_tag(struct sk_buff *skb, int vlan)
++{
++	strip_vlan_tag(skb);
++}
++
++/* FIXME: pkt_type may be PACKET_MULTICAST */
++static __inline__ void sw_skb_xmit(struct sk_buff *skb, struct net_device *dev,
++		unsigned char pkt_type)
++{
++	/* FIXME packets larger that 1500 may break things */
++#ifdef DEBUG
++	if (skb->len > dev->mtu) {
++		dbg("%s: mtu exceeded on %s len=%d mtu=%d\n",
++				__func__, dev->name, skb->len, dev->mtu);
++		// goto destroy;
++	}
++#endif
++
++	if (dev->sw_port) {
++		/* This is a physical port (not a bogus one i.e. vif) */
++		skb->dev = dev;
++
++		/* Prevent packets from being checksummed again on egress.
++		 * A nice explanation of the ip_summed field can be found
++		 * in skbuff.h (around line 50). For Xen integration, comply
++		 * with their hw/csum optimization.
++		 */
++#ifdef CONFIG_XEN
++		/* CHECKSUM_COMPLETE changes to CHECKSUM_NONE
++		 * This prevents checksumming for real devices ingres
++		 * packets (which always have CHECKSUM_COMPLETE - see
++		 * checksum constans explanation for rx in skbuff.h)
++		 * but keeps CHECKSUM_PARTIAL untouched (this is the
++		 * case for xen vif ingress packets).
++		 */
++		skb_forward_csum(skb);
++#else
++		skb->ip_summed = CHECKSUM_NONE;
++#endif
++		skb_push(skb, ETH_HLEN);
++		dbg("%s: sending out skb; ip_summed=%d\n", __func__, (int)skb->ip_summed);
++		dev_queue_xmit(skb);
++		return;
++	}
++	/* This is a vif, so we need to call sw_vif_rx() instead. The
++	 * ip_summed field is properly handled by sw_vif_rx() */
++	sw_vif_rx(skb, pkt_type, dev);
++	return;
++	
++/* destroy:	*/
++	dev_kfree_skb(skb);
++}
++
++/* if the packet data is used by someone else
++   we make a copy before altering it 
++ */
++static void sw_skb_unshare(struct sk_buff **skb)
++{
++	struct sk_buff *skb2;
++
++	if (atomic_read(&skb_shinfo(*skb)->dataref)) {
++		dbg("%s: expanding skb=%p\n", __func__, *skb);
++		skb2 = skb_copy_expand(*skb, ETH_HLEN+VLAN_TAG_BYTES, 0, GFP_ATOMIC);
++		BUG_ON(!skb2);
++
++		/* Fix ip_summed stuff (also see "BUG ALERT" at bottom of
++		 * skb_copy_expand() comment)
++		 */
++		skb2->csum = (*skb)->csum;
++		skb2->ip_summed = (*skb)->ip_summed;
++
++		dev_kfree_skb(*skb);
++		*skb = skb2;
++	}
++}
++
++/* Forward frame from in port to out port,
++   adding/removing vlan tag if necessary.
++ */
++static void __sw_forward(struct net_switch_port *in, struct net_switch_port *out,
++	struct sk_buff *skb, struct skb_extra *skb_e)
++{
++	dbg("%s: forwarding frame to %s; ip_summed=%d\n", __func__,
++			out->dev->name, (int)skb->ip_summed);
++	if (out->flags & SW_PFL_TRUNK && !(in->flags & SW_PFL_TRUNK)) {
++		/* must add vlan tag (vlan = in->vlan) */
++		sw_skb_unshare(&skb);
++		add_vlan_tag(skb, in->vlan);
++	}
++	else if (!(out->flags & SW_PFL_TRUNK) && in->flags & SW_PFL_TRUNK) {
++		/* must remove vlan tag */
++		sw_skb_unshare(&skb);
++		strip_vlan_tag(skb);
++	}
++	sw_skb_xmit(skb, out->dev, PACKET_HOST);
++}
++
++struct sw_flood_context {
++	struct net_switch_port *in;
++	int vlan;
++	int pkt_type;
++	struct sk_buff *skb;
++	struct list_head *lh1;
++	struct list_head *lh2;
++	struct net_device *(*netdev)(struct list_head *);
++	int (*valid)(struct list_head *, int,
++			struct sw_flood_context *);
++	void *priv;
++#ifdef DEBUG
++	int copied, cloned, unshared;
++#endif
++};
++
++#ifdef DEBUG
++#define __sw_flood_inc_cloned ctx->cloned++
++#define __sw_flood_inc_copied ctx->copied++
++#define __sw_flood_inc_unshared ctx->unshared++
++#else
++#define __sw_flood_inc_cloned
++#define __sw_flood_inc_copied
++#define __sw_flood_inc_unshared
++#endif
++
++static int __sw_flood(struct sw_flood_context *ctx)
++{
++	struct list_head *entry, *prev=NULL, *oldprev;
++	struct sk_buff *skb, *skb2;
++	int needs_tag_change = 1, ret = 0;
++	void (*vlan_op)(struct sk_buff *, int);
++
++	vlan_op = ctx->in->flags & SW_PFL_TRUNK ? __strip_vlan_tag : add_vlan_tag;
++	skb = ctx->skb;
++
++	__list_for_each_rcu(entry, ctx->lh1) {
++		if (!ctx->valid(entry, 1, ctx))
++			continue;
++		if (prev) {
++			__sw_flood_inc_cloned;
++			skb2 = skb_clone(skb, GFP_ATOMIC);
++			sw_skb_xmit(skb, ctx->netdev(prev), ctx->pkt_type);
++			ret++;
++			skb = skb2;
++		}
++		prev = entry;
++	}
++	oldprev = prev;
++	__list_for_each_rcu(entry, ctx->lh2) {
++		if (!ctx->valid(entry, 2, ctx))
++			continue;
++		if (oldprev && prev == oldprev) {
++			/* 1 or more elements in lh1 && and we're at the first element
++			   in lh2; make a copy of the skb, then send the last skb from
++			   lh1 */
++			__sw_flood_inc_copied;
++			skb2 = skb_copy_expand(skb, ETH_HLEN+VLAN_TAG_BYTES, 0, GFP_ATOMIC);
++			vlan_op(skb2, ctx->vlan);
++			needs_tag_change = 0;
++			sw_skb_xmit(skb, ctx->netdev(prev), ctx->pkt_type);
++			ret++;
++			skb = skb2;
++			prev = entry;
++			continue;
++		}
++		if (prev) {
++			if (needs_tag_change) {
++				/* 0 elements in lh1, and we're at the 2nd element in lh2;
++				   make sure skb is an exclusive copy and apply the tag
++				   change to it before it gets cloned and sent */
++				__sw_flood_inc_unshared;
++				sw_skb_unshare(&skb);
++				vlan_op(skb, ctx->vlan);
++				needs_tag_change = 0;
++			}
++			__sw_flood_inc_cloned;
++			skb2 = skb_clone(skb, GFP_ATOMIC);
++			sw_skb_xmit(skb, ctx->netdev(prev), ctx->pkt_type);
++			ret++;
++			skb = skb2;
++		}
++		prev = entry;
++	}
++	if (prev) {
++		if (needs_tag_change && prev != oldprev) {
++			/* lh2 is not empty, so the remaining element is from lh2,
++			   but the tag change was not applied */
++			__sw_flood_inc_unshared;
++			sw_skb_unshare(&skb);
++			vlan_op(skb, ctx->vlan);
++		}
++		sw_skb_xmit(skb, ctx->netdev(prev), ctx->pkt_type);
++		ret++;
++	}
++	else {
++		dbg("%s: freeing skb\n", __func__);
++		dev_kfree_skb(skb);
++	}
++	return ret;
++}
++
++#undef __sw_flood_inc_cloned
++#undef __sw_flood_inc_copied
++#undef __sw_flood_inc_unshared
++
++static struct net_device *sw_fdb_entry_to_netdev(struct list_head *l)
++{
++	struct net_switch_fdb_entry *entry;
++
++	entry = list_entry(l, struct net_switch_fdb_entry, lh);
++	return entry->port->dev;
++}
++
++static int sw_group_fdb_entry_valid(struct list_head *curr, int stage,
++		struct sw_flood_context *ctx)
++{
++	struct net_switch_fdb_entry *entry;
++	int first_trunkness;
++	unsigned char *mc_vmac;
++
++	entry = list_entry(curr, struct net_switch_fdb_entry, lh);
++	first_trunkness = ctx->in->flags & SW_PFL_TRUNK;
++	mc_vmac = (unsigned char *)ctx->priv;
++
++	if (entry->port == ctx->in)
++		return 0;
++	if (stage == 1 && (entry->port->flags & SW_PFL_TRUNK) != first_trunkness)
++		return 0;
++	if (stage == 2 && (entry->port->flags & SW_PFL_TRUNK) == first_trunkness)
++		return 0;
++	if (entry->vlan != ctx->vlan)
++		return 0;
++	if (memcmp(entry->mac, mc_vmac, ETH_ALEN))
++		return 0;
++	if (!(entry->type & SW_FDB_IGMP))
++		return 0;
++	/* In sw_flood we use the vdb, so we know for sure that 'vlan' is
++	   allowed on the output port. But here we walk the fdb, so we need
++	   to additionally check if 'vlan' is allowed on the output port. */
++	if ((first_trunkness && sw_port_forbidden_vlan(entry->port, ctx->vlan)) ||
++			(!first_trunkness && entry->port->vlan != ctx->vlan))
++		return 0;
++	return 1;
++}
++
++static int sw_flood_group(struct net_switch *sw, struct net_switch_port *in,
++		struct sk_buff *skb, struct skb_extra *skb_e)
++{
++	struct net_switch_bucket *bucket = &sw->fdb[sw_mac_hash(skb_mac_header(skb))];
++	unsigned char mc_vmac[ETH_ALEN] = {0x01, 0x00, 0x00, 0x00, 0x00, 0x00};
++	struct sw_flood_context ctx;
++	int ret;
++
++	/* Build the multicast group virtual MAC */
++	*(__be32 *)(&mc_vmac[2]) = sw_ip_hdr(skb, skb_e)->daddr;
++	/* Lookup in FDB to select the bucket */
++	bucket = &sw->fdb[sw_mac_hash(mc_vmac)];
++
++	memset(&ctx, 0, sizeof(ctx));
++	ctx.in = in;
++	ctx.vlan = skb_e->vlan;
++	ctx.pkt_type = PACKET_MULTICAST;
++	ctx.skb = skb;
++	ctx.lh1 = &bucket->entries;
++	ctx.lh2 = &bucket->entries;
++	ctx.netdev = sw_fdb_entry_to_netdev;
++	ctx.valid = sw_group_fdb_entry_valid;
++	ctx.priv = &mc_vmac[0];
++
++	ret = __sw_flood(&ctx);
++
++	dbg("%s: cloned=%d copied=%d unshared=%d\n", __func__, ctx.cloned, ctx.copied,
++			ctx.unshared);
++	return ret;
++}
++
++static struct net_device *sw_vdb_link_to_netdev(struct list_head *l)
++{
++	struct net_switch_vdb_link *entry;
++
++	entry = list_entry(l, struct net_switch_vdb_link, lh);
++	return entry->port->dev;
++}
++
++static int sw_flood_mrouters_valid(struct list_head *curr, int stage,
++		struct sw_flood_context *ctx)
++{
++	struct net_switch_vdb_link *link;
++
++	link = list_entry(curr, struct net_switch_vdb_link, lh);
++	if (link->port == ctx->in)
++		return 0;
++	return sw_is_mrouter(link->port->mrouters, ctx->vlan);
++}
++
++static int sw_flood_mrouters(struct net_switch *sw, struct net_switch_port *in,
++		struct sk_buff *skb, int vlan)
++{
++	struct sw_flood_context ctx;
++	int ret;
++
++	memset(&ctx, 0, sizeof(ctx));
++	ctx.in = in;
++	ctx.vlan = vlan;
++	ctx.pkt_type = PACKET_MULTICAST;
++	ctx.skb = skb;
++	ctx.netdev = sw_vdb_link_to_netdev;
++	ctx.valid = sw_flood_mrouters_valid;
++
++	/* if source port is in trunk mode we first send the
++	   socket buffer to all trunk ports in that vlan then
++	   strip vlan tag and send to all non-trunk ports in that vlan
++	 */
++	if (in->flags & SW_PFL_TRUNK) {
++		ctx.lh1 = &sw->vdb[vlan]->trunk_ports;
++		ctx.lh2 = &sw->vdb[vlan]->non_trunk_ports;
++	}
++	else {
++	/* otherwise we send the frame to all non-trunk ports in that vlan
++	   then add a vlan tag to it and send it to all trunk ports in that vlan.
++	 */
++		ctx.lh1 = &sw->vdb[vlan]->non_trunk_ports;
++		ctx.lh2 = &sw->vdb[vlan]->trunk_ports;
++	}
++
++	ret = __sw_flood(&ctx);
++
++	dbg("%s: cloned=%d copied=%d unshared=%d\n", __func__, ctx.cloned, ctx.copied,
++			ctx.unshared);
++	return ret;
++}
++
++static int sw_flood_valid(struct list_head *curr, int stage,
++		struct sw_flood_context *ctx)
++{
++	struct net_switch_vdb_link *link;
++
++	link = list_entry(curr, struct net_switch_vdb_link, lh);
++	return (link->port != ctx->in);
++}
++
++/* Flood frame to all necessary ports */
++static int sw_flood(struct net_switch *sw, struct net_switch_port *in,
++		struct sk_buff *skb, int vlan) {
++	struct sw_flood_context ctx;
++	int ret;
++
++	memset(&ctx, 0, sizeof(ctx));
++	ctx.in = in;
++	ctx.vlan = vlan;
++	ctx.pkt_type = PACKET_BROADCAST;
++	ctx.skb = skb;
++	ctx.netdev = sw_vdb_link_to_netdev;
++	ctx.valid = sw_flood_valid;
++
++	/* if source port is in trunk mode we first send the 
++	   socket buffer to all trunk ports in that vlan then
++	   strip vlan tag and send to all non-trunk ports in that vlan 
++	 */
++	if (in->flags & SW_PFL_TRUNK) {
++		ctx.lh1 = &sw->vdb[vlan]->trunk_ports;
++		ctx.lh2 = &sw->vdb[vlan]->non_trunk_ports;
++	}
++	else {
++	/* otherwise we send the frame to all non-trunk ports in that vlan 
++	   then add a vlan tag to it and send it to all trunk ports in that vlan.
++	 */
++		ctx.lh1 = &sw->vdb[vlan]->non_trunk_ports;
++		ctx.lh2 = &sw->vdb[vlan]->trunk_ports;
++	}
++
++	ret = __sw_flood(&ctx);
++
++	dbg("%s: cloned=%d copied=%d unshared=%d\n", __func__, ctx.cloned, ctx.copied,
++			ctx.unshared);
++	return ret;
++}	
++
++static int sw_vif_forward(struct sk_buff *skb, struct skb_extra *skb_e)
++{
++	struct net_switch *sw = (skb->dev->sw_port)? skb->dev->sw_port->sw:
++		((struct net_switch_vif_priv *)netdev_priv(skb->dev))->bogo_port.sw;
++	unsigned char *vif_mac = sw->vif_mac;
++	struct net_device *dev;
++	int vlan;
++
++	if(memcmp(skb_mac_header(skb), vif_mac, ETH_ALEN - 2))
++		return 0;
++	vlan = (vif_mac[ETH_ALEN - 2] ^ skb_mac_header(skb)[ETH_ALEN - 2]) * 0x100 +
++		(vif_mac[ETH_ALEN - 1] ^ skb_mac_header(skb)[ETH_ALEN - 1]);
++	if(vlan == skb_e->vlan && (dev = sw_vif_find(sw, vlan))) {
++		if(skb_e->has_vlan_tag) {
++			sw_skb_unshare(&skb);
++			strip_vlan_tag(skb);
++		}
++		sw_vif_rx(skb, PACKET_HOST, dev);
++		return 1;
++	}
++	return 0;
++}
++
++static int sw_multicast(struct net_switch *sw, struct net_switch_port *in,
++		struct sk_buff *skb, struct skb_extra *skb_e)
++{
++	unsigned char mc_vmac[ETH_ALEN] = {0x01, 0x00, 0x00, 0x00, 0x00, 0x00};
++	struct net_switch_port *port;
++
++	dbg("%s: vlan=%d eth=%x (%x) ip=%x (%x) igmp=%x (%x)\n", __func__,
++			skb_e->vlan,
++			sw_eth_hproto(skb, skb_e), ETH_P_IP,
++			sw_ip_hdr(skb, skb_e)->protocol, IPPROTO_IGMP,
++			sw_igmp_hdr(skb, skb_e)->type, IGMPV2_HOST_MEMBERSHIP_REPORT);
++	dbg("%s: skb->data=%p mac_header=%p network_header=%p transport_header=%p\n",
++			__func__, skb->data,
++			skb_mac_header(skb), skb_network_header(skb), skb_transport_header(skb));
++
++	/* if IGMP snooping is disabled we need to flood the frame */
++	if (!sw->igmp_snooping || !sw->vdb[skb_e->vlan]->igmp_snooping)
++		return sw_flood(sw, in, skb, skb_e->vlan);
++
++	/* IGMP membership report: create group and forward to mrouters */
++	if (sw_eth_hproto(skb, skb_e) == ETH_P_IP && sw_ip_hdr(skb, skb_e)->protocol == IPPROTO_IGMP &&
++			sw_igmp_hdr(skb, skb_e)->type == IGMPV2_HOST_MEMBERSHIP_REPORT) {
++		if (!sw_is_mrouter(in->mrouters, skb_e->vlan)) {
++			list_for_each_entry(port, &sw->ports, lh) {
++				if (sw_is_mrouter(port->mrouters, skb_e->vlan))
++					goto fdb_igmp_learn;
++			}
++			dbg("%s: port is not mrouter and no other mrouter found\n", __func__);
++			dev_kfree_skb(skb);
++			return 0;
++		}
++fdb_igmp_learn:
++		/* Add the multicast group virtual MAC in the FDB */
++		dbg("%s: learning group address\n", __func__);
++		*(__be32 *)(&mc_vmac[2]) = sw_igmp_hdr(skb, skb_e)->group;
++		fdb_learn(mc_vmac, in, skb_e->vlan, SW_FDB_IGMP_DYNAMIC);
++		return sw_flood_mrouters(sw, in, skb, skb_e->vlan);
++	}
++
++	/* Normal multicast traffic */
++	if (!sw_is_mrouter(in->mrouters, skb_e->vlan)) {
++		list_for_each_entry(port, &sw->ports, lh) {
++			if (sw_is_mrouter(port->mrouters, skb_e->vlan))
++				return sw_flood_mrouters(sw, in, skb, skb_e->vlan);
++		}
++		return sw_flood(sw, in, skb, skb_e->vlan);
++	}
++	/* forward to multicast group members from the FDB */
++	return sw_flood_group(sw, in, skb, skb_e);
++}
++
++/* Forwarding decision
++   Returns the number of ports the packet was forwarded to.
++ */
++int sw_forward(struct net_switch_port *in,
++		struct sk_buff *skb, struct skb_extra *skb_e)
++{
++	struct net_switch *sw = in->sw;
++	struct net_switch_bucket *bucket = &sw->fdb[sw_mac_hash(skb_mac_header(skb))];
++	struct net_switch_fdb_entry *out;
++	int ret = 1;
++
++	dbg("sw_forward: usage count %d\n", atomic_read(&skb_shinfo(skb)->dataref) != 1);
++	if (sw_vif_forward(skb, skb_e))
++		return ret;
++	rcu_read_lock();
++	if (is_mcast_mac(skb_mac_header(skb))) {
++		ret = sw_multicast(sw, in, skb, skb_e);
++		rcu_read_unlock();
++		return ret;
++	}
++	if (fdb_lookup(bucket, skb_mac_header(skb), skb_e->vlan, &out)) {
++		/* fdb entry found */
++		rcu_read_unlock();
++		if (in == out->port) {
++			/* in_port == out_port */
++			dbg("forward: Dropping frame, dport %s == sport %s\n",
++					out->port->dev->name, in->dev->name);
++			goto free_skb; 
++		}
++		if (!(out->port->flags & SW_PFL_TRUNK) && 
++				skb_e->vlan != out->port->vlan) {
++			dbg("forward: Dropping frame, dport %s vlan_id %d != skb_e.vlan_id %d\n",
++					out->port->dev->name, out->port->vlan, skb_e->vlan);
++			goto free_skb;
++		}
++		if ((out->port->flags & SW_PFL_TRUNK) &&
++				(out->port->forbidden_vlans[skb_e->vlan / 8] & (1 << (skb_e->vlan % 8)))) {
++			dbg("forward: Dropping frame, skb_e.vlan_id %d not in allowed vlans of dport %s\n",
++					skb_e->vlan, out->port->dev->name);
++			goto free_skb;
++		}
++		dbg("forward: Forwarding frame from %s to %s\n", in->dev->name,
++				out->port->dev->name);
++		__sw_forward(in, out->port, skb, skb_e);
++	} else {
++		rcu_read_unlock();
++		dbg("forward: Flooding frame from %s to all necessary ports\n",
++				in->dev->name);
++		/*
++		   The fact that skb_e->vlan exists in the vdb is based
++		   _only_ on the checks performed in sw_handle_frame()
++		 */
++		ret = sw_flood(sw, in, skb, skb_e->vlan);
++	}	
++	return ret; 
++
++free_skb:	
++	dev_kfree_skb(skb);
++	return 0;
++}
+diff --git a/net/switch/sw_ioctl.c b/net/switch/sw_ioctl.c
+new file mode 100644
+index 0000000..3f3e043
+--- /dev/null
++++ b/net/switch/sw_ioctl.c
+@@ -0,0 +1,1000 @@
++/*
++ *    This file is part of Linux Multilayer Switch.
++ *
++ *    Linux Multilayer Switch is free software; you can redistribute it and/or
++ *    modify it under the terms of the GNU General Public License as published
++ *    by the Free Software Foundation; either version 2 of the License, or
++ *    (at your option) any later version.
++ *
++ *    Linux Multilayer Switch is distributed in the hope that it will be 
++ *    useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *    GNU General Public License for more details.
++ *
++ *    You should have received a copy of the GNU General Public License
++ *    along with Linux Multilayer Switch; if not, write to the Free Software
++ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++ */
++#include <net/sock.h>
++
++#include "sw_private.h"
++
++inline void dump_mem(void *m, int len) {
++	int j;
++	char buf[65];
++	unsigned char *mem= m;
++
++	while(len) {
++		for(j = 0; j < 32 &&len; j++, len--) {
++			sprintf(buf + 2 * j, "%02hx", *mem);
++			mem++;
++		}
++		dbg("bmp: %s\n", buf);
++	}
++}
++
++/* Set a forbidden vlan mask to allow the default vlans */
++static inline void __sw_allow_default_vlans(unsigned char *forbidden_vlans) {
++	sw_allow_vlan(forbidden_vlans, 1);
++	sw_allow_vlan(forbidden_vlans, 1002);
++	sw_allow_vlan(forbidden_vlans, 1003);
++	sw_allow_vlan(forbidden_vlans, 1004);
++	sw_allow_vlan(forbidden_vlans, 1005);
++}
++
++/* Effectively remove a port from all allowed vlans in a bitmap of
++   forbidden vlans.
++ */
++static inline void __sw_remove_from_vlans(struct net_switch_port *port) {
++	int n, vlan = 0;
++	unsigned char mask, *bmp = port->forbidden_vlans;
++	for(n = 0; n < SW_VLAN_BMP_NO; n++, bmp++) {
++		for(mask = 1; mask; mask <<= 1, vlan++) {
++			if(*bmp & mask)
++				continue;
++			sw_vdb_del_port(vlan, port);
++		}
++	}
++}
++
++/* Add an interface to the switch. The switch configuration mutex must
++   be acquired from outside.
++ */
++static int sw_addif(struct net_device *dev) {
++	struct net_switch_port *port;
++
++	if (sw_is_vif(dev))
++		return -EINVAL;
++
++	if(rcu_dereference(dev->sw_port) != NULL) {
++		/* dev->sw_port shouldn't be changed elsewhere, so
++		   we don't necessarily need rcu_dereference here
++		 */
++		return -EBUSY;
++	}
++	if((port = kzalloc(sizeof(struct net_switch_port), GFP_KERNEL)) == NULL)
++		return -ENOMEM;
++	if((port->mrouters = kzalloc(SW_VLAN_BMP_NO, GFP_KERNEL)) == NULL) {
++		kfree(port);
++		return -ENOMEM;
++	}
++	if((port->forbidden_vlans = kzalloc(SW_VLAN_BMP_NO, GFP_KERNEL)) == NULL) {
++		kfree(port->mrouters);
++		kfree(port);
++		return -ENOMEM;
++	}
++	port->dev = dev;
++	port->sw = &sw;
++    port->vlan = 1; /* By default all ports are in vlan 1 */
++	port->desc[0] = '\0';
++	port->flags = SW_PFL_DISABLED;
++	INIT_LIST_HEAD(&port->sock_cdp);
++	INIT_LIST_HEAD(&port->sock_vtp);
++	INIT_LIST_HEAD(&port->sock_rstp);
++#ifdef NET_SWITCH_TRUNKDEFAULTVLANS
++	memset(port->forbidden_vlans, 0xff, SW_VLAN_BMP_NO);
++	__sw_allow_default_vlans(port->forbidden_vlans);
++#else
++	sw_forbid_vlan(port->forbidden_vlans, 0);
++	sw_forbid_vlan(port->forbidden_vlans, 4095);
++#endif
++    sw_vdb_add_port(1, port);
++	list_add_tail_rcu(&port->lh, &sw.ports);
++	rcu_assign_pointer(dev->sw_port, port);
++	dev_hold(dev);
++	rtnl_lock();
++	dev_set_promiscuity(dev, 1);
++	rtnl_unlock();
++	sw_enable_port(port);
++	dbg("Added device %s to switch\n", dev->name);
++	return 0;
++}
++
++/* Remove an interface from the switch. Appropriate locks must be held
++   from outside to ensure that nobody tries to remove the same interface
++   at the same time.
++ */
++int sw_delif(struct net_device *dev) {
++	struct net_switch_port *port;
++	int do_unlock;
++
++	if((port = rcu_dereference(dev->sw_port)) == NULL)
++		return -EINVAL;
++
++	/* First disable promiscuous mode, so that there be less chances to
++	   still receive packets on this port
++	 */
++	do_unlock = rtnl_trylock();
++	dev_set_promiscuity(dev, -1);
++	if (do_unlock)
++		rtnl_unlock();
++
++	/* Now let all incoming queue processors know that frames on this port
++	   are not handled by the switch anymore.
++	 */
++	rcu_assign_pointer(dev->sw_port, NULL);
++	/* dev->sw_port is now NULL, so no instance of sw_handle_frame() will
++	   process incoming packets on this port.
++
++	   However, at the time we changed the pointer there might have been
++	   instances of sw_handle_frame() that were processing incoming
++	   packets on this port. Frame processing can add entries to the fdb
++	   that reference this port, so we have to wait for all running
++	   instances to finish.
++	 */
++	synchronize_sched();
++	/* Now nobody can add references to this port, so we can safely clean
++	   up all existing references from the fdb
++	 */
++	fdb_cleanup_port(port, SW_FDB_ANY);
++	/* Clean up vlan references: if the port was non-trunk, remove it from
++	   its single vlan; otherwise use the disallowed vlans bitmap to remove
++	   it from all vlans
++	 */
++	if(port->flags & SW_PFL_TRUNK) {
++		__sw_remove_from_vlans(port);
++	} else {
++		sw_vdb_del_port(port->vlan, port);
++	}
++	list_del_rcu(&port->lh);
++	/* free port memory and release interface */
++	kfree(port->mrouters);
++	kfree(port->forbidden_vlans);
++	kfree(port);
++	dev_put(dev);
++	dbg("Removed device %s from switch\n", dev->name);
++	return 0;
++}
++
++/* Effectively add a port to all allowed vlans in a bitmap of
++   forbidden vlans.
++ */
++static inline void __sw_add_to_vlans(struct net_switch_port *port) {
++	int n, vlan = 0;
++	unsigned char mask, *bmp = port->forbidden_vlans;
++	for(n = 0; n < SW_VLAN_BMP_NO; n++, bmp++) {
++		for(mask = 1; mask; mask <<= 1, vlan++) {
++			if(*bmp & mask)
++				continue;
++			sw_vdb_add_port(vlan, port);
++		}
++	}
++}
++
++/* Set a port's trunk mode and make appropriate changes to the
++   vlan database.
++   FIXME for fdb_cleanup_port()
++   1. what about igmp pseudo-fdb entries?
++   2. what about static macs?
++   3. what about macs on access vlan?
++ */
++static int sw_set_port_trunk(struct net_switch_port *port, int trunk) {
++	int status;
++
++	if (!port)
++		return -EINVAL;
++	if (port->flags & SW_PFL_NOSWITCHPORT)
++		return -EACCES;
++
++	if(port->flags & SW_PFL_TRUNK) {
++		if(trunk)
++			return -EEXIST;
++		sw_set_port_flag_rcu(port, SW_PFL_DROPALL);
++		__sw_remove_from_vlans(port);
++		sw_res_port_flag(port, SW_PFL_TRUNK);
++		fdb_cleanup_port(port, SW_FDB_MAC_DYNAMIC);
++		status = sw_vdb_add_port(port->vlan, port);
++#if NET_SWITCH_NOVLANFORIF == 2
++		if(status)
++			sw_disable_port(port);
++		/* FIXME FIXME FIXME
++		 * i think CDP packets should still be received even if this
++		 * happens. maybe we do not need to put the device down, but
++		 * just set a special flag to drop all switched packets.
++		 * this applies to all places where NET_SWITCH_NOVLANFORIF
++		 * is tested
++		 */
++#endif
++		sw_res_port_flag(port, SW_PFL_DROPALL);
++	} else {
++		if(!trunk)
++			return -EEXIST;
++		sw_set_port_flag_rcu(port, SW_PFL_DROPALL);
++		sw_vdb_del_port(port->vlan, port);
++		sw_set_port_flag(port, SW_PFL_TRUNK);
++		sw_res_port_flag(port, SW_PFL_ACCESS);
++		fdb_cleanup_port(port, SW_FDB_MAC_DYNAMIC);
++		__sw_add_to_vlans(port);
++		/* Make sure it was not disabled by assigning a non-existent vlan */
++		sw_enable_port(port);
++		sw_res_port_flag(port, SW_PFL_DROPALL);
++	}
++	return 0;
++}
++
++static int sw_set_port_access(struct net_switch_port *port, int access) {
++	int status;
++
++	if (!port)
++		return -EINVAL;
++	if (port->flags & SW_PFL_NOSWITCHPORT)
++		return -EACCES;
++
++	if(access) {
++		/* cmd: switchport mode access */
++		if((status = sw_set_port_trunk(port, 0)))
++			return status;
++		sw_set_port_flag(port, SW_PFL_ACCESS);
++	} else {
++		/* cmd: no switchport mode access
++		 * Just reset the flag. Note that if we are in trunk mode,
++		 * then "no switchport mode access" leaves us in trunk mode.
++		 * Just resetting the flag is ok regardless of the current
++		 * access mode.
++		 */
++		sw_res_port_flag(port, SW_PFL_ACCESS);
++	}
++	return 0;
++}
++
++/* FIXME for fdb_cleanup_port()
++   1. what about igmp pseudo-fdb entries?
++   2. what about static macs?
++   3. what about macs on access vlan?
++ */
++static int sw_set_switchport(struct net_switch_port *port, int switchport) {
++	int status;
++
++	if (!port)
++		return -EINVAL;
++	if (port->flags & SW_PFL_NOSWITCHPORT) {
++		/* port is routed and we change it to switched */
++		if (!switchport)
++			return -EEXIST;
++		sw_set_port_flag_rcu(port, SW_PFL_DROPALL);
++		if (port->flags & SW_PFL_TRUNK)
++			__sw_add_to_vlans(port);
++		else {
++			status = sw_vdb_add_port(port->vlan, port);
++#if NET_SWITCH_NOVLANFORIF == 2
++			if(status)
++				sw_disable_port(port);
++#endif
++		}
++		sw_res_port_flag(port, SW_PFL_DROPALL);
++	} else {
++		/* port is switched and we change it to routed */
++		if (switchport)
++			return -EEXIST;
++		sw_set_port_flag_rcu(port, SW_PFL_DROPALL);
++		if (port->flags & SW_PFL_TRUNK)
++	        __sw_remove_from_vlans(port);
++		else
++			sw_vdb_del_port(port->vlan, port);
++		fdb_cleanup_port(port, SW_FDB_MAC_DYNAMIC);
++		/* FIXME FIXME FIXME
++		   - scoaterea portului din vlan-uri opreste flood-ul catre
++		     portul respectiv
++		   - stergerea mac-urilor dinamice opreste unicast catre
++		     portul respectiv
++		   - RAMANE UNICAST pe MAC STATIC!!! - la unicast ar trebui
++		     pusa si conditia de switched port inainte de a trimite
++			 pachetul atunci cand am gasit un mac care se potriveste
++		   - nu e clarificat multicast-ul -- ramane de vazut cum se
++		     va implementa igmp snooping
++		 */
++		sw_set_port_flag(port, SW_PFL_NOSWITCHPORT);
++		/* Make sure it was not disabled by assigning a non-existent vlan */
++		sw_enable_port(port);
++		sw_res_port_flag(port, SW_PFL_DROPALL);
++	}
++	return 0;
++}
++
++/* Change a port's bitmap of forbidden vlans and, if necessary,
++   make appropriate changes to the vlan database.
++ */
++static int sw_set_port_forbidden_vlans(struct net_switch_port *port,
++		unsigned char *forbidden_vlans) {
++	unsigned char *new = forbidden_vlans;
++	unsigned char *old = port->forbidden_vlans;
++	unsigned char mask;
++	int n, vlan = 0;
++
++	if (!port)
++		return -EINVAL;
++	if (port->flags & SW_PFL_NOSWITCHPORT)
++		return -EACCES;
++
++#ifdef NET_SWITCH_TRUNKDEFAULTVLANS
++	__sw_allow_default_vlans(forbidden_vlans);
++#endif
++	/* FIXME hardcoded 0 and 4095; normally we should forbid
++	   all vlans below SW_VLAN_MIN and above SW_VLAN_MAX
++	 */
++	sw_forbid_vlan(forbidden_vlans, 0);
++	sw_forbid_vlan(forbidden_vlans, 4095);
++	if(port->flags & SW_PFL_TRUNK) {
++		for(n = 0; n < SW_VLAN_BMP_NO; n++, old++, new++) {
++			for(mask = 1; mask; mask <<= 1, vlan++) {
++				if(!((*old ^ *new) & mask))
++					continue;
++				if(*new & mask)
++					sw_vdb_del_port(vlan, port);
++				else
++					sw_vdb_add_port(vlan, port);
++			}
++		}
++	}
++	memcpy(port->forbidden_vlans, forbidden_vlans, SW_VLAN_BMP_NO);
++	return 0;
++}
++
++/* Update a port's bitmap of forbidden vlans by allowing vlans from a
++   given bitmap of forbidden vlans. If necessary, make the appropriate
++   changes to the vlan database.
++ */
++static int sw_add_port_forbidden_vlans(struct net_switch_port *port,
++		unsigned char *forbidden_vlans) {
++	unsigned char bmp[SW_VLAN_BMP_NO];
++	unsigned char *p = bmp;
++	unsigned char *new = forbidden_vlans;
++	unsigned char *old = port->forbidden_vlans;
++	int n;
++
++	if (!port)
++		return -EINVAL;
++	if (port->flags & SW_PFL_NOSWITCHPORT)
++		return -EACCES;
++
++	for(n = 0; n < SW_VLAN_BMP_NO; n++, old++, new++, p++)
++		*p = *old & *new;
++	return sw_set_port_forbidden_vlans(port, bmp);
++}
++
++/* Update a port's bitmap of forbidden vlans by disallowing those vlans
++   that are allowed by a given bitmap (of forbidden vlans). If necessary,
++   make the appropriate changes to the vlan database.
++ */
++static int sw_del_port_forbidden_vlans(struct net_switch_port *port,
++		unsigned char *forbidden_vlans) {
++	unsigned char bmp[SW_VLAN_BMP_NO];
++	unsigned char *p = bmp;
++	unsigned char *new = forbidden_vlans;
++	unsigned char *old = port->forbidden_vlans;
++	int n;
++
++	if (!port)
++		return -EINVAL;
++	if (port->flags & SW_PFL_NOSWITCHPORT)
++		return -EACCES;
++
++	for(n = 0; n < SW_VLAN_BMP_NO; n++, old++, new++, p++)
++		*p = *old | ~*new;
++	return sw_set_port_forbidden_vlans(port, bmp);
++}
++
++static int __add_vlan_default(struct net_switch *sw, int vlan) {
++	int status;
++
++	if(sw_vdb_vlan_exists(sw, vlan))
++		return 0;
++	if((status = sw_vdb_add_vlan_default(sw, vlan)))
++		return status;
++	/* TODO Notification to userspace for the cli */
++	return 0;
++}
++
++/* Change a port's non-trunk vlan and make appropriate changes to the vlan
++   database if necessary.
++ */
++static int sw_set_port_vlan(struct net_switch_port *port, int vlan) {
++	int status;
++
++	if (!port)
++		return -EINVAL;
++	if (port->flags & SW_PFL_NOSWITCHPORT)
++		return -EACCES;
++	if(port->vlan == vlan)
++		return 0;
++
++	if(port->flags & SW_PFL_TRUNK) {
++		port->vlan = vlan;
++#if NET_SWITCH_NOVLANFORIF == 1
++		__add_vlan_default(port->sw, vlan);
++#endif
++	} else {
++		sw_set_port_flag_rcu(port, SW_PFL_DROPALL);
++		sw_vdb_del_port(port->vlan, port);
++		status = sw_vdb_add_port(vlan, port);
++		if(status) {
++#if NET_SWITCH_NOVLANFORIF == 1
++			status = __add_vlan_default(port->sw, vlan);
++			if(status) {
++				port->vlan = vlan;
++				smp_wmb();
++				sw_res_port_flag(port, SW_PFL_DROPALL);
++				return status;
++			}
++			status = sw_vdb_add_port(vlan, port);
++#elif NET_SWITCH_NOVLANFORIF == 2
++			sw_disable_port(port);
++#endif
++		}
++		port->vlan = vlan;
++		smp_wmb();
++		sw_res_port_flag(port, SW_PFL_DROPALL);
++	}
++	return 0;
++}
++
++static int sw_get_mac_loop(int hash_pos, struct swcfgreq *arg,
++		struct net_switch_port *port, int len) {
++	struct net_switch_fdb_entry *entry;
++	struct net_switch_mac mac;
++	int cmp_mac = !is_null_mac(arg->ext.mac.addr);
++	int vlan = arg->vlan;
++
++	list_for_each_entry_rcu(entry, &sw.fdb[hash_pos].entries, lh) {
++		if (cmp_mac && memcmp(arg->ext.mac.addr, entry->mac, ETH_ALEN))
++			continue;
++		if (vlan && vlan != entry->vlan)
++			continue;
++		if (port && port != entry->port)
++			continue;
++		if (!fdb_entry_match(entry->type, arg->ext.mac.type))
++			continue;
++		if (len + sizeof(struct net_switch_mac) > arg->buf.size) {
++			dbg("sw_get_mac_loop: insufficient buffer space\n");
++			len = -ENOMEM;
++			break;
++		}
++		memcpy(mac.addr, entry->mac, ETH_ALEN);
++		mac.type = entry->type;
++		mac.vlan = entry->vlan;
++		mac.ifindex = entry->port->dev->ifindex;
++		rcu_read_unlock();
++		if (copy_to_user(arg->buf.addr + len, &mac, sizeof(struct net_switch_mac))) {
++			rcu_read_lock();
++			dbg("copy_to_user failed (hash_pos=%d)\n", hash_pos);
++			len = -EFAULT;
++			break;
++		}
++		else 
++			rcu_read_lock();
++		len += sizeof(struct net_switch_mac);
++	}
++
++	return len;
++}
++
++static int sw_get_mac(struct swcfgreq *arg, struct net_switch_port *port) {
++	int i, ret = 0;
++
++	rcu_read_lock();
++	if (!is_null_mac(arg->ext.mac.addr)) 
++		ret = sw_get_mac_loop(sw_mac_hash(arg->ext.mac.addr), arg, port, ret);
++	else 
++		for (i=0; i<SW_HASH_SIZE; i++) {
++			ret = sw_get_mac_loop(i, arg, port, ret);
++			if (ret < 0)
++				break;
++		}
++	rcu_read_unlock();
++
++	return ret;
++}
++
++int sw_get_vdb(struct swcfgreq *arg, int vlan_id, char *vlan_desc) {
++	int size = 0;
++	struct net_switch_vdb entry;
++	int vlan, min = SW_MIN_VLAN, max = SW_MAX_VLAN;
++
++	if (vlan_id) {
++		if (sw_invalid_vlan(vlan_id))
++			return -EINVAL;
++		min = max = vlan_id;
++	}
++
++	for(vlan = min; vlan <= max; vlan++) {
++		rcu_read_lock();
++		if(sw.vdb[vlan] == NULL) {
++			rcu_read_unlock();
++			continue;
++		}
++		if (vlan_desc && strcmp(vlan_desc, sw.vdb[vlan]->name)) {
++			rcu_read_unlock();
++			continue;
++		}
++		entry.vlan = vlan;
++		strcpy(entry.name, sw.vdb[vlan]->name);
++		rcu_read_unlock();
++		push_to_user_buf(entry, arg, size);
++	}
++
++	return size;
++}
++
++int sw_getvlanif(struct swcfgreq *arg)
++{
++	int size = 0;
++	int ifindex;
++	struct net_switch_vdb_link *link;
++
++	dbg("sw_getvlanif, vlan=%d\n", arg->vlan);
++
++	if (sw_invalid_vlan(arg->vlan))
++		return -EINVAL;
++	if (sw.vdb[arg->vlan] == NULL)
++		return -ENOENT;
++
++	list_for_each_entry(link, &sw.vdb[arg->vlan]->non_trunk_ports, lh) {
++		if (sw_is_vif(link->port->dev))
++			continue;
++		ifindex = link->port->dev->ifindex;
++		push_to_user_buf(ifindex, arg, size);
++	}
++
++	return size;
++}
++
++int sw_getiflist(struct swcfgreq *arg)
++{
++	int size = 0;
++	struct net_switch_dev entry;
++	struct net_switch_port *port;
++
++	if (arg->ext.switchport & (SW_IF_SWITCHED | SW_IF_ROUTED))
++		list_for_each_entry(port, &sw.ports, lh) {
++			entry.type = port->flags & SW_PFL_NOSWITCHPORT ?
++				SW_IF_ROUTED : SW_IF_SWITCHED;
++			if (!(entry.type & arg->ext.switchport))
++				continue;
++			strncpy(entry.name, port->dev->name, IFNAMSIZ);
++			entry.ifindex = port->dev->ifindex;
++			entry.vlan = 0;
++			push_to_user_buf(entry, arg, size);
++		}
++
++	if (arg->ext.switchport & SW_IF_VIF) {
++		int i;
++		struct net_switch_vif_priv *vif_priv;
++
++		for (i = 0; i < SW_VIF_HASH_SIZE; i++)
++			list_for_each_entry(vif_priv, &sw.vif[i], lh) {
++				port = &vif_priv->bogo_port;
++				strncpy(entry.name, port->dev->name, IFNAMSIZ);
++				entry.ifindex = port->dev->ifindex;
++				entry.type = SW_IF_VIF;
++				entry.vlan = port->vlan;
++				push_to_user_buf(entry, arg, size);
++			}
++	}
++
++	return size;
++}
++
++int sw_getmrouters(struct swcfgreq *arg)
++{
++	struct net_switch_port *port;
++	struct net_switch_mrouter tmp;
++	unsigned char mask;
++	int i, size = 0;
++
++	list_for_each_entry(port, &sw.ports, lh) {
++		tmp.ifindex = port->dev->ifindex;
++		for(i = 0; i < SW_VLAN_BMP_NO; i++) {
++			if(!port->mrouters[i])
++				continue;
++			tmp.vlan = i*8;
++			for(mask = 1; mask; mask <<= 1, tmp.vlan++) {
++				if((port->mrouters[i] & mask)) {
++					push_to_user_buf(tmp, arg, size);
++					dbg("%s: adding (ifindex, vlan) = (%d, %d)\n",
++							__func__, tmp.ifindex, tmp.vlan);
++				}
++			}
++		}
++	}
++	dbg("%s: returning %d\n", __func__, size);
++	return size;
++}
++
++#define DEV_GET if(1) {\
++	if ((dev = dev_get_by_index(net, arg.ifindex)) == NULL) {\
++		err = -ENODEV;\
++		break;\
++	}\
++	do_put = 1;\
++}
++
++#define __PORT_GET if(1) {\
++	port = rcu_dereference(dev->sw_port);\
++	if(!port) {\
++		err = -EINVAL;\
++		break;\
++	}\
++}
++
++#define PORT_GET if(1) {\
++	DEV_GET;\
++	__PORT_GET;\
++}
++
++/* Handle "deviceless" ioctls. These ioctls are not specific to a certain
++   device; they control the switching engine as a whole.
++ */
++int sw_deviceless_ioctl(struct socket *sock, unsigned int cmd, void __user *uarg) {
++	struct net_device *dev = NULL, *rdev;
++	struct net_switch_port *port = NULL;
++	struct swcfgreq arg;
++	unsigned char bitmap[SW_VLAN_BMP_NO];
++	int err = -EINVAL;
++	int do_put = 0;
++	unsigned long age_time;
++	char vlan_desc[SW_MAX_VLAN_NAME+1];
++	struct net *net = &init_net;
++
++	if (cmd != SIOCSWCFG)
++		return -ENOIOCTLCMD;
++
++	if(!capable(CAP_NET_ADMIN))
++		return -EPERM;
++
++	if (copy_from_user(&arg, uarg, sizeof(arg)))
++		return -EFAULT;
++
++	memset(bitmap, 0xFF, SW_VLAN_BMP_NO);
++
++	switch(arg.cmd) {
++	case SWCFG_ADDIF:
++		DEV_GET;
++		err = sw_addif(dev);
++		break;
++	case SWCFG_DELIF:
++		DEV_GET;
++		err = sw_delif(dev);
++		break;
++	case SWCFG_ADDVLAN:
++		if (!strncpy_from_user(vlan_desc, arg.ext.vlan_desc, SW_MAX_VLAN_NAME)) {
++			err = -EFAULT;
++			break;
++		}
++		vlan_desc[SW_MAX_VLAN_NAME] = '\0';
++		err = sw_vdb_add_vlan(&sw, arg.vlan, vlan_desc);
++		break;
++	case SWCFG_DELVLAN:
++		if (sw_is_default_vlan(arg.vlan)) {
++			err = -EACCES;
++			break;
++		}
++		err = sw_vdb_del_vlan(&sw, arg.vlan);
++		break;
++	case SWCFG_RENAMEVLAN:
++		if (!strncpy_from_user(vlan_desc, arg.ext.vlan_desc, SW_MAX_VLAN_NAME)) {
++			err = -EFAULT;
++			break;
++		}
++		vlan_desc[SW_MAX_VLAN_NAME] = '\0';
++		err = sw_vdb_set_vlan_name(&sw, arg.vlan, vlan_desc);
++		break;
++	case SWCFG_ADDVLANPORT:
++		DEV_GET;
++		sw_allow_vlan(bitmap, arg.vlan);
++		err = sw_add_port_forbidden_vlans(rcu_dereference(dev->sw_port), bitmap);
++		break;
++	case SWCFG_DELVLANPORT:
++		DEV_GET;
++		/* use sw_allow_vlan here because sw_del_port_forbidden_vlans
++		   negates the mask
++		 */
++		sw_allow_vlan(bitmap, arg.vlan);	
++		err = sw_del_port_forbidden_vlans(rcu_dereference(dev->sw_port), bitmap);
++		break;
++	case SWCFG_SETACCESS:
++		DEV_GET;
++		err = sw_set_port_access(rcu_dereference(dev->sw_port), arg.ext.access);
++		break;
++	case SWCFG_SETTRUNK:
++		DEV_GET;
++		err = sw_set_port_trunk(rcu_dereference(dev->sw_port), arg.ext.trunk);
++		break;
++	case SWCFG_SETPORTVLAN:	
++		DEV_GET;
++		err = sw_set_port_vlan(rcu_dereference(dev->sw_port), arg.vlan);	
++		break;
++	case SWCFG_CLEARMACINT:
++		PORT_GET;
++		fdb_cleanup_port(port, SW_FDB_MAC_DYNAMIC);
++		err = 0;
++		break;
++	case SWCFG_SETAGETIME:
++		/* FIXME use constants for arg.ext.nsec range */
++		if (arg.ext.nsec < 10 || arg.ext.nsec > 1000000) { 
++			err = -EINVAL;
++			break;
++		}
++		atomic_set(&sw.fdb_age_time, arg.ext.nsec * HZ);
++		err = 0;
++		break;
++	case SWCFG_GETAGETIME:
++		age_time = atomic_read(&sw.fdb_age_time);
++		arg.ext.nsec = age_time / HZ;
++		err = 0;
++		if(copy_to_user(uarg, &arg, sizeof(arg))) {
++			err = -EFAULT;
++			break;
++		}
++		break;
++	case SWCFG_MACSTATIC:
++		PORT_GET;
++		/* FIXME: do we need to add multicast mac addresses from here ? */
++		if (is_mcast_mac(arg.ext.mac.addr)) {
++			err = -EINVAL;
++			break;
++		}
++		err = fdb_learn(arg.ext.mac.addr, port, arg.vlan, SW_FDB_STATIC);
++		break;
++	case SWCFG_DELMACSTATIC:
++		PORT_GET;
++		if (is_null_mac(arg.ext.mac.addr)) {
++			err = -EINVAL;
++			break;
++		}
++		err = fdb_del(&sw, arg.ext.mac.addr, port, arg.vlan, SW_FDB_MAC_STATIC) ? 0 : -ENOENT;
++		break;
++	case SWCFG_ADDVIF:
++		err = sw_vif_addif(&sw, arg.vlan, &rdev);
++		if (!err || err == -EEXIST) {
++			arg.ifindex = rdev->ifindex;
++			err = copy_to_user(uarg, &arg, sizeof(arg)) ? -EFAULT : err;
++		}
++		if (!err)
++			err = sw_vif_enable(rdev);
++		break;
++	case SWCFG_DELVIF:
++		err = sw_vif_delif(&sw, arg.vlan);
++		/* FIXME FIXME FIXME nu e un pic cam tarziu sa dam cu disable?
++		if (!err)
++			err = sw_vif_disable(&sw, arg.vlan);
++		*/
++		break;
++	case SWCFG_DISABLE_IF:
++		err = 0;
++		DEV_GET;
++
++		if (sw_is_vif(dev)) {
++			sw_vif_disable(dev);
++			break;
++		}
++
++		__PORT_GET;
++		sw_set_port_flag(port, SW_PFL_ADMDISABLED);
++		sw_disable_port(port);
++		break;
++	case SWCFG_ENABLE_IF:
++		err = 0;
++		DEV_GET;
++
++		if (sw_is_vif(dev)) {
++			sw_vif_enable(dev);
++			break;
++		}
++
++		__PORT_GET;
++		sw_res_port_flag(port, SW_PFL_ADMDISABLED);
++		sw_enable_port(port);
++		break;
++	case SWCFG_SETMROUTER:
++		PORT_GET;
++		if (arg.ext.mrouter)
++			sw_set_mrouter(port->mrouters, arg.vlan);
++		else
++			sw_reset_mrouter(port->mrouters, arg.vlan);
++		err = 0;
++		break;
++	case SWCFG_SETTRUNKVLANS:
++		PORT_GET;
++		if(copy_from_user(bitmap, arg.ext.bmp, SW_VLAN_BMP_NO)) {
++			err = -EFAULT;
++			break;
++		}
++		err = sw_set_port_forbidden_vlans(port, bitmap);
++		break;
++	case SWCFG_ADDTRUNKVLANS:
++		PORT_GET;
++		if(copy_from_user(bitmap, arg.ext.bmp, SW_VLAN_BMP_NO)) {
++			err = -EFAULT;
++			break;
++		}
++		err = sw_add_port_forbidden_vlans(port, bitmap);
++		break;
++	case SWCFG_DELTRUNKVLANS:
++		PORT_GET;
++		if(copy_from_user(bitmap, arg.ext.bmp, SW_VLAN_BMP_NO)) {
++			err = -EFAULT;
++			break;
++		}
++		err = sw_del_port_forbidden_vlans(port, bitmap);
++		break;
++	case SWCFG_SETIFDESC:
++		PORT_GET;
++		if(!strncpy_from_user(port->desc, arg.ext.iface_desc,
++					SW_MAX_PORT_DESC)) {
++			err = -EFAULT;
++			break;
++		}
++		port->desc[SW_MAX_PORT_DESC] = '\0';
++		err = 0;
++		break;
++	case SWCFG_GETIFCFG:
++		PORT_GET;
++		arg.ext.cfg.flags = port->flags;
++		arg.ext.cfg.access_vlan = port->vlan;
++		if(arg.ext.cfg.forbidden_vlans != NULL) {
++			if(copy_to_user(arg.ext.cfg.forbidden_vlans,
++						port->forbidden_vlans, SW_VLAN_BMP_NO)) {
++				err = -EFAULT;
++				break;
++			}
++		}
++		if(arg.ext.cfg.description != NULL) {
++			if(copy_to_user(arg.ext.cfg.description, port->desc,
++						strlen(port->desc) + 1)) {
++				err = -EFAULT;
++				break;
++			}
++		}
++		if(copy_to_user(uarg, &arg, sizeof(arg))) {
++			err = -EFAULT;
++			break;
++		}
++		err = 0;
++		break;
++	case SWCFG_GETIFTYPE:
++		DEV_GET;
++		do {
++			if (sw_is_vif(dev)) {
++				struct net_switch_vif_priv *priv = netdev_priv(dev);
++
++				arg.ext.switchport = SW_IF_VIF;
++				arg.vlan = priv->bogo_port.vlan;
++				break;
++			}
++			port = rcu_dereference(dev->sw_port);
++			if (!port) {
++				arg.ext.switchport = SW_IF_NONE;
++				break;
++			}
++			arg.ext.switchport = (port->flags & SW_PFL_NOSWITCHPORT) ?
++				SW_IF_ROUTED : SW_IF_SWITCHED;
++		} while (0);
++		if (copy_to_user(uarg, &arg, sizeof(arg))) {
++			err = -EFAULT;
++			break;
++		}
++		err = 0;
++		break;
++	case SWCFG_GETMAC:
++		/* the code in dev_new_index() is small and simple enough to
++		 * figure out that interface indexes are never <= 0; thus
++		 * using a value of 0 to disable filter-by-port is safe */
++		if (arg.ifindex)
++			PORT_GET;
++		err = sw_get_mac(&arg, port);
++		break;
++	case SWCFG_DELMACDYN:
++		/* the code in dev_new_index() is small and simple enough to
++		 * figure out that interface indexes are never <= 0; thus
++		 * using a value of 0 to disable filter-by-port is safe */
++		if (arg.ifindex) 
++			PORT_GET;
++	
++		if (port) {
++			err = fdb_cleanup_port(port, SW_FDB_MAC_DYNAMIC);
++			break;
++		}	
++		if (arg.vlan) {
++			err = fdb_cleanup_vlan(&sw, arg.vlan, SW_FDB_MAC_DYNAMIC);
++			break;
++		}
++		if (!is_null_mac(arg.ext.mac.addr))
++			err = fdb_del(&sw, arg.ext.mac.addr, port, arg.vlan, SW_FDB_MAC_DYNAMIC);
++		else 
++			err = fdb_cleanup_by_type(&sw, SW_FDB_MAC_DYNAMIC);
++		break;
++	case SWCFG_GETVDB:
++		if (arg.ext.vlan_desc != NULL &&
++				!strncpy_from_user(vlan_desc, arg.ext.vlan_desc, SW_MAX_VLAN_NAME)) {
++			err = -EFAULT;
++			break;
++		}
++		vlan_desc[SW_MAX_VLAN_NAME] = '\0';
++		err = sw_get_vdb(&arg, arg.vlan, arg.ext.vlan_desc == NULL ?
++				NULL : vlan_desc);
++		break;
++	case SWCFG_SETSWPORT:
++		PORT_GET;
++		err = sw_set_switchport(port, arg.ext.switchport);
++		break;
++	case SWCFG_GETIFLIST:
++		err = sw_getiflist(&arg);
++		break;
++	case SWCFG_GETVLANIFS:
++		err = sw_getvlanif(&arg);
++		break;
++	case SWCFG_GETMROUTERS:
++		err = sw_getmrouters(&arg);
++		break;
++	case SWCFG_SETIGMPS:
++		err = 0;
++		if(arg.vlan == 0){
++			/*global igmp flag*/
++			int i;
++			sw.igmp_snooping = arg.ext.snooping;
++			for(i=SW_MIN_VLAN; i<=SW_MAX_VLAN; i++)
++				if(sw.vdb[i])
++					sw.vdb[i]->igmp_snooping = arg.ext.snooping;
++			break;
++		}
++		/*per vlan igmp flag*/
++		if(sw_vdb_vlan_exists(&sw, arg.vlan))
++			sw.vdb[arg.vlan]->igmp_snooping = arg.ext.snooping;
++		else
++			err = -EINVAL;
++		break;
++	case SWCFG_GETIGMPS:
++		err = 0;
++		arg.ext.snooping = sw.igmp_snooping;
++		if (arg.buf.addr) {
++			unsigned char map[SW_VLAN_BMP_NO];
++			int i;
++
++			memset(map, 0, sizeof(map));
++			for (i = SW_MIN_VLAN; i <= SW_MAX_VLAN; i++) {
++				if (!sw.vdb[i])
++					continue;
++				/* set bits for vlans with *disabled* igmp; this way
++				 * userspace config builder will know that (a) vlan
++				 * exists and (b) vlan has igmp snooping disabled */
++				if (!sw.vdb[i]->igmp_snooping)
++					sw_bitmap_set(map, i);
++			}
++			if (copy_to_user(arg.buf.addr, map, sizeof(map))) {
++				err = -EFAULT;
++				break;
++			}
++		}
++		if (copy_to_user(uarg, &arg, sizeof(arg)))
++			err = -EFAULT;
++		break;
++	}
++
++	if (do_put)
++		dev_put(dev);
++
++	return err;
++}
++
++#undef DEV_GET
++#undef PORT_GET
+diff --git a/net/switch/sw_private.h b/net/switch/sw_private.h
+new file mode 100644
+index 0000000..f5d44bc
+--- /dev/null
++++ b/net/switch/sw_private.h
+@@ -0,0 +1,301 @@
++/*
++ *    This file is part of Linux Multilayer Switch.
++ *
++ *    Linux Multilayer Switch is free software; you can redistribute it and/or
++ *    modify it under the terms of the GNU General Public License as published
++ *    by the Free Software Foundation; either version 2 of the License, or
++ *    (at your option) any later version.
++ *
++ *    Linux Multilayer Switch is distributed in the hope that it will be 
++ *    useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *    GNU General Public License for more details.
++ *
++ *    You should have received a copy of the GNU General Public License
++ *    along with Linux Multilayer Switch; if not, write to the Free Software
++ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++ */
++
++#ifndef _SW_PRIVATE_H
++#define _SW_PRIVATE_H
++
++#include <linux/netdevice.h>
++#include <linux/rculist.h>
++#include <linux/wait.h>
++#include <linux/spinlock.h>
++#include <linux/net_switch.h>
++#include <asm/atomic.h>
++
++#ifdef DEBUG
++#define dbg(text,par...) printk(KERN_DEBUG text, ##par)
++#else
++#define dbg(par...)
++#endif
++#define SW_HASH_SIZE_BITS 12
++#define SW_HASH_SIZE (1 << SW_HASH_SIZE_BITS)
++
++/* Hash bucket */
++struct net_switch_bucket {
++	/*
++		List of fdb_entries
++	*/
++	struct list_head entries;
++
++	/* To avoid adding a fdb_entry twice we protect each bucket
++	   with a spinlock. Since each bucket has its own lock, this
++	   doesn't lead to a bottleneck.
++	 */
++	spinlock_t lock;
++};
++
++struct net_switch_vdb_entry {
++	char *name;
++	unsigned char igmp_snooping;
++	struct list_head trunk_ports;
++	struct list_head non_trunk_ports;
++};
++
++struct net_switch_port {
++	/* Linking with other ports in a list */
++	struct list_head lh;
++
++	/* Physical device associated with this port */
++	struct net_device *dev;
++
++	/* Pointer to the switch owning this port */
++	struct net_switch *sw;
++
++	unsigned int flags;
++	int vlan;
++
++	/* Bitmap of forbidden vlans for trunk ports.
++	   512 * 8 bits = 4096 bits => 4096 vlans
++	 */
++	unsigned char *forbidden_vlans;
++
++	/* Bitmap for mrouter ports per vlan.
++	   512 * 8 bits = 4096 bits => 4096 vlans
++	 */
++	unsigned char *mrouters;
++
++	/* Port description */
++	char desc[SW_MAX_PORT_DESC + 1];
++
++	/* List heads for switch sockets */
++	struct list_head sock_cdp;
++	struct list_head sock_vtp;
++	struct list_head sock_rstp;
++};
++
++struct net_switch_vif_priv {
++	struct list_head lh;
++	struct net_device_stats stats;
++	struct net_switch_port bogo_port;
++};
++
++/* Hashing constant for the vlan virtual interfaces hash */
++#define SW_VIF_HASH_SIZE 97
++
++struct net_switch {
++	/* List of all ports in the switch */
++	struct list_head ports;
++
++	/* Switch forwarding database (hashtable) */
++	struct net_switch_bucket fdb[SW_HASH_SIZE];
++
++	/* Vlan database */
++	struct net_switch_vdb_entry * volatile vdb[SW_MAX_VLAN + 1];
++
++	/* Forwarding database entry aging time */
++	atomic_t fdb_age_time;
++	
++	/* Vlan virtual interfaces */
++	struct list_head vif[SW_VIF_HASH_SIZE];
++	
++	/* Cache of forwarding database entries */
++	struct kmem_cache *fdb_cache;
++
++    /* Cache of link structures */
++    struct kmem_cache *vdb_cache;
++
++	/* Template for virtual interfaces mac */
++	unsigned char vif_mac[ETH_ALEN];
++
++	/* Global IGMP snooping enable flag */
++	unsigned char igmp_snooping;
++};
++
++
++struct net_switch_vdb_link {
++	struct list_head lh;
++	struct net_switch_port *port;
++};
++
++#define sw_disable_port_rcu(port) do {\
++	sw_disable_port(port);\
++	synchronize_sched();\
++} while(0)
++
++#define sw_enable_port_rcu(port) do {\
++	sw_enable_port(port);\
++	synchronize_sched();\
++} while(0)
++
++#define sw_set_port_flag(port,flag) ((port)->flags |= (flag))
++#define sw_res_port_flag(port,flag) ((port)->flags &= ~(flag))
++
++#define sw_set_port_flag_rcu(port, flag) do {\
++	sw_set_port_flag(port, flag);\
++	synchronize_sched();\
++} while(0)
++
++#define sw_res_port_flag_rcu(port, flag) do {\
++	sw_res_port_flag(port, flag);\
++	synchronize_sched();\
++} while(0)
++
++/* Hash Entry */
++struct net_switch_fdb_entry {
++	struct list_head lh;
++	unsigned char mac[ETH_ALEN];
++	unsigned char type;
++	int vlan;
++	struct net_switch_port *port;
++	struct net_switch_bucket *bucket;
++	struct timer_list age_timer;
++	struct rcu_head rcu;
++	unsigned long stamp;
++};
++
++struct skb_extra {
++	int vlan;
++	int has_vlan_tag;
++};
++
++#define sw_port_forbidden_vlan(port, vlan) sw_forbidden_vlan((port)->forbidden_vlans, vlan)
++
++extern struct net_switch sw;
++
++static __inline__ int sw_mac_hash(const unsigned char *mac) {
++	unsigned long x;
++
++	x = mac[0];
++	x = (x << 2) ^ mac[1];
++	x = (x << 2) ^ mac[2];
++	x = (x << 2) ^ mac[3];
++	x = (x << 2) ^ mac[4];
++	x = (x << 2) ^ mac[5];
++
++	x ^= x >> 8;
++
++	return x & (SW_HASH_SIZE - 1);
++}
++
++static __inline__ int sw_vlan_hash(const int vlan) {
++	return vlan % SW_VIF_HASH_SIZE; 
++}
++
++#define fdb_entry_match(entry_type, mask_value) (((entry_type) & ((mask_value) >> 8)) == ((mask_value) & 0xff))
++
++/* sw.c */
++extern void dump_packet(const struct sk_buff *);
++extern void sw_enable_port(struct net_switch_port *);
++extern void sw_disable_port(struct net_switch_port *);
++extern void sw_device_up(struct net_device *);
++extern void sw_device_down(struct net_device *);
++
++/* sw_fdb.c */
++extern void sw_fdb_init(struct net_switch *);
++extern int fdb_cleanup_port(struct net_switch_port *, int);
++extern int fdb_cleanup_vlan(struct net_switch *, int, int);
++extern int fdb_cleanup_by_type(struct net_switch *, int);
++extern int fdb_learn(unsigned char *, struct net_switch_port *, int, int);
++extern int fdb_del(struct net_switch *, unsigned char *,
++		struct net_switch_port *, int, int);
++extern int fdb_lookup(struct net_switch_bucket *, unsigned char *,
++	int, struct net_switch_fdb_entry **);
++extern void sw_fdb_exit(struct net_switch *);
++
++/* sw_vdb.c */
++extern int sw_vdb_add_vlan(struct net_switch *, int, char *);
++extern int sw_vdb_add_vlan_default(struct net_switch *, int);
++extern int sw_vdb_del_vlan(struct net_switch *, int);
++extern int sw_vdb_set_vlan_name(struct net_switch *, int, char *);
++extern void sw_vdb_init(struct net_switch *);
++extern void sw_vdb_exit(struct net_switch *);
++extern int sw_vdb_add_port(int, struct net_switch_port *);
++extern int sw_vdb_del_port(int, struct net_switch_port *);
++
++#define sw_vdb_vlan_exists(sw, vlan) \
++	(sw_valid_vlan(vlan) && (sw)->vdb[vlan])
++
++/* sw_proc.c */
++extern int init_switch_proc(void);
++extern void cleanup_switch_proc(void);
++
++/* sw_ioctl.c */
++extern int sw_delif(struct net_device *);
++extern int sw_deviceless_ioctl(struct socket *, unsigned int, void __user *);
++extern void dump_mem(void *, int);
++
++#define push_to_user_buf(__entry, __arg, __size) do {\
++	if (__size + sizeof(__entry) > (__arg)->buf.size)\
++		return -ENOMEM;\
++	if (copy_to_user((__arg)->buf.addr + __size, &(__entry), sizeof(__entry)))\
++		return -EFAULT;\
++	__size += sizeof(__entry);\
++} while (0)
++
++
++#define VLAN_TAG_BYTES 4
++
++/* sw_forward.c */
++extern int sw_forward(struct net_switch_port *,
++	struct sk_buff *, struct skb_extra *);
++
++/* sw_vif.c */
++extern struct net_device *sw_vif_find(struct net_switch *, int);
++extern int sw_vif_addif(struct net_switch *, int, struct net_device **);
++extern int sw_vif_delif(struct net_switch *, int);
++extern int sw_vif_enable(struct net_device *);
++extern int sw_vif_disable(struct net_device *);
++extern void sw_vif_cleanup(struct net_switch *);
++extern int sw_is_vif(struct net_device *);
++static __inline__ void sw_vif_rx(struct sk_buff *skb, int pkt_type, struct net_device *dev) {
++	struct net_switch_vif_priv *priv;
++
++	skb->pkt_type = pkt_type;
++	skb->dev = dev;
++#ifdef CONFIG_XEN
++	/* Packets that come from real devices have ip_summed set to
++	   either CHECKSUM_COMPLETE (usual case) or CHECKSUM_NONE
++	   (the harware/driver failed to checksum the packet). 
++
++	   Packets that come from xen VIFs have ip_summed set to
++	   CHECKSUM_PARTIAL hoping that it can be summed in dom0 by
++	   the nic hardware. Fortunately, the Xen crew bothered
++	   enough to change the whole ip stack, so packets with
++	   ip_summed == CHECKSUM_PARTIAL are accepted by the local
++	   stack even if their checksum is broken (you will see them
++	   as being broken with tcpdump on vlanX, though).
++	   */
++#ifdef DEBUG
++	if (skb->ip_summed == CHECKSUM_PARTIAL) {
++		dbg("%s: fixing ip checksum\n", __func__);
++	}
++#endif
++#endif
++	priv = netdev_priv(skb->dev);
++	priv->stats.rx_packets++;
++	priv->stats.rx_bytes += skb->data_len;
++	dbg("%s: skb=0x%p headroom=%d (head=0x%p data=0x%p) "
++			"pkt_type=%d\n", __func__,
++			skb, skb->data - skb->head, skb->head, skb->data,
++			skb->pkt_type);
++	netif_receive_skb(skb);
++}
++
++/* sw_socket.c */
++extern int sw_socket_filter(struct sk_buff *, struct net_switch_port *);
++
++#endif
+diff --git a/net/switch/sw_proc.c b/net/switch/sw_proc.c
+new file mode 100644
+index 0000000..fd38a68
+--- /dev/null
++++ b/net/switch/sw_proc.c
+@@ -0,0 +1,242 @@
++/*
++ *    This file is part of Linux Multilayer Switch.
++ *
++ *    Linux Multilayer Switch is free software; you can redistribute it and/or
++ *    modify it under the terms of the GNU General Public License as published
++ *    by the Free Software Foundation; either version 2 of the License, or
++ *    (at your option) any later version.
++ *
++ *    Linux Multilayer Switch is distributed in the hope that it will be 
++ *    useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *    GNU General Public License for more details.
++ *
++ *    You should have received a copy of the GNU General Public License
++ *    along with Linux Multilayer Switch; if not, write to the Free Software
++ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++ */
++
++#include <linux/proc_fs.h>
++
++#include "sw_private.h"
++#include "sw_proc.h"
++
++#define SCR_RIGHT_MAX 70
++#define INITIAL_OFFSET 22
++
++static struct proc_dir_entry *switch_dir, *iface_file,
++							 *mac_file, *vlan_file, *vif_file;
++
++
++static int read_vlan_bitmap(char *page, struct net_switch_port *port, int initial_offset) {
++	int i, vlan, min, max, mask, count;
++	int enabled=0;
++	int offset = initial_offset;
++	
++	min = max = vlan = count = 0;
++	
++	for (i=0; i<SW_VLAN_BMP_NO; i++) {
++		for (mask=0x01; mask < 0x100; mask<<=1, vlan++) {
++			if ((port->forbidden_vlans[i] & mask) && enabled) {
++				if (offset > initial_offset) offset+=sprintf(page+count+offset, ",");
++				if (offset > SCR_RIGHT_MAX) {
++					count+=offset;
++					count+=sprintf(page+count, "\n");
++					for (offset=0; offset<initial_offset; )
++						offset+=sprintf(page+count+offset," ");
++				}
++				if (max - min > 1) 
++					offset += sprintf(page+count+offset, "%d-%d", min, max);
++				else if (max - min == 1) 
++					offset += sprintf(page+count+offset, "%d,%d", min, max);
++				else 
++					offset += sprintf(page+count+offset, "%d", min);
++				enabled = 0;
++			}
++			else if (! (port->forbidden_vlans[i] & mask)) {
++				if (!enabled) {
++					min = max = vlan;
++					enabled = 1;
++				}
++				else {
++					max = vlan;
++				}
++			}
++		}
++	}
++
++	if (! (port->forbidden_vlans[SW_VLAN_BMP_NO-1] & 0x80)) {
++		if (offset > initial_offset) offset+=sprintf(page+count+offset, ",");
++		if (offset > SCR_RIGHT_MAX) {
++			count+=offset;
++			count+=sprintf(page+count, "\n");
++			for (offset=0; offset<initial_offset;)
++				offset+=sprintf(page+count+offset," ");
++		}
++		if (max - min > 1) 
++			offset += sprintf(page+count+offset, "%d-%d", min, max);
++		else if (max - min == 1)
++			offset += sprintf(page+count+offset, "%d,%d", min, max);
++		else 
++			offset += sprintf(page+count+offset, "%d", min);
++	}
++
++	count+=offset;
++
++	return count;
++}
++
++static int proc_read_ifaces(char *page, char **start,
++		off_t off, int count,
++		int *eof, void *data) {
++		
++	struct net_switch_port *port;
++	int len = 0;
++	
++	len += sprintf(page, "Port  Trunk  Enabled  VLAN\n"
++		"----  -----  -------  ----\n");
++
++	rcu_read_lock();
++	list_for_each_entry(port, &sw.ports, lh) {
++		len+= sprintf(page+len, "%4s  %5d  %7d  ",
++			port->dev->name, (port->flags & SW_PFL_TRUNK)?1:0, 
++			!(port->flags & SW_PFL_DISABLED));
++		if (port->flags & SW_PFL_TRUNK) {
++			len += read_vlan_bitmap(page+len-INITIAL_OFFSET, port, INITIAL_OFFSET);
++			len -= INITIAL_OFFSET;
++			len += sprintf(page+len, "\n");
++		}
++		else 
++			len += sprintf(page+len, "%-4d\n", port->vlan);
++	}
++	rcu_read_unlock();
++	return len;
++}
++
++static int proc_read_mac(char *page, char **start,
++		off_t off, int count,
++		int *eof, void *data) {
++		
++	struct net_switch_fdb_entry *entry;	
++	int len = 0;
++	int i;
++
++	len += sprintf(page, "Destination Address  Address Type  VLAN  Destination Port\n"
++		"-------------------  ------------  ----  ----------------\n");
++	rcu_read_lock();
++	for (i=0; i<SW_HASH_SIZE; i++) {
++		list_for_each_entry_rcu(entry, &sw.fdb[i].entries, lh) {
++			len+=sprintf(page+len, "%02x%02x.%02x%02x.%02x%02x       "
++				"%12s  %4d  %s\n",
++				entry->mac[0], entry->mac[1], entry->mac[2],
++				entry->mac[3], entry->mac[4], entry->mac[5],
++				(entry->type & SW_FDB_STATIC)? "Static": "Dynamic",
++				entry->vlan,
++				entry->port->dev->name
++				);
++		}
++	}
++	rcu_read_unlock();
++	
++	return len;
++}
++
++static int proc_read_vlan(char *page, char **start,
++		off_t off, int count,
++		int *eof, void *data) {
++		
++	int len, vlan;
++	struct net_switch_vdb_link *link;
++	
++	len = sprintf(page, "VLAN Name                             Status    Ports\n");
++	len += sprintf(page+len, "---- -------------------------------- --------- "
++		"-------------------------------\n");
++	
++	rcu_read_lock();
++
++	for (vlan = SW_MIN_VLAN; vlan <= SW_MAX_VLAN; vlan++) {
++		if (! sw.vdb[vlan]) continue;
++		len += sprintf(page+len, "%-4d %-32s active    ", vlan, sw.vdb[vlan]->name);
++		/* FIXME: functie de listat porturile paginat */
++		list_for_each_entry(link, &sw.vdb[vlan]->trunk_ports, lh) {
++			len += sprintf(page+len,"%s ", link->port->dev->name);
++		}
++		list_for_each_entry(link, &sw.vdb[vlan]->non_trunk_ports, lh) {
++			if (!link->port->dev->sw_port) continue;
++			len += sprintf(page+len,"%s ", link->port->dev->name);
++		}
++		len += sprintf(page+len, "\n");
++	}
++	
++	rcu_read_unlock();
++	
++	return len;	
++}	
++
++static int proc_read_vif(char *page, char **start,
++		off_t off, int count,
++		int *eof, void *data) {
++	int len = 0, vlan;
++
++	for (vlan=SW_MIN_VLAN; vlan<=SW_MAX_VLAN; vlan++) {
++		if (sw_vif_find(&sw, vlan))
++			len += sprintf(page+len, "vlan%d\n", vlan);
++	}
++	return len;
++}	
++
++int init_switch_proc(void) {
++
++	/* Create our own directory under /proc/net */
++	switch_dir = proc_net_mkdir(&init_net, SW_PROCFS_DIR, init_net.proc_net);
++	if (!switch_dir)
++		return -ENOMEM;
++
++	/*
++	   Create the ifaces file, which lists information
++	   about the interfaces added to switch
++	 */
++	iface_file = create_proc_read_entry(SW_PROCFS_IFACES, 0644,
++			switch_dir, proc_read_ifaces, NULL);
++	if (!iface_file) {
++		proc_net_remove(&init_net, SW_PROCFS_DIR);
++		return -ENOMEM;
++	}
++
++	mac_file = create_proc_read_entry(SW_PROCFS_MAC, 0644,
++			switch_dir, proc_read_mac, NULL);
++	if (!mac_file) {
++		remove_proc_entry(SW_PROCFS_IFACES, switch_dir);
++		proc_net_remove(&init_net, SW_PROCFS_DIR);
++		return -ENOMEM;
++	}
++	
++	vlan_file = create_proc_read_entry(SW_PROCFS_VLAN, 0644,
++			switch_dir, proc_read_vlan, NULL);
++	if (!vlan_file) {
++		remove_proc_entry(SW_PROCFS_IFACES, switch_dir);
++		remove_proc_entry(SW_PROCFS_MAC, switch_dir);
++		proc_net_remove(&init_net, SW_PROCFS_DIR);
++		return -ENOMEM;
++	}
++
++	vif_file = create_proc_read_entry(SW_PROCFS_VIF, 0644,
++			switch_dir, proc_read_vif, NULL);
++	if (!vif_file) {
++		remove_proc_entry(SW_PROCFS_IFACES, switch_dir);
++		remove_proc_entry(SW_PROCFS_MAC, switch_dir);
++		remove_proc_entry(SW_PROCFS_VLAN, switch_dir);
++		proc_net_remove(&init_net, SW_PROCFS_DIR);
++	}
++
++	dbg("sw_proc initialized\n");
++	return 0;
++}
++
++void cleanup_switch_proc(void) {
++	remove_proc_entry(SW_PROCFS_IFACES, switch_dir);
++	remove_proc_entry(SW_PROCFS_MAC, switch_dir);
++	remove_proc_entry(SW_PROCFS_VLAN, switch_dir);
++	remove_proc_entry(SW_PROCFS_VIF, switch_dir);
++	proc_net_remove(&init_net, SW_PROCFS_DIR);
++}
+diff --git a/net/switch/sw_proc.h b/net/switch/sw_proc.h
+new file mode 100644
+index 0000000..a7226fe
+--- /dev/null
++++ b/net/switch/sw_proc.h
+@@ -0,0 +1,30 @@
++/*
++ *    This file is part of Linux Multilayer Switch.
++ *
++ *    Linux Multilayer Switch is free software; you can redistribute it and/or
++ *    modify it under the terms of the GNU General Public License as published
++ *    by the Free Software Foundation; either version 2 of the License, or
++ *    (at your option) any later version.
++ *
++ *    Linux Multilayer Switch is distributed in the hope that it will be 
++ *    useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *    GNU General Public License for more details.
++ *
++ *    You should have received a copy of the GNU General Public License
++ *    along with Linux Multilayer Switch; if not, write to the Free Software
++ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++ */
++
++#ifndef _SW_PROC_H
++#define _SW_PROC_H
++
++#include "sw_private.h"
++
++#define SW_PROCFS_DIR "switch"
++#define SW_PROCFS_IFACES "ifaces"
++#define SW_PROCFS_MAC "mac"
++#define SW_PROCFS_VLAN "vlan"
++#define SW_PROCFS_VIF "vif"
++
++#endif
+diff --git a/net/switch/sw_socket.c b/net/switch/sw_socket.c
+new file mode 100644
+index 0000000..31666ba
+--- /dev/null
++++ b/net/switch/sw_socket.c
+@@ -0,0 +1,556 @@
++/*
++ *    This file is part of Linux Multilayer Switch.
++ *
++ *    Linux Multilayer Switch is free software; you can redistribute it and/or
++ *    modify it under the terms of the GNU General Public License as published
++ *    by the Free Software Foundation; either version 2 of the License, or
++ *    (at your option) any later version.
++ *
++ *    Linux Multilayer Switch is distributed in the hope that it will be 
++ *    useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *    GNU General Public License for more details.
++ *
++ *    You should have received a copy of the GNU General Public License
++ *    along with Linux Multilayer Switch; if not, write to the Free Software
++ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++ */
++
++#include <linux/types.h>
++#include <linux/socket.h>
++#include <linux/skbuff.h>
++#include <net/protocol.h>
++#include <net/sock.h>
++
++#include "sw_private.h"
++
++/* This implements the PF_SWITCH protocol family that is used by user space
++ * daemons (such as cdpd) to send and receive protocol-specific raw packets.
++ *
++ * We prefer this over PF_PACKET and libpcap/libnet because we have to
++ * detect and filter these packets anyway in the switching engine. By using
++ * our custom socket implementation, we can "send" these packets to user
++ * space instead of just dropping them.
++ *
++ * This implementation is strongly inspired from PF_PACKET implementation,
++ * in net/packet/af_packet.c.
++ */
++
++DEFINE_MUTEX(sw_ioctl_mutex);
++
++/* FIXME: maybe we should move this to a header file */
++#define ETH_HDLC_CDP 0x2000
++#define ETH_HDLC_VTP 0x2004
++
++/* Custom structure that wraps the kernel "sock" struct. We use it to be
++ * able to add implementation-specific data to the socket structure.
++ */
++struct switch_sock {
++	/* struct sock has to be the first member of switch_sock to keep
++	 * consistency with the rest of the kernel */
++	struct sock				sk;
++
++	/* implementation-specific fields follow */
++	int						proto;			/* socket protocol number */
++	struct list_head		port_chain;		/* link to port list of sockets */
++	struct net_switch_port	*port;			/* required for sendmsg() */
++};
++
++static inline struct switch_sock *sw_sk(struct sock *sk) {
++	return (struct switch_sock *)sk;
++}
++
++/* Enqueue a sk_buff to a socket receive queue.
++ */
++static int sw_socket_enqueue(struct sk_buff *skb, struct net_device *dev, struct switch_sock *sw_sock) {
++	struct sock *sk = &sw_sock->sk;
++
++	if (skb->pkt_type == PACKET_LOOPBACK)
++		goto skb_unhandled;
++
++	skb->dev = dev;
++
++	if (atomic_read(&sk->sk_rmem_alloc) + skb->truesize >=
++			(unsigned)sk->sk_rcvbuf)
++		goto skb_unhandled;
++
++	if (dev->header_ops) {
++		if (sk->sk_type != SOCK_DGRAM)
++			skb_push(skb, skb->data - skb_mac_header(skb));
++		else if (skb->pkt_type == PACKET_OUTGOING)
++			skb_pull(skb, skb_network_offset(skb));
++	}
++
++	/* clone the skb if others we're sharing it with others  */
++	if (skb_shared(skb)) {
++		struct sk_buff *nskb = skb_clone(skb, GFP_ATOMIC);
++
++		if (nskb == NULL)
++			goto skb_unhandled;
++
++		skb = nskb;
++	}
++
++	skb_set_owner_r(skb, sk);
++	skb->dev = NULL;
++	skb_dst_drop(skb);
++
++	nf_reset(skb);
++
++	/* queue the skb in the socket recieve queue */
++	spin_lock(&sk->sk_receive_queue.lock);
++	dbg("enqueuing skb=%p to sk_receive_queue=%p\n", skb, &sk->sk_receive_queue);
++	__skb_queue_tail(&sk->sk_receive_queue, skb);
++	spin_unlock(&sk->sk_receive_queue.lock);
++
++	/* notify blocked reader that data is available */
++	sk->sk_data_ready(sk, skb->len);
++	return 1;
++
++skb_unhandled:
++	kfree_skb(skb);
++	return 0;
++}
++
++static unsigned char cdp_vtp_dst[6] = {0x01, 0x00, 0x0c, 0xcc, 0xcc, 0xcc};
++static unsigned char filter_paranoia[5] = {0xaa, 0x03, 0x00, 0x00, 0x0c};
++/*                                          S    N C F \______  ______/
++ *                                          S    e o i        \/
++ *                                          A    t n e   Organization
++ *                                          P    W t l    Identifier
++ *                                               a r d     (CISCO)
++ *                                               r o
++ *                                               e l
++ */
++
++/* Socket filter: all packets are filtered through this function.
++ * If we recognize a protocol we're interested in, we enqueue the
++ * socket buffer to the appropriate switch socket and return non
++ * zero value, so the packet doesn't get in the forwarding algorithm.
++ */
++int sw_socket_filter(struct sk_buff *skb, struct net_switch_port *port) {
++	int handled = 0;
++	struct switch_sock *sw_sk; 
++
++	/* RSTP frames can be identified by having both the DSAP and SSAP fields
++	 * equal to 0x42. The Control field must also equal 0x03.
++	 * The multicast address is 01:80:C2:00:00:00 */
++	if (skb->data[0] == 0x42 && skb->data[1] == 0x42 && skb->data[2] == 0x03) {
++		dbg("Identified RSTP frame on %s\n", port->dev->name);
++		list_for_each_entry_rcu(sw_sk, &port->sock_rstp, port_chain) {
++			atomic_inc(&skb->users);
++			handled |= sw_socket_enqueue(skb, port->dev, sw_sk);
++		}
++		goto out;
++	}
++
++	/* First identify SNAP frames. See specs/ether_frame_formats.html for
++	 * details */
++	if(skb->len >= port->dev->mtu || skb->data[0] != 0xaa)
++		goto out;
++	
++#ifdef SW_SOCK_FILTER_PARANOIA
++	/* Also check SSAP, Control Field, and Organization ID */
++	if(memcmp(filter_paranoia, skb->data + 1, sizeof(filter_paranoia)))
++		goto out;
++#endif
++	
++	/* Both CDP and VTP frames are sent to a specific multicast address */
++	if(memcmp(cdp_vtp_dst, skb_mac_header(skb), sizeof(cdp_vtp_dst)))
++		goto out;
++
++	/* Check for HDLC protocol type (offset 6 within LLC field) */
++	switch(ntohs(*(short *)(skb->data + 6))) {
++	case ETH_HDLC_CDP:
++		dbg("Identified CDP frame on %s\n", port->dev->name);
++		list_for_each_entry_rcu(sw_sk, &port->sock_cdp, port_chain) {
++			/* Be nice and increase the usage count on this skb */
++			atomic_inc(&skb->users);
++			handled |= sw_socket_enqueue(skb, port->dev, sw_sk);
++		}
++		break;
++	case ETH_HDLC_VTP:
++		dbg("Identified VTP frame on %s\n", port->dev->name);
++		list_for_each_entry_rcu(sw_sk, &port->sock_vtp, port_chain) {
++			/* Be nice and increase the usage count on this skb */
++			atomic_inc(&skb->users);
++			handled |= sw_socket_enqueue(skb, port->dev, sw_sk);
++			/* FIXME VTP frames must be forwarded when we are transparent */
++		}
++		break;
++	}
++out:
++	return handled;
++}
++
++/* Almost copy-paste from af_packet.c */
++static void sw_sock_destruct(struct sock *sk) {
++	dbg("sw_sock_destruct, sk=%p\n", sk);
++	WARN_ON(atomic_read(&sk->sk_rmem_alloc));
++	WARN_ON(atomic_read(&sk->sk_wmem_alloc));
++
++	if (!sock_flag(sk, SOCK_DEAD)) {
++		dbg("Attempt to release alive switch socket: %p\n", sk);
++		return;
++	}
++}
++
++static struct proto switch_proto = {
++	.name = "SWITCH",
++	.owner = THIS_MODULE,
++	.obj_size = sizeof(struct switch_sock)
++};
++
++static const struct proto_ops sw_sock_ops;
++
++static int sw_sock_create(struct net *net, struct socket *sock, int protocol) {
++	struct sock *sk;
++	struct switch_sock *sws;
++
++	dbg("sw_sock_create(sock=%p), proto=%d\n", sock, protocol);
++	if(!capable(CAP_NET_RAW))
++		return -EPERM;
++	if(sock->type != SOCK_RAW)
++		return -ESOCKTNOSUPPORT;
++	if(protocol)
++		return -ESOCKTNOSUPPORT;
++
++	sock->state = SS_UNCONNECTED;
++
++	sk = sk_alloc(net, PF_SWITCH, GFP_KERNEL, &switch_proto);
++	if(sk == NULL)
++		return -ENOBUFS;
++
++	sock->ops = &sw_sock_ops;
++	sock_init_data(sock, sk);
++
++	sws = sw_sk(sk);
++	sk->sk_family = PF_SWITCH;
++	sws->proto = 0;
++
++	sk->sk_destruct = sw_sock_destruct;
++	dbg("sk_sock_create, created sk %p\n", sk);
++
++	return 0;
++}
++
++static int bind_switch_port(struct switch_sock *sws, struct net_switch_port *port, int proto) {
++	struct list_head *lh;
++
++	switch(proto) {
++	case ETH_P_CDP:
++		lh = &port->sock_cdp;
++		break;
++	case ETH_P_RSTP:
++		lh = &port->sock_rstp;
++		break;
++	/* FIXME: here we should handle other protocols as well */
++	default:
++		return -EINVAL;
++	}
++
++	sws->proto = proto;
++	sws->port = port;
++
++	/* now the socket is ready and we can publish it to the port */
++	list_add_tail_rcu(&sws->port_chain, lh);
++	return 0;
++}
++
++static void unbind_switch_port(struct switch_sock *sws) {
++	if(!sws->proto)
++		return;
++	list_del_rcu(&sws->port_chain);
++	synchronize_rcu();
++	sws->proto = 0;
++}
++
++static int sw_sock_release(struct socket *sock) {
++	struct sock *sk = sock->sk;
++	struct switch_sock *sws = sw_sk(sk);
++	
++	dbg("sw_sock_release(sock=%p) sk=%p\n", sock, sock->sk);
++
++	unbind_switch_port(sws);
++
++	/* set socket to be dead for the destructor to be called */
++	sock_orphan(sk);
++	sock->sk = NULL;
++
++	/* purge tx, rx queue */
++	skb_queue_purge(&sk->sk_write_queue);
++	skb_queue_purge(&sk->sk_error_queue);
++	skb_queue_purge(&sk->sk_receive_queue);
++
++	/* decrement usage count */
++	sock_put(sk);
++
++	return 0;
++}
++
++static int sw_sock_bind(struct socket *sock, struct sockaddr *uaddr, int addr_len) {
++	struct net_device *dev = NULL;
++	struct switch_sock *sws = sw_sk(sock->sk);
++	struct sockaddr_sw *sw_addr = (struct sockaddr_sw *)uaddr;
++	int err;
++
++	dbg("sw_sock_bind, sk=%p\n", sws);
++
++	if(addr_len < sizeof(struct sockaddr_sw))
++		return -EINVAL;
++	if(sw_addr->ssw_family != AF_SWITCH)
++		return -EINVAL;
++
++	dev = dev_get_by_name(&init_net, sw_addr->ssw_if_name);
++	if(dev == NULL)
++		return -ENODEV;
++
++	/* prevent devices from being added or removed from the switch */
++	mutex_lock(&sw_ioctl_mutex);
++
++	if(dev->sw_port == NULL) {
++		err = -ENODEV;
++	} else {
++		unbind_switch_port(sws);
++		err = bind_switch_port(sws, dev->sw_port, sw_addr->ssw_proto);
++	}
++
++	mutex_unlock(&sw_ioctl_mutex);
++	dev_put(dev); /* dev_get_by_name() calls dev_hold() */
++	return err;
++}
++
++/* First implementation of Linux Multilayer Switch used a hook in
++ * sock_ioctl(), which is the socket-specific implementation
++ * of the ioctl() generic file operation. It is referenced in
++ * the socket_file_ops structure at the beginnig of socket.c.
++ *
++ * In sock_ioctl() we added a new branch to the switch statement:
++ * our own hook to call our particular ioctl() handler. But the
++ * default branch of the switch statement calls sock->ops->ioctl(),
++ * which points to sw_sock_ioctl().
++ *
++ * Now that we have our own protocol implementation, we prefer
++ * using our own ioctl() handler than hijacking the main socket
++ * ioctl() handler.
++ */
++static int sw_sock_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg) {
++	int err;
++	void __user *argp = (void __user *)arg;
++
++	dbg("sw_sock_ioctl, cmd=%d\n", cmd);
++	mutex_lock(&sw_ioctl_mutex);
++	err = sw_deviceless_ioctl(sock, cmd, argp);
++	mutex_unlock(&sw_ioctl_mutex);
++	return err;
++}
++
++static int sw_sock_sendmsg(struct kiocb *iocb, struct socket *sock,
++		struct msghdr *msg, size_t len) {
++	struct sock *sk = sock->sk;
++	struct switch_sock *sws = sw_sk(sk);
++	struct sk_buff *skb;
++	struct net_device *dev = NULL;
++	unsigned short proto = 0;
++	int err = 0;
++
++	dbg("sw_sock_sendmsg, sk=%p\n", sk);
++
++	if (msg->msg_name == NULL) {
++		/* check if we are connected */
++		if (!sws->proto)
++			return -ENOTCONN;
++		
++		dev = sws->port->dev;
++		dev_hold(dev);
++	} else {
++		struct sockaddr_sw *sw_addr = (struct sockaddr_sw *)msg->msg_name;
++
++		/* verify that the protocol family is AF_SWITCH */
++		if (sw_addr != NULL && sw_addr->ssw_family != AF_SWITCH)
++			return -EINVAL;
++
++		/* verify the address */
++		if (msg->msg_namelen < sizeof(struct sockaddr_sw))
++			return -EINVAL;
++		if (msg->msg_namelen == sizeof(struct sockaddr_sw))
++			proto = sw_addr->ssw_proto;
++
++		dev = dev_get_by_name(&init_net, sw_addr->ssw_if_name);
++		if (dev == NULL)
++			return -ENODEV;
++	}
++	
++	dbg("sw_sock_sendmsg, proto=%x, if_name=%s\n", proto, dev->name);
++
++	/* Since this is a raw protocol, the user is responsible for doing 
++	 the fragmentation. Message size cannot exceed device mtu. */
++	err = -EMSGSIZE;
++	if (len > dev->mtu + dev->hard_header_len) {
++		dbg("sw_sock_sendmsg, len(%d) exceeds mtu (%d)+ hard_header_len(%d)\n",
++				len, dev->mtu, dev->hard_header_len);
++		goto out_unlock;
++	}
++
++	err = -ENOBUFS;
++	skb = sock_wmalloc(sk, len + LL_RESERVED_SPACE(dev), 0, GFP_KERNEL);
++	if (skb == NULL) {
++		dbg("sw_sock_sendmsg, sock_wmalloc failed\n");
++		goto out_unlock;
++	}
++	dbg("sw_sock_sendmsg, skb allocated at %p\n", skb);
++
++	/* Fill the socket buffer  */
++	/* Save space for drivers that write hard header at Tx time (implement
++	   the hard_header method)*/
++	skb_reserve(skb, LL_RESERVED_SPACE(dev));
++	skb_reset_network_header(skb);
++
++	/* Align data correctly */
++	if (dev->header_ops) {
++		skb->data -= dev->hard_header_len;
++		skb->tail -= dev->hard_header_len;
++		if (len < dev->hard_header_len)
++			skb_reset_network_header(skb);
++	}
++
++	/* Copy data from msg */
++	err = memcpy_fromiovec(skb_put(skb,len), msg->msg_iov, len);
++	skb->protocol = proto;
++	skb->dev = dev;
++	skb->priority = sk->sk_priority;
++	if (err) {
++		dbg("sw_sock_sendmsg, memcpy_fromiovec failed\n");
++		goto out_free;
++	}
++
++	err = -ENETDOWN;
++	if (!(dev->flags & IFF_UP)) {
++		dbg("sw_sock_sendmsg, interface is down\n");
++		goto out_free;
++	}
++
++	/* send skb */
++	dbg("sw_sock_sendmsg, sending skb (len=%d)\n", len);
++	dev_queue_xmit(skb);
++	dev_put(dev);
++	return len;
++
++	/* Error recovery */
++out_free:
++	kfree_skb(skb);
++out_unlock:
++	if (dev)
++		dev_put(dev);
++	return err;
++}
++
++static int sw_sock_recvmsg(struct kiocb *iocb, struct socket *sock,
++		struct msghdr *msg, size_t len, int flags) {
++	struct sock *sk = sock->sk;
++	int copied, err;
++	struct sk_buff *skb;
++
++	dbg("sw_sock_recvmsg, sk=%p\n", sock->sk);
++
++	err = -EINVAL;
++	if(flags & ~(MSG_DONTWAIT))
++		goto out;
++	
++	/* Call the generic datagram receiver. This handles all sorts
++	 * of horrible races and re-entrancy so we can forget about it
++	 * in the protocol layers.
++	 *
++	 * Now it will return ENETDOWN, if device have just gone down,
++	 * but then it will block.
++	 */
++
++	skb = skb_recv_datagram(sk, flags, flags & MSG_DONTWAIT, &err);
++
++	/* An error occurred so return it. Because skb_recv_datagram() 
++	 * handles the blocking we don't see and worry about blocking
++	 * retries.
++	 */
++	if(skb == NULL) {
++		dbg("skb null after returning from skb_recv_datagram\n");
++		goto out;
++	}
++
++	/* We don't return any address. If we change our mind, then
++	 * msg->msg_namelen should be the address length and
++	 * msg->msg_name should point to the address
++	 */
++	msg->msg_namelen = 0;
++	
++	/* You lose any data beyond the buffer you gave. If it worries a
++	 * user program they can ask the device for its MTU anyway.
++	 */
++	copied = skb->len;
++	if(copied > len) {
++		copied = len;
++		msg->msg_flags |= MSG_TRUNC;
++	}
++
++	err = skb_copy_datagram_iovec(skb, 0, msg->msg_iov, copied);
++	if (err)
++		goto out_free;
++
++	sock_recv_timestamp(msg, sk, skb);
++
++	/* Free or return the buffer as appropriate. Again this
++	 * hides all the races and re-entrancy issues from us.
++	 */
++	err = (flags & MSG_TRUNC) ? skb->len : copied;
++
++out_free:
++	skb_free_datagram(sk, skb);
++out:
++	return err;
++}
++
++static const struct proto_ops sw_sock_ops = {
++	.family =		PF_SWITCH,
++	.owner =		THIS_MODULE,
++	.release = 		sw_sock_release,
++	.bind =			sw_sock_bind,
++	.connect =		sock_no_connect,
++	.socketpair =	sock_no_socketpair,
++	.accept =		sock_no_accept,
++	.getname =		sock_no_getname,
++	.poll =			datagram_poll,
++	.ioctl =		sw_sock_ioctl,
++	.listen =		sock_no_listen,
++	.shutdown =		sock_no_shutdown,
++	.setsockopt =	sock_no_setsockopt,
++	.getsockopt =	sock_no_getsockopt,
++	.sendmsg =		sw_sock_sendmsg,
++	.recvmsg =		sw_sock_recvmsg,
++	.mmap =			sock_no_mmap,
++	.sendpage =		sock_no_sendpage,
++};
++
++static struct net_proto_family switch_family_ops = {
++	.family =		PF_SWITCH,
++	.create =		sw_sock_create,
++	.owner =		THIS_MODULE,
++};
++
++void sw_sock_exit(void) {
++	sock_unregister(PF_SWITCH);
++	proto_unregister(&switch_proto);
++	dbg("Sucessfully unregistered PF_SWITCH protocol family\n");
++}
++
++int sw_sock_init(void) {
++	int err = proto_register(&switch_proto, 0);
++
++	if(err)
++		goto out;
++	
++	sock_register(&switch_family_ops);
++	dbg("Sucessfully registered PF_SWITCH protocol family\n");
++out:
++	return err;
++}
++
++MODULE_ALIAS_NETPROTO(PF_SWITCH);
+diff --git a/net/switch/sw_socket.h b/net/switch/sw_socket.h
+new file mode 100644
+index 0000000..4fe4076
+--- /dev/null
++++ b/net/switch/sw_socket.h
+@@ -0,0 +1,24 @@
++/*
++ *    This file is part of Linux Multilayer Switch.
++ *
++ *    Linux Multilayer Switch is free software; you can redistribute it and/or
++ *    modify it under the terms of the GNU General Public License as published
++ *    by the Free Software Foundation; either version 2 of the License, or
++ *    (at your option) any later version.
++ *
++ *    Linux Multilayer Switch is distributed in the hope that it will be 
++ *    useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *    GNU General Public License for more details.
++ *
++ *    You should have received a copy of the GNU General Public License
++ *    along with Linux Multilayer Switch; if not, write to the Free Software
++ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++ */
++#ifndef _SW_SOCKET_H
++#define _SW_SOCKET_H
++
++extern void sw_sock_exit(void);
++extern int sw_sock_init(void);
++
++#endif
+diff --git a/net/switch/sw_vdb.c b/net/switch/sw_vdb.c
+new file mode 100644
+index 0000000..150379b
+--- /dev/null
++++ b/net/switch/sw_vdb.c
+@@ -0,0 +1,241 @@
++/*
++ *    This file is part of Linux Multilayer Switch.
++ *
++ *    Linux Multilayer Switch is free software; you can redistribute it and/or
++ *    modify it under the terms of the GNU General Public License as published
++ *    by the Free Software Foundation; either version 2 of the License, or
++ *    (at your option) any later version.
++ *
++ *    Linux Multilayer Switch is distributed in the hope that it will be 
++ *    useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *    GNU General Public License for more details.
++ *
++ *    You should have received a copy of the GNU General Public License
++ *    along with Linux Multilayer Switch; if not, write to the Free Software
++ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++ */
++
++#include "sw_private.h"
++
++/* Add a new vlan to the vlan database */
++int sw_vdb_add_vlan(struct net_switch *sw, int vlan, char *name) {
++	struct net_switch_vdb_entry *entry;
++	struct net_switch_port *port;
++	struct net_device *dev;
++
++    if(sw_invalid_vlan(vlan))
++        return -EINVAL;
++    if(sw->vdb[vlan])
++        return -EEXIST;
++    if(!(entry = kmalloc(sizeof(struct net_switch_vdb_entry),
++					GFP_ATOMIC))) {
++        dbg("Out of memory while trying to add vlan %d\n", vlan);
++        return -ENOMEM;
++    }
++	if(!(entry->name = kmalloc(SW_MAX_VLAN_NAME + 1, GFP_ATOMIC))) {
++		kfree(entry);
++		return -ENOMEM;
++	}
++	strncpy(entry->name, name, SW_MAX_VLAN_NAME);
++	entry->name[SW_MAX_VLAN_NAME] = '\0';
++	entry->igmp_snooping = sw->igmp_snooping;
++	INIT_LIST_HEAD(&entry->trunk_ports);
++	INIT_LIST_HEAD(&entry->non_trunk_ports);
++	rcu_assign_pointer(sw->vdb[vlan], entry);
++
++	/* Add all switched ports to this vlan, if it is configured
++	 * on them.
++	 */
++	list_for_each_entry(port, &sw->ports, lh) {
++		if(port->flags & SW_PFL_NOSWITCHPORT)
++			continue;
++		if(port->flags & SW_PFL_TRUNK) {
++			if(sw_port_forbidden_vlan(port, vlan))
++				continue;
++		} else {
++			if(port->vlan != vlan)
++				continue;
++			sw_enable_port(port);
++		}
++		sw_vdb_add_port(vlan, port);
++	}
++
++	if((dev = sw_vif_find(sw, vlan))) {
++		struct net_switch_vif_priv *priv = netdev_priv(dev);
++		sw_vdb_add_port(vlan, &priv->bogo_port);
++	}
++
++	return 0;
++}
++
++int sw_vdb_add_vlan_default(struct net_switch *sw, int vlan) {
++	char buf[9];
++	
++    if(sw_invalid_vlan(vlan))
++        return -EINVAL;
++	/* TODO If we're vtp client, ignore this request and return */
++	sprintf(buf, "VLAN%04d", vlan);
++	return sw_vdb_add_vlan(sw, vlan, buf);
++}
++
++/* Remove a vlan from the vlan database */
++int sw_vdb_del_vlan(struct net_switch *sw, int vlan) {
++	struct net_switch_vdb_entry *entry;
++	struct net_switch_vdb_link *link, *tmp;
++
++	if(sw_invalid_vlan(vlan))
++		return -EINVAL;
++	if(!(entry = sw->vdb[vlan]))
++		return -ENOENT;
++
++	/* Disable all access mode ports that have this vlan set
++	 * as the access vlan */
++#if NET_SWITCH_NOVLANFORIF == 2
++	list_for_each_entry(link, &entry->non_trunk_ports, lh) {
++		if(link->port->flags & SW_PFL_NOSWITCHPORT)
++			continue;
++		sw_disable_port(link->port);
++	}
++#endif
++
++	/* Unlink the entry from the vlan database, then wait
++	 * until all sw_handle_frame() instances see the change.
++	 * Now all sw_handle_frame() instances will drop the
++	 * packets on this vlan during the sanity checks. Thus
++	 * nobody learns macs on this vlan, so we can safely remove
++	 * all entrues from the fdb.
++	 */
++	rcu_assign_pointer(sw->vdb[vlan], NULL);
++	synchronize_sched();
++	/* FIXME what about igmp pseudo-entries? */
++	fdb_cleanup_vlan(sw, vlan, SW_FDB_ANY);
++
++	/* Subsequent invocations of the forwarding code will "see" this
++	 * VLAN as deleted and will not run on this VLAN. So we can safely
++	 * free the link structures without further synchronization.
++	 */
++	list_for_each_entry_safe(link, tmp, &entry->trunk_ports, lh) {
++		kmem_cache_free(sw->vdb_cache, link);
++	}
++	list_for_each_entry_safe(link, tmp, &entry->non_trunk_ports, lh) {
++		kmem_cache_free(sw->vdb_cache, link);
++	}
++	kfree(entry->name);
++	kfree(entry);
++
++	return 0;
++}
++
++/* Rename a vlan */
++int sw_vdb_set_vlan_name(struct net_switch *sw, int vlan, char *name) {
++	struct net_switch_vdb_entry *entry;
++	char *entry_name, *old_name;
++
++    if(sw_invalid_vlan(vlan))
++        return -EINVAL;
++    if(!(entry = sw->vdb[vlan]))
++        return -ENOENT;
++	if(sw_is_default_vlan(vlan))
++		return -EPERM;
++    if(!(entry_name = kmalloc(SW_MAX_VLAN_NAME + 1, GFP_ATOMIC))) {
++        dbg("Out of memory while trying to change vlan name%d\n", vlan);
++        return -ENOMEM;
++    }
++	strncpy(entry_name, name, SW_MAX_VLAN_NAME);
++    entry_name[SW_MAX_VLAN_NAME] = '\0';
++	old_name = entry->name;
++	rcu_assign_pointer(entry->name, entry_name);
++	synchronize_sched();
++	kfree(old_name);
++
++	return 0;
++}
++
++/* Initialize the vlan database */
++void sw_vdb_init(struct net_switch *sw) {
++	memset(&sw->vdb, 0, sizeof(sw->vdb));
++	sw->vdb_cache = KMEM_CACHE(net_switch_vdb_link, SLAB_HWCACHE_ALIGN);
++	if(!sw->vdb_cache)
++		return;
++    sw_vdb_add_vlan(sw, 1, "default");
++    sw_vdb_add_vlan(sw, 1002, "fddi-default");
++    sw_vdb_add_vlan(sw, 1003, "trcrf-default");
++    sw_vdb_add_vlan(sw, 1004, "fddinet-default");
++    sw_vdb_add_vlan(sw, 1005, "trbrf-default");
++}
++
++/* Destroy the vlan database */
++void sw_vdb_exit(struct net_switch *sw) {
++	int vlan;
++
++	for(vlan = SW_MIN_VLAN; vlan <= SW_MAX_VLAN; vlan++)
++		sw_vdb_del_vlan(sw, vlan);
++	kmem_cache_destroy(sw->vdb_cache);
++}
++
++/* Add a port to a vlan */
++int sw_vdb_add_port(int vlan, struct net_switch_port *port) {
++	struct net_switch *sw;
++	struct net_switch_vdb_link *link;
++
++    if(sw_invalid_vlan(vlan))
++        return -EINVAL;
++		
++	if (!port) 
++		return -EINVAL;	
++		
++	sw = port->sw; 
++	
++	if(!sw->vdb[vlan])
++		return -ENOENT;
++	/* The same port cannot be added twice to the same vlan because the only
++	   way to add a port to a vlan is by changing the port's configuration.
++	   Changing port configuration is mutually exclusive.
++	 */
++	link = kmem_cache_alloc(sw->vdb_cache, GFP_ATOMIC);
++	if(!link) {
++		dbg("Out of memory while adding port to vlan\n");
++		return -ENOMEM;
++	}
++	link->port = port;
++	smp_wmb();
++	if(port->flags & SW_PFL_TRUNK) {
++		list_add_tail_rcu(&link->lh, &sw->vdb[vlan]->trunk_ports);
++	} else {
++		list_add_tail_rcu(&link->lh, &sw->vdb[vlan]->non_trunk_ports);
++	}
++	dbg("vdb: Added port %s to vlan %d\n", port->dev->name, vlan);
++
++	return 0;
++}
++
++/* Remove a port from a vlan */
++int sw_vdb_del_port(int vlan, struct net_switch_port *port) {
++	struct net_switch_vdb_link *link;
++	struct list_head *lh;
++
++    if(sw_invalid_vlan(vlan))
++        return -EINVAL;
++		
++	if (!port) 
++		return -EINVAL;	
++		
++	if(!port->sw->vdb[vlan])
++		return -ENOENT;
++		
++	lh = (port->flags & SW_PFL_TRUNK) ?
++		&port->sw->vdb[vlan]->trunk_ports :
++		&port->sw->vdb[vlan]->non_trunk_ports;
++	list_for_each_entry(link, lh, lh) {
++		if(link->port == port) {
++			list_del_rcu(&link->lh);
++			synchronize_sched();
++			kmem_cache_free(port->sw->vdb_cache, link);
++			dbg("vdb: Removed port %s from vlan %d\n", port->dev->name, vlan);
++			return 0;
++		}
++	}
++	
++	return -ENOENT;
++}
+diff --git a/net/switch/sw_vif.c b/net/switch/sw_vif.c
+new file mode 100644
+index 0000000..0bf0ee8
+--- /dev/null
++++ b/net/switch/sw_vif.c
+@@ -0,0 +1,199 @@
++/*
++ *    This file is part of Linux Multilayer Switch.
++ *
++ *    Linux Multilayer Switch is free software; you can redistribute it and/or
++ *    modify it under the terms of the GNU General Public License as published
++ *    by the Free Software Foundation; either version 2 of the License, or
++ *    (at your option) any later version.
++ *
++ *    Linux Multilayer Switch is distributed in the hope that it will be 
++ *    useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *    GNU General Public License for more details.
++ *
++ *    You should have received a copy of the GNU General Public License
++ *    along with Linux Multilayer Switch; if not, write to the Free Software
++ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++ */
++
++#include "sw_private.h"
++#include <linux/ethtool.h>
++
++struct net_device *sw_vif_find(struct net_switch *sw, int vlan) {
++	struct net_switch_vif_priv *priv;
++	struct list_head *search = &sw->vif[sw_vlan_hash(vlan)];
++
++	list_for_each_entry(priv, search, lh) {
++		if(priv->bogo_port.vlan == vlan)
++			return priv->bogo_port.dev;
++	}
++	return NULL;
++}
++
++int sw_vif_open(struct net_device *dev) {
++	netif_start_queue(dev);
++	return 0;
++}
++
++int sw_vif_stop(struct net_device *dev) {
++	netif_stop_queue(dev);
++	return 0;
++}
++
++int sw_vif_hard_start_xmit(struct sk_buff *skb, struct net_device *dev) {
++	struct net_switch_vif_priv *priv = netdev_priv(dev);
++	struct skb_extra skb_e;
++	unsigned long pkt_len = skb->data_len;
++
++	skb_e.vlan = priv->bogo_port.vlan;
++	skb_e.has_vlan_tag = 0;
++	skb_reset_mac_header(skb);
++	skb->mac_len = ETH_HLEN;
++	skb->dev = dev;
++	skb_pull(skb, ETH_HLEN);
++	dbg("sw_vif_hard_xmit: skb=0x%p skb headroom: %d (head=0x%p data=0x%p)\n",
++			skb, skb->data - skb->head, skb->head, skb->data);
++	if(sw_forward(&priv->bogo_port, skb, &skb_e)) {
++		priv->stats.tx_packets++;
++		priv->stats.tx_bytes += pkt_len;
++	} else {
++		priv->stats.tx_errors++;
++	}
++	return 0;
++}
++
++struct net_device_stats * sw_vif_get_stats(struct net_device *dev) {
++	struct net_switch_vif_priv *priv = netdev_priv(dev);
++	return &priv->stats;
++}
++
++static struct ethtool_ops sw_vif_ethtool_ops = {
++	.get_tx_csum = ethtool_op_get_tx_csum,
++	.set_tx_csum = ethtool_op_set_tx_csum,
++	.get_sg = ethtool_op_get_sg,
++	.set_sg = ethtool_op_set_sg,
++	.get_tso = ethtool_op_get_tso,
++	.set_tso = ethtool_op_set_tso,
++	.get_link = ethtool_op_get_link,
++};
++
++static struct net_device_ops sw_vif_netdev_ops = {
++	.ndo_open = sw_vif_open,
++	.ndo_stop = sw_vif_stop,
++	.ndo_start_xmit = sw_vif_hard_start_xmit,
++	.ndo_get_stats = sw_vif_get_stats,
++};
++
++int sw_vif_addif(struct net_switch *sw, int vlan, struct net_device **rdev)
++{
++	char buf[9];
++	struct net_device *dev;
++	struct net_switch_vif_priv *priv;
++	int result;
++	
++	if(sw_invalid_vlan(vlan))
++		return -EINVAL;
++	if ((dev = sw_vif_find(sw, vlan))) {
++		if (rdev)
++			*rdev = dev;
++		return -EEXIST;
++	}
++	/* We can now safely create the new interface and this is no race
++	   because this is called only from ioctl() and ioctls are
++	   mutually exclusive (a semaphore in socket ioctl routine)
++	 */
++	sprintf(buf, "vlan%d", vlan);
++	dbg("About to alloc netdev for vlan %d\n", vlan);
++	dev = alloc_netdev(sizeof(struct net_switch_vif_priv), buf, ether_setup);
++	if(dev == NULL)
++		return -EINVAL;
++	memcpy(dev->dev_addr, sw->vif_mac, ETH_ALEN);
++	dev->dev_addr[ETH_ALEN - 2] ^= vlan / 0x100;
++	dev->dev_addr[ETH_ALEN - 1] ^= vlan % 0x100;
++
++	dev->netdev_ops = &sw_vif_netdev_ops;
++	dev->watchdog_timeo = HZ;
++	SET_ETHTOOL_OPS(dev, &sw_vif_ethtool_ops);
++	
++	priv = netdev_priv(dev);
++	INIT_LIST_HEAD(&priv->bogo_port.lh); /* paranoid */
++	priv->bogo_port.dev = dev;
++	priv->bogo_port.sw = sw;
++	priv->bogo_port.flags = 0;
++	priv->bogo_port.vlan = vlan;
++	priv->bogo_port.forbidden_vlans = NULL;
++	priv->bogo_port.mrouters = NULL;
++	priv->bogo_port.desc[0] = '\0';
++	list_add_tail(&priv->lh, &sw->vif[sw_vlan_hash(vlan)]);
++	if ((result = register_netdev(dev))) {
++		dbg("vif: error %i registering netdevice %s\n", 
++				result, dev->name);
++	}
++	else {
++		dbg("vif: successfully registered netdevice %s\n", dev->name);
++	}		
++	if(sw_vdb_add_vlan_default(sw, vlan))
++		sw_vdb_add_port(vlan, &priv->bogo_port);
++	if (rdev)
++		*rdev = dev;
++	
++	return 0;
++}
++
++static void __vif_delif(struct net_device *dev) {
++	struct net_switch_vif_priv *priv;
++
++	priv = netdev_priv(dev);
++	list_del_rcu(&priv->lh);
++	sw_vdb_del_port(priv->bogo_port.vlan, &priv->bogo_port);
++	synchronize_sched();
++	unregister_netdev(dev);
++	free_netdev(dev);
++}
++
++int sw_vif_delif(struct net_switch *sw, int vlan) {
++	struct net_device *dev;
++
++	dbg("sw_vif_delif called (vlan=%d).\n", vlan);
++	if(sw_invalid_vlan(vlan))
++		return -EINVAL;
++	if((dev = sw_vif_find(sw, vlan)) == NULL)
++		return -ENOENT;
++
++	__vif_delif(dev);
++	return 0;
++}
++
++/* Administratively enable the virtual interface */
++/* FIXME: bogo_port flags? otherwise sw_device_up can be used instead */
++int sw_vif_enable(struct net_device *dev)
++{
++	BUG_ON(!sw_is_vif(dev));
++	dbg("sw_vif_enable (%s)\n", dev->name);
++	sw_device_up(dev);
++	return 0;
++}
++
++/* Administratively disable the virtual interface */
++/* FIXME: bogo_port flags? otherwise sw_device_down can be used instead */
++int sw_vif_disable(struct net_device *dev)
++{
++	BUG_ON(!sw_is_vif(dev));
++	dbg("sw_vif_disable (%s)\n", dev->name);
++	sw_device_down(dev);
++	return 0;
++}
++
++void sw_vif_cleanup(struct net_switch *sw) {
++	struct net_switch_vif_priv *priv, *tmp;
++	int i;
++	
++	for (i=0; i < SW_VIF_HASH_SIZE; i++)
++		list_for_each_entry_safe(priv, tmp, &sw->vif[i], lh)
++			__vif_delif(priv->bogo_port.dev);
++}
++
++int sw_is_vif(struct net_device *dev)
++{
++	return dev->netdev_ops->ndo_open == sw_vif_open;
++}
+diff --git a/net/switch/test.sh b/net/switch/test.sh
+new file mode 100644
+index 0000000..1d0ba2c
+--- /dev/null
++++ b/net/switch/test.sh
+@@ -0,0 +1,8 @@
++#!/bin/bash
++
++swctl add eth3
++swctl add eth4
++swctl setportvlan eth3 11
++swctl addportvlan eth4 11
++swctl settrunk eth4 1
++swctl addvlan 11 teste

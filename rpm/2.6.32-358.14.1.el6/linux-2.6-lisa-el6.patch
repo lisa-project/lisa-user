@@ -1,0 +1,37 @@
+diff -r -u linux-2.6.32-279.9.1.el6.lisa2.0.1.build3.i686/net/switch/sw_ioctl.c linux-2.6.32-279.9.1.el6.lisa2.0.1.build3.i686/net/switch.1/sw_ioctl.c
+--- linux-2.6.32-279.9.1.el6.lisa2.0.1.build3.i686/net/switch/sw_ioctl.c	2012-10-05 18:26:40.961708275 +0300
++++ linux-2.6.32-279.9.1.el6.lisa2.0.1.build3.i686/net/switch.1/sw_ioctl.c	2012-10-05 17:52:04.000916563 +0300
+@@ -19,6 +19,13 @@
+ 
+ #include "sw_private.h"
+ 
++/* Declaring this in sw_deviceless_ioctl() as a local variable makes it exceed
++ * 1024 bytes of stack frame. It's safe to make it a static variable (with the
++ * price of 512 bytes being wasted all the time) since ioctl() calls are
++ * synchronized in sw_sock_ioctl() by a mutex.
++ */
++static unsigned char bitmap[SW_VLAN_BMP_NO];
++
+ inline void dump_mem(void *m, int len) {
+ 	int j;
+ 	char buf[65];
+@@ -648,7 +655,6 @@
+ 	struct net_device *dev = NULL, *rdev;
+ 	struct net_switch_port *port = NULL;
+ 	struct swcfgreq arg;
+-	unsigned char bitmap[SW_VLAN_BMP_NO];
+ 	int err = -EINVAL;
+ 	int do_put = 0;
+ 	unsigned long age_time;
+diff -r -u linux-2.6.32-279.9.1.el6.lisa2.0.1.build3.i686/net/switch/sw_socket.c linux-2.6.32-279.9.1.el6.lisa2.0.1.build3.i686/net/switch.1/sw_socket.c
+--- linux-2.6.32-279.9.1.el6.lisa2.0.1.build3.i686/net/switch/sw_socket.c	2012-10-05 18:26:40.962712216 +0300
++++ linux-2.6.32-279.9.1.el6.lisa2.0.1.build3.i686/net/switch.1/sw_socket.c	2012-10-05 18:09:22.083231920 +0300
+@@ -203,7 +203,7 @@
+ 
+ static const struct proto_ops sw_sock_ops;
+ 
+-static int sw_sock_create(struct net *net, struct socket *sock, int protocol) {
++static int sw_sock_create(struct net *net, struct socket *sock, int protocol, int kern) {
+ 	struct sock *sk;
+ 	struct switch_sock *sws;
+ 
