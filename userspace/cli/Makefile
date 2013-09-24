@@ -118,8 +118,9 @@ dep: $(DEPS)
 
 libswcli.so: $(LIBSWCLI_OBJS)
 	$(Q)$(MAKE) -C $(TOP_DIR)/lib
-	$(QUIET_LD)$(CC) $(CFLAGS) -shared -Wl,-soname,$@ -o $@ -lreadline -lcurses -lutil -lcrypt -lrt \
-		$^ ../lib/util.o ../lib/mm.o ../lib/if_generic.o ../lib/netlink.o ../lib/cdp_client.o ../lib/rstp_client.o
+	$(QUIET_LD)$(CC) $(CFLAGS) -shared -Wl,-soname,$@ -o $@ \
+		$^ ../lib/util.o ../lib/mm.o ../lib/if_generic.o ../lib/netlink.o ../lib/cdp_client.o ../lib/rstp_client.o \
+		-lreadline -lcurses -lutil -lcrypt -lrt
 
 $(LIBSWCLI_TARGETS): % : %.o libswcli.so $(TOP_DIR)/switch/libswitch.so
-	$(QUIET_LD)$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
+	$(QUIET_LD)$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ -lreadline

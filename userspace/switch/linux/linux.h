@@ -3,6 +3,7 @@
 
 #include <unistd.h>
 #include <errno.h>
+#include <netinet/in.h>
 #include <linux/sockios.h>
 #include <linux/if_vlan.h>
 #include <linux/if_bridge.h>

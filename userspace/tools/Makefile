@@ -21,7 +21,7 @@ ifneq ($(MAKECMDGOALS), clean)
 $(info ********* Building testing tools *********)
 endif
 
-LDFLAGS = -lcrypt
+LDFLAGS = -lcrypt -lpthread
 include $(TOP_DIR)/scripts/Makefile.includes
 include $(TOP_DIR)/switch/Makefile.switch
 INC	+= $(SWITCH_INC) \
