@@ -683,6 +683,11 @@ static int igmp_get(struct switch_operations *sw_ops, char *buff, int *snooping)
 	memset(map, 0, SW_VLAN_BMP_NO);
 
 	mm_lock(mm);
+	*snooping = SHM->igmp_snooping;
+	if (buff == NULL) {
+		mm_unlock(mm);
+		return 0;
+	}
 	mm_list_for_each(mm, ptr, mm_ptr(mm, &SHM->vlan_data)) {
 		struct vlan_data *v_data =
 			mm_addr(mm, mm_list_entry(ptr, struct vlan_data, lh));
@@ -694,7 +699,6 @@ static int igmp_get(struct switch_operations *sw_ops, char *buff, int *snooping)
 			sw_bitmap_set(map, v_data->vlan_id);
 	}
 
-	*snooping = SHM->igmp_snooping;
 	mm_unlock(mm);
 
 	memcpy(buff, map, SW_VLAN_BMP_NO);
