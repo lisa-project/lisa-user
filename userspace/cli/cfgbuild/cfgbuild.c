@@ -307,7 +307,7 @@ vlans:
 	}
 	else
 		for (i = SW_MIN_VLAN, j = 0; i < SW_MAX_VLAN; i++) {
-			if (!sw_allowed_vlan(vlans, i))
+			if (sw_forbidden_vlan(vlans, i))
 				continue;
 			if (sw_is_default_vlan(i))
 				continue;

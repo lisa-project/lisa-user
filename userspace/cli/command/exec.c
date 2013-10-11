@@ -920,7 +920,7 @@ int cmd_show_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_no
 
 	if (vlan_desc != NULL) {
 		for (i = min_vlan; i <= max_vlan; i++)
-			if (sw_bitmap_test(vlans, i)) {
+			if (sw_allowed_vlan(vlans, i)) {
 				status = switch_get_vlan_desc(i, vlan_name);
 				if (!status && !strcmp(vlan_name, vlan_desc))
 					break;
@@ -941,7 +941,7 @@ int cmd_show_vlan(struct cli_context *ctx, int argc, char **argv, struct menu_no
 	fprintf(out, fmt1, DASHES(4), DASHES(32), DASHES(9), DASHES(31));
 
 	for (i = min_vlan; i <= max_vlan; i++) {
-		if (!sw_bitmap_test(vlans, i))
+		if (!sw_allowed_vlan(vlans, i))
 			continue;
 		int vlan = i;
 		int vlif_no;

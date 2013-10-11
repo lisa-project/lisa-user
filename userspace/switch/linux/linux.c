@@ -576,11 +576,9 @@ static int get_vdb(struct switch_operations *sw_ops, unsigned char *vlans)
 		struct vlan_data *v_data =
 			mm_addr(mm, mm_list_entry(ptr, struct vlan_data, lh));
 
-		sw_bitmap_reset(bitmap, v_data->vlan_id);
+		sw_allow_vlan(bitmap, v_data->vlan_id);
 	}
 	mm_unlock(mm);
-
-	inverse_bitmap(bitmap);
 
 	memcpy(vlans, bitmap, SW_VLAN_BMP_NO);
 
@@ -628,7 +626,7 @@ static void set_global_igmp(struct switch_operations *sw_ops, int snooping)
 
 	get_vdb(sw_ops, vdb);
 	for (i = 1; i < SW_MAX_VLAN; i++) {
-		if (!sw_bitmap_test(vdb, i))
+		if (!sw_allowed_vlan(vdb, i))
 			continue;
 
 		/* Set igmp for each VLAN in VDB */
@@ -1116,7 +1114,7 @@ static int get_mac(struct switch_operations *sw_ops, int ifindex, int vlan,
 	else {
 		sw_ops->get_vdb(sw_ops, bitmap);
 		for (vlan_id = 1 ; vlan_id < SW_MAX_VLAN; vlan_id++) {
-			if (sw_bitmap_test(bitmap, vlan_id)) {
+			if (sw_allowed_vlan(bitmap, vlan_id)) {
 
 				ret = br_get_all_fdb_entries(lnx_ctx, vlan_id, (void **)buffer);
 
