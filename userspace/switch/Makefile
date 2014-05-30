@@ -51,7 +51,7 @@ include $(TOP_DIR)/scripts/Makefile.rules
 dep: $(DEPS)
 
 $(LIBSWITCH_NAME): $(LIBSWITCH_OBJS) $(OBJS) $(TOP_DIR)/lib/mm.o $(TOP_DIR)/lib/cJSON.o
-	$(QUIET_LD)$(CC) $(CFLAGS) --export-dynamic -rdynamic -shared -Wl,-soname,$@ -o $@ $^ -lrt -ldl -lm
+	$(QUIET_LD)$(CC) $(CFLAGS) -rdynamic -shared -Wl,-soname,$@ -o $@ $^ -lrt -ldl -lm
 
 multiengine.o: multiengine.c
 	$(QUIET_LD)$(CC) $(CFLAGS) -c -o $@  $^

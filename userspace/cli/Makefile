@@ -116,9 +116,7 @@ dep: $(DEPS)
 
 libswcli.so: $(LIBSWCLI_OBJS)
 	$(Q)$(MAKE) -C $(TOP_DIR)/lib
-	$(QUIET_LD)$(CC) $(CFLAGS) -shared -Wl,-soname,$@ -o $@ -lreadline -lcurses -lutil -lcrypt -lrt \
-		$^ ../lib/util.o ../lib/mm.o ../lib/if_generic.o ../lib/netlink.o ../lib/cdp_client.o ../lib/rstp_client.o \
-		../switch/switch_api/sw_api.o $(TOP_DIR)/switch/multiengine.o
+	$(QUIET_LD)$(CC) $(CFLAGS) -shared -Wl,-soname,$@ -o $@ $^ ../lib/util.o ../lib/mm.o ../lib/if_generic.o ../lib/netlink.o ../lib/cdp_client.o ../lib/rstp_client.o ../switch/switch_api/sw_api.o $(TOP_DIR)/switch/multiengine.o -lreadline -lcurses -lutil -lcrypt -lrt -ldl -lm
 
 $(LIBSWCLI_TARGETS): % : %.o libswcli.so $(TOP_DIR)/switch/$(LIBSWITCH_NAME)
-	$(QUIET_LD)$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
+	$(QUIET_LD)$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ -lreadline

@@ -5,7 +5,7 @@ include $(TOP_DIR)/scripts/Makefile.variables
 ifeq ($(IMPL), lisa)
 LIBSWITCH_NAME = liblisa.so
 CFLAGS	+= -DLiSA
-INC = $(LINUX_INC) 
+INC = $(LINUX_INC)
 endif
 
 ifeq ($(IMPL), linux)
@@ -38,7 +38,7 @@ dep: $(DEPS)
 swctl: swctl.o $(TOP_DIR)/switch/$(LIBSWITCH_NAME)
 	$(Q) $(MAKE) -C $(TOP_DIR)/lib
 	$(QUIET_LD)$(CC) -o $@ $^ ../lib/if_generic.o \
-		../lib/netlink.o ../lib/util.o ../lib/mm.o -lrt $(LDFLAGS)
-	
+		../lib/netlink.o ../lib/util.o ../lib/mm.o -lrt -lpthread $(LDFLAGS)
+
 $(SIMPLE_TARGETS): % : %.o
 	$(QUIET_LD)$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
